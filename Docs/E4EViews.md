@@ -24,3 +24,36 @@ Example:
     - ENV1/1/QAPKG/SBSQAPKG/PROCESS/DELPROC
     - ENV1/1/QAPKG/SBSQAPKG/PROCESS/GENPROC
     - ENV1/1/QAPKG/SBSQAPKG/PROCESS/MOVPROC
+
+### Advanced Filters with Wildcards
+
+The following examples show how you can enter wildcard entries at any stage of the generated filter. You can use this method to determine the location of elements with one or more similar characteristics:
+
+- A Basic filter showing the location of all elements for a particular type:
+  - ENVIRONMENT/STAGENUMBER/SYSTEM/SUBSYSTEM/TYPE/
+- A custom filter to show all occurrences of elements of the same type, across several subsystems as the subsystem field is wildcarded:
+  - ENVIRONMENT/STAGENUMBER/SYSTEM/( * )/TYPE/
+- An advanced filter to show all occurrences of elements of the same type, across several systems and their subsystems:
+  - ENVIRONMENT/STAGENUMBER/( * )/( * )/TYPE/
+
+#### Note:
+- Wildcard entries or specific data must be entered for every level when a filter is edited. Filters with missing or empty fields are not permitted.
+- Filters that you create are automatically saved in the Filters View. You should therefore take care to delete redundant filters when no longer required.
+- You can key several fields as wildcards, however you should aim to use no more than two wildcards in any filter. If searching in a large volume of data using several wildcards can trigger large scale searches, with a negative impact on performance.
+
+### Explorer for Endevor Map View
+
+Map View expands to show the several levels of Endevor data as follows:
+- Repository
+    - Environment
+        - System
+            - Subsystem
+                - Type
+                    - Element
+
+#### More information:
+For further explanation about the structure of data and inventory management in Endevor see Inventory Management in the Endevor SCM Documentation.
+
+#### Navigate the Map View
+
+Each level of the Map view expands to show the contents of the level, excluding the lowest level, which shows individual Elements. Navigate through the repository using the Map View, which operates similarly to a hierarchy tree. Each level in turn can be expanded to show its contents, until you reach the Elements level. The individual Elements represent the smallest individual pieces of data that are used by Endevor.
