@@ -145,6 +145,17 @@ You have successfully opened an element for inspection.
 Elements are read-only in their native location. To edit an Element, perform the Retrieve Element action and store a copy of the Element to your specified Workspace.
 
 #### Retrieve Element
+The Retrieve Element action allows you to save a copy of the Element to your workspace. The data can then be edited as required.
+#### Follow these steps:
+1. Right-click on the element in either the Map or Filters view. The options to Browse or Retrieve Element are displayed.
+2. Select Retrieve Element. The Element is saved to your specified Workspace and is displayed in the panel, including related information, as follows:
+    ```
+    //DELPROC PROC
+    //DELMOD EXEC PGM=CONDELE,PARM=*COMPONENTS
+    ```
+You can now work with the Element, and save the newly edited element to your Workspace.
+
+You have successfully retrieved an element.
 
 #### Retrieve Element with Dependencies
 
