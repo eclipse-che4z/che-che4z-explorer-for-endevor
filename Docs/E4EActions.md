@@ -49,24 +49,32 @@ The Type level in Map View allows you to create custom filters, without necessar
 You can edit existing filters to create custom searches for elements with closely matching characteristics elsewhere in the data set.
 #### Follow these steps:
 1. Select the filter that you want to edit. The filter is highlighted, and the following options are displayed:
-    - Delete
-    - Edit
+```
+ - Delete
+ - Edit
+```
 2. Click the edit icon. A message shows with the instruction "Edit filter. (Press 'Enter' to confirm or 'Escape' to cancel)" and the selected filter highlighted with only the Element field as a Wildcard ( * ):
-- ENVIRONMENT/STAGE NUMBER/SYSTEM/SUBSYSTEM/TYPE/*
+```
+    ENVIRONMENT/STAGE NUMBER/SYSTEM/SUBSYSTEM/TYPE/*
+```
 3. Replace any field as required with a Wildcard ( * ), for example:
-- ENVIRONMENT/STAGENUMBER/SYSTEM/SUBSYSTEM/*/*
-
-  This filter could now be used, for example, to display all Types and Elements in the specified Subsystem 
+```
+    ENVIRONMENT/STAGENUMBER/SYSTEM/SUBSYSTEM/*/*
+```
+  This filter could now be used, for example, to display all Types and Elements in the specified Subsystem
+  
 4. Press Enter to confirm the changes
   The filter has been edited and now shows under the list of saved filters.
 The filters list automatically contains every filter that you have created and so it can get heavily populated if you are conducting several different searches. To address this, delete filters once they are no longer needed.
+
 #### Notes:
+```
     - Wildcard entries or specific data must be entered for every level when a filter is edited.
     - Filters with missing or empty fields are not permitted.
     - Filters that you create are automatically saved in the Filters View.
     - You can key several fields as wildcards, however ensure that you use no more than two wildcards in any filter.
     - If searching in a large volume of data using several wildcards can trigger large scale searches, with a negative impact on performance.
-
+```
 #### Delete Filter
 The filters list automatically contains every filter that you have created and so it can get heavily populated if you are conducting several different searches. To address this, you can delete filters once they are no longer needed
 #### Follow these steps:
@@ -75,8 +83,10 @@ The filters list automatically contains every filter that you have created and s
     - Edit
 2. Click the Delete icon.
 A message shows as follows:
-Delete filter: ENV1/1/( * )/( * )/( * )/( * )?
+```
+Delete filter: ENV1/1/(*)/(*)/(*)/(*)?
 Source: Explorer for Endevor (Extension) 
+```
 3. Click OK The filter is deleted.
 
 ### Explorer for Endevor Element Actions
@@ -96,6 +106,43 @@ Once you identify the relevant data, you can perform the following actions:
   Retrieves the several selected Elements, with no additional data. The Elements are stored locally while being worked on, before you then upload them back to the main repository.
 
 #### Browse Element
+The Browse Element action displays the entire contents of the Element, including related metadata. This allows you to determine if you want to retrieve and work with the Element
+#### Follow these steps:
+1. Right-click on the element in either the Map or Filters view. The options to Browse or Retrieve the Element appear.
+2. Select the Browse Element option. The Element is displayed in the panel, including related information, as follows:
+
+```
+*1CA Endevor SCM Version 18.0.12 Copyright (C) 1986-2018 CA. All Rights
+PROBLEM CA Endevor SCM
+PRINT BROWSE
+ELEMENT: DELPROC
+**********************************************************************************************
+**********************************************************************************************
+** **
+** ELEMENT BROWSE 14MAY19 11:38 **
+** **
+** ENVIRONMENT: ENV1 SYSTEM: QAPKG SUBSYSTEM: SBSQAPKG **
+** TYPE: PROCESS STAGE ID: 1 **
+** ELEMENT: DELPROC **
+** **
+** SIGNED OUT TO: PABJU03 DELTA TYPE: REVERSE **
+** **
+**********************************************************************************************
+-------------------------- SOURCE LEVEL INFORMATION ---------------------------
+VVLL SYNC USER DATE TIME STMTS CCID COMMENT
+---- ---- -------- ------- ----- -------- ------------ ----------------------------------------
+0100 PABJU03 14MAY19 08:25 2
+GENERATED PABJU03 14MAY19 08:25
+
++0100 //DELPROC PROC
++0100 //DELMOD EXEC PGM=CONDELE,PARM=*COMPONENTS*
+```
+
+3. Review the displayed information to determine if it is relevant or useful to you.
+
+You have successfully opened an element for inspection.
+#### Note:
+Elements are read-only in their native location. To edit an Element, perform the Retrieve Element action and store a copy of the Element to your specified Workspace.
 
 #### Retrieve Element
 
