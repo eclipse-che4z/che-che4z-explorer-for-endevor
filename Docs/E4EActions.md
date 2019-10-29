@@ -158,5 +158,69 @@ You can now work with the Element, and save the newly edited element to your Wor
 You have successfully retrieved an element.
 
 #### Retrieve Element with Dependencies
+The Retrieve Element with Dependencies action allows you to save a copy of the Element, along with any other elements that are dependent on it. The data is saved in your specified Workspace, and can be edited as required
+
+#### Follow these steps:
+1. Locate the Element that you want to retrieve in either the Map or Filter view.
+2. Right-click on the Element. The following options are displayed:
+    - Browse Element
+    - Retrieve Element
+    - Retrieve Element with Dependencies
+3. Select Retrieve Element with Dependencies.
+The Element is saved to your specified Workspace, along with any dependencies.
+
+The Elements and dependencies are displayed in the panel in separate tabs, as follows:
+
+Element:
+    ********************************************************************
+    * ACMQAPIA : call ACMQ API programs (ACMQAPI2) *
+    * *
+    * Change INVOKE to ACMQAPI1/2/3 to test other programs *
+    ******************************************************************** 
+    ACMQAPIA @C1INIT INVOKE=(ACMQAPI2,DYNAM), X 
+    TYPE=ACMQ_batch, X  
+    STACK=72000, X 
+    ESTAE=NO, X 
+    SLAT=YES 
+    END
+
+First Dependency:
+
+    ASMA90 = 'RENT,TERM,XREF(SHORT),USING(MAP,WARN(11)),LIST(133),'+ 00000010'LANGUAGE(UE),' 00000110IGYCRCTL       ='OBJECT,APOST,AWO,DATA(24),FASTSRT,FLAG(W),'+ 00000200'LIST,RENT,TRUNC(BIN),'+ 00000300'NODBCS,SOURCE,MAP,NOSEQ,XREF,
+    NONUMBER,LIST,' 00000400IEWL = 'LIST,MAP,RENT,REUS,NOLET,XREF,SIZE=(256K,64K),' 00000500CCNDRVR = 'SOURCE,SHOWINC,LIST,NOOPT,AGG,XR,LO,ARCH(3),' 00000600
+
+Second Dependency:
+
+MACRO 00001 $$ABCD &ROL=,&CODE= 00002 .* ABCD= IS A 4 CHARACTER CODE 00003 AIF ('&CODE' EQ '').DONE 00004 .GEN $$ABSEXP ROL=&ROL,ARG=&CODE,TYPE=OT$$ABCD,FMT=C4 00005 .DONE ANOP 00006 MEND 00007
+
+You can now work with the Element and dependencies stored in your Workspace
+
+You have successfully retrieved an element.
+
+##### Notes:
+    - All dependencies are saved to the Workspace in appropriate folders based on their type
+    - If the type folder for the dependencies doesn't exist new folder is created
+    - No limit on the number of dependencies for the retrieved Element
+    - Retrieve Element with Dependencies is not compatible with the Retrieve Multiple Elements action.
 
 #### Retrieve Multiple Elements
+
+The Retrieve Multiple Elements action allows you to save a copy of several Elements in a single action. The elements are saved without related metadata to your workspace, grouped in folders by Type. The elements can be used as required, and then merged back to the desired location, or used elsewhere.
+
+As a developer unfamiliar with the classic Endevor interface, you need to retrieve a multiple elements to your Workspace. This action allows you to retrieve several elements simultaneously, ensuring that you receive an accurate impression of the elements at the same point in time.
+
+##### Prerequisite:
+    - Workspace established and open in Visual Studio Code Explorer
+
+##### Follow these steps:
+1. Ensure that you have an open workspace in Visual Studio Code Explorer
+2. Left-click on the first element that you want to retrieve in either the Map or Filters view.
+3. Hold Shift and use the arrow keys to move up or down to select multiple elements that you want to retrieve
+4. Right-click on selected elements that you want to retrieve. The options to Browse or Retrieve Element appear.
+5. Select Retrieve Element.
+6. The Elements will be saved sequentially to your specified Workspace, sorted info folders according to Type.
+7. The Elements are displayed as multiple separate tabs in the panel, including related information, as follows:
+    //DELPROC PROC
+    //DELMOD EXEC PGM=CONDELE,PARM=*COMPONENTS
+    
+You have successfully retrieved multiple elements and can now work with them in Visual Studio Code or your preferred IDE.
