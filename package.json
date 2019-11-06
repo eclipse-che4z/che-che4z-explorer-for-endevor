@@ -1,0 +1,247 @@
+{
+    "name": "explorer-for-endevor",
+    "displayName": "Explorer for Endevor",
+    "description": "Explorer for Endevor",
+    "version": "0.9.0",
+    "publisher": "broadcomMFD",
+    "engines": {
+        "vscode": "^1.32.0"
+    },
+    "categories": [
+        "SCM Providers"
+    ],
+    "activationEvents": [
+        "onWebviewPanel:endevorHostPanel",
+        "workspaceContains:.gbmapping",
+        "onView:endevorExplorer"
+    ],
+    "icon": "resources/logo.png",
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "endevorexplorer.refreshHosts",
+                "title": "Refresh",
+                "icon": {
+                    "light": "resources/light/refresh.svg",
+                    "dark": "resources/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.newHost",
+                "title": "New connection",
+                "icon": {
+                    "light": "resources/light/add.svg",
+                    "dark": "resources/dark/add.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.updateHost",
+                "title": "Update Host",
+                "icon": {
+                    "light": "resources/light/edit.svg",
+                    "dark": "resources/dark/edit.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.refreshRepo",
+                "title": "Refresh Repository",
+                "icon": {
+                    "light": "resources/light/refresh.svg",
+                    "dark": "resources/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.deleteHost",
+                "title": "Delete Host",
+                "icon": {
+                    "light": "resources/light/delete.svg",
+                    "dark": "resources/dark/delete.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.addFilter",
+                "title": "Add Filter",
+                "icon": {
+                    "light": "resources/light/add.svg",
+                    "dark": "resources/dark/add.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.deleteFilter",
+                "title": "Delete Filter",
+                "icon": {
+                    "light": "resources/light/delete.svg",
+                    "dark": "resources/dark/delete.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.editFilter",
+                "title": "Edit Filter",
+                "icon": {
+                    "light": "resources/light/edit.svg",
+                    "dark": "resources/dark/edit.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.retrieveElement",
+                "title": "Retrieve Element"
+            },
+            {
+                "command": "endevorexplorer.retrieveElementWithDependencies",
+                "title": "Retrieve Element with Dependencies"
+            },
+            {
+                "command": "endevorexplorer.browseElement",
+                "title": "Browse Element"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "endevorexplorer.updateHost",
+                    "when": "view == endevorExplorer && viewItem == repository",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.deleteFilter",
+                    "when": "view == endevorExplorer && viewItem == filter",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.deleteHost",
+                    "when": "view == endevorExplorer && viewItem == repository",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.editFilter",
+                    "when": "view == endevorExplorer && viewItem == filter",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.refreshRepo",
+                    "when": "view == endevorExplorer && viewItem == repository",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.addFilter",
+                    "when": "view == endevorExplorer && viewItem == filters",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.addFilter",
+                    "when": "view == endevorExplorer && viewItem == type",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.browseElement",
+                    "when": "view == endevorExplorer && viewItem == element"
+                },
+                {
+                    "command": "endevorexplorer.retrieveElement",
+                    "when": "view == endevorExplorer && viewItem == element"
+                },
+                {
+                    "command": "endevorexplorer.retrieveElementWithDependencies",
+                    "when": "view == endevorExplorer && viewItem == element && multipleSelection == false"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "endevorexplorer.refreshHosts",
+                    "when": "view == endevorExplorer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "endevorexplorer.newHost",
+                    "when": "view == endevorExplorer",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "Explorer for Endevor",
+            "scope": "resource",
+            "properties": {
+                "endevor.hosts": {
+                    "type": "array",
+                    "title": "Host List",
+                    "items": {
+                        "type": "object",
+                        "title": "Host Configuration",
+                        "required": ["name", "url", "username", "datasource", "filters"],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Connection settings name"
+                            },
+                            "url": {
+                                "type": "string",
+                                "description": "Connection url"
+                            },
+                            "username": {
+                                "type": "string",
+                                "description": "Connection User name"
+                            },
+                            "datasource": {
+                                "type": "string",
+                                "description": "Configuration"
+                            },
+                            "filters": {
+                                "type": "array",
+                                "description": "List of connection's filters",
+                                "items": {
+                                    "type": "object",
+                                    "title": "Filter",
+                                    "properties": {
+                                        "uri": {
+                                            "type": "string",
+                                            "description": "Filter uri"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "description": "Endevor Hosts Configuration"
+                }
+            }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "endevorExplorerContainer",
+                    "title": "Explorer for Endevor",
+                    "icon": "resources/logo.svg"
+                }
+            ]
+        },
+        "views": {
+			"endevorExplorerContainer": [
+                {
+                    "id": "endevorExplorer",
+                    "name": "Explorer for Endevor"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "@types/mocha": "^2.2.42",
+        "@types/node": "^10.12.21",
+        "@types/request-promise": "^4.1.42",
+        "tslint": "^5.12.1",
+        "tslint-sonarts": "^1.9.0",
+        "typescript": "^3.3.1",
+        "vscode": "^1.1.28"
+    },
+    "dependencies": {
+        "request": "^2.88.0"
+    }
+}
