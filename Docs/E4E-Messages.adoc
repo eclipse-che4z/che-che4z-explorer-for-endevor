@@ -1,51 +1,66 @@
+---
+title: Explorer for Endevor Messages
+keywords:
+tags: []
+sidebar: che_7_docs
+permalink: che-7/E4E-Messages/
+folder: che-7/extensions
+summary:
+---
+
+[id="E4E-Messages"]
+= Explorer for Endevor Messages
+
+:context: E4E-Messages
+
 ## Explorer for Endevor Messages
 
-##### THIS FILTER STRING ALREADY EXISTS FOR HOST: HOSTNAME
+#### THIS FILTER STRING ALREADY EXISTS FOR HOST: HOSTNAME
 
-*Reason:*
+* *Reason:*
 
       Filter edit not saved as it already exists. Duplicate filters are not permitted.
 
-*Action:*
+* *Action:*
 
       Use existing filter or make additional edits to create a unique filter.
 
-##### PLEASE ENTER VALID URL
+#### PLEASE ENTER VALID URL
 
-*Reason:*
+* *Reason:*
 
     URL provided for data source is incorrect
 
-*Action:*
+* *Action:*
 
      Ensure the url for the Explorer for Endevor data source you want to use is correct.
 
-##### CONNECTION REFUSED
+#### CONNECTION REFUSED
 
-*Reason:*
+* *Reason:*
 
       Explorer for Endevor is unable to reach the specified URL 
 
-*Action:*
+* *Action:*
       
       Ensure that the URL is correct, and that you have the required access
 
-##### INVALID CREDENTIALS PROVIDED
+#### INVALID CREDENTIALS PROVIDED
 
-*Reason:*
+* *Reason:*
 
       Mainframe credentials not accepted
 
-*Action:*
+* *Action:*
 
       Confirm your mainframe credentials and re-enter
 
-##### HOST WITH NAME <HOSTNAME> ALREADY EXISTS
+#### HOST WITH NAME <HOSTNAME> ALREADY EXISTS
 
-*Reason:*
+* *Reason:*
 
       The host name must be unique and so a new host cannot be named the same as any existing host
 
-*Action:*
+* *Action:*
 
       Choose on an alternative host name
