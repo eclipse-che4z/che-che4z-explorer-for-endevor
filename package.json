@@ -10,6 +10,16 @@
     "categories": [
         "SCM Providers"
     ],
+    "keywords": [
+		"mainframe", "mainframe", "explorer", "endevor"
+    ],
+    "repository": {
+		"url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
+	},
+	"homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
+	"bugs": {
+		"url": "https://github.com/eclipse/che-che4z-explorer-for-endevor/issues"
+	},
     "activationEvents": [
         "onWebviewPanel:endevorHostPanel",
         "workspaceContains:.gbmapping",
