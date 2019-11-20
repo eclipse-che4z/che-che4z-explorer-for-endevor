@@ -24,3 +24,4 @@ _cacache
 _npx
 anonymous-cli-metrics.json
 Jenkinsfile
+sonar-project.properties
