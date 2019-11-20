@@ -67,7 +67,7 @@ pipeline {
                 container('node') {
                     sh "npx vsce package"
                     archiveArtifacts "*.vsix"        
-                    sh "mv *explorer-for-endevor*.vsix explorer-for-endevor_latest.vsix"
+                    sh "mv *$projectName*.vsix '$projectName'_latest.vsix"
                 }
             }
         }
