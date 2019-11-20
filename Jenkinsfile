@@ -48,14 +48,13 @@ pipeline {
        workspace = "$env.WORKSPACE"
     }
     stages {
-        stage('Install & Test') {
+        stage('Install Dependencies') {
             environment {
                 npm_config_cache = "$env.WORKSPACE"
             }
             steps {
                 container('node') {
                     sh "npm ci"
-                    // sh "npm test"
                 }
             }
         }
