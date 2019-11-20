@@ -20,3 +20,7 @@ vsc-extension-quickstart.md
 **/tslint.json
 **/*.map
 **/*.ts
+_cacache
+_npx
+anonymous-cli-metrics.json
+Jenkinsfile
