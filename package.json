@@ -11,7 +11,7 @@
         "SCM Providers"
     ],
     "keywords": [
-		"mainframe", "mainframe", "explorer", "endevor"
+		"zOS", "mainframe", "explorer", "endevor"
     ],
     "repository": {
 		"url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
