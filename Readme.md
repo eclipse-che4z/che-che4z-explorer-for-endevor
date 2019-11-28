@@ -1,7 +1,6 @@
-# Explorer for Endevor extension for VS Code
+# Explorer for Endevor
 
-Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® SCM elements using a user-friendly, intuitive interface.
-Explorer for Endevor allows you to create customized filters for Endevor Elements enabling you to Browse and Retrieve specific Elements, without knowing the exact path to navigate beforehand.
+Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® SCM elements using a user-friendly, intuitive IDE interface. Explorer for Endevor allows you to create customized filters for Endevor Elements enabling you to Browse and Retrieve specific Elements, without knowing the exact path to navigate beforehand.
 
 ## **Contents**
 
@@ -16,13 +15,16 @@ Explorer for Endevor allows you to create customized filters for Endevor Element
 
 ## **Prerequisites**
 
-Prior to installing the Visual Studio Code Extension for Explorer for Endevor, ensure that you meet the following prerequisites:
+Prior to installing Explorer for Endevor, ensure that you meet the following prerequisites:
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
 - Installed and configured CA Endevor® SCM Web Services.
 - Latest maintenance and updates applied.
     - Check [here](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0/Endevor-Explorer-for-CA-Endevor-SCM/Install-Endevor-Explorer-for-Visual-Studio-Code.html#topic.dita_cb1ab084-7939-4082-96b1-40bd34c86be6) for more information.
+- **Optional:**
+    - If installing in Eclipse Che IDE:
+        - Eclipse Che 7.3 on Kubernetes
 
 ## **User Guide**
 
@@ -34,15 +36,15 @@ Create a Host in Explorer for Endevor to specify the data source you want to wor
 
 ![](https://raw.githubusercontent.com/zimlu02/Explorer-for-Endevor-about/master/explorer-for-endevor-gifs/create_host.gif)
 
-**Follow these steps:**
+**Procedure:**
 
-1. Open the Explorer for Endevor extension in Visual Studio Code.
+1. Open the Explorer for Endevor extension.
 2. Click the plus icon or *New connection*.
    
    You will be prompted to enter an Endevor repository URL in the format 'http(s)://url:port', for example 'http(s)://myhost01:9090' then press 'Enter' to confirm or 'Escape' to cancel.
 3. Select a CA Endevor SCM configuration from the drop-down list.
 
-You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the Visual Studio Code interface.
+You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the interface.
 - Change the name of the connection by clicking the pencil icon next to the connection name. Names must be unique as duplicate names are not permitted.
 - Filters can be created in the connection without being logged in, however you will be prompted to enter your credentials before any data is displayed.
 
