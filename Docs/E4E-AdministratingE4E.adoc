@@ -15,7 +15,9 @@ summary:
 
 As an Explorer for Endevor administrator, ensure that users have the following resources prior to using Explorer for Endevor for the first time.
 
-- Visual Studio Code installed
+- IDE installed, such as:
+    - Eclipse Che
+    - Visual Studio Code
 - Mainframe credentials
 - Endevor user access.
 - Administrator access should also be in place for system administrators or senior users where required.
