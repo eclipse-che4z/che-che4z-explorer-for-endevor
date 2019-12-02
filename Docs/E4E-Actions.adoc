@@ -288,11 +288,11 @@ This action allows you to retrieve several elements simultaneously, ensuring tha
 
 *Prerequisite:*
 
-- Workspace established and open in Visual Studio Code Explorer
+- Workspace established and open in your IDE
 
 *Procedure:*
 
-. Ensure that you have an open workspace in Visual Studio Code Explorer
+. Ensure that you have an open workspace in your IDE
 . Left-click on the first element that you want to retrieve in either the Map or Filters view.
 . Hold Shift and use the arrow keys to move up or down to select multiple elements that you want to retrieve
 . Right-click on selected elements that you want to retrieve. The options to Browse or Retrieve Element appear.
@@ -305,4 +305,4 @@ This action allows you to retrieve several elements simultaneously, ensuring tha
 //DELMOD EXEC PGM=CONDELE,PARM=*COMPONENTS
 ```
 
-You have successfully retrieved multiple elements and can now work with them in Visual Studio Code or your preferred IDE.
+You have successfully retrieved multiple elements and can now work with them in your preferred IDE.
