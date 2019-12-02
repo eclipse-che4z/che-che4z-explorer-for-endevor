@@ -13,7 +13,7 @@ summary:
 
 :context: E4E-InstallE4E
 
-Explorer for Endevor lets you view and edit Endevor data using a user-friendly, intuitive modern interface.
+Explorer for Endevor lets you view and edit Endevor data using a user-friendly, intuitive modern interface, such as Visual Studio Code, or Eclipse Che.
 
 Explorer for Endevor allows you to create customized views and filters for Endevor data, enabling you to identify and retrieve specific elements, using a modern front-end Endevor interface
 
