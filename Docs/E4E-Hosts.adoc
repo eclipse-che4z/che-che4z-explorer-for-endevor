@@ -13,7 +13,7 @@ summary:
 
 :context: E4E-Hosts
 
-Endevor Explorer Hosts define a path to a Endevor data source location. Explorer for Endevor can support the creation of multiple hosts in one instance.
+Explorer for Endevor Hosts define a path to a Endevor data source location. Explorer for Endevor can support the creation of multiple hosts in one instance.
 
 You can, for example:
 
@@ -23,23 +23,23 @@ You can, for example:
 
 ### Create An Explorer for Endevor Host
 
-To create an Endevor Host, specify the data source that you want to view, with or without write access.
+To create an Explorer for Endevor Host, specify the data source that you want to view, with or without write access.
 
 *Procedure:*
 
-. Open the Explorer tab in Visual Studio Code and enter your Mainframe credentials when prompted.
+. Open the Explorer for Endevor tab in your IDE and enter your Mainframe credentials when prompted.
 . Minimize the other tabs if needed
 . Click the plus icon on the Explorer for Endevor tab.
     - You will be prompted to enter a z/OS URL in the format 'http(s)://url:port', for example: http://myhost01:9090 then press 'Enter' to confirm or 'Escape' to cancel.
-. Enter a unique name for the Endevor Host
+. Enter a unique name for the Explorer for Endevor Host
 . Click Next. If the repository name and URL are accepted, the CA Endevor SCM configuration becomes available.
 . Select a CA Endevor SCM configuration from the drop-down list.
 
-You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the Visual Studio Code interface.
+You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the IDE interface.
 
 ### Refresh Explorer for Endevor Host Repository
 
-The Explorer for Endevor tab in Visual Studio Code shows all your currently mapped Explorer for Endevor Hosts. Each of these hosts show the contents of the specified data source.
+The Explorer for Endevor tab in your IDE shows all your currently mapped Explorer for Endevor Hosts. Each of these hosts show the contents of the specified data source.
 
 You can refresh each host to ensure that the data you are working with is current.
 
@@ -62,7 +62,7 @@ You cannot currently update the URL of the data source, or the selected Endevor 
 
 *Procedure:*
 
-. Navigate to Explorer for Endevor Your current Hosts are displayed under the Explorer for Endevor tab in the Explorer view.
+. Navigate to Explorer for Endevor. Your current Hosts are displayed under the Explorer for Endevor tab in the Explorer view.
 . Select the host that you want to update The host is highlighted, and the following icons are displayed:
     - Delete
     - Refresh
