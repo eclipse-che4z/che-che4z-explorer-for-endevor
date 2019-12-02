@@ -17,7 +17,7 @@ Explorer for Endevor lets you view and edit Endevor data using a user-friendly, 
 
 Explorer for Endevor allows you to create customized views and filters for Endevor data, enabling you to identify and retrieve specific elements, using a modern front-end Endevor interface
 
-### Install Explorer for Endevor for Eclipse Che
+## Install Explorer for Endevor for Eclipse Che
 
 Explorer for Endevor can be installed as part of the Eclipse Che4z basic stack.
 
@@ -27,20 +27,19 @@ Eclipse Che 7.3 on Kubernetes
 #### Procedure
 . Log in to Eclipse Che.
 
-. In a web browser, load the following URL:
-https://<CHE_HOST>/f?url=https://github.com/eclipse/che-che4z/raw/1.0.0/mainframe-basic-stack.yaml
+. In a web browser, load the following URL: `https://<CHE_HOST>/f?url=https://github.com/eclipse/che-che4z/raw/1.0.0/mainframe-basic-stack.yaml`
 
-    - https://<CHE_HOST> specifies the Che Server URL, for example: https://my-che-server.com.
+    - `https://<CHE_HOST> specifies the Che Server URL, for example: https://my-che-server.com.`
 
-    - /f?url= links the Che Server URL to the Eclipse Che4z basic stack URL.
+    - `/f?url= links the Che Server URL to the Eclipse Che4z basic stack URL.`
 
-    - https://github.com/eclipse/che-che4z/raw/1.0.0/mainframe-basic-stack.yaml is the Eclipse Che4z basic stack URL.
+    - `https://github.com/eclipse/che-che4z/raw/1.0.0/mainframe-basic-stack.yaml is the Eclipse Che4z basic stack URL.`
 
 . Press Enter and wait for the workspace to initialize.
 
 . A workspace is created with Eclipse Che4z extensions available.
 
-### Install Explorer for Endevor for Visual Studio Code
+## Install Explorer for Endevor for Visual Studio Code
 
 Explorer for Endevor for Visual Studio Code (VSC) lets you view and edit Endevor data using a user-friendly, intuitive modern interface.
 
