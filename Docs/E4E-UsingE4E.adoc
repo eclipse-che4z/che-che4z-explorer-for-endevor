@@ -35,20 +35,20 @@ You can, for example:
 - Hosts can be renamed as their purpose changes. You can also update your credentials here to ensure access to the data source is maintained.
 
 ### Views
-Explorer for Endevor offers two views through which you can inspect Endevor data:
+- Explorer for Endevor offers two views through which you can inspect Endevor data:
 
 #### Filters View
-Filters View contains all filters created by your previous searches in the Map View.
+- Filters View contains all filters created by your previous searches in the Map View.
   
 #### Map View
-Map View expands to show the several levels of Endevor data. Use the path followed in Map View to create filters which mimic the path taken. These filters then allow you to only show the relevant information.
+- Map View expands to show the several levels of Endevor data. Use the path followed in Map View to create filters which mimic the path taken. These filters then allow you to only show the relevant information.
 
 ### Actions
 
 #### Filter Actions
 
-Filter Actions allow you to Create and Edit filters, and then to Delete filters once no longer required.
+- Filter Actions allow you to Create and Edit filters, and then to Delete filters once no longer required.
 
 #### Element Actions
 
-Element Actions allow you to Browse and inspect Elements. You can then Retrieve Elements and manipulate them as required in your chosen IDE.
+- Element Actions allow you to Browse and inspect Elements. You can then Retrieve Elements and manipulate them as required in your chosen IDE.
