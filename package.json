@@ -4,6 +4,9 @@
     "description": "Explorer for Endevor",
     "version": "0.9.0",
     "publisher": "broadcomMFD",
+    "repository": {
+        "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
+    },
     "engines": {
         "vscode": "^1.32.0"
     },
@@ -11,15 +14,15 @@
         "SCM Providers"
     ],
     "keywords": [
-		"zOS", "mainframe", "explorer", "endevor"
+        "zOS",
+        "mainframe",
+        "explorer",
+        "endevor"
     ],
-    "repository": {
-		"url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
-	},
-	"homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
-	"bugs": {
-		"url": "https://github.com/eclipse/che-che4z-explorer-for-endevor/issues"
-	},
+    "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
+    "bugs": {
+        "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor/issues"
+    },
     "activationEvents": [
         "onWebviewPanel:endevorHostPanel",
         "workspaceContains:.gbmapping",
@@ -179,7 +182,13 @@
                     "items": {
                         "type": "object",
                         "title": "Host Configuration",
-                        "required": ["name", "url", "username", "datasource", "filters"],
+                        "required": [
+                            "name",
+                            "url",
+                            "username",
+                            "datasource",
+                            "filters"
+                        ],
                         "properties": {
                             "name": {
                                 "type": "string",
@@ -227,7 +236,7 @@
             ]
         },
         "views": {
-			"endevorExplorerContainer": [
+            "endevorExplorerContainer": [
                 {
                     "id": "endevorExplorer",
                     "name": "Explorer for Endevor"
@@ -242,13 +251,11 @@
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
     "devDependencies": {
-        "@types/mocha": "^2.2.42",
-        "@types/node": "^10.12.21",
-        "@types/request-promise": "^4.1.42",
-        "tslint": "^5.12.1",
+        "@types/node": "^12.6.2",
+        "tslint": "^5.18.0",
         "tslint-sonarts": "^1.9.0",
-        "typescript": "^3.3.1",
-        "vscode": "^1.1.28"
+        "typescript": "^3.5.3",
+        "vscode": "^1.1.33"
     },
     "dependencies": {
         "request": "^2.88.0"
