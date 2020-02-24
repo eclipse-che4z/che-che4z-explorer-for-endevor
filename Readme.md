@@ -15,7 +15,7 @@ Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® S
 
 ## **Prerequisites**
 
-Prior to installing Explorer for Endevor, ensure that you meet the following prerequisites:
+Prior to using Explorer for Endevor, ensure that you meet the following prerequisites:
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
@@ -25,6 +25,12 @@ Prior to installing Explorer for Endevor, ensure that you meet the following pre
 - **Optional:**
     - If installing in Eclipse Che IDE:
         - Eclipse Che 7.3 on Kubernetes
+
+## **Installing**
+
+Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
+
+If using Eclipse Che version 7.3 on Kubernetes, follow the Installing Che section [here](https://github.com/eclipse/che-che4z).
 
 ## **User Guide**
 
@@ -170,7 +176,7 @@ Once you identify the relevant Element, you can perform the following actions:
 
 	Retrieves several selected Elements. The Elements are stored locally in the specified Workspace.
 
-For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0.html)
+For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-integrations-for-enterprise-devops/1-0/Endevor-Explorer-for-CA-Endevor-SCM.html)
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
