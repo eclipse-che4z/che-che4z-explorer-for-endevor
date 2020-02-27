@@ -5,6 +5,7 @@ Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® S
 ## **Contents**
 
 - [**Prerequisites**](#prerequisites)
+- [**Installing**](#installing)
 - [**User Guide**](#user-guide)
 - [**Use Cases**](#use-cases)
 - [**Configuration and Usage Tips**](#configuration-and-usage-tips)
