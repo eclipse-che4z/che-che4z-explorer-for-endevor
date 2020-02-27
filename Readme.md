@@ -22,7 +22,7 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 - Access to CA Endevor® SCM
 - Installed and configured CA Endevor® SCM Web Services.
 - Latest maintenance and updates applied.
-    - Check [here](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0/Endevor-Explorer-for-CA-Endevor-SCM/Install-Endevor-Explorer-for-Visual-Studio-Code.html#topic.dita_cb1ab084-7939-4082-96b1-40bd34c86be6) for more information.
+    - Check [here](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1.html) for more information.
 - **Optional:**
     - If installing in Eclipse Che IDE:
         - Eclipse Che 7.3 on Kubernetes
