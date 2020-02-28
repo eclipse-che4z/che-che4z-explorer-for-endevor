@@ -2,7 +2,7 @@
 All notable changes to Explorer for Endevor will be documented in this file.
 
 ## [0.9.1] 2020-02-28
-# Changed
+### Changed
 - Readme.md updated
 - License changed to EPL 2.0
 - Open-source release and move to public repository
@@ -11,7 +11,7 @@ All notable changes to Explorer for Endevor will be documented in this file.
 ### Added
 - New Host Creation
 
-# Changed
+### Changed
 - UX Enhancements
 
 ## [0.8.0] - 2019-08-21
@@ -27,5 +27,3 @@ All notable changes to Explorer for Endevor will be documented in this file.
 - Extension name changed
 - Corrected Links
 - Third Party Licence texts applied
-
-### Removed
