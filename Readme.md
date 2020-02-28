@@ -178,6 +178,9 @@ Once you identify the relevant Element, you can perform the following actions:
 	Retrieves several selected Elements. The Elements are stored locally in the specified Workspace.
 
 For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-integrations-for-enterprise-devops/1-0/Endevor-Explorer-for-CA-Endevor-SCM.html)
+
+[![GitHub issues](https://img.shields.io/github/issues-raw/eclipse/che-che4z-lsp-for-hlasm?style=flat-square)](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
+[![slack](https://img.shields.io/badge/chat-on%20Slack-blue?style=flat-square)](https://join.slack.com/t/che4z/shared_invite/enQtNzk0MzA4NDMzOTIwLWIzMjEwMjJlOGMxNmMyNzQ1NWZlMzkxNmQ3M2VkYWNjMmE0MGQ0MjIyZmY3MTdhZThkZDg3NGNhY2FmZTEwNzQ)
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
