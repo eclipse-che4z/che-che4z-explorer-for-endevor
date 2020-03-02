@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Explorer for Endevor will be documented in this file.
 
-## [0.9.1] 2020-02-28
+## [0.9.1] 2020-03-02
 ### Changed
 - Readme.md updated
 - License changed to EPL 2.0
