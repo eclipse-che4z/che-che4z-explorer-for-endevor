@@ -1,5 +1,5 @@
 <div id="header" align="center">
-    
+
 [![Build Status](https://ci.eclipse.org/che4z/buildStatus/icon?job=endevorExplorer%2Fdevelopment)](https://ci.eclipse.org/che4z/job/endevorExplorer/job/development/)
 [![GitHub issues](https://img.shields.io/github/issues-raw/eclipse/che-che4z-explorer-for-endevor)](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
 [![slack](https://img.shields.io/badge/chat-on%20Slack-blue)](https://join.slack.com/t/che4z/shared_invite/enQtNzk0MzA4NDMzOTIwLWIzMjEwMjJlOGMxNmMyNzQ1NWZlMzkxNmQ3M2VkYWNjMmE0MGQ0MjIyZmY3MTdhZThkZDg3NGNhY2FmZTEwNzQ)
@@ -61,7 +61,7 @@ Create a Host in Explorer for Endevor to specify the data source you want to wor
 
 1. Open the Explorer for Endevor extension.
 2. Click the plus icon or *New connection*.
-   
+
    You will be prompted to enter an Endevor repository URL in the format 'http(s)://url:port', for example 'http(s)://myhost01:9090' then press 'Enter' to confirm or 'Escape' to cancel.
 3. Select a CA Endevor SCM configuration from the drop-down list.
 
@@ -93,7 +93,7 @@ Creating a manual filter is a quick way to narrow down your search to only relev
     - Type (type)
     - Element (element)
 
-        If you are unsure about any of the parameters, you can substitute up to two with a * wildcard, or instead create a filter using the Map View option. 
+        If you are unsure about any of the parameters, you can substitute up to two with a * wildcard, or instead create a filter using the Map View option.
 
 2. Click the plus icon next to **Filter** on the **Explorer for Endevor** tab.
 
@@ -111,7 +111,7 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 1. Open Map View in Explorer for Endevor for your selected Host
 2. Navigate the view as required, selecting your desired options as you navigate through the different parameters in hierarchical order.
 3. Select an entry at the **Type** level, and click the plus icon.
-    
+
     The path that you followed appears highlighted at the top of your screen, displaying the following dialog:
 
         "Create a new Endevor filter (Press 'Enter' to confirm or 'Escape' to cancel)"
@@ -127,7 +127,7 @@ The Browse Element action displays the entire contents of the Element, including
 **Follow these steps:**
 
 1. Right-click on the element in either the Map or Filters view.
-    
+
     The options to Browse or Retrieve the Element appear.
 
 2. Select the Browse Element option.
