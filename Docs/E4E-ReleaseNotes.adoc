@@ -35,3 +35,10 @@ Version 0.9 was released on 19 September 2019 and includes the following feature
 - Streamlined process to create new Host connections
 
 ##### UX Enhancements
+
+#### Version 0.9.1
+Version 0.9.1 was released on 28 September 2019 and includes the following features:
+
+##### Updated README
+
+##### Updated License

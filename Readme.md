@@ -1,10 +1,25 @@
+<div id="header" align="center">
+    
+[![Build Status](https://ci.eclipse.org/che4z/buildStatus/icon?job=endevorExplorer%2Fdevelopment)](https://ci.eclipse.org/che4z/job/endevorExplorer/job/development/)
+[![GitHub issues](https://img.shields.io/github/issues-raw/eclipse/che-che4z-explorer-for-endevor)](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
+[![slack](https://img.shields.io/badge/chat-on%20Slack-blue)](https://join.slack.com/t/che4z/shared_invite/enQtNzk0MzA4NDMzOTIwLWIzMjEwMjJlOGMxNmMyNzQ1NWZlMzkxNmQ3M2VkYWNjMmE0MGQ0MjIyZmY3MTdhZThkZDg3NGNhY2FmZTEwNzQ)
+
+</div>
+
 # Explorer for Endevor
 
 Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® SCM elements using a user-friendly, intuitive IDE interface. Explorer for Endevor allows you to create customized filters for Endevor Elements enabling you to Browse and Retrieve specific Elements, without knowing the exact path to navigate beforehand.
 
+> How can we improve Explorer for Endevor? [Let us know on our Git repository](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
+
+This extension is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. Feel free to contribute right here.
+
+Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe) and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
+
 ## **Contents**
 
 - [**Prerequisites**](#prerequisites)
+- [**Installing**](#installing)
 - [**User Guide**](#user-guide)
 - [**Use Cases**](#use-cases)
 - [**Configuration and Usage Tips**](#configuration-and-usage-tips)
@@ -15,16 +30,22 @@ Explorer for Endevor gives you the ability to Browse and Retrieve CA Endevor® S
 
 ## **Prerequisites**
 
-Prior to installing Explorer for Endevor, ensure that you meet the following prerequisites:
+Prior to using Explorer for Endevor, ensure that you meet the following prerequisites:
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
 - Installed and configured CA Endevor® SCM Web Services.
 - Latest maintenance and updates applied.
-    - Check [here](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0/Endevor-Explorer-for-CA-Endevor-SCM/Install-Endevor-Explorer-for-Visual-Studio-Code.html#topic.dita_cb1ab084-7939-4082-96b1-40bd34c86be6) for more information.
+    - Check [here](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1.html) for more information.
 - **Optional:**
     - If installing in Eclipse Che IDE:
         - Eclipse Che 7.3 on Kubernetes
+
+## **Installing**
+
+Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
+
+If using Eclipse Che version 7.3 on Kubernetes, follow the Installing Che section [here](https://github.com/eclipse/che-che4z).
 
 ## **User Guide**
 
@@ -34,7 +55,7 @@ You must first create a host in Explorer for Endevor to enable it to access the 
 
 Create a Host in Explorer for Endevor to specify the data source you want to work with. This will allow you to view and explore the selected Endevor repositories.
 
-![](https://raw.githubusercontent.com/zimlu02/Explorer-for-Endevor-about/master/explorer-for-endevor-gifs/create_host.gif)
+![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_host.gif)
 
 **Procedure:**
 
@@ -56,7 +77,7 @@ Explorer for Endevor filters can be created in two ways:
 
 - Search in Map View, and save a filter from the path followed.
 
-![](https://raw.githubusercontent.com/zimlu02/Explorer-for-Endevor-about/master/explorer-for-endevor-gifs/create_filter.gif)
+![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_filter.gif)
 
 #### **Create a Manual Filter:**
 
@@ -113,7 +134,7 @@ The Browse Element action displays the entire contents of the Element, including
 
     The Element is displayed in the panel, including related information, as shown below:
 
-    ![](https://raw.githubusercontent.com/zimlu02/Explorer-for-Endevor-about/master/explorer-for-endevor-gifs/browse_retrieve.gif)
+    ![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/browse_retrieve.gif)
 
 3. Review the displayed information to determine if it is relevant or useful to you.
 
@@ -170,7 +191,7 @@ Once you identify the relevant Element, you can perform the following actions:
 
 	Retrieves several selected Elements. The Elements are stored locally in the specified Workspace.
 
-For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0.html)
+For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-integrations-for-enterprise-devops/1-0/Endevor-Explorer-for-CA-Endevor-SCM.html)
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
@@ -192,4 +213,4 @@ Technical support cases must be submitted to Broadcom in accordance with guidanc
 Note: To receive technical assistance and support, you must remain compliant with “Working with Support”, be current on all applicable licensing and maintenance requirements, and maintain an environment in which all computer hardware, operating systems, and third party software associated with the affected Broadcom CA software are on the releases and version levels from the manufacturer that Broadcom designates as compatible with the software.  Changes you elect to make to your operating environment could detrimentally affect the performance of Broadcom CA software and Broadcom shall not be responsible for these effects or any resulting degradation in performance of the Broadcom CA software.  Severity 1 cases must be opened via telephone and elevations of lower severity incidents to Severity 1 status must be requested via telephone.
 
 ------------------------------------------------------------------------------------------------
-Copyright © 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+Copyright © 2020 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
