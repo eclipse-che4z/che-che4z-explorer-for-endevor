@@ -37,7 +37,7 @@ Version 0.9 was released on 19 September 2019 and includes the following feature
 ##### UX Enhancements
 
 #### Version 0.9.1
-Version 0.9.1 was released on 28 September 2020 and includes the following features:
+Version 0.9.1 was released on 28 September 2019 and includes the following features:
 
 ##### Updated README
 
