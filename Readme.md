@@ -34,18 +34,15 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
-- Installed and configured CA Endevor® SCM Web Services.
-- Latest maintenance and updates applied.
-    - Check [here](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1.html) for more information.
-- **Optional:**
-    - If installing in Eclipse Che IDE:
-        - Eclipse Che 7.3 on Kubernetes
+- CA Endevor® SCM version 18.0.12 or higher with the following PTFs applied:
+   - (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
+   - (if using version 18.1.x) PTF SO11272
+   - (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
+- CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/installing/how-to-enable-web-services/configure-ca-endevor-scm-for-web-services.html)
 
 ## **Installing**
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
-
-If using Eclipse Che version 7.3 on Kubernetes, follow the Installing Che section [here](https://github.com/eclipse/che-che4z).
 
 ## **User Guide**
 
