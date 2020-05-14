@@ -32,8 +32,6 @@ export async function browseElement(arg: any) {
             progress.report({ increment: 10 });
             try {
                 const session = utils.buildSession(repo);
-                // this needs to be
-                // WEBSMFTS/env/SMPLPROD/stgnum/1/sys/ADMIN/subsys/PROCESS/type/PROCESS/ele/DLODNNL
                 const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
 
                 const requestBody = utils.buildRequestBody();
