@@ -12,8 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
+import { IElementActionRequest, IElementBasicData} from "@broadcom/endevor-for-zowe-cli";
+import { Session, ISession} from "@zowe/imperative";
 import { EndevorElementNode } from "./ui/tree/EndevorNodes";
+import { EndevorQualifier } from "./model/IEndevorQualifier";
+import { Repository } from "./model/Repository";
 
 export function toArray<T>(data: any): T[] {
     if (Array.isArray(data)) {
@@ -67,4 +70,57 @@ export function multipleElementsSelected(selection: any[]): boolean {
     } else {
         return false;
     }
+}
+
+export function buildSession(repository: Repository): Session {
+    const protocol = repository.getUrl().split(":")[0];
+    const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
+    // TODO: check how to enforce type (see with Vit)
+    const port: any = repository.getUrl().split(":")[2];
+    // make this readable
+    // tslint:disable-next-line: max-line-length
+    const basePath: string = repository.getUrlString().split(":")[2].split("/")[1] + "/" + repository.getUrlString().split(":")[2].split("/")[2];
+    const sessionDetails: ISession = {
+        basePath,
+        hostname,
+        // password: repository.getPassword(),
+        port,
+        //TODO: figure out how to cast this shit (see with Vit)
+        protocol: "http", 
+        rejectUnauthorized: false,
+        type: "basic",
+        // strictSSL: true,
+        // secureProtocol: 'SSLv23_method',
+        // user: repository.getUsername(),
+        base64EncodedAuth: Buffer.from(repository.getUsername() + ":" + repository.getPassword()).toString("base64")
+    }
+    return new Session(sessionDetails);
+}
+
+export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, instance: string): IElementBasicData{
+    let element: IElementBasicData;
+    element = {
+        element: endevorQualifier.element ? endevorQualifier.element : "null",
+        environment: endevorQualifier.env ? endevorQualifier.env : "null",
+        instance,
+        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : "null",
+        subsystem: endevorQualifier.subsystem ? endevorQualifier. subsystem : "null",
+        system: endevorQualifier.system ? endevorQualifier.system : "null",
+        type: endevorQualifier.type ? endevorQualifier.type : "null",
+        // TODO: see with Vit what to do here
+        // [key: string]: null
+    }
+    return element;
+}
+
+export function buildRequestBody(): IElementActionRequest {
+    return {
+        expandIncludes: "",
+        level: "",
+        noSignout: "yes",
+        oveSign: "",
+        replaceMember: "",
+        search: "",
+        version: "",
+    };
 }

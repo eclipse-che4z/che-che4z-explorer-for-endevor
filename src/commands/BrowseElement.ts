@@ -12,10 +12,12 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { PrintElementComponents, IEndevorRestResponse } from "@broadcom/endevor-for-zowe-cli";
 import * as vscode from "vscode";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { EndevorRestClient } from "../service/EndevorRestClient";
+import * as utils from "../utils";
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
@@ -29,7 +31,24 @@ export async function browseElement(arg: any) {
         async progress => {
             progress.report({ increment: 10 });
             try {
-                const data: any = await EndevorRestClient.browseElement(repo, eq);
+                const session = utils.buildSession(repo);
+                // this needs to be
+                // WEBSMFTS/env/SMPLPROD/stgnum/1/sys/ADMIN/subsys/PROCESS/type/PROCESS/ele/DLODNNL
+                const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
+
+                const requestBody = utils.buildRequestBody();
+                // TODO: check this with Vit
+                let data: any;
+                try {
+                    const printResult = await PrintElementComponents.printElementComponents(session, element, requestBody);
+                    // TODO: check this with Vit
+                    data = printResult.data ? printResult.data.toString() : undefined;
+                } catch (error) {
+                    // TODO: error handling
+                    console.log(error);
+                }
+
+                // const data: any = await EndevorRestClient.browseElement(repo, eq);
                 progress.report({ increment: 50 });
                 let doc: vscode.TextDocument | undefined;
                 doc = await vscode.workspace.openTextDocument({ content: data });
