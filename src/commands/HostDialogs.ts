@@ -12,11 +12,12 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { IEndevorInstance, ListInstance } from "@broadcom/endevor-for-zowe-cli";
 import { URL } from "url";
 import { ProgressLocation, window, workspace } from "vscode";
 import { EndevorController } from "../EndevorController";
 import { Repository } from "../model/Repository";
-import { EndevorRestClient } from "../service/EndevorRestClient";
+import * as utils from "../utils";
 
 export class HostDialogs {
     /**
@@ -43,9 +44,15 @@ export class HostDialogs {
             async progress => {
                 progress.report({message: "Waiting for " + newRepo.getUrl() + " to respond.", increment: 10 });
                 try {
-                    const datasources = await EndevorRestClient.listDatasources(newRepo);
+                    const session = utils.buildSession(newRepo);
+                    const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
+                    // tslint:disable-next-line: no-commented-code
+                    // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
+                    // TODO: wierdly enough the old implementation gives error (invalid url) with https but new one works
                     for (const ds of datasources) {
-                        dsNames.push(ds.name);
+                        // TODO: slight mismatch between interfaces - check with Vit
+                        // need to cast, since all properties defined with IEndevorInstance are optional
+                        dsNames.push(ds.name as string);
                     }
                     dsNames.sort();
                     progress.report({ increment: 100 });
