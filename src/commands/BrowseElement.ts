@@ -30,7 +30,7 @@ export async function browseElement(arg: any) {
         async progress => {
             progress.report({ increment: 10 });
             try {
-                const session = utils.buildSession(repo);
+                const session = await utils.buildSession(repo);
                 const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
 
                 const requestBody = utils.buildRequestBody();

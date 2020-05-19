@@ -44,11 +44,11 @@ export class HostDialogs {
             async progress => {
                 progress.report({message: "Waiting for " + newRepo.getUrl() + " to respond.", increment: 10 });
                 try {
-                    const session = utils.buildSession(newRepo);
+                    const session = await utils.buildSession(newRepo);
                     const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
                     // tslint:disable-next-line: no-commented-code
                     // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
-                    // TODO: wierdly enough the old implementation gives error (invalid url) with https but new one works
+                    // TODO: the old implementation weirdly gives error (invalid url) with https but new one works
                     for (const ds of datasources) {
                         // TODO: slight mismatch between interfaces - check with Vit
                         // need to cast, since all properties defined with IEndevorInstance are optional

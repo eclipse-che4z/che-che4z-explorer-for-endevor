@@ -16,6 +16,7 @@ import { IElementActionRequest, IElementBasicData} from "@broadcom/endevor-for-z
 import { ISession, Session} from "@zowe/imperative";
 import { EndevorQualifier } from "./model/IEndevorQualifier";
 import { Repository } from "./model/Repository";
+import { CredentialsInputBox } from "./ui/tree/CredentialsInput";
 import { EndevorElementNode } from "./ui/tree/EndevorNodes";
 
 export function toArray<T>(data: any): T[] {
@@ -73,7 +74,7 @@ export function multipleElementsSelected(selection: any[]): boolean {
 }
 
 // THROWAWAY: will be covered by profile implementation with Imperative profile management
-export function buildSession(repository: Repository): Session {
+export async function buildSession(repository: Repository): Promise<Session> {
     const protocol = repository.getUrl().split(":")[0];
     const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
     // TODO: check how to enforce type (see with Vit)
@@ -81,6 +82,14 @@ export function buildSession(repository: Repository): Session {
     // make this readable
     const basePath: string = repository.getUrlString().split(":")[2].split("/")[1] +
         "/" + repository.getUrlString().split(":")[2].split("/")[2];
+
+    // set password if not defined
+    if (!repository.getPassword()) {
+        const creds = await CredentialsInputBox.askforCredentials(repository)
+        if (!creds) {
+            throw { cancelled: true };
+        }
+    }
     const sessionDetails: ISession = {
         base64EncodedAuth: Buffer.from(repository.getUsername() + ":" + repository.getPassword()).toString("base64"),
         basePath,
@@ -101,13 +110,13 @@ export function buildSession(repository: Repository): Session {
 export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, instance: string): IElementBasicData {
     let element: IElementBasicData;
     element = {
-        element: endevorQualifier.element ? endevorQualifier.element : "null",
-        environment: endevorQualifier.env ? endevorQualifier.env : "null",
+        element: endevorQualifier.element ? endevorQualifier.element : "*",
+        environment: endevorQualifier.env ? endevorQualifier.env : "*",
         instance,
-        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : "null",
-        subsystem: endevorQualifier.subsystem ? endevorQualifier. subsystem : "null",
-        system: endevorQualifier.system ? endevorQualifier.system : "null",
-        type: endevorQualifier.type ? endevorQualifier.type : "null",
+        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : "*",
+        subsystem: endevorQualifier.subsystem ? endevorQualifier. subsystem : "*",
+        system: endevorQualifier.system ? endevorQualifier.system : "*",
+        type: endevorQualifier.type ? endevorQualifier.type : "*",
         // TODO: see with Vit what to do here
         // [key: string]: null
     };

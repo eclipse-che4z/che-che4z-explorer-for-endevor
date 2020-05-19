@@ -13,6 +13,12 @@
  */
 
 // tslint:disable: max-classes-per-file
+import { ListElement,
+         ListEnvironment,
+         ListStage,
+         ListSubsystem,
+         ListSystem,
+         ListType } from "@broadcom/endevor-for-zowe-cli";
 import * as vscode from "vscode";
 import { createEmptyNode, createPathNodes } from "../../FilterUtils";
 import { Element } from "../../model/Element";
@@ -26,7 +32,7 @@ import { Stage } from "../../model/Stage";
 import { SubSystem } from "../../model/SubSystem";
 import { System } from "../../model/System";
 import { Type } from "../../model/Type";
-import { EndevorRestClient, Resource } from "../../service/EndevorRestClient";
+import * as utils from "../../utils";
 
 export class EndevorNode extends vscode.TreeItem {
     private entity?: EndevorEntity;
@@ -189,7 +195,12 @@ export class EndevorBrowsingNode extends EndevorNode {
         try {
             const resultNodes: EndevorQualifiedNode[] = [];
             const resultEntities: Environment[] = [];
-            const envs: IEnvironment[] = await EndevorRestClient.getMetadata(repo, {}, Resource.ENV);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const environment = utils.endevorQualifierToElement({}, instance);
+            const requestBody = ListEnvironment.setupListEnvironmentRequest({});
+            const envResponse = await ListEnvironment.listEnvironment(session, instance, environment, requestBody);
+            const envs: IEnvironment[] = envResponse.data as any[];
             envs.forEach(env => {
                 const envEntity: Environment = new Environment(repo, env);
                 resultEntities.push(envEntity);
@@ -294,7 +305,12 @@ export class FilterNode extends EndevorNode {
         this.needReload = false;
 
         try {
-            const elements: IElement[] = await EndevorRestClient.getMetadata(repo, qualifier, Resource.ELEMENT);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const endevorElement = utils.endevorQualifierToElement(qualifier, instance);
+            const requestBody = ListElement.setupListElementRequest({});
+            const listResponse = await ListElement.listElement(session, instance, endevorElement, requestBody);
+            const elements: IElement[] = utils.toArray(listResponse.data);
             const resultEntities: Element[] = [];
             let resultNodes: EndevorNode[] = [];
             for (const element of elements) {
@@ -362,7 +378,12 @@ export class EnvironmentNode extends EndevorQualifiedNode {
         }
         this.needReload = false;
         try {
-            const stages: IStage[] = await EndevorRestClient.getMetadata(repo, nodeQualEnv, Resource.STGNUM);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const stageNumber = utils.endevorQualifierToElement(nodeQualEnv, instance);
+            const requestBody = ListStage.setupListStageRequest({});
+            const listResponse = await ListStage.listStage(session, instance, stageNumber, requestBody);
+            const stages: IStage[] = utils.toArray(listResponse.data);
             const resultEntities: Stage[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
             stages.forEach(stage => {
@@ -397,7 +418,12 @@ export class StageNode extends EndevorQualifiedNode {
         try {
             const resultEntities: System[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const systems: ISystem[] = await EndevorRestClient.getMetadata(repo, nodeQualStage, Resource.SYS);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const endevorSystem = utils.endevorQualifierToElement(nodeQualStage, instance);
+            const requestBody = ListSystem.setupListSystemRequest({});
+            const listSystemResponse = await ListSystem.listSystem(session, instance, endevorSystem, requestBody);
+            const systems: ISystem[] = utils.toArray(listSystemResponse.data);
             systems.forEach(system => {
                 const systemEntity: System = new System(repo, system);
                 resultEntities.push(systemEntity);
@@ -433,7 +459,16 @@ export class SystemNode extends EndevorQualifiedNode {
         try {
             const resultEntities: SubSystem[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const subsystems: ISubsystem[] = await EndevorRestClient.getMetadata(repo, nodeQualSystem, Resource.SUBSYS);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const endevorSubsystem = utils.endevorQualifierToElement(nodeQualSystem, instance);
+            const requestBody = ListSubsystem.setupListSubsystemRequest({});
+            const listSubsystemResponse = await ListSubsystem.listSubsystem(
+                session,
+                instance,
+                endevorSubsystem,
+                requestBody);
+            const subsystems: ISubsystem[] = utils.toArray(listSubsystemResponse.data);
             subsystems.forEach(subsystem => {
                 const subsysEntity: SubSystem = new SubSystem(repo, subsystem);
                 resultEntities.push(subsysEntity);
@@ -466,7 +501,12 @@ export class SubsystemNode extends EndevorQualifiedNode {
         try {
             const resultEntities: Type[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const types: IType[] = await EndevorRestClient.getMetadata(repo, nodeQualSubsys, Resource.TYPE);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const endevorType = utils.endevorQualifierToElement(nodeQualSubsys, instance);
+            const requestBody = ListType.setupListTypeRequest({});
+            const listTypeResponse = await ListType.listType(session, instance, endevorType, requestBody);
+            const types: IType[] = utils.toArray(listTypeResponse.data);
             types.forEach(type => {
                 const typeEntity: Type = new Type(repo, type);
                 resultEntities.push(typeEntity);
@@ -500,7 +540,12 @@ export class TypeNode extends EndevorQualifiedNode {
         this.needReload = false;
         try {
             const resultNodes: EndevorNode[] = [];
-            const elements: IElement[] = await EndevorRestClient.getMetadata(repo, nodeQualType, Resource.ELEMENT);
+            const session = await utils.buildSession(repo);
+            const instance = repo.getDatasource();
+            const endevorElement = utils.endevorQualifierToElement(nodeQualType, instance);
+            const requestBody = ListElement.setupListElementRequest({});
+            const listElementResponse = await ListElement.listElement(session, instance, endevorElement, requestBody);
+            const elements: IElement[] = utils.toArray(listElementResponse.data);
             elements.forEach(element => {
                 const eleEntity: Element = new Element(repo, element);
                 resultNodes.push(new EndevorElementNode(eleEntity, { ...nodeQualType, element: element.fullElmName }));
