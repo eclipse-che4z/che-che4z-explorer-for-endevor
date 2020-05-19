@@ -32,7 +32,7 @@ export class RetrieveElementService {
         elementName: string,
         eq: EndevorQualifier,
     ): Promise<string> {
-        const session = utils.buildSession(repo);
+        const session = await utils.buildSession(repo);
         const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
         const requestBody = utils.buildRequestBody();
       // TODO: check this with Vit
@@ -68,7 +68,7 @@ export class RetrieveElementService {
      */
     public async retrieveDependenciesList(repo: Repository, eq: EndevorQualifier): Promise<Element[]> {
         const result: Element[] = [];
-        const session = utils.buildSession(repo);
+        const session = await utils.buildSession(repo);
         const instance = repo.getDatasource();
         const endevorElement = utils.endevorQualifierToElement(eq, instance);
         // TODO: match this up
@@ -104,7 +104,7 @@ export class RetrieveElementService {
     }
 
     private async getExtension(repo: Repository, eq: EndevorQualifier): Promise<string> {
-        const session = utils.buildSession(repo);
+        const session = await utils.buildSession(repo);
         const instance = repo.getDatasource();
         const typeInput = utils.endevorQualifierToElement(eq, instance);
         const requestBody = utils.buildRequestBody();
