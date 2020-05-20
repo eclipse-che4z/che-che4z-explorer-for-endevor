@@ -200,7 +200,7 @@ export class EndevorBrowsingNode extends EndevorNode {
             const environment = utils.endevorQualifierToElement({}, instance);
             const requestBody = ListEnvironment.setupListEnvironmentRequest({});
             const envResponse = await ListEnvironment.listEnvironment(session, instance, environment, requestBody);
-            const envs: IEnvironment[] = envResponse.data as any[];
+            const envs: IEnvironment[] = utils.toArray(envResponse.data);
             envs.forEach(env => {
                 const envEntity: Environment = new Environment(repo, env);
                 resultEntities.push(envEntity);

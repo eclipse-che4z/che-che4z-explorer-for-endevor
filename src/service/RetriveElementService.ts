@@ -109,7 +109,7 @@ export class RetrieveElementService {
         const typeInput = utils.endevorQualifierToElement(eq, instance);
         const requestBody = ListType.setupListTypeRequest({});
         let types: IType[];
-        const listResponse: any = await ListType.listType(session, instance, typeInput, requestBody);
+        const listResponse = await ListType.listType(session, instance, typeInput, requestBody);
         types = utils.toArray(listResponse.data);
         for (const type of types) {
             if (type.typeName === eq.type && type.fileExt) {
