@@ -46,13 +46,15 @@ export class HostDialogs {
                 try {
                     const session = await utils.buildSession(newRepo);
                     const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
-                    // tslint:disable-next-line: no-commented-code
-                    // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
-                    // TODO: the old implementation weirdly gives error (invalid url) with https but new one works
                     for (const ds of datasources) {
                         // TODO: slight mismatch between interfaces - check with Vit
                         // need to cast, since all properties defined with IEndevorInstance are optional
-                        dsNames.push(ds.name as string);
+                        // Changed to type check construct since dsNames is already initialized as empty array. 
+                        // Confirm approach
+                        // dsNames.push(ds.name as string);
+                        if (typeof ds.name === "string") {
+                            dsNames.push(ds.name);
+                        }
                     }
                     dsNames.sort();
                     progress.report({ increment: 100 });

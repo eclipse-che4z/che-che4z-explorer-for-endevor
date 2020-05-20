@@ -33,18 +33,15 @@ export async function browseElement(arg: any) {
                 const session = await utils.buildSession(repo);
                 const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
 
-                const requestBody = utils.buildRequestBody();
-                // TODO: check this with Vit
-                let data: any;
+                const requestBody = PrintElementComponents.setupPrintRequest({});
+                let data: string | undefined;
                 try {
                     const printResult = await PrintElementComponents.printElementComponents(
                         session,
                         element,
                         requestBody);
-                    // TODO: check this with Vit
                     data = printResult.data ? printResult.data.toString() : undefined;
                 } catch (error) {
-                    // TODO: error handling
                     vscode.window.showErrorMessage(error);
                 }
                 progress.report({ increment: 50 });
