@@ -34,15 +34,15 @@ export class RetrieveElementService {
     ): Promise<string> {
         const session = await utils.buildSession(repo);
         const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
-        const requestBody = utils.buildRequestBody();
-      // TODO: check this with Vit
-        let data: any;
+        const requestArgs = {
+            nosignout: "yes",
+        };
+        const requestBody = RetrieveElement.setupRetrieveRequest(requestArgs);
+        let data: string | undefined;
         try {
             const retrieveResult = await RetrieveElement.retrieveElement(session, element, requestBody);
-            // TODO: check this with Vit
             data = retrieveResult.data ? retrieveResult.data.toString() : undefined;
         } catch (error) {
-            // TODO: error handling
             vscode.window.showErrorMessage(error);
         }
         const ext = await this.getExtension(repo, eq);
@@ -71,13 +71,12 @@ export class RetrieveElementService {
         const session = await utils.buildSession(repo);
         const instance = repo.getDatasource();
         const endevorElement = utils.endevorQualifierToElement(eq, instance);
-        // TODO: match this up
-        // const requestBody: IOptionListRequest = utils.buildRequestBody(); // the interface here was wrong
-        const requestBody: IOptionListRequest = {
+        const requestArguments = {
             excCirculars: "yes",
             excIndirect: "no",
             excRelated: "no",
         };
+        const requestBody = QueryACMComponents.setupAcmComponentsRequest(requestArguments);
         const queryacmCompResponse = await QueryACMComponents.queryACMComponents(
             session,
             instance,
@@ -85,6 +84,7 @@ export class RetrieveElementService {
             requestBody);
 
         // TODO: IEndevorAcmComponents is not on par with IElement. Should we map it?
+        // const elements: IElement[] = await EndevorRestClient.retrieveElementDependencies(repo, eq);
         const elements: any = queryacmCompResponse.data as IEndevorAcmComponents[];
         if (elements.length === 0) {
             return [];
@@ -107,7 +107,7 @@ export class RetrieveElementService {
         const session = await utils.buildSession(repo);
         const instance = repo.getDatasource();
         const typeInput = utils.endevorQualifierToElement(eq, instance);
-        const requestBody = utils.buildRequestBody();
+        const requestBody = ListType.setupListTypeRequest({});
         let types: IType[];
         const listResponse: any = await ListType.listType(session, instance, typeInput, requestBody);
         types = utils.toArray(listResponse.data);

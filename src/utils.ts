@@ -72,20 +72,26 @@ export function multipleElementsSelected(selection: any[]): boolean {
         return false;
     }
 }
+function getBasePathFromRepo(repository: Repository): string {
+    return repository.getUrlString().split(":")[2].split("/")[1] +
+        "/" + repository.getUrlString().split(":")[2].split("/")[2];
+}
 
 // THROWAWAY: will be covered by profile implementation with Imperative profile management
 export async function buildSession(repository: Repository): Promise<Session> {
-    const protocol = repository.getUrl().split(":")[0];
+    // TODO: create proper type
+    // type HTTPS_PROTOCOL = "https";
+    // type HTTP_PROTOCOL = "http";
+    // from ISession, only works with https
+    // const protocol = repository.getUrl().split(":")[0] as HTTPS_PROTOCOL;
+    // BUT in reality, it only works with http
+    const protocol = "http";
     const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
-    // TODO: check how to enforce type (see with Vit)
-    const port: any = repository.getUrl().split(":")[2];
-    // make this readable
-    const basePath: string = repository.getUrlString().split(":")[2].split("/")[1] +
-        "/" + repository.getUrlString().split(":")[2].split("/")[2];
-
+    const port = Number(repository.getUrl().split(":")[2]);
+    const basePath = getBasePathFromRepo(repository);
     // set password if not defined
     if (!repository.getPassword()) {
-        const creds = await CredentialsInputBox.askforCredentials(repository)
+        const creds = await CredentialsInputBox.askforCredentials(repository);
         if (!creds) {
             throw { cancelled: true };
         }
@@ -96,8 +102,7 @@ export async function buildSession(repository: Repository): Promise<Session> {
         hostname,
         // password: repository.getPassword(),
         port,
-        // TODO: figure out how to cast this shit (see with Vit)
-        protocol: "http",
+        protocol,
         rejectUnauthorized: false,
         type: "basic",
         // strictSSL: true,
@@ -108,8 +113,7 @@ export async function buildSession(repository: Repository): Promise<Session> {
 }
 
 export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, instance: string): IElementBasicData {
-    let element: IElementBasicData;
-    element = {
+    return {
         element: endevorQualifier.element ? endevorQualifier.element : "*",
         environment: endevorQualifier.env ? endevorQualifier.env : "*",
         instance,
@@ -119,18 +123,5 @@ export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, in
         type: endevorQualifier.type ? endevorQualifier.type : "*",
         // TODO: see with Vit what to do here
         // [key: string]: null
-    };
-    return element;
-}
-
-export function buildRequestBody(): IElementActionRequest {
-    return {
-        expandIncludes: "",
-        level: "",
-        noSignout: "yes",
-        oveSign: "",
-        replaceMember: "",
-        search: "",
-        version: "",
     };
 }
