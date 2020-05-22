@@ -12,12 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorInstance, ListInstance } from "@broadcom/endevor-for-zowe-cli";
 import { URL } from "url";
 import { ProgressLocation, window, workspace } from "vscode";
 import { EndevorController } from "../EndevorController";
 import { Repository } from "../model/Repository";
-import * as utils from "../utils";
+import { proxyGetDsNamesFromInstance } from "../service/EndevorCliProxy";
 
 export class HostDialogs {
     /**
@@ -37,26 +36,13 @@ export class HostDialogs {
         }
         const newRepo = new Repository("", url, "", "", "");
 
-        const dsNames: string[] = [];
         window.withProgress({
                 location: ProgressLocation.Notification,
             },
             async progress => {
                 progress.report({message: "Waiting for " + newRepo.getUrl() + " to respond.", increment: 10 });
                 try {
-                    const session = await utils.buildSession(newRepo);
-                    const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
-                    for (const ds of datasources) {
-                        // TODO: slight mismatch between interfaces - check with Vit
-                        // need to cast, since all properties defined with IEndevorInstance are optional
-                        // Changed to type check construct since dsNames is already initialized as empty array. 
-                        // Confirm approach
-                        // dsNames.push(ds.name as string);
-                        if (typeof ds.name === "string") {
-                            dsNames.push(ds.name);
-                        }
-                    }
-                    dsNames.sort();
+                    const dsNames = await proxyGetDsNamesFromInstance(newRepo);
                     progress.report({ increment: 100 });
                     const dsItem = await window.showQuickPick(dsNames.map(label => ({ label })), {
                         ignoreFocusOut: true,

@@ -12,11 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { PrintElementComponents } from "@broadcom/endevor-for-zowe-cli";
 import * as vscode from "vscode";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import * as utils from "../utils";
+import { proxyBrowseElement } from "../service/EndevorCliProxy";
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
@@ -30,20 +29,7 @@ export async function browseElement(arg: any) {
         async progress => {
             progress.report({ increment: 10 });
             try {
-                const session = await utils.buildSession(repo);
-                const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
-
-                const requestBody = PrintElementComponents.setupPrintRequest({});
-                let data: string | undefined;
-                try {
-                    const printResult = await PrintElementComponents.printElementComponents(
-                        session,
-                        element,
-                        requestBody);
-                    data = printResult.data ? printResult.data.toString() : undefined;
-                } catch (error) {
-                    vscode.window.showErrorMessage(error);
-                }
+                const data = await proxyBrowseElement(repo, eq);
                 progress.report({ increment: 50 });
                 let doc: vscode.TextDocument | undefined;
                 doc = await vscode.workspace.openTextDocument({ content: data });
