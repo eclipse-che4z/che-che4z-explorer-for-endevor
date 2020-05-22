@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElementActionRequest, IElementBasicData} from "@broadcom/endevor-for-zowe-cli";
+import { IElementBasicData} from "@broadcom/endevor-for-zowe-cli";
 import { ISession, Session} from "@zowe/imperative";
 import { EndevorQualifier } from "./model/IEndevorQualifier";
 import { Repository } from "./model/Repository";
@@ -121,7 +121,5 @@ export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, in
         subsystem: endevorQualifier.subsystem ? endevorQualifier. subsystem : "*",
         system: endevorQualifier.system ? endevorQualifier.system : "*",
         type: endevorQualifier.type ? endevorQualifier.type : "*",
-        // TODO: see with Vit what to do here
-        // [key: string]: null
     };
 }

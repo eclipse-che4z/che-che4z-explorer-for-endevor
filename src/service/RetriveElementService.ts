@@ -12,15 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorAcmComponents, IOptionListRequest, ListType, QueryACMComponents, RetrieveElement } from "@broadcom/endevor-for-zowe-cli";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { Element } from "../model/Element";
-import { IElement, IType } from "../model/IEndevorEntities";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import * as utils from "../utils";
+import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "../service/EndevorCliProxy";
 import { GitBridgeSupport } from "./GitBridgeSupport";
 
 export class RetrieveElementService {
@@ -32,19 +30,7 @@ export class RetrieveElementService {
         elementName: string,
         eq: EndevorQualifier,
     ): Promise<string> {
-        const session = await utils.buildSession(repo);
-        const element = utils.endevorQualifierToElement(eq, repo.getDatasource());
-        const requestArgs = {
-            nosignout: "yes",
-        };
-        const requestBody = RetrieveElement.setupRetrieveRequest(requestArgs);
-        let data: string | undefined;
-        try {
-            const retrieveResult = await RetrieveElement.retrieveElement(session, element, requestBody);
-            data = retrieveResult.data ? retrieveResult.data.toString() : undefined;
-        } catch (error) {
-            vscode.window.showErrorMessage(error);
-        }
+        const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
         const typeDirectory = this.gitBridge.createElementPath(workspace, eq.type!);
         if (!fs.existsSync(typeDirectory)) {
@@ -68,24 +54,7 @@ export class RetrieveElementService {
      */
     public async retrieveDependenciesList(repo: Repository, eq: EndevorQualifier): Promise<Element[]> {
         const result: Element[] = [];
-        const session = await utils.buildSession(repo);
-        const instance = repo.getDatasource();
-        const endevorElement = utils.endevorQualifierToElement(eq, instance);
-        const requestArguments = {
-            excCirculars: "yes",
-            excIndirect: "no",
-            excRelated: "no",
-        };
-        const requestBody = QueryACMComponents.setupAcmComponentsRequest(requestArguments);
-        const queryacmCompResponse = await QueryACMComponents.queryACMComponents(
-            session,
-            instance,
-            endevorElement,
-            requestBody);
-
-        // TODO: IEndevorAcmComponents is not on par with IElement. Should we map it?
-        // const elements: IElement[] = await EndevorRestClient.retrieveElementDependencies(repo, eq);
-        const elements: any = queryacmCompResponse.data as IEndevorAcmComponents[];
+        const elements = await proxyRetrieveAcmComponents(repo, eq);
         if (elements.length === 0) {
             return [];
         }
@@ -104,13 +73,7 @@ export class RetrieveElementService {
     }
 
     private async getExtension(repo: Repository, eq: EndevorQualifier): Promise<string> {
-        const session = await utils.buildSession(repo);
-        const instance = repo.getDatasource();
-        const typeInput = utils.endevorQualifierToElement(eq, instance);
-        const requestBody = ListType.setupListTypeRequest({});
-        let types: IType[];
-        const listResponse = await ListType.listType(session, instance, typeInput, requestBody);
-        types = utils.toArray(listResponse.data);
+        const types = await proxyListType(repo, eq);
         for (const type of types) {
             if (type.typeName === eq.type && type.fileExt) {
                 return type.fileExt;
