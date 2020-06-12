@@ -36,7 +36,7 @@ export function editFilter(arg: any) {
                 if (filter.getUri() !== filterUri) {
                     filter.editFilter(filterUri);
                     (<EndevorNode>arg).children = [];
-                    EndevorController.instance.saveRepositories();
+                    EndevorController.instance.updateSettings();
                 }
             }
         }

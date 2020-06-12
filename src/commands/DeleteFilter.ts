@@ -24,7 +24,7 @@ export function deleteFilter(arg: any) {
             vscode.window.showWarningMessage("Delete filter: " + filter.getName() + "?", "OK").then(message => {
                 if (message === "OK") {
                     filter.deleteFilter();
-                    EndevorController.instance.saveRepositories();
+                    EndevorController.instance.updateSettings();
                 }
             });
         }

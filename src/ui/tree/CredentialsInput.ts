@@ -34,7 +34,7 @@ export class CredentialsInputBox {
         }
         repo.setUsername(username);
         repo.setPassword(password);
-        EndevorController.instance.saveRepositories();
+        EndevorController.instance.updateSettings();
         return { password, username };
     }
     private static async showUserName(username: string): Promise<string | undefined> {

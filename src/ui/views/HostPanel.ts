@@ -57,7 +57,7 @@ export class HostPanel {
                         // }
                         const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
                         EndevorController.instance.addRepository(targetRepo, null);
-                        EndevorController.instance.saveRepositories();
+                        EndevorController.instance.updateSettings();
                         panel.dispose();
                         break;
                     case "configuration":
@@ -125,7 +125,7 @@ export class HostPanel {
                 repo.setName(name);
                 repo.setUsername(username);
                 repo.setPassword(password);
-                EndevorController.instance.saveRepositories();
+                EndevorController.instance.updateSettings();
                 panel.dispose();
             },
             undefined,

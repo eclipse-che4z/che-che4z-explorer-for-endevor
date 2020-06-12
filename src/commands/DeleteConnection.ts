@@ -23,7 +23,7 @@ export function deleteConnection(arg:any){
                 EndevorController.instance.removeConnection(arg.label);
                 vscode.commands.executeCommand("endevorexplorer.refreshHosts");
                 vscode.window.showInformationMessage("Session removed.");
-                EndevorController.instance.saveRepositories();
+                EndevorController.instance.updateSettings();
             } else {
                 vscode.window.showInformationMessage("Operation cancelled.");
             }

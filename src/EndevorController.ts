@@ -94,9 +94,25 @@ export class EndevorController {
         });
     }
 
-    public saveRepositories() {
-        SettingsFacade.updateSettings(this.getConnections());
+    public updateRepositoryName(oldRepoName: string, newRepoName: string, connectionlabel: string) {
+        const newMap = new Map();
+        this.connections.get(connectionlabel).getRepositoryMap().forEach((repo, name) => {
+            if (name === oldRepoName) {
+                repo.setName(newRepoName);
+                newMap.set(newRepoName, repo);
+            } else {
+                newMap.set(name, repo);
+            }
+        });
+        this.connections.get(connectionlabel).repositories = newMap;
+        const cnxIdx = this.rootNode.children.findIndex(node => node.label === connectionlabel);
+        const repoIdx = this.rootNode.children[cnxIdx].children.findIndex(repo => repo.label === oldRepoName);
+        this.rootNode.children[cnxIdx].children[repoIdx].label = newRepoName;
     }
+    // TODO: delete this eventually. Name is misleading. renamed it
+    // public saveRepositories() {
+    //     SettingsFacade.updateSettings(this.getConnections());
+    // }
 
     public updateSettings() {
         SettingsFacade.updateSettings(this.getConnections());
@@ -230,7 +246,7 @@ export class EndevorController {
             }
         });
         if (saveRepos) {
-            this.saveRepositories();
+            this.updateSettings();
         }
     }
 

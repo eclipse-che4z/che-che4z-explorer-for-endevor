@@ -38,7 +38,7 @@ export function addFilter(arg: any) {
         if (filterUri) {
             const repo: Repository = <Repository>arg.getRepository();
             repo.filters.push(new EndevorFilter(repo, filterUri));
-            EndevorController.instance.saveRepositories();
+            EndevorController.instance.updateSettings();
         }
     });
 }

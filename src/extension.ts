@@ -108,10 +108,6 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("endevorexplorer.updateHost", (arg: any) => {
             if (arg.contextValue === "repository") {
                 HostDialogs.editHost(arg);
-                // const repo: Repository | undefined = arg.getRepository();
-                // if (repo) {
-                //     HostDialogs.editHost(repo);
-                // }
             }
         }),
     );

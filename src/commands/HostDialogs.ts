@@ -158,8 +158,8 @@ export class HostDialogs {
                 return;
             }
             const oldName = repo.getName();
-            repo.setName(newName);
-            EndevorController.instance.saveRepositories();
+            EndevorController.instance.updateRepositoryName(oldName, newName, repo.getProfileLabel());
+            EndevorController.instance.updateSettings();
             window.showInformationMessage(`Connection ${oldName} was renamed to ${newName}.`);
         }
     }
