@@ -17,24 +17,102 @@ import { ProgressLocation, window, workspace } from "vscode";
 import { EndevorController } from "../EndevorController";
 import { Repository } from "../model/Repository";
 import { proxyGetDsNamesFromInstance } from "../service/EndevorCliProxy";
+import { Profiles } from "../service/Profiles";
+import * as utils from "../utils";
+import * as vscode from "vscode";
+import { Connection } from "../model/Connection";
+
 
 export class HostDialogs {
+    public static async addConnection() {
+        const allProfiles = (Profiles.getInstance()).allProfiles;
+        const createNewProfile = "Create a New Connection to z/OS";
+        let chosenProfile: string;
+
+        let profileNamesList = allProfiles.map(profile => {
+            return profile.name;
+        });
+
+        if (profileNamesList) {
+            profileNamesList = profileNamesList.filter(profileNames =>
+                !EndevorController.instance.getConnections().find((connection: Connection) =>
+                    connection.getName() === profileNames,
+                ),
+            );
+        }
+        const createPick = new utils.FilterDescriptor("\uFF0B " + createNewProfile);
+        const items: vscode.QuickPickItem[] = profileNamesList.map(element => new utils.FilterItem(element));
+        const placeholder = "Choose \"Create new...\" to define a new profile or select an existing profile to Add to the USS Explorer";
+
+        const quickpick = vscode.window.createQuickPick();
+        quickpick.items = [createPick, ...items];
+        quickpick.placeholder = placeholder;
+        quickpick.ignoreFocusOut = true;
+        quickpick.show();
+        const choice = await utils.resolveQuickPickHelper(quickpick);
+        quickpick.hide();
+        if (!choice) {
+            vscode.window.showInformationMessage("No selection made.");
+            return;
+        }
+        if (choice instanceof utils.FilterDescriptor) {
+            chosenProfile = "";
+        } else {
+            chosenProfile = choice.label;
+        }
+
+        if (chosenProfile === "") {
+            let newProfileName: any;
+            let profileName: string;
+            const options = {
+                placeHolder: "Connection Name",
+                prompt: "Enter a name for the connection",
+                value: profileName,
+            };
+            profileName = await vscode.window.showInputBox(options);
+            if (!profileName) {
+                vscode.window.showInformationMessage("Profile Name was not supplied. Operation Cancelled");
+                return;
+            }
+            chosenProfile = profileName;
+            try {
+                newProfileName = await Profiles.getInstance().createNewConnection(chosenProfile);
+            } catch (error) {
+                vscode.window.showErrorMessage(error.message);
+            }
+            if (newProfileName) {
+                try {
+                    const newProfile = Profiles.getInstance().listProfiles().find(
+                        profile => profile.name === newProfileName);
+                    const profileToAdd = new Connection(newProfile);
+                    EndevorController.instance.addConnection(profileToAdd);
+                } catch (error) {
+                    vscode.window.showErrorMessage("Error while adding new profile");
+                }
+            }
+        } else if (chosenProfile) {
+            const profileToAdd = new Connection(allProfiles.find(profile => profile.name === chosenProfile));
+            EndevorController.instance.addConnection(profileToAdd);
+        } else {
+            vscode.window.showInformationMessage("Operation cancelled");
+        }
+    }
     /**
      * Add host.
      * @param
      * @returns
      */
-    public static async addHost() {
+    public static async addHost(connection) {
         if (!(workspace.workspaceFolders && workspace.workspaceFolders.length > 0)) {
             window.showErrorMessage("Specify workspace before creating repository.");
             return;
         }
 
-        const url = await HostDialogs.showUrlInput();
-        if (url === undefined) {
-            return;
-        }
-        const newRepo = new Repository("", url, "", "", "");
+        const profile = connection.getEntity().getProfile();
+        const url = `${profile.protocol}://${profile.host}:${profile.port}`;
+        // TODO: add dataSource here when we import endevor-connection profile
+        const dataSource = "";
+        const newRepo = new Repository("", url, profile.user, profile.password, dataSource, connection.label);
 
         window.withProgress({
                 location: ProgressLocation.Notification,
@@ -50,15 +128,15 @@ export class HostDialogs {
                     if (dsItem === undefined) {
                         return;
                     }
-                    if (EndevorController.instance.findRepoByName(dsItem.label)) {
-                        window.showErrorMessage("Host with name " + dsItem.label + " already exists");
+                    if (EndevorController.instance.isRepoInConnection(dsItem.label, connection.label)) {
+                        window.showErrorMessage("Host with name " + dsItem.label + " already exists in this session");
                         return;
                     }
 
                     newRepo.setName(dsItem.label);
                     newRepo.setDatasource(dsItem.label);
-                    EndevorController.instance.addRepository(newRepo);
-                    EndevorController.instance.saveRepositories();
+                    EndevorController.instance.addRepository(newRepo, connection.getEntity().getName());
+                    EndevorController.instance.updateSettings();
                     window.showInformationMessage("Connection " + dsItem.label + " was created.");
                 } catch (error) {
                     window.showErrorMessage("The host " + newRepo.getUrl() + " is not available.");
@@ -67,21 +145,23 @@ export class HostDialogs {
         );
     }
 
-    public static async editHost(repo: Repository) {
+    public static async editHost(context) {
+        const repo: Repository | undefined = context.getRepository();
+        if (repo) {
+            const newName =  await HostDialogs.showHostNameInput(repo);
 
-        const newName =  await HostDialogs.showHostNameInput(repo);
-
-        if (newName === undefined) {
-            return;
+            if (newName === undefined) {
+                return;
+            }
+            if (EndevorController.instance.isRepoInConnection(newName, repo.getProfileLabel())) {
+                window.showErrorMessage("Host with name " + newName + " already exists");
+                return;
+            }
+            const oldName = repo.getName();
+            repo.setName(newName);
+            EndevorController.instance.saveRepositories();
+            window.showInformationMessage(`Connection ${oldName} was renamed to ${newName}.`);
         }
-        if (EndevorController.instance.findRepoByName(newName)) {
-            window.showErrorMessage("Host with name " + newName + " already exists");
-            return;
-        }
-        const oldName = repo.getName();
-        repo.setName(newName);
-        EndevorController.instance.saveRepositories();
-        window.showInformationMessage(`Connection ${oldName} was renamed to ${newName}.`);
     }
 
     private static async showHostNameInput(repo: Repository): Promise<string | undefined> {

@@ -111,9 +111,11 @@ export class GitBridgeSupport {
         );
         if (result === "Import") {
             const repos: Repository[] = SettingsFacade.listRepositories();
-            const newRepo: Repository = new Repository(hostName, repoUrl, "", undefined, configuration);
+            // TODO: check profileLabel implications here
+            const newRepo: Repository = new Repository(hostName, repoUrl, "", undefined, configuration, "");
             repos.push(newRepo);
-            SettingsFacade.updateRepositories(repos);
+            // TODO: FIX ME
+            // SettingsFacade.updateRepositories(repos);
         }
         return result;
     }

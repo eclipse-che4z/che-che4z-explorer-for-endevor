@@ -17,6 +17,7 @@ import { EndevorFilter, FILTER_ALL_STRING } from "./EndevorFilter";
 import { Environment } from "./Environment";
 import { Filter } from "./IEndevorEntities";
 import { System } from "./System";
+import { Connection } from "./Connection";
 
 export class Repository extends EndevorEntity {
     private _id?: number;
@@ -28,8 +29,10 @@ export class Repository extends EndevorEntity {
     private _environments: Map<string, Environment>;
     private _filters: EndevorFilter[];
     private _map: EndevorFilter;
+    private _profileLabel: string;
+    // private connection: Connection;
 
-    constructor(name: string, url: string, username: string, password: string | undefined, datasource: string, id?: number) {
+    constructor(name: string, url: string, username: string, password: string | undefined, datasource: string, profileLabel: string, id?: number) {
         super();
         this._id = id;
         this.name = name;
@@ -40,6 +43,7 @@ export class Repository extends EndevorEntity {
         this._environments = new Map();
         this._filters = [];
         this._map = new EndevorFilter(this, FILTER_ALL_STRING);
+        this._profileLabel = profileLabel;
     }
 
     public loadInfoFromConfig(repo: Repository) {
@@ -68,21 +72,21 @@ export class Repository extends EndevorEntity {
     }
 
     public findSystem(envName: string, sysName: string): System | undefined {
-        let env: Environment | undefined = this.findEnvironment(envName);
+        const env: Environment | undefined = this.findEnvironment(envName);
         if (env) {
             return env.findSystem(sysName);
         }
     }
 
     public findType(typeName: string, envName: string, sysName: string) {
-        let system: System | undefined = this.findSystem(envName, sysName);
+        const system: System | undefined = this.findSystem(envName, sysName);
         if (system) {
             return system.findType(typeName);
         }
     }
 
     public findFilter(uri: string): EndevorFilter | undefined {
-        for (let filter of this.filters) {
+        for (const filter of this.filters) {
             if (filter.getUri() === uri) {
                 return filter;
             }
@@ -102,6 +106,17 @@ export class Repository extends EndevorEntity {
 
     public getName(): string {
         return this.name;
+    }
+    public setProfileLabel(value: string) {
+        this._profileLabel = value;
+    }
+
+    public getProfileLabel(): string {
+        return this._profileLabel;
+    }
+
+    public isAttachedToConnection(value: string) {
+        return value === this._profileLabel;
     }
 
     public setUsername(value: string) {
@@ -165,12 +180,12 @@ export class Repository extends EndevorEntity {
     }
 
     public getUrlString(): string {
-        let urlPath: string = 'EndevorService/rest/' + this.datasource;
+        let urlPath: string = "EndevorService/rest/" + this.datasource;
         if (this.datasource !== "") {
-            urlPath = urlPath + '/';
+            urlPath = urlPath + "/";
         }
-        if (!this.url.endsWith('/')) {
-            urlPath = '/' + urlPath;
+        if (!this.url.endsWith("/")) {
+            urlPath = "/" + urlPath;
         }
         return this.url + urlPath;
     }
@@ -180,7 +195,7 @@ export class Repository extends EndevorEntity {
     }
 
     public getIFilters(): Filter[] {
-        let resultFilters: Filter[] = [];
+        const resultFilters: Filter[] = [];
         this._filters.forEach(filter => {
             resultFilters.push({ uri: filter.getUri() });
         });
@@ -223,7 +238,7 @@ export class Repository extends EndevorEntity {
         if (repo.filters.length !== this.filters.length) {
             return false;
         }
-        for (let filter of repo.filters) {
+        for (const filter of repo.filters) {
             if (!this.findFilter(filter.getUri())) {
                 return false;
             }

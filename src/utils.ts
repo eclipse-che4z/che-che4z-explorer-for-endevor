@@ -18,6 +18,28 @@ import { EndevorQualifier } from "./model/IEndevorQualifier";
 import { Repository } from "./model/Repository";
 import { CredentialsInputBox } from "./ui/tree/CredentialsInput";
 import { EndevorElementNode } from "./ui/tree/EndevorNodes";
+import { QuickPickItem, QuickPick } from "vscode";
+
+export async function resolveQuickPickHelper(quickpick: QuickPick<QuickPickItem>): Promise<QuickPickItem | undefined> {
+    return new Promise<QuickPickItem | undefined>(
+        (c) => quickpick.onDidAccept(() => c(quickpick.activeItems[0])));
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterItem implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return false; }
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterDescriptor implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return true; }
+}
 
 export function toArray<T>(data: any): T[] {
     if (Array.isArray(data)) {

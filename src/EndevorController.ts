@@ -14,7 +14,14 @@
 
 import { Repository } from './model/Repository';
 import { SettingsFacade } from './service/SettingsFacade';
-import { EndevorNode, EndevorBrowsingNode, FilterNode } from './ui/tree/EndevorNodes';
+import { EndevorNode, EndevorBrowsingNode, FilterNode, ConnectionNode } from './ui/tree/EndevorNodes';
+import { Connection } from './model/Connection';
+import { Session, IProfileLoaded } from '@zowe/imperative';
+import { Profiles } from './service/Profiles';
+import { IConnection } from "./model/IConnection";
+import { timingSafeEqual } from 'crypto';
+import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
+import { Host } from './model/IEndevorInstance';
 
 export class EndevorController {
     /**
@@ -28,11 +35,7 @@ export class EndevorController {
      */
     private _rootNode: EndevorNode = new EndevorNode(undefined);
 
-    /**
-     * Endevor model high level representing Endevor instances (repositories).
-     * Repositories in turn have stage and system metadata.
-     */
-    private repositories: Map<string, Repository> = new Map();
+    private connections: Map<string, Connection> = new Map();
 
     private constructor() { }
 
@@ -51,55 +54,56 @@ export class EndevorController {
         this._rootNode = value;
     }
 
-    public getRepositories(): Repository[] {
-        return Array.from(this.repositories.values());
-    }
-
-    public addRepository(repo: Repository) {
-        if (!repo.id) {
-            repo.id = this.findNextId();
+    public addRepository(repo: Repository, connectionLabel: string) {
+        if (typeof repo.id === "undefined") {
+            repo.id = this.findNextId(connectionLabel);
         }
-        this.repositories.set(repo.getName(), repo);
         const newRepoNode: EndevorNode = new EndevorNode(repo);
-        this._rootNode.children.push(newRepoNode);
+        this.connections.get(connectionLabel).loadRepository(repo);
+        this._rootNode.children.forEach(child => {
+            if (child.getEntity().getName() === connectionLabel) {
+                child.children.push(newRepoNode);
+            }
+        });
     }
 
-    public removeRepository(repoName: string) {
-        this.repositories.delete(repoName);
+    public getConnections(): Connection[] {
+        return Array.from(this.connections.values());
+    }
+    public addConnection(connection: Connection) {
+        this.connections.set(connection.name, connection);
+        const newConnectionNode = new EndevorNode(connection);
+        this._rootNode.children.push(newConnectionNode);
+    }
+
+    public removeConnection(connectionName: string) {
+        this.connections.delete(connectionName);
+        this._rootNode.children.forEach((connection, index) => {
+            if (connection.label === connectionName) {
+                this._rootNode.children.splice(index, 1);
+            }
+        });
+    }
+
+    public removeRepository(repoName: string, connectionLabel: string) {
+        this.connections.get(connectionLabel).getRepositoryMap().delete(repoName);
+        this._rootNode.children.forEach((connection, index) => {
+            if (connection.label === connectionLabel) {
+                this._rootNode.children[index].children = connection.children.filter(repo => repo.label !== repoName);
+            }
+        });
     }
 
     public saveRepositories() {
-        SettingsFacade.updateRepositories(this.getRepositories());
+        SettingsFacade.updateSettings(this.getConnections());
+    }
+
+    public updateSettings() {
+        SettingsFacade.updateSettings(this.getConnections());
     }
 
     public updateNeedReloadInTree(parNeedReload: boolean, refreshTreeRoot: EndevorNode) {
         refreshTreeRoot.updateNeedReload(parNeedReload);
-    }
-
-    /**
-     * Checks if current filters of the repository node - `repoNode` are different from the loaded ones in `loadedRepo`.
-     * Along with updating the filters in model (`Repository`), it also updates the tree.
-     * @param repoNode `EndevorNode` containing repository with current filters.
-     * @param repo Repository loaded from settings.json
-     */
-    private checkAndReloadFilters(repoNode: EndevorNode, repo: Repository) {
-        let filtersNode: EndevorBrowsingNode = <EndevorBrowsingNode>repoNode.children.find(child => (<EndevorBrowsingNode>child).isFiltersNode());
-        if (!filtersNode) {
-            return;
-        }
-        let newChildren: Map<string, EndevorNode> = new Map();
-        repo.filters.forEach(filter => {
-            let newNode: EndevorNode | undefined = filtersNode.findFilterNode(filter);
-            if (newNode) {
-                newNode.updateInfo();
-                newNode.needReload = !newNode.hasChildren();
-            } else {
-                newNode = new FilterNode(filter);
-            }
-            newChildren.set(filter.getUri(), newNode);
-        });
-        filtersNode.children = Array.from(newChildren.values());
-        filtersNode.needReload = false;
     }
 
     /**
@@ -113,68 +117,80 @@ export class EndevorController {
      */
     // tslint:disable-next-line:member-ordering
     public loadRepositories() {
-        const reposFromSettings: Repository[] = SettingsFacade.listRepositories();
-        const updatedRepos: Map<string, Repository> = new Map();
+        const connectionsFromSettings: Map <string, Host[]> = new Map();
+        SettingsFacade.listConnections().forEach(conn => connectionsFromSettings.set(conn.name, conn.hosts));
         this.rootNode.needReload = false;
-        if (this.rootNode.children.length !== this.repositories.size) {
+        if (this.rootNode.children.length !== this.connections.size) {
             this.rootNode.needReload = true;
         }
-        reposFromSettings.forEach(settingsRepo => {
-            let repoNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(settingsRepo.id);
-            let repoToKeep: Repository = settingsRepo;
-            if (repoNode) {
-                let modelRepo: Repository | undefined = repoNode.getRepository();
-                if (modelRepo) {
-                    if (!modelRepo.isEqual(settingsRepo)) {
-                        this.rootNode.needReload = true;
-                        if (modelRepo.isSameInstance(settingsRepo)) {
-                            repoNode.needReload = !repoNode.hasChildren();
-                        } else {
-                            repoNode.needReload = true;
+        connectionsFromSettings.forEach((hostList, connName) => {
+            let connNode = EndevorController.instance.findNodeByConnectionName(connName);
+            // if connection is defined, check all hosts and add them in the tree if missing
+            if (connNode) {
+                const reposFromSettings: Repository[] = SettingsFacade.listRepositories(connName);
+                const updatedRepos: Map<string, Repository> = new Map();
+                reposFromSettings.forEach(settingsRepo => {
+                    // Check if node is already defined in root tree
+                    let repoNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(settingsRepo.id, connName);
+                    let repoToKeep: Repository = settingsRepo;
+                    // TODO: check here what happens if there is repoNode. At load, this is empty
+                    // this is the case when a repo is already defined in the tree and settings are loaded
+                    if (repoNode) {
+                        let modelRepo: Repository | undefined = repoNode.getRepository();
+                        if (modelRepo) {
+                            if (modelRepo.isEqual(settingsRepo)) {
+                                this.rootNode.needReload = true;
+                                if (!modelRepo.isSameInstance(settingsRepo)) {
+                                    repoNode.needReload = !repoNode.hasChildren();
+                                } else {
+                                    repoNode.needReload = true;
+                                }
+                                modelRepo.loadInfoFromConfig(settingsRepo);
+                            }
+                            repoToKeep = modelRepo;
                         }
-                        modelRepo.loadInfoFromConfig(settingsRepo);
+                        this.checkAndReloadFilters(repoNode, repoToKeep);
+                        repoNode.updateInfo();
+                    } else {
+                        this.rootNode.needReload = true;
                     }
-                    repoToKeep = modelRepo;
-                }
-                this.checkAndReloadFilters(repoNode, repoToKeep);
-                repoNode.updateInfo();
-            } else {
-                this.rootNode.needReload = true;
-            }
-            updatedRepos.set(repoToKeep.getName(), repoToKeep);
-        });
-        this.repositories = updatedRepos;
-        this.updateIDs();
-    }
-
-    /**
-     * In case `id` is not present in the settings.json, this function will determine it
-     * and store in the settings.json.
-     */
-    private updateIDs() {
-        let saveRepos: boolean = false;
-        this.repositories.forEach(repo => {
-            if (repo.id === undefined) {
-                repo.id = EndevorController.instance.findNextId();
-                saveRepos = true;
+                    updatedRepos.set(repoToKeep.getName(), repoToKeep);
+                });
+                // this.connections.get(connName).repositories = updatedRepos;
+                let currentRepos = this.connections.get(connName).repositories;
+                currentRepos = updatedRepos;
+                currentRepos.forEach(repo => EndevorController.instance.addRepository(repo, repo.getProfileLabel()));
+                this.updateIDs(connName);
             }
         });
-        if (saveRepos) {
-            this.saveRepositories();
-        }
     }
 
-    public findRepoByName(name: string): Repository | undefined {
-        return this.repositories.get(name);
+    public isRepoInConnection(repoName: string, connectionLabel: string): boolean {
+        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
+        return repoMap.get(repoName) ? true : false ;
     }
 
-    public findNodeByRepoID(id: number | undefined): EndevorNode | undefined {
+    // tslint:disable-next-line: member-ordering
+    public findNodeByRepoID(id: number | undefined, connectionLabel: string): EndevorNode | undefined {
         if (id === undefined) {
             return undefined;
         }
-        for (let node of this._rootNode.children) {
-            let nodeRepo: Repository | undefined = node.getRepository();
+        const connection = this.findNodeByConnectionName(connectionLabel);
+        for (const node of connection.children) {
+            const nodeRepo: Repository | undefined = node.getRepository();
             if (nodeRepo && nodeRepo.id === id) {
+                return node;
+            }
+        }
+    }
+
+    // tslint:disable-next-line: member-ordering
+    public findNodeByConnectionName(name: string): EndevorNode | undefined {
+        if (!name) {
+            return undefined;
+        }
+        for (const node of this._rootNode.children) {
+            if (node.getEntity().getName() === name) {
                 return node;
             }
         }
@@ -183,10 +199,11 @@ export class EndevorController {
     /**
      * Function used to determine next available `id`.
      */
-    private findNextId(): number {
-        let iDArray: boolean[] = new Array(this.repositories.size);
+    public findNextId(connectionLabel: string): number {
+        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
+        let iDArray: boolean[] = new Array(repoMap.size);
         iDArray.fill(true);
-        this.repositories.forEach(repo => {
+        repoMap.forEach(repo => {
             if (repo.id !== undefined) {
                 iDArray[repo.id] = false;
             }
@@ -199,4 +216,47 @@ export class EndevorController {
         return iDArray.length;
     }
 
+/**
+ * In case `id` is not present in the settings.json, this function will determine it
+ * and store in the settings.json.
+ */
+    private updateIDs(connectionLabel: string) {
+        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
+        let saveRepos: boolean = false;
+        repoMap.forEach(repo => {
+            if (repo.id === undefined) {
+                repo.id = EndevorController.instance.findNextId(connectionLabel);
+                saveRepos = true;
+            }
+        });
+        if (saveRepos) {
+            this.saveRepositories();
+        }
+    }
+
+    /**
+     * Checks if current filters of the repository node - `repoNode` are different from the loaded ones in `loadedRepo`.
+     * Along with updating the filters in model (`Repository`), it also updates the tree.
+     * @param repoNode `EndevorNode` containing repository with current filters.
+     * @param repo Repository loaded from settings.json
+     */
+    private checkAndReloadFilters(repoNode: EndevorNode, repo: Repository) {
+        const filtersNode: EndevorBrowsingNode = <EndevorBrowsingNode>repoNode.children.find(child => (<EndevorBrowsingNode>child).isFiltersNode());
+        if (!filtersNode) {
+            return;
+        }
+        const newChildren: Map<string, EndevorNode> = new Map();
+        repo.filters.forEach(filter => {
+            let newNode: EndevorNode | undefined = filtersNode.findFilterNode(filter);
+            if (newNode) {
+                newNode.updateInfo();
+                newNode.needReload = !newNode.hasChildren();
+            } else {
+                newNode = new FilterNode(filter);
+            }
+            newChildren.set(filter.getUri(), newNode);
+        });
+        filtersNode.children = Array.from(newChildren.values());
+        filtersNode.needReload = false;
+    }
 }

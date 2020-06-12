@@ -49,6 +49,22 @@
                 }
             },
             {
+                "command": "endevorexplorer.newConnection",
+                "title": "Create a New Session (Profile)",
+                "icon": {
+                    "light": "resources/light/add.svg",
+                    "dark": "resources/dark/add.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.deleteConnection",
+                "title": "Delete Session (Profile)",
+                "icon": {
+                    "light": "resources/light/delete.svg",
+                    "dark": "resources/dark/delete.svg"
+                }
+            },
+            {
                 "command": "endevorexplorer.updateHost",
                 "title": "Update Host",
                 "icon": {
@@ -127,6 +143,16 @@
                     "group": "inline"
                 },
                 {
+                    "command": "endevorexplorer.newHost",
+                    "when": "view == endevorExplorer && viewItem == connection",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.deleteConnection",
+                    "when": "view == endevorExplorer && viewItem == connection",
+                    "group": "inline"
+                },
+                {
                     "command": "endevorexplorer.editFilter",
                     "when": "view == endevorExplorer && viewItem == filter",
                     "group": "inline"
@@ -166,7 +192,7 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "endevorexplorer.newHost",
+                    "command": "endevorexplorer.newConnection",
                     "when": "view == endevorExplorer",
                     "group": "navigation"
                 }
@@ -176,53 +202,78 @@
             "title": "Explorer for Endevor",
             "scope": "resource",
             "properties": {
-                "endevor.hosts": {
-                    "type": "array",
-                    "title": "Host List",
+                "endevor.connections": {
+                    "type":"array",
+                    "title": "Endevor Connections",
                     "items": {
                         "type": "object",
-                        "title": "Host Configuration",
+                        "title": "Connection details",
+                        "description": "Host Configuration",
                         "required": [
                             "name",
-                            "url",
-                            "username",
-                            "datasource",
-                            "filters"
+                            "hosts"
                         ],
                         "properties": {
                             "name": {
                                 "type": "string",
-                                "description": "Connection settings name"
+                                "title": "Connection Name",
+                                "description": "Connection Name"
                             },
-                            "url": {
-                                "type": "string",
-                                "description": "Connection url"
-                            },
-                            "username": {
-                                "type": "string",
-                                "description": "Connection User name"
-                            },
-                            "datasource": {
-                                "type": "string",
-                                "description": "Configuration"
-                            },
-                            "filters": {
+                            "hosts": {
                                 "type": "array",
-                                "description": "List of connection's filters",
+                                "title": "Host List",
                                 "items": {
                                     "type": "object",
-                                    "title": "Filter",
+                                    "title": "Host Configuration",
+                                    "required": [
+                                        "name",
+                                        "url",
+                                        "username",
+                                        "datasource",
+                                        "filters",
+                                        "profile"
+                                    ],
                                     "properties": {
-                                        "uri": {
+                                        "profile": {
+                                            "type":"string",
+                                            "description": "Profile attached to"
+                                        },
+                                        "name": {
                                             "type": "string",
-                                            "description": "Filter uri"
+                                            "description": "Connection settings name"
+                                        },
+                                        "url": {
+                                            "type": "string",
+                                            "description": "Connection url"
+                                        },
+                                        "username": {
+                                            "type": "string",
+                                            "description": "Connection User name"
+                                        },
+                                        "datasource": {
+                                            "type": "string",
+                                            "description": "Configuration"
+                                        },
+                                        "filters": {
+                                            "type": "array",
+                                            "description": "List of connection's filters",
+                                            "items": {
+                                                "type": "object",
+                                                "title": "Filter",
+                                                "properties": {
+                                                    "uri": {
+                                                        "type": "string",
+                                                        "description": "Filter uri"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
-                                }
+                                },
+                                "description": "Endevor Hosts Configuration"
                             }
                         }
-                    },
-                    "description": "Endevor Hosts Configuration"
+                    }
                 }
             }
         },

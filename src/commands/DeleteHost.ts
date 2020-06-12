@@ -22,7 +22,7 @@ export function deleteHost(arg:any){
         if (repo) {
             vscode.window.showWarningMessage("Delete connection: " + repo.getName() + "?", "OK").then(message => {
                 if (message === "OK") {
-                    EndevorController.instance.removeRepository(repo.getName());
+                    EndevorController.instance.removeRepository(repo.getName(), repo.getProfileLabel());
                     EndevorController.instance.saveRepositories();
                 }
             });

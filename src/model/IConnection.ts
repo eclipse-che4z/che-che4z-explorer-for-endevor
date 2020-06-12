@@ -12,20 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Filter } from "./IEndevorEntities";
-
-export interface Host {
-    id?: number;
+export interface IConnection {
     name: string;
-    url: string;
-    username: string;
-    password?: string;
-    datasource: string;
-    filters?: Filter[];
-    // TODO: change this to mandatory later
-    profileLabel?: string;
-}
-
-export interface DataSource {
-    name: string;
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    rejectUnauthorized: boolean;
 }

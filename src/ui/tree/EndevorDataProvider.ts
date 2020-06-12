@@ -13,44 +13,89 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorNode, EndevorBrowsingNode, FilterNode, EndevorFilterPathNode, NewRepositoryNode } from './EndevorNodes';
+import { EndevorNode, EndevorBrowsingNode, FilterNode, EndevorFilterPathNode, NewRepositoryNode, ConnectionNode, NewConnectionButton } from './EndevorNodes';
 import { EnvironmentNode, StageNode, SystemNode, SubsystemNode, TypeNode } from './EndevorNodes';
 import { EndevorController } from '../../EndevorController';
 import { Repository } from '../../model/Repository';
+import { Profiles } from "../../service/Profiles";
+import { Logger, IProfileLoaded } from "@zowe/imperative";
+import { Connection } from '../../model/Connection';
 
+
+export async function createEndevorTree(log: Logger) {
+    const tree = new EndevorDataProvider();
+    await tree.addSession();
+    return tree;
+}
 export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode> {
-    private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
-    readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
+    public _sessionNodes: EndevorNode[] = [];
+    public _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
+    public readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
-    constructor() { }
+    // constructor() {}
 
-    getTreeItem(element: EndevorNode): vscode.TreeItem {
+    public getTreeItem(element: EndevorNode): vscode.TreeItem {
         return element;
     }
 
-    getChildren(node?: EndevorNode): Promise<EndevorNode[]> {
+    public addSession(sessionName?: string) {
+        if (sessionName) {
+            const endevorProfile = Profiles.getInstance().loadNamedProfile(sessionName);
+            if (endevorProfile) {
+                this.addSingleSession(endevorProfile);
+            }
+        } else {
+            const endevorProfiles = Profiles.getInstance().allProfiles;
+            // TODO: check if profile is already loaded.
+            // This action was done from history (stuff that got saved in config file)
+            for (const endevorProfile of endevorProfiles) {
+                if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+                    continue;
+                }
+            }
+            if (this._sessionNodes.length === 0) {
+                this.addSingleSession(Profiles.getInstance().defaultProfile);
+            }
+        }
+        this.refresh();
+    }
+
+    public getChildren(node?: EndevorNode): EndevorNode[] | Promise<EndevorNode[]> {
+        // if (node) {
+        //     return node.children;
+        // }
+        // return this._sessionNodes;
+        // init phase. need to add profiles here instead of instances
+        // TODO: FIX ALL THIS DOUBLE NEGATIONS !!!
         if (!node) {
             const root: EndevorNode = EndevorController.instance.rootNode;
+            // 1st time, this is false (!true)
             if (!root.needReload) {
-                return Promise.resolve([new NewRepositoryNode(), ...root.children]);
+                return Promise.resolve([new NewConnectionButton(), ...root.children]);
             }
-            let repos: Repository[] = EndevorController.instance.getRepositories();
-            let newChildren: EndevorNode[] = [];
-            repos.forEach(repo => {
-                let newRepoNode: EndevorNode = new EndevorNode(repo);
-                let foundNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(repo.id);
-                if (foundNode && !foundNode.needReload) {
-                    newRepoNode.children = foundNode.children;
-                    newRepoNode.needReload = false;
-                    newRepoNode.collapsibleState = foundNode.collapsibleState;
+            const connections = EndevorController.instance.getConnections();
+            const newChildren: EndevorNode[] = [];
+            connections.forEach(connection => {
+                const newConnectionNode: EndevorNode = new EndevorNode(connection);
+                // TODO: here I get a connection without repos
+                const foundConnection: EndevorNode | undefined = EndevorController.instance.findNodeByConnectionName(
+                    connection.getName());
+                // TODO: Check the logic here!!! This is to fix the refresh
+                // if (foundConnection && !foundConnection.needReload) {
+                if (foundConnection && foundConnection.needReload) {
+                    newConnectionNode.children = foundConnection.children;
+                    newConnectionNode.needReload = false;
+                    newConnectionNode.collapsibleState = foundConnection.collapsibleState;
                 }
-                newChildren.push(newRepoNode);
+                newChildren.push(newConnectionNode);
             });
             root.needReload = false;
             root.children = newChildren;
-            return Promise.resolve([new NewRepositoryNode(), ...newChildren]);
+            return Promise.resolve([new NewConnectionButton(), ...newChildren]);
         }
         switch (node.contextValue) {
+            case "connection":
+                return Promise.resolve((<ConnectionNode>node).children);
             case "repository":
                 const repo: Repository | undefined = this.getNodeRepository(node);
                 if (!repo) {
@@ -93,11 +138,23 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
         this._onDidChangeTreeData.fire();
     }
 
+    // TODO: this might need to be moved out
     private getNodeRepository(node: EndevorNode): Repository | undefined {
         let repo: Repository | undefined = node.getRepository();
         if (node instanceof EndevorBrowsingNode) {
             repo = (<EndevorBrowsingNode>node).getRepository();
         }
         return repo;
+    }
+
+    private async addSingleSession(endevorProfile: IProfileLoaded) {
+        if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+            return;
+        }
+        const session = await Profiles.getInstance().createBasicEndevorSession(endevorProfile.profile);
+        const node = new ConnectionNode(session, endevorProfile.name);
+        EndevorController.instance.addConnection(new Connection(endevorProfile));
+        this._sessionNodes.push(node);
+
     }
 }

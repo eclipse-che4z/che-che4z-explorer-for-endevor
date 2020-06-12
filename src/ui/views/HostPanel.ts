@@ -51,18 +51,18 @@ export class HostPanel {
                         const password = message.data.password;
                         const datasource = message.data.configuration;
 
-                        if (EndevorController.instance.findRepoByName(name)) {
-                            vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                            return;
-                        }
-                        const targetRepo: Repository = new Repository(name, url, username, password, datasource);
-                        EndevorController.instance.addRepository(targetRepo);
+                        // if (EndevorController.instance.findRepoByName(name)) {
+                        //     vscode.window.showErrorMessage("Host with name " + name + " already exists");
+                        //     return;
+                        // }
+                        const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
+                        EndevorController.instance.addRepository(targetRepo, null);
                         EndevorController.instance.saveRepositories();
                         panel.dispose();
                         break;
                     case "configuration":
                         const restUrl = message.data.url;
-                        const newRepo = new Repository("", restUrl, "", "", "");
+                        const newRepo = new Repository("", restUrl, "", "", "", "");
                         try {
                             const session = await utils.buildSession(newRepo);
                             const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
@@ -118,10 +118,10 @@ export class HostPanel {
                 const name = message.data.name;
                 const username = message.data.username;
                 const password = message.data.password;
-                if (EndevorController.instance.findRepoByName(name) && repo.getName() !== name) {
-                    vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                    return;
-                }
+                // if (EndevorController.instance.findRepoByName(name) && repo.getName() !== name) {
+                //     vscode.window.showErrorMessage("Host with name " + name + " already exists");
+                //     return;
+                // }
                 repo.setName(name);
                 repo.setUsername(username);
                 repo.setPassword(password);
