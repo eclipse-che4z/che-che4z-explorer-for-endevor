@@ -12,11 +12,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export interface IConnection {
+import { IProfile } from "@zowe/imperative";
+
+export interface IConnection extends IProfile {
     name: string;
     host: string;
     port: number;
     user: string;
     password: string;
     rejectUnauthorized: boolean;
+    protocol: string;
 }

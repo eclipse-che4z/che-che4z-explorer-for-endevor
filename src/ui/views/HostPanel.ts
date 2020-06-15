@@ -51,10 +51,6 @@ export class HostPanel {
                         const password = message.data.password;
                         const datasource = message.data.configuration;
 
-                        // if (EndevorController.instance.findRepoByName(name)) {
-                        //     vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                        //     return;
-                        // }
                         const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
                         EndevorController.instance.addRepository(targetRepo, null);
                         EndevorController.instance.updateSettings();
@@ -67,8 +63,6 @@ export class HostPanel {
                             const session = await utils.buildSession(newRepo);
                             const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
                             // tslint:disable-next-line: no-commented-code
-                            // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
-                            // TODO: comments in /src/commands/HostDialogs.ts apply here as well
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
                                 dsNames.push(ds.name as string);
@@ -76,7 +70,6 @@ export class HostPanel {
                             dsNames.sort();
                             panel.webview.postMessage({ data: dsNames });
                         } catch (error) {
-                            // TODO maybe improve error handling here
                             panel.webview.postMessage({ data: [] });
                         }
                         break;

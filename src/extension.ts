@@ -104,7 +104,6 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("endevorexplorer.deleteConnection", deleteConnection));
 
     context.subscriptions.push(
-        // TODO: this doesn't work (not shown in tree, even after refresh)
         vscode.commands.registerCommand("endevorexplorer.updateHost", (arg: any) => {
             if (arg.contextValue === "repository") {
                 HostDialogs.editHost(arg);
@@ -123,7 +122,6 @@ export async function activate(context: vscode.ExtensionContext) {
             endevorDataProvider.refresh();
         }),
     );
-    // TODO: add filter also cleans out the tree (something is wrong with reloading)
     context.subscriptions.push(vscode.commands.registerCommand(Commands.AddFilter, addFilter));
     context.subscriptions.push(vscode.commands.registerCommand(Commands.EditFilter, editFilter));
     context.subscriptions.push(vscode.commands.registerCommand(Commands.DeleteFilter, deleteFilter));
@@ -143,9 +141,8 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration(HOST_SETTINGS_KEY)) {
-                // TODO: NEED TO FIX THIS. is adding it 2 times
-                // EndevorController.instance.loadRepositories();
                 endevorDataProvider.refresh();
+                vscode.commands.executeCommand("endevorexplorer.refreshHosts");
             }
         }),
     );

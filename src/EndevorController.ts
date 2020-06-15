@@ -109,10 +109,6 @@ export class EndevorController {
         const repoIdx = this.rootNode.children[cnxIdx].children.findIndex(repo => repo.label === oldRepoName);
         this.rootNode.children[cnxIdx].children[repoIdx].label = newRepoName;
     }
-    // TODO: delete this eventually. Name is misleading. renamed it
-    // public saveRepositories() {
-    //     SettingsFacade.updateSettings(this.getConnections());
-    // }
 
     public updateSettings() {
         SettingsFacade.updateSettings(this.getConnections());
@@ -149,8 +145,6 @@ export class EndevorController {
                     // Check if node is already defined in root tree
                     let repoNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(settingsRepo.id, connName);
                     let repoToKeep: Repository = settingsRepo;
-                    // TODO: check here what happens if there is repoNode. At load, this is empty
-                    // this is the case when a repo is already defined in the tree and settings are loaded
                     if (repoNode) {
                         let modelRepo: Repository | undefined = repoNode.getRepository();
                         if (modelRepo) {

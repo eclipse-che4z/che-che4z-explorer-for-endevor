@@ -62,9 +62,6 @@ export async function proxyRetrieveAcmComponents(repository: Repository,
         instance,
         endevorElement,
         requestBody);
-    // TODO: IEndevorAcmComponents is not on par with IElement. Should we map it?
-    // const elements: IElement[] = await EndevorRestClient.retrieveElementDependencies(repo, eq);
-    // const elements: any = queryacmCompResponse.data as IEndevorAcmComponents[];
     return queryacmCompResponse.data as IElement[];
 }
 

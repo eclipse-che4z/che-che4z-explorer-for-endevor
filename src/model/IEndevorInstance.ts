@@ -22,7 +22,6 @@ export interface Host {
     password?: string;
     datasource: string;
     filters?: Filter[];
-    // TODO: change this to mandatory later
     profileLabel?: string;
 }
 

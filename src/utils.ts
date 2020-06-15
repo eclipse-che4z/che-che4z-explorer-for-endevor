@@ -99,15 +99,10 @@ function getBasePathFromRepo(repository: Repository): string {
         "/" + repository.getUrlString().split(":")[2].split("/")[2];
 }
 
-// THROWAWAY: will be covered by profile implementation with Imperative profile management
 export async function buildSession(repository: Repository): Promise<Session> {
-    // TODO: create proper type
-    // type HTTPS_PROTOCOL = "https";
-    // type HTTP_PROTOCOL = "http";
-    // from ISession, only works with https
-    // const protocol = repository.getUrl().split(":")[0] as HTTPS_PROTOCOL;
-    // BUT in reality, it only works with http
-    const protocol = "http";
+    // hacky solution to make ISession happy
+    type PROTOCOL = "http" | "https";
+    const protocol = repository.getUrl().split(":")[0] as PROTOCOL;
     const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
     const port = Number(repository.getUrl().split(":")[2]);
     const basePath = getBasePathFromRepo(repository);
@@ -122,14 +117,10 @@ export async function buildSession(repository: Repository): Promise<Session> {
         base64EncodedAuth: Buffer.from(repository.getUsername() + ":" + repository.getPassword()).toString("base64"),
         basePath,
         hostname,
-        // password: repository.getPassword(),
         port,
         protocol,
         rejectUnauthorized: false,
         type: "basic",
-        // strictSSL: true,
-        // secureProtocol: 'SSLv23_method',
-        // user: repository.getUsername(),
     };
     return new Session(sessionDetails);
 }

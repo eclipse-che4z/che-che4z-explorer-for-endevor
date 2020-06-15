@@ -58,8 +58,6 @@ export class SettingsFacade {
         return repos;
     }
 
-    // create a snapshot of connections and write is to settings file
-    // TODO: later look into how to update only 1 connection or one host / connection
     public static async updateSettings(connections: Connection[]) {
         const conns = [];
         connections.forEach(connection => {
@@ -91,7 +89,7 @@ export class SettingsFacade {
 
     }
 
-    // TODO: this is not update but overwrite, so source of truth is always Repositories !!!
+    // this is not update but overwrite, so source of truth is always Repositories
     public static async updateRepositories(connection: Connection) {
         const repos = connection.getRepositoryList();
         const hosts: Host[] = [];

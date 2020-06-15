@@ -46,8 +46,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
             }
         } else {
             const endevorProfiles = Profiles.getInstance().allProfiles;
-            // TODO: check if profile is already loaded.
-            // This action was done from history (stuff that got saved in config file)
             for (const endevorProfile of endevorProfiles) {
                 if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
                     continue;
@@ -61,12 +59,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     }
 
     public getChildren(node?: EndevorNode): EndevorNode[] | Promise<EndevorNode[]> {
-        // if (node) {
-        //     return node.children;
-        // }
-        // return this._sessionNodes;
-        // init phase. need to add profiles here instead of instances
-        // TODO: FIX ALL THIS DOUBLE NEGATIONS !!!
         if (!node) {
             const root: EndevorNode = EndevorController.instance.rootNode;
             // 1st time, this is false (!true)
@@ -77,10 +69,8 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
             const newChildren: EndevorNode[] = [];
             connections.forEach(connection => {
                 const newConnectionNode: EndevorNode = new EndevorNode(connection);
-                // TODO: here I get a connection without repos
                 const foundConnection: EndevorNode | undefined = EndevorController.instance.findNodeByConnectionName(
                     connection.getName());
-                // TODO: Check the logic here!!! This is to fix the refresh
                 // if (foundConnection && !foundConnection.needReload) {
                 if (foundConnection && foundConnection.needReload) {
                     newConnectionNode.children = foundConnection.children;
@@ -138,7 +128,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
         this._onDidChangeTreeData.fire();
     }
 
-    // TODO: this might need to be moved out
     private getNodeRepository(node: EndevorNode): Repository | undefined {
         let repo: Repository | undefined = node.getRepository();
         if (node instanceof EndevorBrowsingNode) {

@@ -21,6 +21,7 @@ interface IUrlValidator {
     valid: boolean;
     host: string;
     port: number;
+    protocol: string;
 }
 
 export class Profiles {
@@ -71,35 +72,6 @@ export class Profiles {
                 vscode.window.showInformationMessage(error.message);
             }
         }
-
-        // TODO: case for SCS, but not covered now (check in latest ZE)
-        // if (this.isSpawnReqd() === 0) {
-        //     // this.allProfiles = ProfileLoader.loadAllProfiles();
-        //     this.allProfiles = (await this.getEndevorCliProfileManager().loadAll()).filter(profile => {
-        //         return profile.type === "endevor";
-        //     });
-        //     try {
-        //         this.defaultProfile = ProfileLoader.loadDefaultProfile(this.log);
-        //     } catch (err) {
-        //         // Unable to load a default profile
-        //         this.log.warn("Unable to locate a default profile. CLI may not be installed. " + err.message);
-        //     }
-        // } else {
-        //     // const profileManager = new CliProfileManager({
-        //     //     profileRootDirectory: path.join(os.homedir(), ".zowe", "profiles"),
-        //     //     type: "endevor",
-        //     // });
-        //     // TODO: if the code above returns already a specific type profile, why we need to filter again?
-        //     // this.allProfiles = (await profileManager.loadAll()).filter(profile => {
-        //     this.allProfiles = (await this.getEndevorCliProfileManager().loadAll()).filter(profile => {
-        //         return profile.type === "endevor";
-        //     });
-        //     if (this.allProfiles.length > 0) {
-        //         this.defaultProfile = (await this.getEndevorCliProfileManager().load({ loadDefault: true }));
-        //     } else {
-        //         ProfileLoader.loadDefaultProfile(this.log);
-        //     }
-        // }
     }
 
     public listProfiles() {
@@ -107,15 +79,14 @@ export class Profiles {
     }
 
     public validateAndParseUrl = (newUrl: string): IUrlValidator => {
-        // TODO: this is not true for endevor, need to be reviewed
         let url: URL;
         const validProtocols: string[] = ["https", "http"];
-        // const DEFAULT_HTTPS_PORT: number = 443;
 
         const validationResult: IUrlValidator = {
             valid: false,
             host: null,
             port: null,
+            protocol: null,
         };
 
         try {
@@ -127,12 +98,11 @@ export class Profiles {
         // overkill with only one valid protocol, but we may expand profile types and protocols in the future?
         if (!validProtocols.some((validProtocol: string) => url.protocol.includes(validProtocol))) {
             return validationResult;
+        } else {
+            validationResult.protocol = url.protocol.replace(":", "");
         }
 
-        // if port is empty, return invalid
-        // TODO: is there a default port? need to ask Endevor or check docs
         if (!url.port.trim()) {
-            // validationResult.port = DEFAULT_HTTPS_PORT;
             return validationResult;
         } else {
             validationResult.port = Number(url.port);
@@ -150,7 +120,7 @@ export class Profiles {
                 if (this.validateAndParseUrl(urlInputBox.value).valid) {
                     resolve(urlInputBox.value);
                 } else {
-                    urlInputBox.validationMessage = "Please enter a valid URL in the format https://url:port.";
+                    urlInputBox.validationMessage = "Please enter a valid URL in the format http(s)://url:port.";
                 }
             });
         });
@@ -240,6 +210,7 @@ export class Profiles {
             user: userName,
             password: passWord,
             rejectUnauthorized: rejectUnauthorize,
+            protocol: endevorUrlParsed.protocol,
         };
 
         let newProfile: IProfile;
@@ -258,7 +229,6 @@ export class Profiles {
     public async createBasicEndevorSession(profile) {
         this.log.debug("Creating an Endevor session from the profile named %s", profile.name);
         return new Session({
-            // TODO: NEED TO TAYLOR FOR ENDEVOR. THIS IS FOR ZOSMF
             type: "basic",
             hostname: profile.host,
             port: profile.port,
@@ -350,22 +320,4 @@ export class Profiles {
         }
         return endevorProfile.profile;
     }
-
-    // TODO: this checks for credential manager override, i.e. SCS
-    // private isSpawnReqd() {
-    //     if (this.spawnValue === -1) {
-    //         const homedir = os.homedir();
-    //         this.spawnValue = 0;
-    //         try {
-    //             const fileName = path.join(homedir, ".zowe", "settings", "imperative.json");
-    //             const settings = JSON.parse(fs.readFileSync(fileName).toString());
-    //             const value = settings.overrides.CredentialManager;
-    //             this.spawnValue = value !== false ? 0 : 1;
-    //         } catch (error) {
-    //             // default to spawn
-    //             this.spawnValue = 0;
-    //         }
-    //     }
-    //     return this.spawnValue;
-    // }
 }
