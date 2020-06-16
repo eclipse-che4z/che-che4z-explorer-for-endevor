@@ -34,6 +34,7 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
+
 - CA Endevor® SCM version 18.0.12 or higher with the following PTFs applied:
    - (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
    - (if using version 18.1.x) PTF SO11272
@@ -44,6 +45,7 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
 
+
 ## **User Guide**
 
 Create a Host in Explorer for Endevor to enable it to access the repository you want to explore.
@@ -51,6 +53,7 @@ Create a Host in Explorer for Endevor to enable it to access the repository you 
 ### **Create a Host**
 
 Create a Host in Explorer for Endevor to specify the data source you want to work with. This allows you to view and explore the selected Endevor repositories.
+
 
 ![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_host.gif)
 
@@ -65,6 +68,7 @@ Create a Host in Explorer for Endevor to specify the data source you want to wor
 You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the interface.
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
 - Filters can be created in the connection without being logged in, but no data is displayed until you log in.
+
 
 ### **Create a Filter**
 
@@ -100,6 +104,7 @@ Creating a manual filter is a quick way to narrow down your search to only relev
 
     If the parameters (with a maximum of two parameters as * wildcards) are correctly entered, the filter appears under the expanded Filter section in the Explorer for Endevor tab.
 
+
 #### **Create a Filter in Map View:**
 
 Map View allows you to create custom filters, without necessarily knowing the parameters in advance or if you have limited or no prior knowledge of Endevor.
@@ -107,6 +112,7 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 **Follow these steps:**
 1. Open Map View in Explorer for Endevor for your selected Host
 2. Select your desired options as you navigate through the different parameters in hierarchical order.
+
 3. Select an entry at the **Type** level, and click the plus icon.
 
     The path that you followed appears highlighted at the top of your screen, displaying the following dialog:
@@ -148,6 +154,7 @@ The Browse Element action displays the entire contents of the Element, including
 ## **Configuration and Usage Tips**
 
 - Delete any filters when no longer required. Filters are saved automatically and so the list might become hard to manage.
+
 - Restrict filters to a maximum of two wildcard entries to avoid heavy resource usage. If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
 ## **Features**:
@@ -193,6 +200,7 @@ For more information, please visit our [documentation](http://techdocs.broadcom.
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
 The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
+
 
 If you are on active support for CA Endevor, technical assistance and support is provided to Broadcom’s CA Endevor customers in accordance with the terms, guidelines, details and parameters located within Broadcom’s “Working with Support” guide located at:
 
