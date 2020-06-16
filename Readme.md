@@ -192,7 +192,7 @@ For more information, please visit our [documentation](http://techdocs.broadcom.
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
-CA Explorer for Endevor extension is made available to customers on Visual Studio’s Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
+The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
 
 If you are on active support for CA Endevor, technical assistance and support is provided to Broadcom’s CA Endevor customers in accordance with the terms, guidelines, details and parameters located within Broadcom’s “Working with Support” guide located at:
 
