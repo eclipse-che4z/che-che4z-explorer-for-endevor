@@ -310,7 +310,6 @@
     },
     "dependencies": {
         "@broadcom/endevor-for-zowe-cli": "^5.1.1",
-        "@zowe/imperative": "^4.6.0",
-        "request": "^2.88.0"
+        "@zowe/imperative": "^4.6.0"
     }
 }
