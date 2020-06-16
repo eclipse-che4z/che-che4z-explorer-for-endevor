@@ -42,7 +42,7 @@
             },
             {
                 "command": "endevorexplorer.newHost",
-                "title": "New connection",
+                "title": "Add a New Datasource",
                 "icon": {
                     "light": "resources/light/add.svg",
                     "dark": "resources/dark/add.svg"
@@ -50,7 +50,7 @@
             },
             {
                 "command": "endevorexplorer.newConnection",
-                "title": "Create a New Session (Profile)",
+                "title": "Create a New Profile",
                 "icon": {
                     "light": "resources/light/add.svg",
                     "dark": "resources/dark/add.svg"
@@ -58,7 +58,7 @@
             },
             {
                 "command": "endevorexplorer.deleteConnection",
-                "title": "Delete Session (Profile)",
+                "title": "Delete Profile",
                 "icon": {
                     "light": "resources/light/delete.svg",
                     "dark": "resources/dark/delete.svg"
@@ -66,7 +66,7 @@
             },
             {
                 "command": "endevorexplorer.updateHost",
-                "title": "Update Host",
+                "title": "Rename Datasource",
                 "icon": {
                     "light": "resources/light/edit.svg",
                     "dark": "resources/dark/edit.svg"
@@ -74,7 +74,7 @@
             },
             {
                 "command": "endevorexplorer.refreshRepo",
-                "title": "Refresh Repository",
+                "title": "Refresh",
                 "icon": {
                     "light": "resources/light/refresh.svg",
                     "dark": "resources/dark/refresh.svg"
@@ -82,7 +82,7 @@
             },
             {
                 "command": "endevorexplorer.deleteHost",
-                "title": "Delete Host",
+                "title": "Delete",
                 "icon": {
                     "light": "resources/light/delete.svg",
                     "dark": "resources/dark/delete.svg"

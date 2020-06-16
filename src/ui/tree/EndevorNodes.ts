@@ -567,7 +567,7 @@ export class NewConnectionButton extends EndevorNode {
         super();
         this.command = {
             command: "endevorexplorer.newConnection",
-            title: "Create a New Session (Profile)",
+            title: "Create a New Profile",
         };
         // TODO remove if Theis fix naming (theia/packages/plugin-ext/src/main/browser/view/tree-views-main.tsx)
         // handleTreeEvents expect node.command.id with command id, but vscode - node.command.command
@@ -575,7 +575,7 @@ export class NewConnectionButton extends EndevorNode {
         // @ts-ignore
         this.command.id = "endevorexplorer.newConnection";
 
-        this.label = "Create a New Session (Profile)";
+        this.label = "Create a New Profile";
         this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     }
     get contextValue() {
@@ -595,7 +595,7 @@ export class NewRepositoryNode extends EndevorNode {
         // @ts-ignore
         this.command.id = "endevorexplorer.newHost";
 
-        this.label = "New connection";
+        this.label = "Add a New Datasource";
         this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     }
     get contextValue() {

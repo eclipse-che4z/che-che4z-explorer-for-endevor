@@ -26,7 +26,7 @@ import { Connection } from "../model/Connection";
 export class HostDialogs {
     public static async addConnection() {
         const allProfiles = (Profiles.getInstance()).allProfiles;
-        const createNewProfile = "Create a New Connection to z/OS";
+        const createNewProfile = "Create a New Connection to Endevor";
         let chosenProfile: string;
 
         let profileNamesList = allProfiles.map(profile => {
@@ -42,7 +42,7 @@ export class HostDialogs {
         }
         const createPick = new utils.FilterDescriptor("\uFF0B " + createNewProfile);
         const items: vscode.QuickPickItem[] = profileNamesList.map(element => new utils.FilterItem(element));
-        const placeholder = "Choose \"Create new...\" to define a new profile or select an existing profile to Add to the USS Explorer";
+        const placeholder = "Choose \"Create new...\" to define a new profile or select an existing one";
 
         const quickpick = vscode.window.createQuickPick();
         quickpick.items = [createPick, ...items];
@@ -65,8 +65,8 @@ export class HostDialogs {
             let newProfileName: any;
             let profileName: string;
             const options = {
-                placeHolder: "Connection Name",
-                prompt: "Enter a name for the connection",
+                placeHolder: "Profile Name",
+                prompt: "Enter a name for the profile",
                 value: profileName,
             };
             profileName = await vscode.window.showInputBox(options);
@@ -137,7 +137,7 @@ export class HostDialogs {
                     newRepo.setDatasource(dsItem.label);
                     EndevorController.instance.addRepository(newRepo, connection.getEntity().getName());
                     EndevorController.instance.updateSettings();
-                    window.showInformationMessage("Connection " + dsItem.label + " was created.");
+                    window.showInformationMessage("Connection to datasource " + dsItem.label + " was created.");
                 } catch (error) {
                     window.showErrorMessage("The host " + newRepo.getUrl() + " is not available.");
                 }
@@ -160,15 +160,15 @@ export class HostDialogs {
             const oldName = repo.getName();
             EndevorController.instance.updateRepositoryName(oldName, newName, repo.getProfileLabel());
             EndevorController.instance.updateSettings();
-            window.showInformationMessage(`Connection ${oldName} was renamed to ${newName}.`);
+            window.showInformationMessage(`Datasource ${oldName} was renamed to ${newName}.`);
         }
     }
 
     private static async showHostNameInput(repo: Repository): Promise<string | undefined> {
         return window.showInputBox({
             ignoreFocusOut: true,
-            placeHolder: "Connection name",
-            prompt: "Enter a custom name for the connection.",
+            placeHolder: "Datasource name",
+            prompt: "Enter a custom name for the datasource.",
             validateInput: (text: string) => (text !== "" ? "" : "Please use only characters A-z and 0-9."),
             value: repo.getName(),
         });
