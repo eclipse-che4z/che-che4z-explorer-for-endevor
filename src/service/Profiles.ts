@@ -10,6 +10,7 @@
 */
 
 import { CliProfileManager, ImperativeConfig, IProfile, IProfileLoaded, ISession, Logger, Session } from "@zowe/imperative";
+import { EndevorProfilesConfig } from "@broadcom/endevor-for-zowe-cli";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -57,16 +58,17 @@ export class Profiles {
         return this.defaultProfile;
     }
     public async refresh() {
+        EndevorProfilesConfig
         this.allProfiles = [];
         const profileManager = this.getEndevorCliProfileManager();
-        const endevorProfiles = (await profileManager.loadAll()).filter(profile => {
+        const endevorProfiles = (await (await profileManager).loadAll()).filter(profile => {
             return profile.type === "endevor";
         });
         if (endevorProfiles && endevorProfiles.length > 0) {
             this.allProfiles.push(...endevorProfiles);
             let defaultProfile: IProfileLoaded;
             try {
-                defaultProfile = await profileManager.load({ loadDefault: true});
+                defaultProfile = await (await profileManager).load({ loadDefault: true});
                 this.defaultProfile = defaultProfile ? defaultProfile : undefined;
             } catch (error) {
                 vscode.window.showInformationMessage(error.message);
@@ -287,17 +289,23 @@ export class Profiles {
         return [updSession.ISession.user, updSession.ISession.password, updSession.ISession.base64EncodedAuth];
     }
 
-    public getEndevorCliProfileManager(): CliProfileManager {
+    public async getEndevorCliProfileManager(): Promise<CliProfileManager> {
         let profileManager = this.endevorProfileManager;
         if (!profileManager) {
-            profileManager = new CliProfileManager({
-                profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
-                type: "endevor",
-            });
-            if (profileManager) {
+            try {
+                await CliProfileManager.initialize(
+                    {
+                        configuration: EndevorProfilesConfig,
+                        profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
+                        reinitialize: false});
+                profileManager = new CliProfileManager({
+                    profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
+                    type: "endevor",
+                });
                 this.endevorProfileManager = profileManager;
-            } else {
-                return undefined;
+            } catch (error) {
+                vscode.window.showErrorMessage("Failed to load Imperative Profile Manager.");
+                vscode.window.showErrorMessage(error.message);
             }
         }
         return profileManager;
@@ -314,7 +322,7 @@ export class Profiles {
     private async saveProfile(ProfileInfo, ProfileName, ProfileType) {
         let endevorProfile: IProfile;
         try {
-            endevorProfile = await this.getEndevorCliProfileManager().save({ profile: ProfileInfo, name: ProfileName, type: ProfileType });
+            endevorProfile = await (await this.getEndevorCliProfileManager()).save({ profile: ProfileInfo, name: ProfileName, type: ProfileType });
         } catch (error) {
             vscode.window.showErrorMessage(error.message);
         }
