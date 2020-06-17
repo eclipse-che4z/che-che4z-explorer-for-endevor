@@ -25,7 +25,7 @@ import { retrieveElement } from "./commands/RetrieveElement";
 import { retrieveWithDependencies } from "./commands/RetrieveElementWithDependencies";
 import { EndevorController } from "./EndevorController";
 import { GitBridgeSupport } from "./service/GitBridgeSupport";
-import { RetrieveElementService } from "./service/RetriveElementService";
+import { RetrieveElementService } from "./service/RetrieveElementService";
 import { HOST_SETTINGS_KEY } from "./service/SettingsFacade";
 import { createEndevorTree } from "./ui/tree/EndevorDataProvider";
 import { EndevorNode } from "./ui/tree/EndevorNodes";
