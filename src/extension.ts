@@ -24,7 +24,6 @@ import { HostDialogs } from "./commands/HostDialogs";
 import { retrieveElement } from "./commands/RetrieveElement";
 import { retrieveWithDependencies } from "./commands/RetrieveElementWithDependencies";
 import { EndevorController } from "./EndevorController";
-import { GitBridgeSupport } from "./service/GitBridgeSupport";
 import { RetrieveElementService } from "./service/RetrieveElementService";
 import { HOST_SETTINGS_KEY } from "./service/SettingsFacade";
 import { createEndevorTree } from "./ui/tree/EndevorDataProvider";
@@ -56,9 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     await Profiles.createInstance(log);
     const endevorDataProvider = await createEndevorTree(log);
-    const gitBridgeSupport = new GitBridgeSupport();
-    const retrieveElementService: RetrieveElementService = new RetrieveElementService(gitBridgeSupport);
-    gitBridgeSupport.register(context);
+    const retrieveElementService: RetrieveElementService = new RetrieveElementService();
     EndevorController.instance.loadRepositories();
 
     const endevorExplorerView: vscode.TreeView<EndevorNode> = vscode.window.createTreeView("endevorExplorer", {
@@ -146,7 +143,6 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
     );
-    gitBridgeSupport.searchImports(context);
 }
 
 // tslint:disable-next-line: no-empty

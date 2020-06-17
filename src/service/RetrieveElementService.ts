@@ -19,10 +19,10 @@ import { Element } from "../model/Element";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
-import { GitBridgeSupport } from "./GitBridgeSupport";
 
 export class RetrieveElementService {
-    constructor(private gitBridge: GitBridgeSupport) {}
+    // tslint:disable-next-line: no-empty
+    constructor() {}
 
     public async retrieveElement(
         workspace: vscode.WorkspaceFolder,
@@ -32,7 +32,7 @@ export class RetrieveElementService {
     ): Promise<string> {
         const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
-        const typeDirectory = this.gitBridge.createElementPath(workspace, eq.type!);
+        const typeDirectory = path.join(workspace.uri.fsPath, eq.type);
         if (!fs.existsSync(typeDirectory)) {
             fs.mkdirSync(typeDirectory);
         }
