@@ -18,7 +18,7 @@ import * as vscode from "vscode";
 import { Element } from "../model/Element";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "../service/EndevorCliProxy";
+import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
 import { GitBridgeSupport } from "./GitBridgeSupport";
 
 export class RetrieveElementService {
