@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -111,10 +111,6 @@ export class HostPanel {
                 const name = message.data.name;
                 const username = message.data.username;
                 const password = message.data.password;
-                // if (EndevorController.instance.findRepoByName(name) && repo.getName() !== name) {
-                //     vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                //     return;
-                // }
                 repo.setName(name);
                 repo.setUsername(username);
                 repo.setPassword(password);

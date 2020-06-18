@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -32,8 +32,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     public _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
     public readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
-    // constructor() {}
-
     public getTreeItem(element: EndevorNode): vscode.TreeItem {
         return element;
     }
@@ -61,7 +59,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     public getChildren(node?: EndevorNode): EndevorNode[] | Promise<EndevorNode[]> {
         if (!node) {
             const root: EndevorNode = EndevorController.instance.rootNode;
-            // 1st time, this is false (!true)
             if (!root.needReload) {
                 return Promise.resolve([new NewConnectionButton(), ...root.children]);
             }
@@ -71,7 +68,6 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
                 const newConnectionNode: EndevorNode = new EndevorNode(connection);
                 const foundConnection: EndevorNode | undefined = EndevorController.instance.findNodeByConnectionName(
                     connection.getName());
-                // if (foundConnection && !foundConnection.needReload) {
                 if (foundConnection && foundConnection.needReload) {
                     newConnectionNode.children = foundConnection.children;
                     newConnectionNode.needReload = false;

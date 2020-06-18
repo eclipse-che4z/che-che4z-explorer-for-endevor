@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -543,7 +543,6 @@ export class ConnectionNode extends EndevorNode {
         }
         if (connection) {
             this._connection = connection;
-            // this.children = connection;
         }
     }
 

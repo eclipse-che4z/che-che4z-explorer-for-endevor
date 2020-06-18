@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -106,7 +106,6 @@ export async function buildSession(repository: Repository): Promise<Session> {
     const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
     const port = Number(repository.getUrl().split(":")[2]);
     const basePath = getBasePathFromRepo(repository);
-    // set password if not defined
     if (!repository.getPassword()) {
         const creds = await CredentialsInputBox.askforCredentials(repository);
         if (!creds) {

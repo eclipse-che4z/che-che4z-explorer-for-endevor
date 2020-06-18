@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -20,7 +20,6 @@ import { Repository } from "../model/Repository";
 import { Connection } from "../model/Connection";
 import { Profiles } from "./Profiles";
 
-// export const HOST_SETTINGS_KEY: string = "endevor.hosts";
 export const HOST_SETTINGS_KEY: string = "endevor.connections";
 
 export class SettingsFacade {
@@ -28,8 +27,7 @@ export class SettingsFacade {
         return vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
     }
 
-    // TODO: remove optional param (call in bridge4git needs to be fixed as well)
-    public static listRepositories(connectionLabel?: string): Repository[] {
+    public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
         // tslint:disable-next-line: max-line-length
         const connectionInSettings = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []).find(connection => connection.name === connectionLabel);
@@ -89,7 +87,6 @@ export class SettingsFacade {
 
     }
 
-    // this is not update but overwrite, so source of truth is always Repositories
     public static async updateRepositories(connection: Connection) {
         const repos = connection.getRepositoryList();
         const hosts: Host[] = [];

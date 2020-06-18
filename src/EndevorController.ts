@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -137,12 +137,10 @@ export class EndevorController {
         }
         connectionsFromSettings.forEach((hostList, connName) => {
             let connNode = EndevorController.instance.findNodeByConnectionName(connName);
-            // if connection is defined, check all hosts and add them in the tree if missing
             if (connNode) {
                 const reposFromSettings: Repository[] = SettingsFacade.listRepositories(connName);
                 const updatedRepos: Map<string, Repository> = new Map();
                 reposFromSettings.forEach(settingsRepo => {
-                    // Check if node is already defined in root tree
                     let repoNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(settingsRepo.id, connName);
                     let repoToKeep: Repository = settingsRepo;
                     if (repoNode) {
@@ -166,7 +164,6 @@ export class EndevorController {
                     }
                     updatedRepos.set(repoToKeep.getName(), repoToKeep);
                 });
-                // this.connections.get(connName).repositories = updatedRepos;
                 let currentRepos = this.connections.get(connName).repositories;
                 currentRepos = updatedRepos;
                 currentRepos.forEach(repo => EndevorController.instance.addRepository(repo, repo.getProfileLabel()));

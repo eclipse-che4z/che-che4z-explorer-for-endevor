@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -30,7 +30,6 @@ export class Repository extends EndevorEntity {
     private _filters: EndevorFilter[];
     private _map: EndevorFilter;
     private _profileLabel: string;
-    // private connection: Connection;
 
     constructor(name: string, url: string, username: string, password: string | undefined, datasource: string, profileLabel: string, id?: number) {
         super();
