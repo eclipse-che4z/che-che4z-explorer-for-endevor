@@ -42,7 +42,7 @@
             },
             {
                 "command": "endevorexplorer.newHost",
-                "title": "Add a New Datasource",
+                "title": "Add a New Configuration",
                 "icon": {
                     "light": "resources/light/add.svg",
                     "dark": "resources/dark/add.svg"
@@ -50,7 +50,7 @@
             },
             {
                 "command": "endevorexplorer.newConnection",
-                "title": "Create a New Profile",
+                "title": "Add a New Profile",
                 "icon": {
                     "light": "resources/light/add.svg",
                     "dark": "resources/dark/add.svg"
@@ -58,7 +58,7 @@
             },
             {
                 "command": "endevorexplorer.deleteConnection",
-                "title": "Delete Profile",
+                "title": "Remove Profile",
                 "icon": {
                     "light": "resources/light/delete.svg",
                     "dark": "resources/dark/delete.svg"
@@ -66,7 +66,7 @@
             },
             {
                 "command": "endevorexplorer.updateHost",
-                "title": "Rename Datasource",
+                "title": "Rename Configuration",
                 "icon": {
                     "light": "resources/light/edit.svg",
                     "dark": "resources/dark/edit.svg"
@@ -82,7 +82,7 @@
             },
             {
                 "command": "endevorexplorer.deleteHost",
-                "title": "Delete",
+                "title": "Remove",
                 "icon": {
                     "light": "resources/light/delete.svg",
                     "dark": "resources/dark/delete.svg"

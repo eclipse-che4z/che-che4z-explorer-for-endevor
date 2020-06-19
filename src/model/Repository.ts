@@ -17,7 +17,6 @@ import { EndevorFilter, FILTER_ALL_STRING } from "./EndevorFilter";
 import { Environment } from "./Environment";
 import { Filter } from "./IEndevorEntities";
 import { System } from "./System";
-import { Connection } from "./Connection";
 
 export class Repository extends EndevorEntity {
     private _id?: number;

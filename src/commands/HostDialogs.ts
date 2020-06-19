@@ -26,7 +26,7 @@ import { Connection } from "../model/Connection";
 export class HostDialogs {
     public static async addConnection() {
         const allProfiles = (Profiles.getInstance()).allProfiles;
-        const createNewProfile = "Create a New Connection to Endevor";
+        const createNewProfile = "Create a New Endevor Profile";
         let chosenProfile: string;
 
         let profileNamesList = allProfiles.map(profile => {
@@ -129,7 +129,7 @@ export class HostDialogs {
                         return;
                     }
                     if (EndevorController.instance.isRepoInConnection(dsItem.label, connection.label)) {
-                        window.showErrorMessage("Host with name " + dsItem.label + " already exists in this session");
+                        window.showErrorMessage("Configuration with name " + dsItem.label + " already exists in this session.");
                         return;
                     }
 
@@ -137,7 +137,7 @@ export class HostDialogs {
                     newRepo.setDatasource(dsItem.label);
                     EndevorController.instance.addRepository(newRepo, connection.getEntity().getName());
                     EndevorController.instance.updateSettings();
-                    window.showInformationMessage("Connection to datasource " + dsItem.label + " was created.");
+                    window.showInformationMessage("Configuration " + dsItem.label + " was added.");
                 } catch (error) {
                     window.showErrorMessage("The host " + newRepo.getUrl() + " is not available.");
                 }
@@ -154,21 +154,21 @@ export class HostDialogs {
                 return;
             }
             if (EndevorController.instance.isRepoInConnection(newName, repo.getProfileLabel())) {
-                window.showErrorMessage("Host with name " + newName + " already exists");
+                window.showErrorMessage("Configuration with name " + newName + " already exists");
                 return;
             }
             const oldName = repo.getName();
             EndevorController.instance.updateRepositoryName(oldName, newName, repo.getProfileLabel());
             EndevorController.instance.updateSettings();
-            window.showInformationMessage(`Datasource ${oldName} was renamed to ${newName}.`);
+            window.showInformationMessage(`Configuration ${oldName} was renamed to ${newName}.`);
         }
     }
 
     private static async showHostNameInput(repo: Repository): Promise<string | undefined> {
         return window.showInputBox({
             ignoreFocusOut: true,
-            placeHolder: "Datasource name",
-            prompt: "Enter a custom name for the datasource.",
+            placeHolder: "Configuration name",
+            prompt: "Enter a custom name for the configuration.",
             validateInput: (text: string) => (text !== "" ? "" : "Please use only characters A-z and 0-9."),
             value: repo.getName(),
         });
