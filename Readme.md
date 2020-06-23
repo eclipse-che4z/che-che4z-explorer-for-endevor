@@ -52,34 +52,27 @@ Create a Host in Explorer for Endevor to enable it to access the repository you 
 
 ### **Create a Profile**
 
-Create a Profile in Explorer for Endevor to specify the data source you want to work with. This allows you to view and explore the selected Endevor repositories.
+Create a Profile in Explorer for Endevor to specify the data source that you want to work with. This allows you to view and explore the selected Endevor repositories.
 
-**Procedure:**
+**Follow these steps:**
 
-1. Click on the + icon
-2. Enter a name for your Profile
-3. Enter Endevor URL in format https://???.broadcom.net:12345 **(Please fill in the ??? whcih was not legible from the video)**
-4. (OPTIONAL) You can then choose whether to include your mainframe credentials. If credentials are added to your profile, you will not be required to re-enter your credentials when accessing different data sources using this profile.
+1. Click on the + icon.
+2. Enter a name for your Profile.
+3. Enter your Endevor URL in the format `https://host:port`.
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different data sources without entering your credentials.
+5. Set profile settings to True or False to indicate that your profile should Reject or Accept connections with self-signed certificates.  
+Your Profile is now available in the panel on the left.
 
-    a. Enter Username
-    
-    b. Enter Password
-    
-5. Set profile settings to True or False to indicate that your profile should Reject or Accept connections with self-signed certs
+6. Click on the profile in the panel.  
+The profile automatically populates in the terminal panel.
 
-Your created Profile will now appear in the panel on the left, ready for use.
+7. To add a new data source, click + next to the panel and select the required additional data source.  
+Your data source appears in the panel below the profile entry.  
+This step can be repeated as many times as you need to add multiple data sources.
 
-6. Click on the profile in the panel, and it is automatically populated in the terminal panel.
+8. In addition to adding multiple data sources to profiles, you can also add additional spearate profiles. Once created, the profiles are listed in the panel on the left hand side, and can be expanded to show which data sources are attached to them.
 
-7. To add a new data source, click + next to the panel and select the required additional data source.
-
-It will then appear in the panel below the profile entry.
-
-This step can be repeated as required to add several data sources.
-
-8. In addition to adding multiple data sources to profiles, you can also add additional spearate profiles. Once created, the profiles are listed in the panel on the left hand side, and can be expanded to show which datasources are attached to them.
-
-9. If you have multiple profiles, you may wish to delete some once they are no longer required. To do so, simply click on the trash can icon on the same line as the relevant Profile name.
+9. If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, simply click on the trash can icon on the same line as the Profile name.
 
 You have successfully created a new Profile connected to a data source, and the Profile is listed under Explorer for Endevor in the interface.
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
