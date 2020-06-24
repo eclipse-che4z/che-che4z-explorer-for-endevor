@@ -51,7 +51,7 @@ Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check
 
 Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor. 
 
-After you create your profile, you specify the configuration that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
+After you create your profile, you specify the configurations that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
 
 **Follow these steps:**
 
