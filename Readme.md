@@ -47,43 +47,42 @@ Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check
 
 ## **User Guide**
 
-Create a Host in Explorer for Endevor to enable it to access the repository you want to explore.
-
 ### **Create a Profile**
 
-Create a profile in Explorer for Endevor, then specify the data source that you want to work with. This allows you to view and explore the selected Endevor repositories.
+Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor. 
+
+After you create your profile, you specify the configuration that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
 
 **Follow these steps:**
 
 1. Click on the + icon.
 2. Enter a name for your profile.
 3. Enter your Endevor URL in the format `https://host:port`.
-4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different data sources without entering your credentials.  
-If you do no add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.  
+If you do not add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
 5. Specify whether to Reject or Accept connections with self-signed certificates.
     - **True**: Reject connections with self-signed certificates.
     - **False**: Accept connections with self-signed certificates.
     
-Your profile is now available in the panel on the left.
+Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
 
-### **Working with Data Sources**
+If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, click on the trash can icon on the same line as the profile name.
 
-Now you have created your profile, assign the data sources that you want to work with.
+### **Working with Endevor Configurations**
+
+Now you have created your profile, assign the configurations that you want to work with.
 
 **Follow these steps:**
 
 1. Click on the profile in the panel.  
 The profile automatically populates in the terminal panel.
 
-2. To add a new data source, click + next to the panel and select the required data source.  
-Your data source appears in the panel below the profile entry.  
-This step can be repeated as many times as you need to add multiple data sources.
-
-In addition to adding multiple data sources to profiles, you can also add additional separate profiles. Once created, the profiles are listed in the panel on the left hand side, and can be expanded to show which data sources are attached to them.
-
-**Note**: If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, simply click on the trash can icon on the same line as the profile name.
+2. To add a new configuration, click + next to the panel and select the required configuration.  
+Your configuration appears in the panel below the profile entry.  
+This step can be repeated as many times as you need to add multiple configurations.
 
 You have successfully connected a profile to a data source, and the profile is listed under Explorer for Endevor in the interface.
+
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
 
 ### **Create a Filter**
