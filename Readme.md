@@ -81,13 +81,17 @@ The profile automatically populates in the terminal panel.
 Your configuration appears in the panel below the profile entry.  
 This step can be repeated as many times as you need to add multiple configurations.
 
-You have successfully connected a profile to a data source, and the profile is listed under Explorer for Endevor in the interface.
+You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
 
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
 
-### **Create a Filter**
+### **Filters**
 
-Filters can be created in the connection without being logged in, but no data is displayed until you log in.
+Explorer for Endevor filters can be used so that only the data you wish to work with is shown.
+
+**Note**: Filters that you create will be associated with your profile. Once you login, the stored filters are available for use.
+
+#### **Create a Filter**
 
 Explorer for Endevor filters can be created in two ways:
 
