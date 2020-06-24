@@ -42,3 +42,8 @@ Version 0.9.1 was released on 28 September 2019 and includes the following featu
 ##### Updated README
 
 ##### Updated License
+
+#### Version 0.10.1
+Version 0.10.1 was released on 25 June 2020 and includes the following features:
+##### Updated README
+##### XXXXXXXXXXXXXXXXXXxx

@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to Explorer for Endevor will be documented in this file.
 
+## [0.10.0] 2020-06-25
+### Added
+- Endevor Plug-in for Zowe CLI profile interoperability 
+    - ability to create a profile
+    - ability to use an already created profile
+    - automatically load default profile
+- dependency on `@broadcom/endevor-for-zowe-cli` npm package
+- dependency on `@zowe/imperative` npm package
+
+### Changed
+- Readme.md updated
+
+### Removed
+- Endevor Bridge for Git support
+- dependency on `request` npm package
+
+
 ## [0.9.1] 2020-03-02
 ### Changed
 - Readme.md updated
