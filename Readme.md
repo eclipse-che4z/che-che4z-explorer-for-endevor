@@ -58,8 +58,9 @@ Create a profile in Explorer for Endevor, then specify the data source that you 
 1. Click on the + icon.
 2. Enter a name for your profile.
 3. Enter your Endevor URL in the format `https://host:port`.
-4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different data sources without entering your credentials.
-5. Set your preference for whether Explorer for Endevor should Reject or Accept connections with self-signed certificates.
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different data sources without entering your credentials.  
+If you skip this step, a credential prompt displays whenever you click on an Endevor configuration in the tree.
+5. Specify whether to Reject or Accept connections with self-signed certificates.
     - **True**: Reject connections with self-signed certificates.
     - **False**: Accept connections with self-signed certificates.
     
