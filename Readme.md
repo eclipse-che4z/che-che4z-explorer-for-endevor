@@ -45,40 +45,49 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
 
-
 ## **User Guide**
 
 Create a Host in Explorer for Endevor to enable it to access the repository you want to explore.
 
 ### **Create a Profile**
 
-Create a Profile in Explorer for Endevor to specify the data source that you want to work with. This allows you to view and explore the selected Endevor repositories.
+Create a profile in Explorer for Endevor, then specify the data source that you want to work with. This allows you to view and explore the selected Endevor repositories.
 
 **Follow these steps:**
 
 1. Click on the + icon.
-2. Enter a name for your Profile.
+2. Enter a name for your profile.
 3. Enter your Endevor URL in the format `https://host:port`.
 4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different data sources without entering your credentials.
-5. Set profile settings to True or False to indicate that your profile should Reject or Accept connections with self-signed certificates.  
-Your Profile is now available in the panel on the left.
+5. Set your preference for whether Explorer for Endevor should Reject or Accept connections with self-signed certificates.
+    - **True**: Reject connections with self-signed certificates.
+    - **False**: Accept connections with self-signed certificates.
+    
+Your profile is now available in the panel on the left.
 
-6. Click on the profile in the panel.  
+### **Working with Data Sources**
+
+Now you have created your profile, assign the data sources that you want to work with.
+
+**Follow these steps:**
+
+1. Click on the profile in the panel.  
 The profile automatically populates in the terminal panel.
 
-7. To add a new data source, click + next to the panel and select the required additional data source.  
+2. To add a new data source, click + next to the panel and select the required data source.  
 Your data source appears in the panel below the profile entry.  
 This step can be repeated as many times as you need to add multiple data sources.
 
-8. In addition to adding multiple data sources to profiles, you can also add additional spearate profiles. Once created, the profiles are listed in the panel on the left hand side, and can be expanded to show which data sources are attached to them.
+In addition to adding multiple data sources to profiles, you can also add additional separate profiles. Once created, the profiles are listed in the panel on the left hand side, and can be expanded to show which data sources are attached to them.
 
-9. If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, simply click on the trash can icon on the same line as the Profile name.
+**Note**: If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, simply click on the trash can icon on the same line as the profile name.
 
-You have successfully created a new Profile connected to a data source, and the Profile is listed under Explorer for Endevor in the interface.
+You have successfully connected a profile to a data source, and the profile is listed under Explorer for Endevor in the interface.
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
-- Filters can be created in the connection without being logged in, but no data is displayed until you log in.
 
 ### **Create a Filter**
+
+Filters can be created in the connection without being logged in, but no data is displayed until you log in.
 
 Explorer for Endevor filters can be created in two ways:
 
