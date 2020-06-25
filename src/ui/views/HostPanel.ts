@@ -12,13 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { IEndevorInstance, ListInstance} from "@broadcom/endevor-for-zowe-cli";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { EndevorController } from "../../EndevorController";
-import { DataSource } from "../../model/IEndevorInstance";
 import { Repository } from "../../model/Repository";
-import { EndevorRestClient } from "../../service/EndevorRestClient";
+import * as utils from "../../utils";
 
 export class HostPanel {
     public static readonly viewType = "endevorHostPanel";
@@ -64,10 +64,14 @@ export class HostPanel {
                         const restUrl = message.data.url;
                         const newRepo = new Repository("", restUrl, "", "", "");
                         try {
-                            const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
+                            const session = await utils.buildSession(newRepo);
+                            const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
+                            // tslint:disable-next-line: no-commented-code
+                            // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
+                            // TODO: comments in /src/commands/HostDialogs.ts apply here as well
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
-                                dsNames.push(ds.name);
+                                dsNames.push(ds.name as string);
                             }
                             dsNames.sort();
                             panel.webview.postMessage({ data: dsNames });

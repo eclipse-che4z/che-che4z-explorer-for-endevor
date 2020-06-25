@@ -16,10 +16,9 @@ import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { Element } from "../model/Element";
-import { IElement, IType } from "../model/IEndevorEntities";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { EndevorRestClient, Resource } from "./EndevorRestClient";
+import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
 import { GitBridgeSupport } from "./GitBridgeSupport";
 
 export class RetrieveElementService {
@@ -31,7 +30,7 @@ export class RetrieveElementService {
         elementName: string,
         eq: EndevorQualifier,
     ): Promise<string> {
-        const data: any = await EndevorRestClient.retrieveElement(repo, eq, false);
+        const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
         const typeDirectory = this.gitBridge.createElementPath(workspace, eq.type!);
         if (!fs.existsSync(typeDirectory)) {
@@ -55,7 +54,7 @@ export class RetrieveElementService {
      */
     public async retrieveDependenciesList(repo: Repository, eq: EndevorQualifier): Promise<Element[]> {
         const result: Element[] = [];
-        const elements: IElement[] = await EndevorRestClient.retrieveElementDependencies(repo, eq);
+        const elements = await proxyRetrieveAcmComponents(repo, eq);
         if (elements.length === 0) {
             return [];
         }
@@ -74,13 +73,7 @@ export class RetrieveElementService {
     }
 
     private async getExtension(repo: Repository, eq: EndevorQualifier): Promise<string> {
-        const typeQualifier: EndevorQualifier = {
-            env: eq.env,
-            stage: eq.stage,
-            system: eq.system,
-            type: eq.type,
-        };
-        const types: IType[] = await EndevorRestClient.getMetadata(repo, typeQualifier, Resource.TYPE);
+        const types = await proxyListType(repo, eq);
         for (const type of types) {
             if (type.typeName === eq.type && type.fileExt) {
                 return type.fileExt;

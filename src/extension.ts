@@ -19,17 +19,17 @@ import { Commands } from "./commands/Common";
 import { deleteFilter } from "./commands/DeleteFilter";
 import { deleteHost } from "./commands/DeleteHost";
 import { editFilter } from "./commands/EditFilter";
+import { HostDialogs } from "./commands/HostDialogs";
 import { retrieveElement } from "./commands/RetrieveElement";
 import { retrieveWithDependencies } from "./commands/RetrieveElementWithDependencies";
 import { EndevorController } from "./EndevorController";
 import { Repository } from "./model/Repository";
 import { GitBridgeSupport } from "./service/GitBridgeSupport";
-import { RetrieveElementService } from "./service/RetriveElementService";
+import { RetrieveElementService } from "./service/RetrieveElementService";
 import { HOST_SETTINGS_KEY } from "./service/SettingsFacade";
 import { EndevorDataProvider } from "./ui/tree/EndevorDataProvider";
 import { EndevorNode } from "./ui/tree/EndevorNodes";
 import { HostPanel } from "./ui/views/HostPanel";
-import { HostDialogs } from "./commands/HostDialogs";
 import { multipleElementsSelected } from "./utils";
 
 export function activate(context: vscode.ExtensionContext) {

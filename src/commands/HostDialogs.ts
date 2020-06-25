@@ -16,7 +16,7 @@ import { URL } from "url";
 import { ProgressLocation, window, workspace } from "vscode";
 import { EndevorController } from "../EndevorController";
 import { Repository } from "../model/Repository";
-import { EndevorRestClient } from "../service/EndevorRestClient";
+import { proxyGetDsNamesFromInstance } from "../service/EndevorCliProxy";
 
 export class HostDialogs {
     /**
@@ -36,18 +36,13 @@ export class HostDialogs {
         }
         const newRepo = new Repository("", url, "", "", "");
 
-        const dsNames: string[] = [];
         window.withProgress({
                 location: ProgressLocation.Notification,
             },
             async progress => {
                 progress.report({message: "Waiting for " + newRepo.getUrl() + " to respond.", increment: 10 });
                 try {
-                    const datasources = await EndevorRestClient.listDatasources(newRepo);
-                    for (const ds of datasources) {
-                        dsNames.push(ds.name);
-                    }
-                    dsNames.sort();
+                    const dsNames = await proxyGetDsNamesFromInstance(newRepo);
                     progress.report({ increment: 100 });
                     const dsItem = await window.showQuickPick(dsNames.map(label => ({ label })), {
                         ignoreFocusOut: true,
