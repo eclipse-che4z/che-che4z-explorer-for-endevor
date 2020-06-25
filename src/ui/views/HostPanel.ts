@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -51,24 +51,18 @@ export class HostPanel {
                         const password = message.data.password;
                         const datasource = message.data.configuration;
 
-                        if (EndevorController.instance.findRepoByName(name)) {
-                            vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                            return;
-                        }
-                        const targetRepo: Repository = new Repository(name, url, username, password, datasource);
-                        EndevorController.instance.addRepository(targetRepo);
-                        EndevorController.instance.saveRepositories();
+                        const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
+                        EndevorController.instance.addRepository(targetRepo, null);
+                        EndevorController.instance.updateSettings();
                         panel.dispose();
                         break;
                     case "configuration":
                         const restUrl = message.data.url;
-                        const newRepo = new Repository("", restUrl, "", "", "");
+                        const newRepo = new Repository("", restUrl, "", "", "", "");
                         try {
                             const session = await utils.buildSession(newRepo);
                             const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
                             // tslint:disable-next-line: no-commented-code
-                            // const datasources: DataSource[] = await EndevorRestClient.listDatasources(newRepo);
-                            // TODO: comments in /src/commands/HostDialogs.ts apply here as well
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
                                 dsNames.push(ds.name as string);
@@ -76,7 +70,6 @@ export class HostPanel {
                             dsNames.sort();
                             panel.webview.postMessage({ data: dsNames });
                         } catch (error) {
-                            // TODO maybe improve error handling here
                             panel.webview.postMessage({ data: [] });
                         }
                         break;
@@ -118,14 +111,10 @@ export class HostPanel {
                 const name = message.data.name;
                 const username = message.data.username;
                 const password = message.data.password;
-                if (EndevorController.instance.findRepoByName(name) && repo.getName() !== name) {
-                    vscode.window.showErrorMessage("Host with name " + name + " already exists");
-                    return;
-                }
                 repo.setName(name);
                 repo.setUsername(username);
                 repo.setPassword(password);
-                EndevorController.instance.saveRepositories();
+                EndevorController.instance.updateSettings();
                 panel.dispose();
             },
             undefined,

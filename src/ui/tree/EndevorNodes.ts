@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -16,6 +16,7 @@
 import * as vscode from "vscode";
 import { createEmptyNode, createPathNodes } from "../../FilterUtils";
 import { Element } from "../../model/Element";
+import { Connection } from "../../model/Connection";
 import { EndevorEntity } from "../../model/EndevorEntity";
 import { EndevorFilter } from "../../model/EndevorFilter";
 import { Environment } from "../../model/Environment";
@@ -31,6 +32,7 @@ import { proxyListElement,
     proxyListSubsystem,
     proxyListSystem,
     proxyListType } from "../../service/EndevorCliProxy";
+import { Session } from "@zowe/imperative";
 
 export class EndevorNode extends vscode.TreeItem {
     private entity?: EndevorEntity;
@@ -107,6 +109,9 @@ export class EndevorNode extends vscode.TreeItem {
         }
         if (this.entity instanceof Type) {
             return "type";
+        }
+        if (this.entity instanceof Connection) {
+            return "connection";
         }
         return "element";
     }
@@ -523,6 +528,59 @@ export class TypeNode extends EndevorQualifiedNode {
     }
 }
 
+export class ConnectionNode extends EndevorNode {
+    private _session: Session;
+    private _connection: Connection;
+    private _connectionName: string;
+
+    constructor(session?: Session, label?: string, connection?: Connection) {
+        super();
+        if (session) {
+            this._session = session;
+        }
+        if (label) {
+            this._connectionName = label;
+        }
+        if (connection) {
+            this._connection = connection;
+        }
+    }
+
+    public getProfileName(): string {
+        return this._connectionName;
+    }
+
+    public getConnection(): Connection {
+        return this._connection;
+    }
+    public getSession(): Session {
+        return this._session;
+    }
+
+    get contextValue() {
+        return "connection";
+    }
+}
+export class NewConnectionButton extends EndevorNode {
+    constructor() {
+        super();
+        this.command = {
+            command: "endevorexplorer.newConnection",
+            title: "Add a New Profile",
+        };
+        // TODO remove if Theis fix naming (theia/packages/plugin-ext/src/main/browser/view/tree-views-main.tsx)
+        // handleTreeEvents expect node.command.id with command id, but vscode - node.command.command
+        // issue: https://github.com/theia-ide/theia/issues/5744
+        // @ts-ignore
+        this.command.id = "endevorexplorer.newConnection";
+
+        this.label = "Add a New Profile";
+        this.collapsibleState = vscode.TreeItemCollapsibleState.None;
+    }
+    get contextValue() {
+        return "connectionButton";
+    }
+}
 export class NewRepositoryNode extends EndevorNode {
     constructor() {
         super();
@@ -536,7 +594,7 @@ export class NewRepositoryNode extends EndevorNode {
         // @ts-ignore
         this.command.id = "endevorexplorer.newHost";
 
-        this.label = "New connection";
+        this.label = "Add a New Configuration";
         this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     }
     get contextValue() {

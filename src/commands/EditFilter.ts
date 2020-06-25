@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -36,7 +36,7 @@ export function editFilter(arg: any) {
                 if (filter.getUri() !== filterUri) {
                     filter.editFilter(filterUri);
                     (<EndevorNode>arg).children = [];
-                    EndevorController.instance.saveRepositories();
+                    EndevorController.instance.updateSettings();
                 }
             }
         }

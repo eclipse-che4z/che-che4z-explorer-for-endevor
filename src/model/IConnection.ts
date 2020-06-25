@@ -12,11 +12,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export interface EndevorQualifier {
-    env?: string;
-    stage?: string;
-    system?: string;
-    subsystem?: string;
-    type?: string;
-    element?: string;
+import { IProfile } from "@zowe/imperative";
+
+export interface IConnection extends IProfile {
+    name: string;
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    rejectUnauthorized: boolean;
+    protocol: string;
 }

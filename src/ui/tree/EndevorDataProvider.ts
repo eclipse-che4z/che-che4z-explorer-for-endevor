@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -13,44 +13,75 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorNode, EndevorBrowsingNode, FilterNode, EndevorFilterPathNode, NewRepositoryNode } from './EndevorNodes';
+import { EndevorNode, EndevorBrowsingNode, FilterNode, EndevorFilterPathNode, NewRepositoryNode, ConnectionNode, NewConnectionButton } from './EndevorNodes';
 import { EnvironmentNode, StageNode, SystemNode, SubsystemNode, TypeNode } from './EndevorNodes';
 import { EndevorController } from '../../EndevorController';
 import { Repository } from '../../model/Repository';
+import { Profiles } from "../../service/Profiles";
+import { Logger, IProfileLoaded } from "@zowe/imperative";
+import { Connection } from '../../model/Connection';
 
+
+export async function createEndevorTree(log: Logger) {
+    const tree = new EndevorDataProvider();
+    await tree.addSession();
+    return tree;
+}
 export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode> {
-    private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
-    readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
+    public _sessionNodes: EndevorNode[] = [];
+    public _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
+    public readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
-    constructor() { }
-
-    getTreeItem(element: EndevorNode): vscode.TreeItem {
+    public getTreeItem(element: EndevorNode): vscode.TreeItem {
         return element;
     }
 
-    getChildren(node?: EndevorNode): Promise<EndevorNode[]> {
+    public addSession(sessionName?: string) {
+        if (sessionName) {
+            const endevorProfile = Profiles.getInstance().loadNamedProfile(sessionName);
+            if (endevorProfile) {
+                this.addSingleSession(endevorProfile);
+            }
+        } else {
+            const endevorProfiles = Profiles.getInstance().allProfiles;
+            for (const endevorProfile of endevorProfiles) {
+                if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+                    continue;
+                }
+            }
+            if (this._sessionNodes.length === 0) {
+                this.addSingleSession(Profiles.getInstance().defaultProfile);
+            }
+        }
+        this.refresh();
+    }
+
+    public getChildren(node?: EndevorNode): EndevorNode[] | Promise<EndevorNode[]> {
         if (!node) {
             const root: EndevorNode = EndevorController.instance.rootNode;
             if (!root.needReload) {
-                return Promise.resolve([new NewRepositoryNode(), ...root.children]);
+                return Promise.resolve([new NewConnectionButton(), ...root.children]);
             }
-            let repos: Repository[] = EndevorController.instance.getRepositories();
-            let newChildren: EndevorNode[] = [];
-            repos.forEach(repo => {
-                let newRepoNode: EndevorNode = new EndevorNode(repo);
-                let foundNode: EndevorNode | undefined = EndevorController.instance.findNodeByRepoID(repo.id);
-                if (foundNode && !foundNode.needReload) {
-                    newRepoNode.children = foundNode.children;
-                    newRepoNode.needReload = false;
-                    newRepoNode.collapsibleState = foundNode.collapsibleState;
+            const connections = EndevorController.instance.getConnections();
+            const newChildren: EndevorNode[] = [];
+            connections.forEach(connection => {
+                const newConnectionNode: EndevorNode = new EndevorNode(connection);
+                const foundConnection: EndevorNode | undefined = EndevorController.instance.findNodeByConnectionName(
+                    connection.getName());
+                if (foundConnection && foundConnection.needReload) {
+                    newConnectionNode.children = foundConnection.children;
+                    newConnectionNode.needReload = false;
+                    newConnectionNode.collapsibleState = foundConnection.collapsibleState;
                 }
-                newChildren.push(newRepoNode);
+                newChildren.push(newConnectionNode);
             });
             root.needReload = false;
             root.children = newChildren;
-            return Promise.resolve([new NewRepositoryNode(), ...newChildren]);
+            return Promise.resolve([new NewConnectionButton(), ...newChildren]);
         }
         switch (node.contextValue) {
+            case "connection":
+                return Promise.resolve((<ConnectionNode>node).children);
             case "repository":
                 const repo: Repository | undefined = this.getNodeRepository(node);
                 if (!repo) {
@@ -99,5 +130,16 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
             repo = (<EndevorBrowsingNode>node).getRepository();
         }
         return repo;
+    }
+
+    private async addSingleSession(endevorProfile: IProfileLoaded) {
+        if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+            return;
+        }
+        const session = await Profiles.getInstance().createBasicEndevorSession(endevorProfile.profile);
+        const node = new ConnectionNode(session, endevorProfile.name);
+        EndevorController.instance.addConnection(new Connection(endevorProfile));
+        this._sessionNodes.push(node);
+
     }
 }

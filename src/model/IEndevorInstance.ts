@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -22,6 +22,7 @@ export interface Host {
     password?: string;
     datasource: string;
     filters?: Filter[];
+    profileLabel?: string;
 }
 
 export interface DataSource {

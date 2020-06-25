@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -18,6 +18,28 @@ import { EndevorQualifier } from "./model/IEndevorQualifier";
 import { Repository } from "./model/Repository";
 import { CredentialsInputBox } from "./ui/tree/CredentialsInput";
 import { EndevorElementNode } from "./ui/tree/EndevorNodes";
+import { QuickPickItem, QuickPick } from "vscode";
+
+export async function resolveQuickPickHelper(quickpick: QuickPick<QuickPickItem>): Promise<QuickPickItem | undefined> {
+    return new Promise<QuickPickItem | undefined>(
+        (c) => quickpick.onDidAccept(() => c(quickpick.activeItems[0])));
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterItem implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return false; }
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterDescriptor implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return true; }
+}
 
 export function toArray<T>(data: any): T[] {
     if (Array.isArray(data)) {
@@ -77,19 +99,13 @@ function getBasePathFromRepo(repository: Repository): string {
         "/" + repository.getUrlString().split(":")[2].split("/")[2];
 }
 
-// THROWAWAY: will be covered by profile implementation with Imperative profile management
 export async function buildSession(repository: Repository): Promise<Session> {
-    // TODO: create proper type
-    // type HTTPS_PROTOCOL = "https";
-    // type HTTP_PROTOCOL = "http";
-    // from ISession, only works with https
-    // const protocol = repository.getUrl().split(":")[0] as HTTPS_PROTOCOL;
-    // BUT in reality, it only works with http
-    const protocol = "http";
+    // hacky solution to make ISession happy
+    type PROTOCOL = "http" | "https";
+    const protocol = repository.getUrl().split(":")[0] as PROTOCOL;
     const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
     const port = Number(repository.getUrl().split(":")[2]);
     const basePath = getBasePathFromRepo(repository);
-    // set password if not defined
     if (!repository.getPassword()) {
         const creds = await CredentialsInputBox.askforCredentials(repository);
         if (!creds) {
@@ -100,14 +116,10 @@ export async function buildSession(repository: Repository): Promise<Session> {
         base64EncodedAuth: Buffer.from(repository.getUsername() + ":" + repository.getPassword()).toString("base64"),
         basePath,
         hostname,
-        // password: repository.getPassword(),
         port,
         protocol,
         rejectUnauthorized: false,
         type: "basic",
-        // strictSSL: true,
-        // secureProtocol: 'SSLv23_method',
-        // user: repository.getUsername(),
     };
     return new Session(sessionDetails);
 }
