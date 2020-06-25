@@ -99,7 +99,6 @@ Explorer for Endevor filters can be created in two ways:
 
 - Search in Map View, and save a filter from the path followed.
 
-![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_filter.gif)
 
 #### **Create a Manual Filter:**
 
@@ -158,7 +157,6 @@ The Browse Element action displays the entire contents of the Element, including
 
     The Element is displayed in the panel, including related information, as shown below:
 
-    ![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/browse_retrieve.gif)
 
 3. Review the displayed information to determine if it is relevant or useful to you.
 
