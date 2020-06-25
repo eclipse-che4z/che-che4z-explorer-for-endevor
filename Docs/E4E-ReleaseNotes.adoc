@@ -42,3 +42,15 @@ Version 0.9.1 was released on 28 September 2019 and includes the following featu
 ##### Updated README
 
 ##### Updated License
+
+#### Version 0.10.0
+Version 0.10.0 was released on 25 June 2020 and includes the following features:
+##### Updated README
+
+##### Endevor Plug-in for Zowe CLI profile interoperability  
+- Users can utilize their Endevor Plug-in for Zowe CLI profiles in Explorer for Endevor
+- If a user has a default Endevor profile, it will be loaded automatically in the extension
+- Users can also create a new Endevor profile from within the extension
+
+##### Endevor Bridge for Git support deprecated
+- Synchronized Git-Endevor mappings are no longer read and the Endevor configuration will not be imported 
