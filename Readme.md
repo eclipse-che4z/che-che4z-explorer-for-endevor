@@ -89,7 +89,7 @@ You have successfully connected a profile to a configuration, and the profile is
 
 Explorer for Endevor filters can be used so that only the data you wish to work with is shown.
 
-**Note**: Filters that you create will be associated with your profile. Once you login, the stored filters are available for use.
+Filters that you create are associated with your profile. Once you log in, the stored filters are available for use.
 
 #### **Create a Filter**
 
