@@ -34,42 +34,64 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 - Access to Mainframe
 - Access to CA Endevor® SCM
-- Installed and configured CA Endevor® SCM Web Services.
-- Latest maintenance and updates applied.
-    - Check [here](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1.html) for more information.
-- **Optional:**
-    - If installing in Eclipse Che IDE:
-        - Eclipse Che 7.3 on Kubernetes
+
+- CA Endevor® SCM version 18.0.12 or higher with the following PTFs applied:
+   - (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
+   - (if using version 18.1.x) PTF SO11272
+   - (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
+- CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/installing/how-to-enable-web-services/configure-ca-endevor-scm-for-web-services.html)
 
 ## **Installing**
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
 
-If using Eclipse Che version 7.3 on Kubernetes, follow the Installing Che section [here](https://github.com/eclipse/che-che4z).
-
 ## **User Guide**
 
-You must first create a host in Explorer for Endevor to enable it to access the repository you want to explore.
+### **Create a Profile**
 
-### **Create a Host**
+Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor. 
 
-Create a Host in Explorer for Endevor to specify the data source you want to work with. This will allow you to view and explore the selected Endevor repositories.
+After you create your profile, you specify the configurations that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
 
-![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_host.gif)
+**Follow these steps:**
 
-**Procedure:**
+1. Click on the + icon.
+2. Enter a name for your profile.
+3. Enter your Endevor URL in the format `https://host:port`.
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.  
+If you do not add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
+5. Specify whether to Reject or Accept connections with self-signed certificates.
+    - **True**: Reject connections with self-signed certificates.
+    - **False**: Accept connections with self-signed certificates.
+    
+Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
 
-1. Open the Explorer for Endevor extension.
-2. Click the plus icon or *New connection*.
+If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, click on the trash can icon on the same line as the profile name.
 
-   You will be prompted to enter an Endevor repository URL in the format 'http(s)://url:port', for example 'http(s)://myhost01:9090' then press 'Enter' to confirm or 'Escape' to cancel.
-3. Select a CA Endevor SCM configuration from the drop-down list.
+### **Working with Endevor Configurations**
 
-You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the interface.
-- Change the name of the connection by clicking the pencil icon next to the connection name. Names must be unique as duplicate names are not permitted.
-- Filters can be created in the connection without being logged in, however you will be prompted to enter your credentials before any data is displayed.
+Now you have created your profile, assign the configurations that you want to work with.
 
-### **Create a Filter**
+**Follow these steps:**
+
+1. Click on the profile in the panel.  
+The profile automatically populates in the terminal panel.
+
+2. To add a new configuration, click + next to the panel and select the required configuration.  
+Your configuration appears in the panel below the profile entry.  
+This step can be repeated as many times as you need to add multiple configurations.
+
+You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
+
+- Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
+
+### **Filters**
+
+Explorer for Endevor filters can be used so that only the data you wish to work with is shown.
+
+Filters that you create are associated with your profile. Once you log in, the stored filters are available for use.
+
+#### **Create a Filter**
 
 Explorer for Endevor filters can be created in two ways:
 
@@ -101,7 +123,8 @@ Creating a manual filter is a quick way to narrow down your search to only relev
 
         - env/stgnum/sys/subsys/type/element
 
-    If the parameters (with a maximum of two parameters as * wildcards) are correctly entered, the filter will appear under the expanded Filter section in the Explorer for Endevor tab.
+    If the parameters (with a maximum of two parameters as * wildcards) are correctly entered, the filter appears under the expanded Filter section in the Explorer for Endevor tab.
+
 
 #### **Create a Filter in Map View:**
 
@@ -109,7 +132,8 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 
 **Follow these steps:**
 1. Open Map View in Explorer for Endevor for your selected Host
-2. Navigate the view as required, selecting your desired options as you navigate through the different parameters in hierarchical order.
+2. Select your desired options as you navigate through the different parameters in hierarchical order.
+
 3. Select an entry at the **Type** level, and click the plus icon.
 
     The path that you followed appears highlighted at the top of your screen, displaying the following dialog:
@@ -150,7 +174,8 @@ The Browse Element action displays the entire contents of the Element, including
 
 ## **Configuration and Usage Tips**
 
-- Delete any filters when no longer required. Filters are saved automatically and so the list can become hard to manage.
+- Delete any filters when no longer required. Filters are saved automatically and so the list might become hard to manage.
+
 - Restrict filters to a maximum of two wildcard entries to avoid heavy resource usage. If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
 ## **Features**:
@@ -195,7 +220,8 @@ For more information, please visit our [documentation](http://techdocs.broadcom.
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
-CA Explorer for Endevor extension is made available to customers on Visual Studio’s Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
+The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
+
 
 If you are on active support for CA Endevor, technical assistance and support is provided to Broadcom’s CA Endevor customers in accordance with the terms, guidelines, details and parameters located within Broadcom’s “Working with Support” guide located at:
 
