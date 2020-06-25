@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -15,7 +15,7 @@
 import * as vscode from "vscode";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { RetrieveElementService } from "../service/RetriveElementService";
+import { RetrieveElementService } from "../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../ui/tree/EndevorNodes";
 import { prepareElementNodesForRetrieve } from "../utils";
 

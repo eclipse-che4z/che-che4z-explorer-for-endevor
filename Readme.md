@@ -45,32 +45,53 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
 
-
 ## **User Guide**
 
-Create a Host in Explorer for Endevor to enable it to access the repository you want to explore.
+### **Create a Profile**
 
-### **Create a Host**
+Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor. 
 
-Create a Host in Explorer for Endevor to specify the data source you want to work with. This allows you to view and explore the selected Endevor repositories.
+After you create your profile, you specify the configurations that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
 
+**Follow these steps:**
 
-![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_host.gif)
+1. Click on the + icon.
+2. Enter a name for your profile.
+3. Enter your Endevor URL in the format `https://host:port`.
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.  
+If you do not add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
+5. Specify whether to Reject or Accept connections with self-signed certificates.
+    - **True**: Reject connections with self-signed certificates.
+    - **False**: Accept connections with self-signed certificates.
+    
+Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
 
-**Procedure:**
+If you have multiple profiles, you might wish to delete some once you no longer need them. To do so, click on the trash can icon on the same line as the profile name.
 
-1. Open the Explorer for Endevor extension.
-2. Click the plus icon or *New connection*.
-   A prompt opens.
-3. Enter an Endevor repository URL in the format 'http(s)://url:port', for example 'http(s)://myhost01:9090' then press 'Enter' to confirm or 'Escape' to cancel.
-4. Select a CA Endevor SCM configuration from the drop-down list.
+### **Working with Endevor Configurations**
 
-You have successfully created a new Host connected to a repository, and the Host is listed under Explorer for Endevor in the interface.
+Now you have created your profile, assign the configurations that you want to work with.
+
+**Follow these steps:**
+
+1. Click on the profile in the panel.  
+The profile automatically populates in the terminal panel.
+
+2. To add a new configuration, click + next to the panel and select the required configuration.  
+Your configuration appears in the panel below the profile entry.  
+This step can be repeated as many times as you need to add multiple configurations.
+
+You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
+
 - Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
-- Filters can be created in the connection without being logged in, but no data is displayed until you log in.
 
+### **Filters**
 
-### **Create a Filter**
+Explorer for Endevor filters can be used so that only the data you wish to work with is shown.
+
+Filters that you create are associated with your profile. Once you log in, the stored filters are available for use.
+
+#### **Create a Filter**
 
 Explorer for Endevor filters can be created in two ways:
 
@@ -78,7 +99,6 @@ Explorer for Endevor filters can be created in two ways:
 
 - Search in Map View, and save a filter from the path followed.
 
-![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/create_filter.gif)
 
 #### **Create a Manual Filter:**
 
@@ -137,7 +157,6 @@ The Browse Element action displays the entire contents of the Element, including
 
     The Element is displayed in the panel, including related information, as shown below:
 
-    ![](https://github.com/eclipse/che-che4z-explorer-for-endevor/blob/v0.9.1/browse_retrieve.gif)
 
 3. Review the displayed information to determine if it is relevant or useful to you.
 

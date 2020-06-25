@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -15,7 +15,7 @@
 import * as vscode from "vscode";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { EndevorRestClient } from "../service/EndevorRestClient";
+import { proxyBrowseElement } from "../service/EndevorCliProxy";
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
@@ -29,7 +29,7 @@ export async function browseElement(arg: any) {
         async progress => {
             progress.report({ increment: 10 });
             try {
-                const data: any = await EndevorRestClient.browseElement(repo, eq);
+                const data = await proxyBrowseElement(repo, eq);
                 progress.report({ increment: 50 });
                 let doc: vscode.TextDocument | undefined;
                 doc = await vscode.workspace.openTextDocument({ content: data });

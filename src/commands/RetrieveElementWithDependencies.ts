@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -17,7 +17,7 @@ import { Element } from "../model/Element";
 import { IElement } from "../model/IEndevorEntities";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { RetrieveElementService } from "../service/RetriveElementService";
+import { RetrieveElementService } from "../service/RetrieveElementService";
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 

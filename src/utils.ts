@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -12,13 +12,39 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
+import { IElementBasicData} from "@broadcom/endevor-for-zowe-cli";
+import { ISession, Session} from "@zowe/imperative";
+import { EndevorQualifier } from "./model/IEndevorQualifier";
+import { Repository } from "./model/Repository";
+import { CredentialsInputBox } from "./ui/tree/CredentialsInput";
 import { EndevorElementNode } from "./ui/tree/EndevorNodes";
+import { QuickPickItem, QuickPick } from "vscode";
+
+export async function resolveQuickPickHelper(quickpick: QuickPick<QuickPickItem>): Promise<QuickPickItem | undefined> {
+    return new Promise<QuickPickItem | undefined>(
+        (c) => quickpick.onDidAccept(() => c(quickpick.activeItems[0])));
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterItem implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return false; }
+}
+
+// tslint:disable-next-line: max-classes-per-file
+export class FilterDescriptor implements QuickPickItem {
+    constructor(private text: string) { }
+    get label(): string { return this.text; }
+    get description(): string { return ""; }
+    get alwaysShow(): boolean { return true; }
+}
 
 export function toArray<T>(data: any): T[] {
     if (Array.isArray(data)) {
         return data as T[];
-    } else if(data) {
+    } else if (data) {
         return [data] as T[];
     } else {
         return [];
@@ -67,4 +93,45 @@ export function multipleElementsSelected(selection: any[]): boolean {
     } else {
         return false;
     }
+}
+function getBasePathFromRepo(repository: Repository): string {
+    return repository.getUrlString().split(":")[2].split("/")[1] +
+        "/" + repository.getUrlString().split(":")[2].split("/")[2];
+}
+
+export async function buildSession(repository: Repository): Promise<Session> {
+    // hacky solution to make ISession happy
+    type PROTOCOL = "http" | "https";
+    const protocol = repository.getUrl().split(":")[0] as PROTOCOL;
+    const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
+    const port = Number(repository.getUrl().split(":")[2]);
+    const basePath = getBasePathFromRepo(repository);
+    if (!repository.getPassword()) {
+        const creds = await CredentialsInputBox.askforCredentials(repository);
+        if (!creds) {
+            throw { cancelled: true };
+        }
+    }
+    const sessionDetails: ISession = {
+        base64EncodedAuth: Buffer.from(repository.getUsername() + ":" + repository.getPassword()).toString("base64"),
+        basePath,
+        hostname,
+        port,
+        protocol,
+        rejectUnauthorized: false,
+        type: "basic",
+    };
+    return new Session(sessionDetails);
+}
+
+export function endevorQualifierToElement(endevorQualifier: EndevorQualifier, instance: string): IElementBasicData {
+    return {
+        element: endevorQualifier.element ? endevorQualifier.element : "*",
+        environment: endevorQualifier.env ? endevorQualifier.env : "*",
+        instance,
+        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : "*",
+        subsystem: endevorQualifier.subsystem ? endevorQualifier. subsystem : "*",
+        system: endevorQualifier.system ? endevorQualifier.system : "*",
+        type: endevorQualifier.type ? endevorQualifier.type : "*",
+    };
 }

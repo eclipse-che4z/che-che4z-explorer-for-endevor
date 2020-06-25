@@ -2,7 +2,7 @@
     "name": "explorer-for-endevor",
     "displayName": "Explorer for Endevor",
     "description": "Explorer for Endevor",
-    "version": "0.9.1",
+    "version": "0.10.0",
     "publisher": "broadcomMFD",
     "repository": {
         "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
@@ -42,15 +42,31 @@
             },
             {
                 "command": "endevorexplorer.newHost",
-                "title": "New connection",
+                "title": "Add a New Configuration",
                 "icon": {
                     "light": "resources/light/add.svg",
                     "dark": "resources/dark/add.svg"
                 }
             },
             {
+                "command": "endevorexplorer.newConnection",
+                "title": "Add a New Profile",
+                "icon": {
+                    "light": "resources/light/add.svg",
+                    "dark": "resources/dark/add.svg"
+                }
+            },
+            {
+                "command": "endevorexplorer.deleteConnection",
+                "title": "Remove Profile",
+                "icon": {
+                    "light": "resources/light/delete.svg",
+                    "dark": "resources/dark/delete.svg"
+                }
+            },
+            {
                 "command": "endevorexplorer.updateHost",
-                "title": "Update Host",
+                "title": "Rename Configuration",
                 "icon": {
                     "light": "resources/light/edit.svg",
                     "dark": "resources/dark/edit.svg"
@@ -58,7 +74,7 @@
             },
             {
                 "command": "endevorexplorer.refreshRepo",
-                "title": "Refresh Repository",
+                "title": "Refresh",
                 "icon": {
                     "light": "resources/light/refresh.svg",
                     "dark": "resources/dark/refresh.svg"
@@ -66,7 +82,7 @@
             },
             {
                 "command": "endevorexplorer.deleteHost",
-                "title": "Delete Host",
+                "title": "Remove",
                 "icon": {
                     "light": "resources/light/delete.svg",
                     "dark": "resources/dark/delete.svg"
@@ -127,6 +143,16 @@
                     "group": "inline"
                 },
                 {
+                    "command": "endevorexplorer.newHost",
+                    "when": "view == endevorExplorer && viewItem == connection",
+                    "group": "inline"
+                },
+                {
+                    "command": "endevorexplorer.deleteConnection",
+                    "when": "view == endevorExplorer && viewItem == connection",
+                    "group": "inline"
+                },
+                {
                     "command": "endevorexplorer.editFilter",
                     "when": "view == endevorExplorer && viewItem == filter",
                     "group": "inline"
@@ -166,7 +192,7 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "endevorexplorer.newHost",
+                    "command": "endevorexplorer.newConnection",
                     "when": "view == endevorExplorer",
                     "group": "navigation"
                 }
@@ -176,53 +202,78 @@
             "title": "Explorer for Endevor",
             "scope": "resource",
             "properties": {
-                "endevor.hosts": {
-                    "type": "array",
-                    "title": "Host List",
+                "endevor.connections": {
+                    "type":"array",
+                    "title": "Endevor Connections",
                     "items": {
                         "type": "object",
-                        "title": "Host Configuration",
+                        "title": "Connection details",
+                        "description": "Host Configuration",
                         "required": [
                             "name",
-                            "url",
-                            "username",
-                            "datasource",
-                            "filters"
+                            "hosts"
                         ],
                         "properties": {
                             "name": {
                                 "type": "string",
-                                "description": "Connection settings name"
+                                "title": "Connection Name",
+                                "description": "Connection Name"
                             },
-                            "url": {
-                                "type": "string",
-                                "description": "Connection url"
-                            },
-                            "username": {
-                                "type": "string",
-                                "description": "Connection User name"
-                            },
-                            "datasource": {
-                                "type": "string",
-                                "description": "Configuration"
-                            },
-                            "filters": {
+                            "hosts": {
                                 "type": "array",
-                                "description": "List of connection's filters",
+                                "title": "Host List",
                                 "items": {
                                     "type": "object",
-                                    "title": "Filter",
+                                    "title": "Host Configuration",
+                                    "required": [
+                                        "name",
+                                        "url",
+                                        "username",
+                                        "datasource",
+                                        "filters",
+                                        "profile"
+                                    ],
                                     "properties": {
-                                        "uri": {
+                                        "profile": {
+                                            "type":"string",
+                                            "description": "Profile attached to"
+                                        },
+                                        "name": {
                                             "type": "string",
-                                            "description": "Filter uri"
+                                            "description": "Connection settings name"
+                                        },
+                                        "url": {
+                                            "type": "string",
+                                            "description": "Connection url"
+                                        },
+                                        "username": {
+                                            "type": "string",
+                                            "description": "Connection User name"
+                                        },
+                                        "datasource": {
+                                            "type": "string",
+                                            "description": "Configuration"
+                                        },
+                                        "filters": {
+                                            "type": "array",
+                                            "description": "List of connection's filters",
+                                            "items": {
+                                                "type": "object",
+                                                "title": "Filter",
+                                                "properties": {
+                                                    "uri": {
+                                                        "type": "string",
+                                                        "description": "Filter uri"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
-                                }
+                                },
+                                "description": "Endevor Hosts Configuration"
                             }
                         }
-                    },
-                    "description": "Endevor Hosts Configuration"
+                    }
                 }
             }
         },
@@ -258,6 +309,7 @@
         "vscode": "^1.1.33"
     },
     "dependencies": {
-        "request": "^2.88.0"
+        "@broadcom/endevor-for-zowe-cli": "^5.1.1",
+        "@zowe/imperative": "^4.6.0"
     }
 }

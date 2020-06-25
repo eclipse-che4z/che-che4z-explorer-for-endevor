@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -20,10 +20,10 @@ export function deleteHost(arg:any){
     if (arg.contextValue === "repository") {
         const repo: Repository | undefined = arg.getRepository();
         if (repo) {
-            vscode.window.showWarningMessage("Delete connection: " + repo.getName() + "?", "OK").then(message => {
+            vscode.window.showWarningMessage("Remove Configuration: " + repo.getName() + "?", "OK").then(message => {
                 if (message === "OK") {
-                    EndevorController.instance.removeRepository(repo.getName());
-                    EndevorController.instance.saveRepositories();
+                    EndevorController.instance.removeRepository(repo.getName(), repo.getProfileLabel());
+                    EndevorController.instance.updateSettings();
                 }
             });
         }

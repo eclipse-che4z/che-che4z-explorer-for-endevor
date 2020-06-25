@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -16,17 +16,23 @@
 import * as vscode from "vscode";
 import { createEmptyNode, createPathNodes } from "../../FilterUtils";
 import { Element } from "../../model/Element";
+import { Connection } from "../../model/Connection";
 import { EndevorEntity } from "../../model/EndevorEntity";
 import { EndevorFilter } from "../../model/EndevorFilter";
 import { Environment } from "../../model/Environment";
-import { IElement, IEnvironment, IStage, ISubsystem, ISystem, IType } from "../../model/IEndevorEntities";
 import { EndevorQualifier } from "../../model/IEndevorQualifier";
 import { Repository } from "../../model/Repository";
 import { Stage } from "../../model/Stage";
 import { SubSystem } from "../../model/SubSystem";
 import { System } from "../../model/System";
 import { Type } from "../../model/Type";
-import { EndevorRestClient, Resource } from "../../service/EndevorRestClient";
+import { proxyListElement,
+    proxyListEnvironment,
+    proxyListStage,
+    proxyListSubsystem,
+    proxyListSystem,
+    proxyListType } from "../../service/EndevorCliProxy";
+import { Session } from "@zowe/imperative";
 
 export class EndevorNode extends vscode.TreeItem {
     private entity?: EndevorEntity;
@@ -103,6 +109,9 @@ export class EndevorNode extends vscode.TreeItem {
         }
         if (this.entity instanceof Type) {
             return "type";
+        }
+        if (this.entity instanceof Connection) {
+            return "connection";
         }
         return "element";
     }
@@ -189,7 +198,7 @@ export class EndevorBrowsingNode extends EndevorNode {
         try {
             const resultNodes: EndevorQualifiedNode[] = [];
             const resultEntities: Environment[] = [];
-            const envs: IEnvironment[] = await EndevorRestClient.getMetadata(repo, {}, Resource.ENV);
+            const envs = await proxyListEnvironment(repo);
             envs.forEach(env => {
                 const envEntity: Environment = new Environment(repo, env);
                 resultEntities.push(envEntity);
@@ -294,7 +303,7 @@ export class FilterNode extends EndevorNode {
         this.needReload = false;
 
         try {
-            const elements: IElement[] = await EndevorRestClient.getMetadata(repo, qualifier, Resource.ELEMENT);
+            const elements = await proxyListElement(repo, qualifier);
             const resultEntities: Element[] = [];
             let resultNodes: EndevorNode[] = [];
             for (const element of elements) {
@@ -362,7 +371,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
         }
         this.needReload = false;
         try {
-            const stages: IStage[] = await EndevorRestClient.getMetadata(repo, nodeQualEnv, Resource.STGNUM);
+            const stages = await proxyListStage(repo, nodeQualEnv);
             const resultEntities: Stage[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
             stages.forEach(stage => {
@@ -397,7 +406,7 @@ export class StageNode extends EndevorQualifiedNode {
         try {
             const resultEntities: System[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const systems: ISystem[] = await EndevorRestClient.getMetadata(repo, nodeQualStage, Resource.SYS);
+            const systems = await proxyListSystem(repo, nodeQualStage);
             systems.forEach(system => {
                 const systemEntity: System = new System(repo, system);
                 resultEntities.push(systemEntity);
@@ -433,7 +442,7 @@ export class SystemNode extends EndevorQualifiedNode {
         try {
             const resultEntities: SubSystem[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const subsystems: ISubsystem[] = await EndevorRestClient.getMetadata(repo, nodeQualSystem, Resource.SUBSYS);
+            const subsystems = await proxyListSubsystem(repo, nodeQualSystem);
             subsystems.forEach(subsystem => {
                 const subsysEntity: SubSystem = new SubSystem(repo, subsystem);
                 resultEntities.push(subsysEntity);
@@ -466,7 +475,7 @@ export class SubsystemNode extends EndevorQualifiedNode {
         try {
             const resultEntities: Type[] = [];
             const resultNodes: EndevorQualifiedNode[] = [];
-            const types: IType[] = await EndevorRestClient.getMetadata(repo, nodeQualSubsys, Resource.TYPE);
+            const types = await proxyListType(repo, nodeQualSubsys);
             types.forEach(type => {
                 const typeEntity: Type = new Type(repo, type);
                 resultEntities.push(typeEntity);
@@ -500,7 +509,7 @@ export class TypeNode extends EndevorQualifiedNode {
         this.needReload = false;
         try {
             const resultNodes: EndevorNode[] = [];
-            const elements: IElement[] = await EndevorRestClient.getMetadata(repo, nodeQualType, Resource.ELEMENT);
+            const elements = await proxyListElement(repo, nodeQualType)
             elements.forEach(element => {
                 const eleEntity: Element = new Element(repo, element);
                 resultNodes.push(new EndevorElementNode(eleEntity, { ...nodeQualType, element: element.fullElmName }));
@@ -519,6 +528,59 @@ export class TypeNode extends EndevorQualifiedNode {
     }
 }
 
+export class ConnectionNode extends EndevorNode {
+    private _session: Session;
+    private _connection: Connection;
+    private _connectionName: string;
+
+    constructor(session?: Session, label?: string, connection?: Connection) {
+        super();
+        if (session) {
+            this._session = session;
+        }
+        if (label) {
+            this._connectionName = label;
+        }
+        if (connection) {
+            this._connection = connection;
+        }
+    }
+
+    public getProfileName(): string {
+        return this._connectionName;
+    }
+
+    public getConnection(): Connection {
+        return this._connection;
+    }
+    public getSession(): Session {
+        return this._session;
+    }
+
+    get contextValue() {
+        return "connection";
+    }
+}
+export class NewConnectionButton extends EndevorNode {
+    constructor() {
+        super();
+        this.command = {
+            command: "endevorexplorer.newConnection",
+            title: "Add a New Profile",
+        };
+        // TODO remove if Theis fix naming (theia/packages/plugin-ext/src/main/browser/view/tree-views-main.tsx)
+        // handleTreeEvents expect node.command.id with command id, but vscode - node.command.command
+        // issue: https://github.com/theia-ide/theia/issues/5744
+        // @ts-ignore
+        this.command.id = "endevorexplorer.newConnection";
+
+        this.label = "Add a New Profile";
+        this.collapsibleState = vscode.TreeItemCollapsibleState.None;
+    }
+    get contextValue() {
+        return "connectionButton";
+    }
+}
 export class NewRepositoryNode extends EndevorNode {
     constructor() {
         super();
@@ -532,7 +594,7 @@ export class NewRepositoryNode extends EndevorNode {
         // @ts-ignore
         this.command.id = "endevorexplorer.newHost";
 
-        this.label = "New connection";
+        this.label = "Add a New Configuration";
         this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     }
     get contextValue() {

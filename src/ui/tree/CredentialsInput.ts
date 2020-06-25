@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Broadcom.
+ * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
  *
  * This program and the accompanying materials are made
@@ -34,7 +34,7 @@ export class CredentialsInputBox {
         }
         repo.setUsername(username);
         repo.setPassword(password);
-        EndevorController.instance.saveRepositories();
+        EndevorController.instance.updateSettings();
         return { password, username };
     }
     private static async showUserName(username: string): Promise<string | undefined> {
