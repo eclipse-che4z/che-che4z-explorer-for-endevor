@@ -69,7 +69,7 @@ If you do not add credentials to your profile, a credential prompt displays when
 **Rename or Delete Profiles**   
     
 - To change the profile name, click the pencil icon next to the profile you wish to change. Ensure that the new profile name is unique.
-- If you have multiple profiles, you might need to delete redundant profiles. To do so, click on the trash can icon on the same line as the profile name.
+- If you have multiple profiles, you might want to remove redundant profiles from the tree. To do so, click on the trash can icon on the same line as the profile name.
 
 ### **Working with Endevor Configurations**
 
