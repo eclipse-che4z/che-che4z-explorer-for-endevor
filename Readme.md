@@ -65,11 +65,8 @@ If you do not add credentials to your profile, a credential prompt displays when
     - **False**: Accept connections with self-signed certificates.
     
     Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
-    
-**Rename or Delete Profiles**   
-    
-- To change the profile name, click the pencil icon next to the profile you wish to change. Ensure that the new profile name is unique.
-- If you have multiple profiles, you might want to remove redundant profiles from the tree. To do so, click on the trash can icon on the same line as the profile name.
+        
+If you have multiple profiles, you might want to remove redundant profiles from the tree. To do so, click on the trash can icon on the same line as the profile name.
 
 ### **Working with Endevor Configurations**
 
@@ -85,6 +82,8 @@ Your configuration appears in the panel below the profile entry.
 This step can be repeated as many times as you need to add multiple configurations.
 
 You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
+
+To change the name of a configuration, click the pencil icon next to the configuration in the tree.
 
 ### **Filters**
 
