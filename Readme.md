@@ -83,7 +83,7 @@ This step can be repeated as many times as you need to add multiple configuratio
 
 You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
 
-- Change the name of the connection by clicking the pencil icon next to the connection name. Ensure that the connection name is unique.
+- You can change the name of profiles as required by clicking the pencil icon next to the profile name. Ensure that the connection name is unique.
 
 ### **Filters**
 
