@@ -16,3 +16,4 @@ export const HOST_SETTINGS_KEY = 'endevor.hosts';
 export const ASTERISK = '*';
 export const RC_TWENTY = "0020";
 export const RC_SIXTEEN = "0016";
+export const OUTPUT_CHANNEL_NAME = 'Explorer for Endevor';
