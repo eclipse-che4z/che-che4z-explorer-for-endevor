@@ -14,19 +14,25 @@
 
 import { Repository } from "../model/Repository";
 import { EndevorController } from "../EndevorController";
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { logger } from "../globals";
 
-export function deleteConnection(arg:any){
+export function deleteConnection(arg: any) {
     if (arg.contextValue === "connection") {
-        vscode.window.showWarningMessage("Remove session?", "OK", "Cancel").then(selection => {
-            if (selection === "OK") {
-                EndevorController.instance.removeConnection(arg.label);
-                vscode.commands.executeCommand("endevorexplorer.refreshHosts");
-                vscode.window.showInformationMessage("Session removed.");
-                EndevorController.instance.updateSettings();
-            } else {
-                vscode.window.showInformationMessage("Operation cancelled.");
-            }
-        });
+        logger.trace(`Remove session ${arg.label}`);
+        vscode.window
+            .showWarningMessage("Remove session?", "OK", "Cancel")
+            .then(selection => {
+                if (selection === "OK") {
+                    EndevorController.instance.removeConnection(arg.label);
+                    vscode.commands.executeCommand(
+                        "endevorexplorer.refreshHosts"
+                    );
+                    logger.info("Session removed.");
+                    EndevorController.instance.updateSettings();
+                } else {
+                    logger.info("Operation cancelled.");
+                }
+            });
     }
 }

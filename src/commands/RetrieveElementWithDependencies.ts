@@ -18,6 +18,7 @@ import { IElement } from "../model/IEndevorEntities";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { RetrieveElementService } from "../service/RetrieveElementService";
+import { logger } from "../globals";
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
@@ -30,10 +31,10 @@ export function retrieveWithDependencies(arg: any, retrieveElementService: Retri
         },
         async (progress, token) => {
             token.onCancellationRequested(() => {
-                vscode.window.showInformationMessage("Retrieve Cancelled.");
+                logger.info("Retrieve Cancelled.");
             });
             if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-                vscode.window.showErrorMessage("Specify workspace before retrieving elements");
+                logger.error("Specify workspace before retrieving elements");
                 return;
             }
             const workspace: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];
