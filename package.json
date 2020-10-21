@@ -203,7 +203,7 @@
             "scope": "resource",
             "properties": {
                 "endevor.connections": {
-                    "type":"array",
+                    "type": "array",
                     "title": "Endevor Connections",
                     "items": {
                         "type": "object",
@@ -235,7 +235,7 @@
                                     ],
                                     "properties": {
                                         "profile": {
-                                            "type":"string",
+                                            "type": "string",
                                             "description": "Profile attached to"
                                         },
                                         "name": {
@@ -297,19 +297,34 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
+        "build": "rimraf dist && webpack --mode production",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install"
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "lint": "concurrently -n \"_eslint_,prettier\" \"eslint --ext .ts,.tsx,.js .\" \"prettier --check .\"",
+        "pretty": "prettier --write .",
+        "test": "npm run test:unit && npm run test:integration",
+        "test:unit": "jest --config jest.config.js --coverage",
+        "test:vscode": "ts-node ./test/runTest.ts",
+        "test:che4z": "jest --config jest.int.config.js --coverage -i",
+        "test:integration": "npm run test:che4z && npm run test:vscode",
+        "package": "mkdirp vsce && vsce package --yarn -o vsce/bridge-for-git.vsix"
     },
     "devDependencies": {
         "@types/node": "^12.6.2",
+        "@types/jest": "^26.0.7",
         "tslint": "^5.18.0",
         "tslint-sonarts": "^1.9.0",
         "typescript": "^3.5.3",
-        "vscode": "^1.1.33"
+        "vscode": "^1.1.33",
+        "ts-node": "^9.0.0",
+        "eslint-plugin-jest": "^24.0.2",
+        "jest": "^26.4.2",
+        "jest-html-reporter": "^3.2.0",
+        "ts-jest": "^26.4.0"
     },
     "dependencies": {
         "@broadcom/endevor-for-zowe-cli": "^5.1.1",
-        "@zowe/imperative": "^4.6.0"
+        "@zowe/imperative": "^4.8.1"
     }
 }
