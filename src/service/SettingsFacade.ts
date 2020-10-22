@@ -13,7 +13,6 @@
  */
 
 import * as vscode from "vscode";
-import { EndevorController } from "../EndevorController";
 import { EndevorFilter } from "../model/EndevorFilter";
 import { Host } from "../model/IEndevorInstance";
 import { Repository } from "../model/Repository";

@@ -230,7 +230,7 @@ export class Profiles {
     }
 
     public async createBasicEndevorSession(profile) {
-        this.log.debug("Creating an Endevor session from the profile named %s", profile.name);
+        logger.trace(`Creating an Endevor session from the profile named ${profile.name}`);
         return new Session({
             type: "basic",
             hostname: profile.host,
