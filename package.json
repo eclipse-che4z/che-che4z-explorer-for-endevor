@@ -203,7 +203,7 @@
             "scope": "resource",
             "properties": {
                 "endevor.connections": {
-                    "type":"array",
+                    "type": "array",
                     "title": "Endevor Connections",
                     "items": {
                         "type": "object",
@@ -235,7 +235,7 @@
                                     ],
                                     "properties": {
                                         "profile": {
-                                            "type":"string",
+                                            "type": "string",
                                             "description": "Profile attached to"
                                         },
                                         "name": {
