@@ -37,13 +37,14 @@ export class CredentialsInputBox {
         EndevorController.instance.updateSettings();
         return { password, username };
     }
-    private static async showUserName(username: string): Promise<string | undefined> {
+    private static async showUserName(username?: string): Promise<string | undefined> {
+        username = username ? username : "";
         return vscode.window.showInputBox({
             ignoreFocusOut: true,
             placeHolder: "Username",
             prompt: "Enter the Username ",
             validateInput: (text: string) => (text !== "" ? "" : "Username must not be empty"),
-            value: username,
+            value: username
         });
     }
     private static async showPasswordBox(): Promise<string | undefined> {

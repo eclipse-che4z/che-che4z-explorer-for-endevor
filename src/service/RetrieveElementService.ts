@@ -32,7 +32,8 @@ export class RetrieveElementService {
     ): Promise<string> {
         const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
-        const typeDirectory = path.join(workspace.uri.fsPath, eq.type);
+        const type = eq.type ? eq.type : "";
+        const typeDirectory = path.join(workspace.uri.fsPath, type);
         if (!fs.existsSync(typeDirectory)) {
             fs.mkdirSync(typeDirectory);
         }

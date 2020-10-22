@@ -22,15 +22,15 @@ export class Repository extends EndevorEntity {
     private _id?: number;
     private name: string;
     private url: string;
-    private username: string;
+    private username: string | undefined;
     private password: string | undefined;
     private datasource: string;
     private _environments: Map<string, Environment>;
     private _filters: EndevorFilter[];
     private _map: EndevorFilter;
-    private _profileLabel: string;
+    private _profileLabel: string | undefined;
 
-    constructor(name: string, url: string, username: string, password: string | undefined, datasource: string, profileLabel: string, id?: number) {
+    constructor(name: string, url: string, username: string | undefined, password: string | undefined, datasource: string, profileLabel: string | undefined, id?: number) {
         super();
         this._id = id;
         this.name = name;
@@ -109,7 +109,7 @@ export class Repository extends EndevorEntity {
         this._profileLabel = value;
     }
 
-    public getProfileLabel(): string {
+    public getProfileLabel(): string | undefined {
         return this._profileLabel;
     }
 
@@ -121,7 +121,7 @@ export class Repository extends EndevorEntity {
         this.username = value;
     }
 
-    public getUsername(): string {
+    public getUsername(): string | undefined {
         return this.username;
     }
 

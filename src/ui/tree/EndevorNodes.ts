@@ -40,7 +40,8 @@ export class EndevorNode extends vscode.TreeItem {
     private _needReload: boolean;
 
     constructor(entity?: EndevorEntity) {
-        super(entity ? entity.getName() : "unknown", vscode.TreeItemCollapsibleState.Collapsed);
+        const entityName = entity ? entity.getName() : "unknown";
+        super(entityName!, vscode.TreeItemCollapsibleState.Collapsed);
         this._needReload = true;
         this.description = "";
         this._children = [];
@@ -529,9 +530,9 @@ export class TypeNode extends EndevorQualifiedNode {
 }
 
 export class ConnectionNode extends EndevorNode {
-    private _session: Session;
-    private _connection: Connection;
-    private _connectionName: string;
+    private _session: Session | undefined = undefined;
+    private _connection: Connection | undefined = undefined;
+    private _connectionName: string | undefined = undefined;
 
     constructor(session?: Session, label?: string, connection?: Connection) {
         super();
@@ -546,14 +547,14 @@ export class ConnectionNode extends EndevorNode {
         }
     }
 
-    public getProfileName(): string {
+    public getProfileName(): string | undefined {
         return this._connectionName;
     }
 
-    public getConnection(): Connection {
+    public getConnection(): Connection | undefined {
         return this._connection;
     }
-    public getSession(): Session {
+    public getSession(): Session | undefined {
         return this._session;
     }
 

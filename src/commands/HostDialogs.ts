@@ -41,7 +41,7 @@ export class HostDialogs {
             );
         }
         const createPick = new utils.FilterDescriptor("\uFF0B " + createNewProfile);
-        const items: vscode.QuickPickItem[] = profileNamesList.map(element => new utils.FilterItem(element));
+        const items: vscode.QuickPickItem[] = profileNamesList.map(element => new utils.FilterItem(element!));
         const placeholder = "Choose \"Create new...\" to define a new profile or select an existing one";
 
         const quickpick = vscode.window.createQuickPick();
@@ -63,11 +63,10 @@ export class HostDialogs {
 
         if (chosenProfile === "") {
             let newProfileName: any;
-            let profileName: string;
+            let profileName: string | undefined;
             const options = {
                 placeHolder: "Profile Name",
-                prompt: "Enter a name for the profile",
-                value: profileName,
+                prompt: "Enter a name for the profile"
             };
             profileName = await vscode.window.showInputBox(options);
             if (!profileName) {
@@ -84,15 +83,20 @@ export class HostDialogs {
                 try {
                     const newProfile = Profiles.getInstance().listProfiles().find(
                         profile => profile.name === newProfileName);
-                    const profileToAdd = new Connection(newProfile);
-                    EndevorController.instance.addConnection(profileToAdd);
+                    if (newProfile) {
+                        const profileToAdd = new Connection(newProfile);
+                        EndevorController.instance.addConnection(profileToAdd);
+                    }
                 } catch (error) {
                     vscode.window.showErrorMessage("Error while adding new profile");
                 }
             }
         } else if (chosenProfile) {
-            const profileToAdd = new Connection(allProfiles.find(profile => profile.name === chosenProfile));
-            EndevorController.instance.addConnection(profileToAdd);
+            const profileToUse = allProfiles.find(profile => profile.name === chosenProfile);
+            if (profileToUse) {
+                const profileToAdd = new Connection(profileToUse);
+                EndevorController.instance.addConnection(profileToAdd);
+            }
         } else {
             vscode.window.showInformationMessage("Operation cancelled");
         }
@@ -149,16 +153,17 @@ export class HostDialogs {
         const repo: Repository | undefined = context.getRepository();
         if (repo) {
             const newName =  await HostDialogs.showHostNameInput(repo);
+            const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
 
             if (newName === undefined) {
                 return;
             }
-            if (EndevorController.instance.isRepoInConnection(newName, repo.getProfileLabel())) {
+            if (EndevorController.instance.isRepoInConnection(newName, profileLabel!)) {
                 window.showErrorMessage("Configuration with name " + newName + " already exists");
                 return;
             }
             const oldName = repo.getName();
-            EndevorController.instance.updateRepositoryName(oldName, newName, repo.getProfileLabel());
+            EndevorController.instance.updateRepositoryName(oldName, newName, profileLabel!);
             EndevorController.instance.updateSettings();
             window.showInformationMessage(`Configuration ${oldName} was renamed to ${newName}.`);
         }

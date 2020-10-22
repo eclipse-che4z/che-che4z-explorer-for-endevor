@@ -45,12 +45,13 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
         } else {
             const endevorProfiles = Profiles.getInstance().allProfiles;
             for (const endevorProfile of endevorProfiles) {
-                if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+                if (this._sessionNodes.find(tempNode => tempNode.label && tempNode.label.trim() === endevorProfile.name)) {
                     continue;
                 }
             }
-            if (this._sessionNodes.length === 0) {
-                this.addSingleSession(Profiles.getInstance().defaultProfile);
+            const defaultProfile = Profiles.getInstance().defaultProfile;
+            if (this._sessionNodes.length === 0 && defaultProfile) {
+                this.addSingleSession(defaultProfile);
             }
         }
         this.refresh();
@@ -66,8 +67,11 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
             const newChildren: EndevorNode[] = [];
             connections.forEach(connection => {
                 const newConnectionNode: EndevorNode = new EndevorNode(connection);
-                const foundConnection: EndevorNode | undefined = EndevorController.instance.findNodeByConnectionName(
-                    connection.getName());
+                let foundConnection: EndevorNode | undefined;
+                const connectionName = connection.getName();
+                if (connectionName) {
+                    foundConnection = EndevorController.instance.findNodeByConnectionName(connectionName);
+                }
                 if (foundConnection && foundConnection.needReload) {
                     newConnectionNode.children = foundConnection.children;
                     newConnectionNode.needReload = false;
@@ -133,7 +137,7 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     }
 
     private async addSingleSession(endevorProfile: IProfileLoaded) {
-        if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
+        if (this._sessionNodes.find(tempNode => tempNode.label && tempNode.label.trim() === endevorProfile.name)) {
             return;
         }
         const session = await Profiles.getInstance().createBasicEndevorSession(endevorProfile.profile);

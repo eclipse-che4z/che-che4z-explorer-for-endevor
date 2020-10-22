@@ -52,7 +52,7 @@ export class HostPanel {
                         const datasource = message.data.configuration;
 
                         const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
-                        EndevorController.instance.addRepository(targetRepo, null);
+                        EndevorController.instance.addRepository(targetRepo, "");
                         EndevorController.instance.updateSettings();
                         panel.dispose();
                         break;

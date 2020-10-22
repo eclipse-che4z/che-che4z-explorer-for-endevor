@@ -30,39 +30,43 @@ export class SettingsFacade {
     public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
         // tslint:disable-next-line: max-line-length
-        const connectionInSettings = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []).find(connection => connection.name === connectionLabel);
+        const allConnectionsInSettings: any[] = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
+        const connectionInSettings = allConnectionsInSettings.find(connection => connection.name === connectionLabel);
         const hosts: Host[] = connectionInSettings ? connectionInSettings.hosts : [];
         const profile = Profiles.getInstance().loadNamedProfile(connectionLabel).profile;
-        hosts.forEach(host => {
-            const repo: Repository = new Repository(
-                host.name,
-                `${profile.protocol}://${profile.host}:${profile.port}`,
-                profile.user,
-                profile.password,
-                host.datasource,
-                host.profileLabel,
-                host.id,
-            );
-            if (host.filters) {
-                const newFilters: Map<string, EndevorFilter> = new Map();
-                host.filters.forEach(filter => {
-                    newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
-                    repo.filters.push(new EndevorFilter(repo, filter.uri));
-                });
-                repo.filters = Array.from(newFilters.values());
-            }
-            repos.push(repo);
-        });
+        if (profile) {
+            hosts.forEach(host => {
+                const repo: Repository = new Repository(
+                    host.name,
+                    `${profile.protocol}://${profile.host}:${profile.port}`,
+                    profile.user,
+                    profile.password,
+                    host.datasource,
+                    host.profileLabel,
+                    host.id,
+                );
+                if (host.filters) {
+                    const newFilters: Map<string, EndevorFilter> = new Map();
+                    host.filters.forEach(filter => {
+                        newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
+                        repo.filters.push(new EndevorFilter(repo, filter.uri));
+                    });
+                    repo.filters = Array.from(newFilters.values());
+                }
+                repos.push(repo);
+            });
+        }
         return repos;
     }
 
     public static async updateSettings(connections: Connection[]) {
-        const conns = [];
+        const conns: any[] = [];
         connections.forEach(connection => {
+            const hostsArray: any[] = [];
             const toPush = {
                 name: connection.getName(),
                 // tslint:disable-next-line: object-literal-sort-keys
-                hosts: [],
+                hosts: hostsArray
             };
             connection.getRepositoryList().forEach(repo => {
                 toPush.hosts.push({
@@ -98,7 +102,7 @@ export class SettingsFacade {
                 name: repo.getName(),
                 profileLabel: repo.getProfileLabel(),
                 url: repo.getUrl(),
-                username: repo.getUsername(),
+                username: repo.getUsername()
             });
         });
         const value = {
