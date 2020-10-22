@@ -16,10 +16,10 @@ import { IProfile } from "@zowe/imperative";
 
 export interface IConnection extends IProfile {
     name: string;
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    rejectUnauthorized: boolean;
-    protocol: string;
+    host: string | undefined;
+    port: number | undefined;
+    user: string | undefined;
+    password: string | undefined;
+    rejectUnauthorized: boolean | undefined;
+    protocol: string | undefined;
 }

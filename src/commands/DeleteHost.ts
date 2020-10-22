@@ -22,7 +22,8 @@ export function deleteHost(arg:any){
         if (repo) {
             vscode.window.showWarningMessage("Remove Configuration: " + repo.getName() + "?", "OK").then(message => {
                 if (message === "OK") {
-                    EndevorController.instance.removeRepository(repo.getName(), repo.getProfileLabel());
+                    const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
+                    EndevorController.instance.removeRepository(repo.getName(), profileLabel!);
                     EndevorController.instance.updateSettings();
                 }
             });
