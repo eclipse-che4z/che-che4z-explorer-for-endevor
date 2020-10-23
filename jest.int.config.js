@@ -15,7 +15,7 @@ testMatch: ['**/__tests__/sampletests/**/*.test.ts'],
       [
         './node_modules/jest-html-reporter',
         {
-          pageTitle: 'CHE4Z Explorer for Endevor Unit Test Report',
+          pageTitle: 'Explorer for Endevor Unit Test Report',
           outputPath: 'results/unit/results.html',
         },
       ],

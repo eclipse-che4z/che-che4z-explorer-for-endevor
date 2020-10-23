@@ -14,4 +14,3 @@ node_modules
 .vscode-test/
 *.vsix
 results
-dist
