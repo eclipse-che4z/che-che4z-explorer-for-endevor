@@ -18,15 +18,26 @@ Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.c
 
 ## **Contents**
 
-- [**Prerequisites**](#prerequisites)
-- [**Installing**](#installing)
-- [**User Guide**](#user-guide)
-- [**Use Cases**](#use-cases)
-- [**Configuration and Usage Tips**](#configuration-and-usage-tips)
-- [**Features**](#features)
+- [Explorer for Endevor](#explorer-for-endevor)
+  - [**Contents**](#contents)
+  - [**Prerequisites**](#prerequisites)
+  - [**Installing**](#installing)
+  - [**User Guide**](#user-guide)
+    - [**Create a Profile**](#create-a-profile)
+    - [**Manage your profiles**](#manage-your-profiles)
+    - [**Working with Endevor Configurations**](#working-with-endevor-configurations)
     - [**Filters**](#filters)
+      - [**Create a Filter**](#create-a-filter)
+      - [**Create a Manual Filter:**](#create-a-manual-filter)
+      - [**Create a Filter in Map View:**](#create-a-filter-in-map-view)
+    - [**Browse or Retrieve an Element**](#browse-or-retrieve-an-element)
+  - [**Use Cases**](#use-cases)
+  - [**Configuration and Usage Tips**](#configuration-and-usage-tips)
+  - [**Features**:](#features)
+    - [**Filters**](#filters-1)
     - [**Elements**](#elements)
-- [**Technical Assistance and Support for CA Explorer for Endevor**](#technical-assistance-and-support-for-ca-explorer-for-endevor)
+  - [For more information, please visit our documentation](#for-more-information-please-visit-our-documentationhttptechdocsbroadcomcomcontentbroadcomtechdocsusenca-mainframe-softwaredevopsca-endevor-integrations-for-enterprise-devops1-0endevor-explorer-for-ca-endevor-scmhtml)
+    - [**Technical Assistance and Support for CA Explorer for Endevor**](#technical-assistance-and-support-for-ca-explorer-for-endevor)
 
 ## **Prerequisites**
 
@@ -40,6 +51,8 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
    - (if using version 18.1.x) PTF SO11272
    - (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
 - CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/installing/how-to-enable-web-services/configure-ca-endevor-scm-for-web-services.html)
+- (Optional) Zowe CLI v1-LTS
+- (Optional) CA Endevor plug-in for Zowe CLI version 6.0.0
 
 ## **Installing**
 
@@ -49,24 +62,30 @@ Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check
 
 ### **Create a Profile**
 
-Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor. 
+Explorer for Endevor uses Zowe CLI profiles for the CA Endevor plug-in to access Endevor inventory locations on the mainframe. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately through your profile in the tree. If you do not have a profile, you can create one in Explorer for Endevor.
 
-After you create your profile, you specify the configurations that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
+After you create your profile, specify the configurations that you want to work with. This allows you to view and explore the selected Endevor repositories. You can create multiple profiles if necessary.
 
 **Follow these steps:**
 
 1. Click on the + icon.
 2. Enter a name for your profile.
 3. Enter your Endevor URL in the format `https://host:port`.
-4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.  
+4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.
 If you do not add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
 5. Specify whether to Reject or Accept connections with self-signed certificates.
     - **True**: Reject connections with self-signed certificates.
     - **False**: Accept connections with self-signed certificates.
-    
-    Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
-        
-If you have multiple profiles, you might want to remove redundant profiles from the tree. To do so, click on the trash can icon on the same line as the profile name.
+
+Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
+
+### **Manage your profiles**
+
+To edit a profile or update your credentials, use the Zowe CLI and the `zowe profiles update endevor <name of profile>` command. Here you can view the details of an existing profile and update them as needed.
+
+If you have multiple profiles in the tree, you might wish to delete some once you no longer need them for a session. To do so, click on the trash can icon on the same line as the profile name.
+
+**Note:** This action does not permanently delete the profile. When you click the + icon again, you will be able to add any previously created profiles again. You can only delete a profile by using the Zowe CLI.
 
 ### **Working with Endevor Configurations**
 
@@ -74,11 +93,11 @@ Now you have created your profile, assign the configurations that you want to wo
 
 **Follow these steps:**
 
-1. Click on the profile in the panel.  
+1. Click on the profile in the panel.
 The profile automatically populates in the terminal panel.
 
-2. To add a new configuration, click + next to the panel and select the required configuration.  
-Your configuration appears in the panel below the profile entry.  
+2. To add a new configuration, click + next to the panel and select the required configuration.
+Your configuration appears in the panel below the profile entry.
 This step can be repeated as many times as you need to add multiple configurations.
 
 You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
