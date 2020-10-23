@@ -89,7 +89,7 @@ If you have multiple profiles in the tree, you might wish to delete some once yo
 
 ### **Working with Endevor Configurations**
 
-Now you have created your profile, assign the configurations that you want to work with.
+Now that you have created your profile, assign the configurations that you want to work with.
 
 **Follow these steps:**
 
