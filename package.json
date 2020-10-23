@@ -310,7 +310,7 @@
         "@types/jest": "^26.0.7",
         "tslint": "^5.18.0",
         "tslint-sonarts": "^1.9.0",
-        "typescript": "^3.5.3",
+        "typescript": "^3.9.4",
         "vscode": "^1.1.33",
         "ts-node": "^9.0.0",
         "jest": "^26.4.2",
