@@ -203,7 +203,7 @@
             "scope": "resource",
             "properties": {
                 "endevor.connections": {
-                    "type":"array",
+                    "type": "array",
                     "title": "Endevor Connections",
                     "items": {
                         "type": "object",
@@ -235,7 +235,7 @@
                                     ],
                                     "properties": {
                                         "profile": {
-                                            "type":"string",
+                                            "type": "string",
                                             "description": "Profile attached to"
                                         },
                                         "name": {
@@ -299,14 +299,23 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install"
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run test:unit && npm run test:integration",
+        "test:unit": "jest --config jest.config.js --coverage",
+        "test:endevor": "jest --config jest.int.config.js --coverage -i",
+        "test:integration": "npm run test:endevor"
     },
     "devDependencies": {
         "@types/node": "^12.6.2",
         "tslint": "^5.18.0",
         "tslint-sonarts": "^1.9.0",
-        "typescript": "^3.5.3",
-        "vscode": "^1.1.33"
+        "typescript": "^3.9.4",
+        "vscode": "^1.1.33",
+        "@types/jest": "^26.0.7",
+        "ts-node": "^9.0.0",
+        "jest": "^26.4.2",
+        "jest-html-reporter": "^3.2.0",
+        "ts-jest": "^26.4.0"
     },
     "dependencies": {
         "@broadcom/endevor-for-zowe-cli": "^5.1.1",
