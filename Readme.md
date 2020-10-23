@@ -36,7 +36,6 @@ Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.c
   - [**Features**:](#features)
     - [**Filters**](#filters-1)
     - [**Elements**](#elements)
-  - [For more information, please visit our documentation](#for-more-information-please-visit-our-documentationhttptechdocsbroadcomcomcontentbroadcomtechdocsusenca-mainframe-softwaredevopsca-endevor-integrations-for-enterprise-devops1-0endevor-explorer-for-ca-endevor-scmhtml)
     - [**Technical Assistance and Support for CA Explorer for Endevor**](#technical-assistance-and-support-for-ca-explorer-for-endevor)
 
 ## **Prerequisites**
@@ -50,13 +49,13 @@ Prior to using Explorer for Endevor, ensure that you meet the following prerequi
    - (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
    - (if using version 18.1.x) PTF SO11272
    - (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
-- CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/installing/how-to-enable-web-services/configure-ca-endevor-scm-for-web-services.html)
+- CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/how-to-enable-web-services.html)
 - (Optional) Zowe CLI v1-LTS
 - (Optional) CA Endevor plug-in for Zowe CLI version 6.0.0
 
 ## **Installing**
 
-Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://www.eclipse.org/che/docs/che-7/introduction-to-eclipse-che/) for more information.
+Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. Check [here](https://projects.eclipse.org/projects/ecd.che.che4z) for more information.
 
 ## **User Guide**
 
@@ -233,7 +232,6 @@ Once you identify the relevant Element, you can perform the following actions:
 
 	Retrieves several selected Elements. The Elements are stored locally in the specified Workspace.
 
-For more information, please visit our [documentation](http://techdocs.broadcom.com/content/broadcom/techdocs/us/en/ca-mainframe-software/devops/ca-endevor-integrations-for-enterprise-devops/1-0/Endevor-Explorer-for-CA-Endevor-SCM.html)
 ---------------------------------------------------------------
 ### **Technical Assistance and Support for CA Explorer for Endevor**
 
