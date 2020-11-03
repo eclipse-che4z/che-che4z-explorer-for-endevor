@@ -86,6 +86,7 @@ export class HostDialogs {
                         profile => profile.name === newProfileName);
                     const profileToAdd = new Connection(newProfile);
                     EndevorController.instance.addConnection(profileToAdd);
+                    EndevorController.instance.updateSettings();
                 } catch (error) {
                     vscode.window.showErrorMessage("Error while adding new profile");
                 }
@@ -93,6 +94,7 @@ export class HostDialogs {
         } else if (chosenProfile) {
             const profileToAdd = new Connection(allProfiles.find(profile => profile.name === chosenProfile));
             EndevorController.instance.addConnection(profileToAdd);
+            EndevorController.instance.updateSettings();
         } else {
             vscode.window.showInformationMessage("Operation cancelled");
         }
