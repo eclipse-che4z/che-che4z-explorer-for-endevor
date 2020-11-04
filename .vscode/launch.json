@@ -41,6 +41,29 @@
 			],
 			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
 			"preLaunchTask": "npm: watch"
+		},
+		{
+		  "name": "Run Specific Test",
+		  "type": "extensionHost",
+		  "request": "launch",
+		  "runtimeExecutable": "${execPath}",
+		  "args": [
+			"--disable-extensions",
+			"--extensionDevelopmentPath=${workspaceFolder}",
+			"--extensionTestsPath=${workspaceFolder}/test/suite/bootstrap"
+		  ],
+		  "env": {
+			"MOCHA_grep": "${input:TestName}"
+		  },
+		  "preLaunchTask": "${defaultBuildTask}"
+		}
+	],
+	"inputs": [
+		{
+		  "id": "TestName",
+		  "type": "promptString",
+		  "description": "Name of the test you want to run. Can be a substring.",
+		  "default": "in progress"
 		}
 	]
 }

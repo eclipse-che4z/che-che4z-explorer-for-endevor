@@ -29,8 +29,8 @@ export async function createEndevorTree(log: Logger) {
 }
 export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode> {
     public _sessionNodes: EndevorNode[] = [];
-    public _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
-    public readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
+    public _onDidChangeTreeData =  new vscode.EventEmitter<EndevorNode | null>();
+    public readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     public getTreeItem(element: EndevorNode): vscode.TreeItem {
         return element;
@@ -121,7 +121,7 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     }
 
     public refresh() {
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(null);
     }
 
     private getNodeRepository(node: EndevorNode): Repository | undefined {

@@ -13,7 +13,7 @@ suite('Basic Extension Test Suite (integration)', () => {
 
   test('Extension loads in VSCode and is active', async () => {    
     await timeout(3000);
-    assert.equal(extension.isActive, true);
+    assert.strictEqual(extension.isActive, true);
   });
 
   test('package.json commands registered in extension', (done) => {
