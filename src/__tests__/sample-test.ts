@@ -1,4 +1,4 @@
-import * as functions from "../sample";
+import * as functions from "./sampletests/sample";
 
 describe("Test Jest", () => {
   test("Should return Hello World!", async () => {
