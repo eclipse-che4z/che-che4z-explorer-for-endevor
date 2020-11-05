@@ -42,6 +42,8 @@ jobs:
 
       - name: Extension Test
         run: npm test
+        uses: GabrielBB/xvfb-action@v1.0
         env:
           CI: true
           NODE_OPTIONS: --max_old_space_size=4096
+
