@@ -168,7 +168,10 @@ export class EndevorController {
                 currentRepos = updatedRepos;
                 currentRepos.forEach(repo => EndevorController.instance.addRepository(repo, repo.getProfileLabel()));
                 this.updateIDs(connName);
-            }
+            } else {
+                let endevorDataProvider = new EndevorDataProvider;
+                endevorDataProvider.addSession(connName);
+            };
         });
     }
 
