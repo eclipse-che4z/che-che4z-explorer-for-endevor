@@ -18,6 +18,7 @@ import { Repository } from "../model/Repository";
 import { RetrieveElementService } from "../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../ui/tree/EndevorNodes";
 import { prepareElementNodesForRetrieve } from "../utils";
+import { logger } from "../globals";
 
 export function retrieveElement(arg: any, selection: EndevorNode[], retrieveElementService: RetrieveElementService) {
     vscode.window.withProgress(
@@ -28,7 +29,7 @@ export function retrieveElement(arg: any, selection: EndevorNode[], retrieveElem
         },
         async (progress, token) => {
             token.onCancellationRequested(() => {
-                vscode.window.showInformationMessage("Retrieve Cancelled.");
+                logger.info("Retrieve Cancelled.");
             });
             const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(selection);
             if (processedSelection.length === 0) {
@@ -36,7 +37,7 @@ export function retrieveElement(arg: any, selection: EndevorNode[], retrieveElem
             }
             const incrementNumber = 100 / processedSelection.length;
             if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-                vscode.window.showErrorMessage("Specify workspace before retrieving elements");
+                logger.error("Specify workspace before retrieving elements");
                 return;
             }
             const workspace = vscode.workspace.workspaceFolders[0];

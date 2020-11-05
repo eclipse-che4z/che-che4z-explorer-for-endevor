@@ -13,12 +13,12 @@
  */
 
 import * as vscode from "vscode";
-import { EndevorController } from "../EndevorController";
 import { EndevorFilter } from "../model/EndevorFilter";
 import { Host } from "../model/IEndevorInstance";
 import { Repository } from "../model/Repository";
 import { Connection } from "../model/Connection";
 import { Profiles } from "./Profiles";
+import { logger } from "../globals";
 
 export const HOST_SETTINGS_KEY: string = "endevor.connections";
 
@@ -80,7 +80,7 @@ export class SettingsFacade {
         try {
             await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns, vscode.ConfigurationTarget.Global);
         } catch (error) {
-            vscode.window.showErrorMessage("Save settings error: " + error);
+            logger.error("Error saving to settings.", error);
         }
 
     }
@@ -106,7 +106,7 @@ export class SettingsFacade {
         try {
             await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value, vscode.ConfigurationTarget.Global);
         } catch (error) {
-            vscode.window.showErrorMessage("Save settings error: " + error);
+            logger.error("Error saving to settings.", error);
         }
     }
 }

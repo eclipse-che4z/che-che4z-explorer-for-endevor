@@ -19,12 +19,13 @@ import * as vscode from "vscode";
 import { EndevorController } from "../../EndevorController";
 import { Repository } from "../../model/Repository";
 import * as utils from "../../utils";
+import { logger } from "../../globals";
 
 export class HostPanel {
     public static readonly viewType = "endevorHostPanel";
     public static createOrShow(context: vscode.ExtensionContext, repo?: Repository) {
         if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-            vscode.window.showErrorMessage("Specify workspace before creating repository.");
+            logger.error("Specify a workspace before creating a repository.");
             return;
         }
         const panel = vscode.window.createWebviewPanel(

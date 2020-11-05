@@ -16,6 +16,7 @@ import * as vscode from "vscode";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { proxyBrowseElement } from "../service/EndevorCliProxy";
+import { logger } from "../globals";
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
@@ -37,7 +38,7 @@ export async function browseElement(arg: any) {
                 return vscode.window.showTextDocument(doc, { preview: false });
             } catch (error) {
                 if (!error.cancelled) {
-                    vscode.window.showErrorMessage(error.error);
+                    logger.error(error.error);
                 }
             }
         },
