@@ -20,6 +20,7 @@ import { Repository } from '../../model/Repository';
 import { Profiles } from "../../service/Profiles";
 import { Logger, IProfileLoaded } from "@zowe/imperative";
 import { Connection } from '../../model/Connection';
+import { logger } from '../../globals';
 
 
 export async function createEndevorTree(log: Logger) {
@@ -37,10 +38,13 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     }
 
     public addSession(sessionName?: string) {
+        logger.trace(`Adding <${sessionName}> session to the tree.`);
         if (sessionName) {
             const endevorProfile = Profiles.getInstance().loadNamedProfile(sessionName);
             if (endevorProfile) {
                 this.addSingleSession(endevorProfile);
+            } else {
+                logger.error(`Profile not found for session <${sessionName}>.`);
             }
         } else {
             const endevorProfiles = Profiles.getInstance().allProfiles;
@@ -133,10 +137,12 @@ export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode>
     }
 
     private async addSingleSession(endevorProfile: IProfileLoaded) {
+        logger.trace(`Loading profile <${endevorProfile.name}>.`);
         if (this._sessionNodes.find(tempNode => tempNode.label.trim() === endevorProfile.name)) {
             return;
         }
         const session = await Profiles.getInstance().createBasicEndevorSession(endevorProfile.profile);
+        logger.trace(`Session created: ${JSON.stringify(session)}`);
         const node = new ConnectionNode(session, endevorProfile.name);
         EndevorController.instance.addConnection(new Connection(endevorProfile));
         this._sessionNodes.push(node);
