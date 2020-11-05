@@ -31,9 +31,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - run: npm install --frozen-lockfile
-
-      - run: npm run vscode:prepublish
+      - run: npm install
 
       # run audit on 1 system to avoid overloading the audit API
       - name: Audit from Windows / Node 12.x
@@ -41,7 +39,7 @@ jobs:
         if: matrix.os == 'windows-latest' && matrix.node-version == '12.x'
 
       - name: Extension Test
-        run: npm run test
+        run: npm test
         env:
           CI: true
           NODE_OPTIONS: --max_old_space_size=4096
