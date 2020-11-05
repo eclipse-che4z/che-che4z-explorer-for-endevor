@@ -75,6 +75,7 @@ pipeline {
                 DISPLAY = ':99.0'
             }
             steps{
+              container('node') {
                 echo "Executing Test Setup Stage"
                 // X virtual framebuffer is a display server implementing the X11 display server protocol.
                 // In contrast to other display servers, Xvfb performs all graphical operations in virtual memory
@@ -83,6 +84,7 @@ pipeline {
 
                 echo "Executing Test Stage"
                 sh "npm run test"
+              }
             }
         }
         stage('Deploy') {
