@@ -75,12 +75,10 @@ export class SettingsFacade {
                     username: repo.getUsername(),
                 });
             });
-            if (toPush.hosts.length > 0) {
-                conns.push(toPush);
-            }
+            conns.push(toPush);
         });
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns);
+            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns, vscode.ConfigurationTarget.Global);
         } catch (error) {
             vscode.window.showErrorMessage("Save settings error: " + error);
         }
@@ -106,7 +104,7 @@ export class SettingsFacade {
         }
 
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value);
+            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value, vscode.ConfigurationTarget.Global);
         } catch (error) {
             vscode.window.showErrorMessage("Save settings error: " + error);
         }
