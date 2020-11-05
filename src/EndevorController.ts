@@ -180,7 +180,10 @@ export class EndevorController {
                     EndevorController.instance.addRepository(repo, profileLabel);
                 })
                 this.updateIDs(connName);
-            }
+            } else {
+                let endevorDataProvider = new EndevorDataProvider;
+                endevorDataProvider.addSession(connName);
+            };
         });
     }
 

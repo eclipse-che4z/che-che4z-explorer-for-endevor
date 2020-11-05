@@ -20,6 +20,7 @@
         "lib": [
             "es7"
         ],
+        "skipLibCheck": true,
         "sourceMap": true,
         "rootDir": "src",
         "strict": true, /* enable all strict type-checking options */
@@ -32,5 +33,6 @@
     "exclude": [
         "node_modules",
         ".vscode-test"
-    ]
+    ],
+    "include": ["src", "test"]
 }

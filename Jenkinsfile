@@ -35,7 +35,7 @@ pipeline {
             label kubeLabel
             yaml kubernetes_config
         }
-    }    
+    }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
@@ -60,16 +60,33 @@ pipeline {
         }
         stage('Package') {
             environment {
-                npm_config_cache = "$env.WORKSPACE"                
+                npm_config_cache = "$env.WORKSPACE"
             }
             steps {
                 container('node') {
                     sh "npx vsce package"
-                    archiveArtifacts "*.vsix"        
+                    archiveArtifacts "*.vsix"
                     sh "mv *$projectName*.vsix '$projectName'_latest.vsix"
                 }
             }
         }
+        // stage("Test"){
+        //     environment {
+        //         DISPLAY = ':99.0'
+        //     }
+        //     steps{
+        //       container('node') {
+        //         echo "Executing Test Setup Stage"
+        //         // X virtual framebuffer is a display server implementing the X11 display server protocol.
+        //         // In contrast to other display servers, Xvfb performs all graphical operations in virtual memory
+        //         // without showing any screen output
+        //         sh "/usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &"
+
+        //         echo "Executing Test Stage"
+        //         sh "npm run test"
+        //       }
+        //     }
+        // }
         stage('Deploy') {
             environment {
                 sshChe4z = "genie.che4z@projects-storage.eclipse.org"

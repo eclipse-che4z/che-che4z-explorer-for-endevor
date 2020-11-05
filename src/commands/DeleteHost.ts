@@ -14,19 +14,29 @@
 
 import { Repository } from "../model/Repository";
 import { EndevorController } from "../EndevorController";
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { logger } from "../globals";
 
-export function deleteHost(arg:any){
+export function deleteHost(arg: any) {
     if (arg.contextValue === "repository") {
         const repo: Repository | undefined = arg.getRepository();
         if (repo) {
-            vscode.window.showWarningMessage("Remove Configuration: " + repo.getName() + "?", "OK").then(message => {
-                if (message === "OK") {
-                    const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
-                    EndevorController.instance.removeRepository(repo.getName(), profileLabel!);
-                    EndevorController.instance.updateSettings();
-                }
-            });
+            logger.trace(`Remove configuration ${repo.getName()}`);
+            vscode.window
+                .showWarningMessage(
+                    "Remove Configuration: " + repo.getName() + "?",
+                    "OK"
+                )
+                .then(message => {
+                    if (message === "OK") {
+                      const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
+                      EndevorController.instance.removeRepository(repo.getName(), profileLabel!);
+                      EndevorController.instance.updateSettings();
+                      logger.trace("Configuration removed");
+                    } else {
+                        logger.trace("Operation cancelled.");
+                    }
+                });
         }
     }
 }

@@ -21,6 +21,7 @@ import { Profiles } from "../service/Profiles";
 import * as utils from "../utils";
 import * as vscode from "vscode";
 import { Connection } from "../model/Connection";
+import { logger } from "../globals";
 
 
 export class HostDialogs {
@@ -52,7 +53,7 @@ export class HostDialogs {
         const choice = await utils.resolveQuickPickHelper(quickpick);
         quickpick.hide();
         if (!choice) {
-            vscode.window.showInformationMessage("No selection made.");
+            logger.info("No selection made.");
             return;
         }
         if (choice instanceof utils.FilterDescriptor) {
@@ -70,35 +71,37 @@ export class HostDialogs {
             };
             profileName = await vscode.window.showInputBox(options);
             if (!profileName) {
-                vscode.window.showInformationMessage("Profile Name was not supplied. Operation Cancelled");
+                logger.info("Profile Name was not supplied. Operation Cancelled");
                 return;
             }
             chosenProfile = profileName;
             try {
                 newProfileName = await Profiles.getInstance().createNewConnection(chosenProfile);
             } catch (error) {
-                vscode.window.showErrorMessage(error.message);
+                logger.error(error.message);
             }
             if (newProfileName) {
                 try {
                     const newProfile = Profiles.getInstance().listProfiles().find(
                         profile => profile.name === newProfileName);
                     if (newProfile) {
-                        const profileToAdd = new Connection(newProfile);
-                        EndevorController.instance.addConnection(profileToAdd);
+                      const profileToAdd = new Connection(newProfile);
+                      EndevorController.instance.addConnection(profileToAdd);
+                      EndevorController.instance.updateSettings();
                     }
                 } catch (error) {
-                    vscode.window.showErrorMessage("Error while adding new profile");
+                    logger.error("Error while adding new profile");
                 }
             }
         } else if (chosenProfile) {
             const profileToUse = allProfiles.find(profile => profile.name === chosenProfile);
             if (profileToUse) {
-                const profileToAdd = new Connection(profileToUse);
-                EndevorController.instance.addConnection(profileToAdd);
+              const profileToAdd = new Connection(profileToUse);
+              EndevorController.instance.addConnection(profileToAdd);
+              EndevorController.instance.updateSettings();
             }
         } else {
-            vscode.window.showInformationMessage("Operation cancelled");
+            logger.info("Operation cancelled");
         }
     }
     /**
@@ -108,7 +111,7 @@ export class HostDialogs {
      */
     public static async addHost(connection) {
         if (!(workspace.workspaceFolders && workspace.workspaceFolders.length > 0)) {
-            window.showErrorMessage("Specify workspace before creating repository.");
+            logger.error("Specify workspace before creating repository.");
             return;
         }
 
@@ -133,7 +136,7 @@ export class HostDialogs {
                         return;
                     }
                     if (EndevorController.instance.isRepoInConnection(dsItem.label, connection.label)) {
-                        window.showErrorMessage("Configuration with name " + dsItem.label + " already exists in this session.");
+                        logger.warn("Configuration already exits.", `Configuration with name ${dsItem.label} already exits in this session.`);
                         return;
                     }
 
@@ -141,9 +144,9 @@ export class HostDialogs {
                     newRepo.setDatasource(dsItem.label);
                     EndevorController.instance.addRepository(newRepo, connection.getEntity().getName());
                     EndevorController.instance.updateSettings();
-                    window.showInformationMessage("Configuration " + dsItem.label + " was added.");
+                    logger.trace(`Configuration ${dsItem.label} was added.`);
                 } catch (error) {
-                    window.showErrorMessage("The host " + newRepo.getUrl() + " is not available.");
+                    logger.error("Host unreachable.", `Host ${newRepo.getUrl()} is not available.`);
                 }
             },
         );
@@ -159,13 +162,13 @@ export class HostDialogs {
                 return;
             }
             if (EndevorController.instance.isRepoInConnection(newName, profileLabel!)) {
-                window.showErrorMessage("Configuration with name " + newName + " already exists");
+                logger.warn("Configuration already exits", `Configuration with name ${newName} already exists`);
                 return;
             }
             const oldName = repo.getName();
             EndevorController.instance.updateRepositoryName(oldName, newName, profileLabel!);
             EndevorController.instance.updateSettings();
-            window.showInformationMessage(`Configuration ${oldName} was renamed to ${newName}.`);
+            logger.info("Configuration renamed.", `Configuration ${oldName} was renamed to ${newName}.`);
         }
     }
 

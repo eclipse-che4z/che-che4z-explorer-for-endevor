@@ -33,6 +33,7 @@ import { proxyListElement,
     proxyListSystem,
     proxyListType } from "../../service/EndevorCliProxy";
 import { Session } from "@zowe/imperative";
+import { logger } from "../../globals";
 
 export class EndevorNode extends vscode.TreeItem {
     private entity?: EndevorEntity;
@@ -210,7 +211,7 @@ export class EndevorBrowsingNode extends EndevorNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error creating the root tree.", error.error);
             }
             return [];
         }
@@ -324,7 +325,7 @@ export class FilterNode extends EndevorNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing filters.", error.error);
             }
             const resultNodes = [createEmptyNode(repo, "<Invalid Path>", error.error)];
             this.children = resultNodes;
@@ -385,7 +386,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing environments.", error.error);
             }
             return [];
         }
@@ -421,7 +422,7 @@ export class StageNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing stages.", error.error);
             }
             return [];
         }
@@ -454,7 +455,7 @@ export class SystemNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing systems.", error.error);
             }
             return [];
         }
@@ -490,7 +491,7 @@ export class SubsystemNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing subsystems.", error.error);
             }
             return [];
         }
@@ -510,7 +511,7 @@ export class TypeNode extends EndevorQualifiedNode {
         this.needReload = false;
         try {
             const resultNodes: EndevorNode[] = [];
-            const elements = await proxyListElement(repo, nodeQualType)
+            const elements = await proxyListElement(repo, nodeQualType);
             elements.forEach(element => {
                 const eleEntity: Element = new Element(repo, element);
                 resultNodes.push(new EndevorElementNode(eleEntity, { ...nodeQualType, element: element.fullElmName }));
@@ -522,7 +523,7 @@ export class TypeNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing types.", error.error);
             }
             return [];
         }
