@@ -39,7 +39,7 @@ export class RetrieveElementService {
             fs.mkdirSync(typeDirectory);
         }
         const filePath: string = path.join(typeDirectory, elementName + (ext ? "." + ext : ""));
-        fs.writeFileSync(filePath, data);
+        fs.writeFileSync(filePath, data!);
 
         return filePath;
     }
