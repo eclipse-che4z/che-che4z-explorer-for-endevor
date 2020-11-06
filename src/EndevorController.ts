@@ -59,9 +59,11 @@ export class EndevorController {
             repo.id = this.findNextId(connectionLabel);
         }
         const newRepoNode: EndevorNode = new EndevorNode(repo);
-        this.connections.get(connectionLabel).loadRepository(repo);
+        const conn = this.connections.get(connectionLabel);
+        if (conn) { conn.loadRepository(repo); }
         this._rootNode.children.forEach(child => {
-            if (child.getEntity().getName() === connectionLabel) {
+            const entity = child.getEntity();
+            if (entity && entity.getName() === connectionLabel) {
                 child.children.push(newRepoNode);
             }
         });
@@ -71,6 +73,7 @@ export class EndevorController {
         return Array.from(this.connections.values());
     }
     public addConnection(connection: Connection) {
+        if (!connection.name) { connection.name = "" }
         this.connections.set(connection.name, connection);
         const newConnectionNode = new EndevorNode(connection);
         this._rootNode.children.push(newConnectionNode);
@@ -86,7 +89,10 @@ export class EndevorController {
     }
 
     public removeRepository(repoName: string, connectionLabel: string) {
-        this.connections.get(connectionLabel).getRepositoryMap().delete(repoName);
+        const conn = this.connections.get(connectionLabel);
+        if (conn) {
+            conn.getRepositoryMap().delete(repoName);
+        }
         this._rootNode.children.forEach((connection, index) => {
             if (connection.label === connectionLabel) {
                 this._rootNode.children[index].children = connection.children.filter(repo => repo.label !== repoName);
@@ -94,18 +100,21 @@ export class EndevorController {
         });
     }
 
-    public updateRepositoryName(oldRepoName: string, newRepoName: string, connectionlabel: string) {
+    public updateRepositoryName(oldRepoName: string, newRepoName: string, connectionLabel: string) {
         const newMap = new Map();
-        this.connections.get(connectionlabel).getRepositoryMap().forEach((repo, name) => {
-            if (name === oldRepoName) {
-                repo.setName(newRepoName);
-                newMap.set(newRepoName, repo);
-            } else {
-                newMap.set(name, repo);
-            }
-        });
-        this.connections.get(connectionlabel).repositories = newMap;
-        const cnxIdx = this.rootNode.children.findIndex(node => node.label === connectionlabel);
+        const conn = this.connections.get(connectionLabel);
+        if (conn) {
+            conn.getRepositoryMap().forEach((repo, name) => {
+                if (name === oldRepoName) {
+                    repo.setName(newRepoName);
+                    newMap.set(newRepoName, repo);
+                } else {
+                    newMap.set(name, repo);
+                }
+            });
+            conn.repositories = newMap;
+        }
+        const cnxIdx = this.rootNode.children.findIndex(node => node.label === connectionLabel);
         const repoIdx = this.rootNode.children[cnxIdx].children.findIndex(repo => repo.label === oldRepoName);
         this.rootNode.children[cnxIdx].children[repoIdx].label = newRepoName;
     }
@@ -164,9 +173,12 @@ export class EndevorController {
                     }
                     updatedRepos.set(repoToKeep.getName(), repoToKeep);
                 });
-                let currentRepos = this.connections.get(connName).repositories;
-                currentRepos = updatedRepos;
-                currentRepos.forEach(repo => EndevorController.instance.addRepository(repo, repo.getProfileLabel()));
+                let currentRepos = updatedRepos;
+                currentRepos.forEach(repo =>  {
+                    let profileLabel = repo.getProfileLabel();
+                    if (!profileLabel) { profileLabel = "" }
+                    EndevorController.instance.addRepository(repo, profileLabel);
+                })
                 this.updateIDs(connName);
             } else {
                 let endevorDataProvider = new EndevorDataProvider;
@@ -175,9 +187,14 @@ export class EndevorController {
         });
     }
 
+
     public isRepoInConnection(repoName: string, connectionLabel: string): boolean {
-        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
-        return repoMap.get(repoName) ? true : false ;
+        const conn = this.connections.get(connectionLabel);
+        if (conn) {
+            const repoMap = conn.getRepositoryMap();
+            return repoMap.get(repoName) ? true : false;
+        }
+        return false;
     }
 
     // tslint:disable-next-line: member-ordering
@@ -186,12 +203,15 @@ export class EndevorController {
             return undefined;
         }
         const connection = this.findNodeByConnectionName(connectionLabel);
-        for (const node of connection.children) {
-            const nodeRepo: Repository | undefined = node.getRepository();
-            if (nodeRepo && nodeRepo.id === id) {
-                return node;
+        if (connection) {
+            for (const node of connection.children) {
+                const nodeRepo: Repository | undefined = node.getRepository();
+                if (nodeRepo && nodeRepo.id === id) {
+                    return node;
+                }
             }
         }
+        return undefined;
     }
 
     // tslint:disable-next-line: member-ordering
@@ -200,7 +220,7 @@ export class EndevorController {
             return undefined;
         }
         for (const node of this._rootNode.children) {
-            if (node.getEntity().getName() === name) {
+            if (node.getEntity() && node.getEntity()!.getName() === name) {
                 return node;
             }
         }
@@ -210,20 +230,24 @@ export class EndevorController {
      * Function used to determine next available `id`.
      */
     public findNextId(connectionLabel: string): number {
-        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
-        let iDArray: boolean[] = new Array(repoMap.size);
-        iDArray.fill(true);
-        repoMap.forEach(repo => {
-            if (repo.id !== undefined) {
-                iDArray[repo.id] = false;
+        const conn = this.connections.get(connectionLabel);
+        if (conn) {
+            const repoMap = conn.getRepositoryMap();
+            let iDArray: boolean[] = new Array(repoMap.size);
+            iDArray.fill(true);
+            repoMap.forEach(repo => {
+                if (repo.id !== undefined) {
+                    iDArray[repo.id] = false;
+                }
+            });
+            for (let i = 0; i < iDArray.length; i++) {
+                if (iDArray[i]) {
+                    return i;
+                }
             }
-        });
-        for (let i = 0; i < iDArray.length; i++) {
-            if (iDArray[i]) {
-                return i;
-            }
+            return iDArray.length;
         }
-        return iDArray.length;
+        return -1;
     }
 
 /**
@@ -231,16 +255,19 @@ export class EndevorController {
  * and store in the settings.json.
  */
     private updateIDs(connectionLabel: string) {
-        const repoMap = this.connections.get(connectionLabel).getRepositoryMap();
-        let saveRepos: boolean = false;
-        repoMap.forEach(repo => {
-            if (repo.id === undefined) {
-                repo.id = EndevorController.instance.findNextId(connectionLabel);
-                saveRepos = true;
+        const conn = this.connections.get(connectionLabel);
+        if (conn) {
+            const repoMap = conn.getRepositoryMap();
+            let saveRepos: boolean = false;
+            repoMap.forEach(repo => {
+                if (repo.id === undefined) {
+                    repo.id = EndevorController.instance.findNextId(connectionLabel);
+                    saveRepos = true;
+                }
+            });
+            if (saveRepos) {
+                this.updateSettings();
             }
-        });
-        if (saveRepos) {
-            this.updateSettings();
         }
     }
 
