@@ -24,6 +24,7 @@ Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.c
   - [**Installing**](#installing)
   - [**User Guide**](#user-guide)
     - [**Create a Profile**](#create-a-profile)
+    - [**Profile Persistence**](#profile-persistence)
     - [**Manage your profiles**](#manage-your-profiles)
     - [**Working with Endevor Configurations**](#working-with-endevor-configurations)
     - [**Filters**](#filters)
@@ -77,6 +78,10 @@ If you do not add credentials to your profile, a credential prompt displays when
     - **False**: Accept connections with self-signed certificates.
 
 Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
+
+### **Profile Persistence**
+
+Explorer for Endevor loads your default Endevor profile into the tree. When you create a new profile in the extension, or select an existing Endevor profile to use, the profile will also appear in the tree. The additional profile will persist in the tree only provided that you use the profile to specify an Endevor web services instance and search that inventory location using a filter or the map. The information for profiles is stored in the settings.json and includes the web services instance you specified during a session.
 
 ### **Manage your profiles**
 
