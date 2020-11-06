@@ -41,7 +41,17 @@
 			],
 			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
 			"preLaunchTask": "npm: watch"
-		},
+        },
+        {
+            "type": "node",
+            "name": "Extension Unit Tests (Jest)",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+            "args": ["--runInBand"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
 		{
 		  "name": "Run Specific Test",
 		  "type": "extensionHost",

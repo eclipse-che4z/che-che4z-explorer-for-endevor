@@ -125,8 +125,8 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(Commands.DeleteFilter, deleteFilter));
     context.subscriptions.push(vscode.commands.registerCommand(Commands.DeleteHost, deleteHost));
     context.subscriptions.push(
-        vscode.commands.registerCommand(Commands.RetrieveElement, (arg: any) => {
-            retrieveElement(arg, endevorExplorerView.selection, retrieveElementService);
+        vscode.commands.registerCommand(Commands.RetrieveElement, async (arg: any) => {
+            await retrieveElement(arg, endevorExplorerView.selection, retrieveElementService);
         }),
     );
     context.subscriptions.push(
