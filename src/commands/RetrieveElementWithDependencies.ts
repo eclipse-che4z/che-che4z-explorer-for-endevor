@@ -13,26 +13,28 @@
  */
 
 import * as vscode from "vscode";
+import { logger } from "../globals";
 import { Element } from "../model/Element";
 import { IElement } from "../model/IEndevorEntities";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { RetrieveElementService } from "../service/RetrieveElementService";
-import { logger } from "../globals";
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
-export function retrieveWithDependencies(arg: any, retrieveElementService: RetrieveElementService) {
-    vscode.window.withProgress(
+export async function retrieveWithDependencies(arg: any, retrieveElementService: RetrieveElementService) {
+    await vscode.window.withProgress(
         {
             cancellable: true,
             location: vscode.ProgressLocation.Notification,
             title: "Retrieving",
         },
         async (progress, token) => {
-            token.onCancellationRequested(() => {
-                logger.info("Retrieve Cancelled.");
-            });
+            if (token) {
+                token.onCancellationRequested(() => {
+                    logger.info("Retrieve Cancelled.");
+                });
+            }
             if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
                 logger.error("Specify workspace before retrieving elements");
                 return;
@@ -53,7 +55,7 @@ export function retrieveWithDependencies(arg: any, retrieveElementService: Retri
             // retrieve dependencies
             let firstOpened: boolean = false;
             for (let i = 0; i < elementsToRetrieve.length; i++) {
-                if (token.isCancellationRequested) {
+                if (token && token.isCancellationRequested) {
                     return;
                 }
                 const elName: string = elementsToRetrieve[i].elmName;

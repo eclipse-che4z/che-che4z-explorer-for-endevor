@@ -130,8 +130,8 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand(Commands.RetrieveWithDependencies, (arg: any) => {
-            retrieveWithDependencies(arg, retrieveElementService);
+        vscode.commands.registerCommand(Commands.RetrieveWithDependencies, async (arg: any) => {
+            await retrieveWithDependencies(arg, retrieveElementService);
         }),
     );
     context.subscriptions.push(vscode.commands.registerCommand(Commands.BrowseElement, browseElement));
