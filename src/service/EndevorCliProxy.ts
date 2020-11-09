@@ -31,7 +31,7 @@ export async function proxyGetDsNamesFromInstance(repository: Repository): Promi
     const session = await buildSession(repository);
     const dataSources = await ListInstance.listInstance(session);
     return dataSources
-        .map(ds => ds.name as string)
+        .map(ds => ds.name)
         .sort();
 }
 
