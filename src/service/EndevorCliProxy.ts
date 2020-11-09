@@ -73,7 +73,11 @@ export async function proxyListType(repository: Repository, endevorQualifier: En
     const requestBody = ListType.setupListTypeRequest({});
     const listResponse = await ListType.listType(session, instance, typeInput, requestBody);
     if (listResponse.returnCode > 0) {
-        logger.error(listResponse.messages[1] ?? listResponse.messages[0], listResponse.messages.toString());
+        logger.error(
+          listResponse.messages ?
+          listResponse.messages[1] ?? listResponse.messages[0]
+          : "Error retrieving element type",
+          listResponse.messages?.toString());
     }
     return toArray(listResponse.data);
 }
@@ -86,7 +90,11 @@ export async function proxyListElement(repository: Repository,
     const requestBody = ListElement.setupListElementRequest({});
     const listResponse = await ListElement.listElement(session, instance, endevorElement, requestBody);
     if (listResponse.returnCode > 0) {
-        logger.error(listResponse.messages[1] ?? listResponse.messages[0], listResponse.messages.toString());
+        logger.error(listResponse.messages ?
+          listResponse.messages[1] ?? listResponse.messages[0]
+          : "Error retrieving element",
+          listResponse.messages?.toString(),
+        );
     }
     return toArray(listResponse.data);
 }
@@ -98,7 +106,11 @@ export async function proxyListEnvironment(repository: Repository): Promise<IEnv
     const requestBody = ListEnvironment.setupListEnvironmentRequest({});
     const envResponse = await ListEnvironment.listEnvironment(session, instance, environment, requestBody);
     if (envResponse.returnCode > 0) {
-        logger.error(envResponse.messages[1] ?? envResponse.messages[0], envResponse.messages.toString());
+        logger.error(envResponse.messages ?
+          envResponse.messages[1] ??  envResponse.messages[0]
+          : "Error retrieving environment",
+          envResponse.messages?.toString(),
+        );
     }
     return toArray(envResponse.data);
 }
@@ -111,7 +123,11 @@ export async function proxyListStage(repository: Repository,
     const requestBody = ListStage.setupListStageRequest({});
     const listResponse = await ListStage.listStage(session, instance, stageNumber, requestBody);
     if (listResponse.returnCode > 0) {
-        logger.error(listResponse.messages[1] ?? listResponse.messages[0], listResponse.messages.toString());
+        logger.error(listResponse.messages ?
+          listResponse.messages[1] ?? listResponse.messages[0]
+          : "Error retrieving stage",
+          listResponse.messages?.toString(),
+        );
     }
     return toArray(listResponse.data);
 }
@@ -128,8 +144,11 @@ export async function proxyListSubsystem(repository: Repository,
         endevorSubsystem,
         requestBody);
     if (listSubsystemResponse.returnCode > 0) {
-        logger.error(listSubsystemResponse.messages[1] ?? listSubsystemResponse.messages[0],
-            listSubsystemResponse.messages.toString());
+        logger.error(listSubsystemResponse.messages ?
+          listSubsystemResponse.messages[1] ?? listSubsystemResponse.messages[0]
+          : "Error retrieving subsystem",
+          listSubsystemResponse.messages?.toString(),
+        );
     }
     return toArray(listSubsystemResponse.data);
 }
@@ -142,8 +161,11 @@ export async function proxyListSystem(repository: Repository,
     const requestBody = ListSystem.setupListSystemRequest({});
     const listSystemResponse = await ListSystem.listSystem(session, instance, endevorSystem, requestBody);
     if (listSystemResponse.returnCode > 0) {
-        logger.error(listSystemResponse.messages[1] ?? listSystemResponse.messages[0],
-            listSystemResponse.messages.toString());
+        logger.error(listSystemResponse.messages ?
+          listSystemResponse.messages[1] ?? listSystemResponse.messages[0]
+          : "Error retrieving subsystem",
+          listSystemResponse.messages?.toString(),
+        );
     }
     return toArray(listSystemResponse.data);
 }

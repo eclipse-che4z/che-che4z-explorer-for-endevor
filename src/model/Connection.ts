@@ -81,14 +81,14 @@ export class Connection extends EndevorEntity implements IProfileLoaded {
         return this;
     }
 
-    public getName(): string {
+    public getName(): string | undefined {
         return this.name;
     }
     public getDescription(): string {
         return "";
     }
 
-    public getProfile(): IProfile {
+    public getProfile(): IProfile | undefined {
         return this.profile;
     }
 
