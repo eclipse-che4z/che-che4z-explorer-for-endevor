@@ -38,8 +38,8 @@ export class Profiles {
 
     private static loader: Profiles;
     public allProfiles: IProfileLoaded[] = [];
-    public defaultProfile: IProfileLoaded | undefined = undefined;
-    private endevorProfileManager: CliProfileManager = undefined;
+    public defaultProfile: IProfileLoaded | undefined;
+    private endevorProfileManager!: CliProfileManager;
 
     // Commenting these because they are not used anywhere...
     // private spawnValue: number = -1;
@@ -155,7 +155,7 @@ export class Profiles {
 
         options = {
             placeHolder: "Optional: User Name",
-            prompt: "Enter the user name for the connection. Leave blank to not store."
+            prompt: "Enter the user name for the connection. Leave blank to not store.",
         };
         userName = await vscode.window.showInputBox(options);
 
@@ -254,7 +254,7 @@ export class Profiles {
         if (!loadSession.user) {
             options = {
                 placeHolder: "User Name",
-                prompt: "Enter the user name for the connection"
+                prompt: "Enter the user name for the connection",
             };
             userName = await vscode.window.showInputBox(options);
 
@@ -296,8 +296,8 @@ export class Profiles {
                     {
                         configuration: EndevorProfilesConfig,
                         profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
-                        reinitialize: false
-                    }
+                        reinitialize: false,
+                    },
                 );
                 profileManager = new CliProfileManager({
                     profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
@@ -325,7 +325,7 @@ export class Profiles {
             endevorProfile = await (await this.getEndevorCliProfileManager()).save({
                 name: ProfileName,
                 profile: ProfileInfo,
-                type: ProfileType
+                type: ProfileType,
             });
             return endevorProfile.profile;
         } catch (error) {
