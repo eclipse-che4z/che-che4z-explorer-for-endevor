@@ -38,8 +38,8 @@ export class Profiles {
 
     private static loader: Profiles;
     public allProfiles: IProfileLoaded[] = [];
-    public defaultProfile: IProfileLoaded;
-    private endevorProfileManager: CliProfileManager;
+    public defaultProfile: IProfileLoaded | undefined = undefined;
+    private endevorProfileManager: CliProfileManager = undefined;
 
     // Commenting these because they are not used anywhere...
     // private spawnValue: number = -1;
