@@ -18,7 +18,7 @@ export interface Host {
     id?: number;
     name: string;
     url: string;
-    username: string;
+    username?: string;
     password?: string;
     datasource: string;
     filters?: Filter[];

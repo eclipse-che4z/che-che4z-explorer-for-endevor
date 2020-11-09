@@ -20,9 +20,9 @@ import { IConnection } from "../model/IConnection";
 
 interface UrlValidator {
     valid: boolean;
-    host: string;
-    port: number;
-    protocol: string;
+    host: string | undefined;
+    port: number | undefined;
+    protocol: string | undefined;
 }
 
 export class Profiles {
@@ -55,7 +55,7 @@ export class Profiles {
         throw new Error("Could not find profile named: "
             + name + ".");
     }
-    public getDefaultProfile(): IProfileLoaded {
+    public getDefaultProfile(): IProfileLoaded | undefined {
         return this.defaultProfile;
     }
     public async refresh() {
@@ -68,7 +68,7 @@ export class Profiles {
         });
         if (endevorProfiles && endevorProfiles.length > 0) {
             this.allProfiles.push(...endevorProfiles);
-            let defaultProfile: IProfileLoaded;
+            let defaultProfile: IProfileLoaded | undefined;
             try {
                 defaultProfile = await (await profileManager).load({ loadDefault: true});
                 this.defaultProfile = defaultProfile ? defaultProfile : undefined;
@@ -87,9 +87,9 @@ export class Profiles {
         const validProtocols: string[] = ["https", "http"];
 
         const validationResult: UrlValidator = {
-            host: null,
-            port: null,
-            protocol: null,
+            host: undefined,
+            port: undefined,
+            protocol: undefined,
             valid: false,
         };
 
@@ -131,9 +131,9 @@ export class Profiles {
     }
 
     public async createNewConnection(profileName: string): Promise<string | undefined> {
-        let userName: string;
-        let passWord: string;
-        let endevorURL: string;
+        let userName: string | undefined;
+        let passWord: string | undefined;
+        let endevorURL: string | undefined;
         let rejectUnauthorize: boolean;
         let options: vscode.InputBoxOptions;
 
@@ -155,8 +155,7 @@ export class Profiles {
 
         options = {
             placeHolder: "Optional: User Name",
-            prompt: "Enter the user name for the connection. Leave blank to not store.",
-            value: userName,
+            prompt: "Enter the user name for the connection. Leave blank to not store."
         };
         userName = await vscode.window.showInputBox(options);
 
@@ -221,13 +220,13 @@ export class Profiles {
 
         try {
             newProfile = await this.saveProfile(connection, connection.name, "endevor");
+            await this.createBasicEndevorSession(newProfile);
+            logger.info(`Profile ${profileName} was created.`);
+            await this.refresh();
+            return profileName;
         } catch (error) {
             logger.error("Error saving profile", error.message);
         }
-        await this.createBasicEndevorSession(newProfile);
-        logger.info(`Profile ${profileName} was created.`);
-        await this.refresh();
-        return profileName;
     }
 
     public async createBasicEndevorSession(profile) {
@@ -245,19 +244,17 @@ export class Profiles {
     }
 
     public async promptCredentials(sessName) {
-        let userName: string;
-        let passWord: string;
+        let userName: string | undefined;
+        let passWord: string | undefined;
         let options: vscode.InputBoxOptions;
 
         const loadProfile = this.loadNamedProfile(sessName);
         const loadSession = loadProfile.profile as ISession;
 
         if (!loadSession.user) {
-
             options = {
                 placeHolder: "User Name",
-                prompt: "Enter the user name for the connection",
-                value: userName,
+                prompt: "Enter the user name for the connection"
             };
             userName = await vscode.window.showInputBox(options);
 
@@ -299,7 +296,9 @@ export class Profiles {
                     {
                         configuration: EndevorProfilesConfig,
                         profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
-                        reinitialize: false});
+                        reinitialize: false
+                    }
+                );
                 profileManager = new CliProfileManager({
                     profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
                     type: "endevor",
@@ -326,10 +325,11 @@ export class Profiles {
             endevorProfile = await (await this.getEndevorCliProfileManager()).save({
                 name: ProfileName,
                 profile: ProfileInfo,
-                type: ProfileType });
+                type: ProfileType
+            });
+            return endevorProfile.profile;
         } catch (error) {
             logger.error("Error saving profile.", error.message);
         }
-        return endevorProfile.profile;
     }
 }

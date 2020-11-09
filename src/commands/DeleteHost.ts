@@ -29,12 +29,10 @@ export function deleteHost(arg: any) {
                 )
                 .then(message => {
                     if (message === "OK") {
-                        EndevorController.instance.removeRepository(
-                            repo.getName(),
-                            repo.getProfileLabel()
-                        );
-                        EndevorController.instance.updateSettings();
-                        logger.trace("Configuration removed");
+                      const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
+                      EndevorController.instance.removeRepository(repo.getName(), profileLabel!);
+                      EndevorController.instance.updateSettings();
+                      logger.trace("Configuration removed");
                     } else {
                         logger.trace("Operation cancelled.");
                     }
