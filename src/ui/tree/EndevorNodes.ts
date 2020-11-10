@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -12,7 +13,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-// tslint:disable: max-classes-per-file
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import * as vscode from 'vscode';
 import { createEmptyNode, createPathNodes } from '../../FilterUtils';
 import { Element } from '../../model/Element';
@@ -44,6 +46,7 @@ export class EndevorNode extends vscode.TreeItem {
 
     constructor(entity?: EndevorEntity) {
         const entityName = entity ? entity.getName() : 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         super(entityName!, vscode.TreeItemCollapsibleState.Collapsed);
         this._needReload = true;
         this.description = '';
@@ -168,7 +171,7 @@ export class EndevorBrowsingNode extends EndevorNode {
         if (this.isMapNode()) {
             return undefined;
         }
-        let uri: string = '';
+        let uri = '';
         if (filter instanceof EndevorFilter) {
             uri = filter.getUri();
         } else {
@@ -176,6 +179,7 @@ export class EndevorBrowsingNode extends EndevorNode {
         }
 
         return this.children.find(
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
             (child) => (child.getEntity() as EndevorFilter).getUri() === uri
         );
     }
@@ -256,7 +260,6 @@ export class EndevorFilterPathNode extends EndevorNode {
                 env: element.envName,
                 stage: element.stgNum,
                 system: element.sysName,
-                // tslint:disable-next-line:object-literal-sort-keys
                 subsystem: element.sbsName,
                 type: element.typeName,
                 element: element.fullElmName,
@@ -637,6 +640,7 @@ export class NewConnectionButton extends EndevorNode {
         // TODO remove if Theis fix naming (theia/packages/plugin-ext/src/main/browser/view/tree-views-main.tsx)
         // handleTreeEvents expect node.command.id with command id, but vscode - node.command.command
         // issue: https://github.com/theia-ide/theia/issues/5744
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         this.command.id = 'endevorexplorer.newConnection';
 
@@ -657,6 +661,7 @@ export class NewRepositoryNode extends EndevorNode {
         // TODO remove if Theis fix naming (theia/packages/plugin-ext/src/main/browser/view/tree-views-main.tsx)
         // handleTreeEvents expect node.command.id with command id, but vscode - node.command.command
         // issue: https://github.com/theia-ide/theia/issues/5744
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         this.command.id = 'endevorexplorer.newHost';
 

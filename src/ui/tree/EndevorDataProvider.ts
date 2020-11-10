@@ -1,3 +1,5 @@
+/* eslint-disable no-case-declarations */
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -18,11 +20,8 @@ import {
     EndevorBrowsingNode,
     FilterNode,
     EndevorFilterPathNode,
-    NewRepositoryNode,
     ConnectionNode,
     NewConnectionButton,
-} from './EndevorNodes';
-import {
     EnvironmentNode,
     StageNode,
     SystemNode,
@@ -36,6 +35,7 @@ import { Logger, IProfileLoaded } from '@zowe/imperative';
 import { Connection } from '../../model/Connection';
 import { logger } from '../../globals';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function createEndevorTree(log: Logger) {
     const tree = new EndevorDataProvider();
     await tree.addSession();
@@ -133,7 +133,7 @@ export class EndevorDataProvider
                     return Promise.resolve(node.children);
                 }
                 return new Promise((resolve) => {
-                    let resultNodes: EndevorNode[] = [];
+                    const resultNodes: EndevorNode[] = [];
                     resultNodes.push(new EndevorBrowsingNode('Filters', repo));
                     resultNodes.push(new EndevorBrowsingNode('Map', repo));
                     node.children = resultNodes;

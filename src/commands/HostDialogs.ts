@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -13,7 +15,7 @@
  */
 
 import { URL } from 'url';
-import { ProgressLocation, window, workspace } from 'vscode';
+// import { ProgressLocation, window, workspace } from 'vscode';
 import { EndevorController } from '../EndevorController';
 import { Repository } from '../model/Repository';
 import { proxyGetDsNamesFromInstance } from '../service/EndevorCliProxy';
@@ -72,12 +74,11 @@ export class HostDialogs {
 
         if (chosenProfile === '') {
             let newProfileName: any;
-            let profileName: string | undefined;
             const options = {
                 placeHolder: 'Profile Name',
                 prompt: 'Enter a name for the profile',
             };
-            profileName = await vscode.window.showInputBox(options);
+            const profileName = await vscode.window.showInputBox(options);
             if (!profileName) {
                 logger.info(
                     'Profile Name was not supplied. Operation Cancelled'
@@ -127,8 +128,8 @@ export class HostDialogs {
     public static async addHost(connection) {
         if (
             !(
-                workspace.workspaceFolders &&
-                workspace.workspaceFolders.length > 0
+                vscode.workspace.workspaceFolders &&
+                vscode.workspace.workspaceFolders.length > 0
             )
         ) {
             logger.error('Specify workspace before creating repository.');
@@ -148,9 +149,9 @@ export class HostDialogs {
             connection.label
         );
 
-        window.withProgress(
+        vscode.window.withProgress(
             {
-                location: ProgressLocation.Notification,
+                location: vscode.ProgressLocation.Notification,
             },
             async (progress) => {
                 progress.report({
@@ -160,7 +161,7 @@ export class HostDialogs {
                 try {
                     const dsNames = await proxyGetDsNamesFromInstance(newRepo);
                     progress.report({ increment: 100 });
-                    const dsItem = await window.showQuickPick(
+                    const dsItem = await vscode.window.showQuickPick(
                         dsNames.map((label) => ({ label })),
                         {
                             ignoreFocusOut: true,
@@ -240,7 +241,7 @@ export class HostDialogs {
     private static async showHostNameInput(
         repo: Repository
     ): Promise<string | undefined> {
-        return window.showInputBox({
+        return vscode.window.showInputBox({
             ignoreFocusOut: true,
             placeHolder: 'Configuration name',
             prompt: 'Enter a custom name for the configuration.',
@@ -261,7 +262,7 @@ export class HostDialogs {
             return url.port ? true : false;
         };
 
-        return window.showInputBox({
+        return vscode.window.showInputBox({
             ignoreFocusOut: true,
             placeHolder: 'URL',
             prompt: "Enter a z/OS URL in the format 'http(s)://url:port'.",

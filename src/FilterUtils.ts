@@ -27,9 +27,9 @@ export function filterStringValidator(
     repo: Repository,
     value: string
 ): string | undefined {
-    let count = (value.match(/\//g) || []).length;
-    let splitString = value.split('/');
-    var invalidInputMessage;
+    const count = (value.match(/\//g) || []).length;
+    const splitString = value.split('/');
+    let invalidInputMessage;
     switch (count) {
         case 0:
             invalidInputMessage = checkForInvalidInput(splitString);
@@ -111,19 +111,19 @@ function checkForInvalidInput(arrayString: string[]): string | undefined {
 function validateLocation(location: string, index: number): boolean {
     // for element name '^([_-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
     if (index === 1) {
-        let stageNumberRegex = new RegExp('^([1-2]{1}|[*]{1})$');
-        let valid = stageNumberRegex.test(location);
+        const stageNumberRegex = new RegExp('^([1-2]{1}|[*]{1})$');
+        const valid = stageNumberRegex.test(location);
         return valid;
     }
     if (index === 5) {
-        let elementRegex = new RegExp(
+        const elementRegex = new RegExp(
             '^([_\\-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
         );
-        let valid = elementRegex.test(location);
+        const valid = elementRegex.test(location);
         return valid;
     }
-    let locationRegex = new RegExp('^([@$#*A-Za-z0-9]{1,8})$');
-    let valid = locationRegex.test(location);
+    const locationRegex = new RegExp('^([@$#*A-Za-z0-9]{1,8})$');
+    const valid = locationRegex.test(location);
     return valid;
 }
 
@@ -148,10 +148,10 @@ export function createPathNodes(
     elements: Element[],
     repo: Repository
 ): EndevorFilterPathNode[] {
-    let pathNodes: EndevorFilterPathNode[] = [];
-    let pathNames: string[] = [];
+    const pathNodes: EndevorFilterPathNode[] = [];
+    const pathNames: string[] = [];
     for (let i = 0; i < elements.length; i++) {
-        let tempPath =
+        const tempPath =
             elements[i].envName +
             '/' +
             elements[i].stgNum +
@@ -166,12 +166,12 @@ export function createPathNodes(
         }
     }
     for (let i = 0; i < pathNames.length; i++) {
-        let elements: Element[] = [];
+        const elements: Element[] = [];
         pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
     }
     for (let i = 0; i < pathNames.length; i++) {
         for (let j = 0; j < elements.length; j++) {
-            let tempPath =
+            const tempPath =
                 elements[j].envName +
                 '/' +
                 elements[j].stgNum +

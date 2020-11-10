@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -92,9 +93,9 @@ export class HostPanel {
                             const datasources: IEndevorInstance[] = await ListInstance.listInstance(
                                 session
                             );
-                            // tslint:disable-next-line: no-commented-code
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
+                                // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
                                 dsNames.push(ds.name as string);
                             }
                             dsNames.sort();
@@ -126,6 +127,7 @@ export class HostPanel {
         panel.webview.html = fs
             .readFileSync(filePath.fsPath, 'utf8')
             .split('${name}')
+            // eslint-disable-next-line no-useless-escape
             .join(repo.getName().replace(/\"/g, '&quot;'))
             .split('${username}')
             .join(repo ? repo.getUsername() : '')

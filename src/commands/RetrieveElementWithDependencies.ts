@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -63,7 +65,7 @@ export function retrieveWithDependencies(
             }
             const incrementNumber = 100 / (elementsToRetrieve.length + 1);
             // retrieve dependencies
-            let firstOpened: boolean = false;
+            let firstOpened = false;
             for (let i = 0; i < elementsToRetrieve.length; i++) {
                 if (token.isCancellationRequested) {
                     return;
@@ -121,7 +123,6 @@ export function retrieveWithDependencies(
  * @param element
  */
 function createElementQualifier(element: Element): EndevorQualifier {
-    // tslint:disable-next-line: prefer-immediate-return
     const eQualifier: EndevorQualifier = {
         element: element.elmName,
         env: element.envName,
@@ -147,7 +148,6 @@ function createElementFromQualifier(
         elmName: eq.element!,
         envName: eq.env!,
         sysName: eq.system!,
-        // tslint:disable-next-line:object-literal-sort-keys
         sbsName: eq.subsystem!,
         stgNum: eq.stage!,
         typeName: eq.type!,

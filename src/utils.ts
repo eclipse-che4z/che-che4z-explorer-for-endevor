@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -29,7 +31,6 @@ export async function resolveQuickPickHelper(
     );
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class FilterItem implements QuickPickItem {
     constructor(private text: string) {}
     get label(): string {
@@ -43,7 +44,6 @@ export class FilterItem implements QuickPickItem {
     }
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class FilterDescriptor implements QuickPickItem {
     constructor(private text: string) {}
     get label(): string {
@@ -68,7 +68,7 @@ export function toArray<T>(data: any): T[] {
 }
 
 export function constructFilterName(uri: string): string {
-    let name: string = '';
+    let name = '';
     const splitString = uri.split('/');
     splitString.forEach((member) => {
         if (
@@ -87,8 +87,9 @@ export function constructFilterName(uri: string): string {
     return name.replace('//', '/');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function constructFilterUri(uri: string): string {
-    const uriFormatted: string = '';
+    const uriFormatted = '';
 
     return uriFormatted;
 }

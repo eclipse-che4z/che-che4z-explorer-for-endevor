@@ -26,7 +26,7 @@ import {
 import { logger } from '../globals';
 
 export class RetrieveElementService {
-    // tslint:disable-next-line: no-empty
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     constructor() {}
 
     public async retrieveElement(
@@ -46,11 +46,13 @@ export class RetrieveElementService {
             typeDirectory,
             elementName + (ext ? '.' + ext : '')
         );
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         fs.writeFileSync(filePath, data!);
 
         return filePath;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public async processRetrieveElementError(error: any) {
         if (!error.cancelled) {
             logger.error('Error retrieving elements.', error.error);
@@ -73,7 +75,6 @@ export class RetrieveElementService {
         const el = elements[0];
         result.push(new Element(repo, el));
         if (Object.getOwnPropertyDescriptor(el, 'components')) {
-            // tslint:disable-next-line: no-string-literal
             for (const dep of el['components']) {
                 if (dep.elmName.trim()) {
                     const element: Element = new Element(repo, dep);
@@ -97,6 +98,7 @@ export class RetrieveElementService {
         logger.trace(
             `No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`
         );
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         return (eq.type as string).toLowerCase();
     }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -32,8 +33,7 @@ export async function browseElement(arg: any) {
             try {
                 const data = await proxyBrowseElement(repo, eq);
                 progress.report({ increment: 50 });
-                let doc: vscode.TextDocument | undefined;
-                doc = await vscode.workspace.openTextDocument({
+                const doc = await vscode.workspace.openTextDocument({
                     content: data,
                 });
                 progress.report({ increment: 100 });

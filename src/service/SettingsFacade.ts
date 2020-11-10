@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -20,7 +21,7 @@ import { Connection } from '../model/Connection';
 import { Profiles } from './Profiles';
 import { logger } from '../globals';
 
-export const HOST_SETTINGS_KEY: string = 'endevor.connections';
+export const HOST_SETTINGS_KEY = 'endevor.connections';
 
 export class SettingsFacade {
     public static listConnections(): any[] {
@@ -29,7 +30,6 @@ export class SettingsFacade {
 
     public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
-        // tslint:disable-next-line: max-line-length
         const allConnectionsInSettings: any[] = vscode.workspace
             .getConfiguration()
             .get(HOST_SETTINGS_KEY, []);
@@ -75,7 +75,6 @@ export class SettingsFacade {
             const hostsArray: any[] = [];
             const toPush = {
                 name: connection.getName(),
-                // tslint:disable-next-line: object-literal-sort-keys
                 hosts: hostsArray,
             };
             connection.getRepositoryList().forEach((repo) => {

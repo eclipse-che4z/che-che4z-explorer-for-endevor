@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -20,7 +22,7 @@ import * as vscode from 'vscode';
 
 export function addFilter(arg: any) {
     //If it came from a type node prefil it.
-    let filterString: string = '';
+    let filterString = '';
     if (arg.contextValue === 'type') {
         filterString =
             arg.qualifier.env +
@@ -34,7 +36,7 @@ export function addFilter(arg: any) {
             arg.qualifier.type +
             '/*';
     }
-    let inputBoxOptions: vscode.InputBoxOptions = {
+    const inputBoxOptions: vscode.InputBoxOptions = {
         value: filterString,
         prompt: 'Create a new Endevor filter.',
         placeHolder: 'env/stgnum/sys/subsys/type/element',

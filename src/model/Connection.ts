@@ -12,13 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from './IEndevorEntities';
-import { IConnection } from './IConnection';
 import { EndevorEntity } from './EndevorEntity';
 import { Repository } from './Repository';
-import { EndevorQualifier } from './IEndevorQualifier';
 import { IProfileLoaded, IProfile } from '@zowe/imperative';
-import { SnippetString } from 'vscode';
 
 export class Connection extends EndevorEntity implements IProfileLoaded {
     message: string;

@@ -15,7 +15,6 @@
 import { IType } from './IEndevorEntities';
 import { EndevorEntity } from './EndevorEntity';
 import { Repository } from './Repository';
-import { EndevorQualifier } from './IEndevorQualifier';
 
 export class Type extends EndevorEntity implements IType {
     envName: string;

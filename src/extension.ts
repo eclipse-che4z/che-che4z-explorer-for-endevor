@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -39,11 +40,11 @@ let log: Logger;
 export async function activate(context: vscode.ExtensionContext) {
     try {
         // Initialize Imperative Logger and load Profiles
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const loggerConfig = require(path.join(
             context.extensionPath,
             'log4jsconfig.json'
         ));
-        // tslint:disable-next-line: max-line-length
         loggerConfig.log4jsConfig.appenders.default.filename = path.join(
             context.extensionPath,
             'logs',
@@ -100,7 +101,6 @@ export async function activate(context: vscode.ExtensionContext) {
             );
         });
     } catch (ignore) {
-        // tslint:disable-next-line:no-console
         console.warn(ignore);
         vscode.commands.executeCommand(
             'setContext',
@@ -208,5 +208,5 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 }
 
-// tslint:disable-next-line: no-empty
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivate() {}

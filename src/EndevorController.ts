@@ -18,13 +18,8 @@ import {
     EndevorNode,
     EndevorBrowsingNode,
     FilterNode,
-    ConnectionNode,
 } from './ui/tree/EndevorNodes';
 import { Connection } from './model/Connection';
-import { Session, IProfileLoaded } from '@zowe/imperative';
-import { Profiles } from './service/Profiles';
-import { IConnection } from './model/IConnection';
-import { timingSafeEqual } from 'crypto';
 import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
 import { Host } from './model/IEndevorInstance';
 
@@ -42,6 +37,7 @@ export class EndevorController {
 
     private connections: Map<string, Connection> = new Map();
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     private constructor() {}
 
     public static get instance(): EndevorController {
@@ -160,7 +156,6 @@ export class EndevorController {
      * In case `id` is not present in the settings.json, function [updateIDs](#EndevorController.updateIDs) is used to determine it
      * and store in the settings.json.
      */
-    // tslint:disable-next-line:member-ordering
     public loadRepositories() {
         const connectionsFromSettings: Map<string, Host[]> = new Map();
         SettingsFacade.listConnections().forEach((conn) =>
@@ -171,7 +166,7 @@ export class EndevorController {
             this.rootNode.needReload = true;
         }
         connectionsFromSettings.forEach((hostList, connName) => {
-            let connNode = EndevorController.instance.findNodeByConnectionName(
+            const connNode = EndevorController.instance.findNodeByConnectionName(
                 connName
             );
             if (connNode) {
@@ -180,7 +175,7 @@ export class EndevorController {
                 );
                 const updatedRepos: Map<string, Repository> = new Map();
                 reposFromSettings.forEach((settingsRepo) => {
-                    let repoNode:
+                    const repoNode:
                         | EndevorNode
                         | undefined = EndevorController.instance.findNodeByRepoID(
                         settingsRepo.id,
@@ -188,7 +183,7 @@ export class EndevorController {
                     );
                     let repoToKeep: Repository = settingsRepo;
                     if (repoNode) {
-                        let modelRepo:
+                        const modelRepo:
                             | Repository
                             | undefined = repoNode.getRepository();
                         if (modelRepo) {
@@ -210,7 +205,7 @@ export class EndevorController {
                     }
                     updatedRepos.set(repoToKeep.getName(), repoToKeep);
                 });
-                let currentRepos = updatedRepos;
+                const currentRepos = updatedRepos;
                 currentRepos.forEach((repo) => {
                     let profileLabel = repo.getProfileLabel();
                     if (!profileLabel) {
@@ -223,7 +218,7 @@ export class EndevorController {
                 });
                 this.updateIDs(connName);
             } else {
-                let endevorDataProvider = new EndevorDataProvider();
+                const endevorDataProvider = new EndevorDataProvider();
                 endevorDataProvider.addSession(connName);
             }
         });
@@ -241,7 +236,6 @@ export class EndevorController {
         return false;
     }
 
-    // tslint:disable-next-line: member-ordering
     public findNodeByRepoID(
         id: number | undefined,
         connectionLabel: string
@@ -261,12 +255,12 @@ export class EndevorController {
         return undefined;
     }
 
-    // tslint:disable-next-line: member-ordering
     public findNodeByConnectionName(name: string): EndevorNode | undefined {
         if (!name) {
             return undefined;
         }
         for (const node of this._rootNode.children) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             if (node.getEntity() && node.getEntity()!.getName() === name) {
                 return node;
             }
@@ -280,7 +274,7 @@ export class EndevorController {
         const conn = this.connections.get(connectionLabel);
         if (conn) {
             const repoMap = conn.getRepositoryMap();
-            let iDArray: boolean[] = new Array(repoMap.size);
+            const iDArray: boolean[] = new Array(repoMap.size);
             iDArray.fill(true);
             repoMap.forEach((repo) => {
                 if (repo.id !== undefined) {
@@ -305,7 +299,7 @@ export class EndevorController {
         const conn = this.connections.get(connectionLabel);
         if (conn) {
             const repoMap = conn.getRepositoryMap();
-            let saveRepos: boolean = false;
+            let saveRepos = false;
             repoMap.forEach((repo) => {
                 if (repo.id === undefined) {
                     repo.id = EndevorController.instance.findNextId(
@@ -327,8 +321,10 @@ export class EndevorController {
      * @param repo Repository loaded from settings.json
      */
     private checkAndReloadFilters(repoNode: EndevorNode, repo: Repository) {
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         const filtersNode: EndevorBrowsingNode = <EndevorBrowsingNode>(
             repoNode.children.find((child) =>
+                // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
                 (<EndevorBrowsingNode>child).isFiltersNode()
             )
         );

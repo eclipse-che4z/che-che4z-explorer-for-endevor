@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -19,7 +21,7 @@ import { EndevorNode } from '../ui/tree/EndevorNodes';
 import * as vscode from 'vscode';
 
 export function editFilter(arg: any) {
-    let inputBoxOptions: vscode.InputBoxOptions = {
+    const inputBoxOptions: vscode.InputBoxOptions = {
         value: arg.getEntity().getName(),
         prompt: 'Edit filter.',
         placeHolder: 'env/stgnum/sys/subsys/type/element',

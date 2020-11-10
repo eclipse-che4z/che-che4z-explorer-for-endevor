@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import {
     CliProfileManager,
     ImperativeConfig,
@@ -37,8 +38,6 @@ export class Profiles {
     public allProfiles: IProfileLoaded[] = [];
     public defaultProfile: IProfileLoaded | undefined;
 
-    private spawnValue: number = -1;
-    private initValue: number = -1;
     private constructor(public log: Logger) {}
 
     public loadNamedProfile(name: string): IProfileLoaded {
@@ -139,9 +138,6 @@ export class Profiles {
     public async createNewConnection(
         profileName: string
     ): Promise<string | undefined> {
-        let userName: string | undefined;
-        let passWord: string | undefined;
-        let endevorURL: string | undefined;
         let rejectUnauthorize: boolean;
         let options: vscode.InputBoxOptions;
 
@@ -152,7 +148,7 @@ export class Profiles {
             "Enter an Endevor URL in the format 'http(s)://url:port'.";
 
         urlInputBox.show();
-        endevorURL = await this.getUrl(urlInputBox);
+        const endevorURL = await this.getUrl(urlInputBox);
         urlInputBox.dispose();
 
         if (!endevorURL) {
@@ -167,7 +163,7 @@ export class Profiles {
             prompt:
                 'Enter the user name for the connection. Leave blank to not store.',
         };
-        userName = await vscode.window.showInputBox(options);
+        const userName = await vscode.window.showInputBox(options);
 
         if (userName === undefined) {
             logger.info('Operation Cancelled');
@@ -180,7 +176,7 @@ export class Profiles {
                 'Enter the password for the connection. Leave blank to not store.',
             password: true,
         };
-        passWord = await vscode.window.showInputBox(options);
+        const passWord = await vscode.window.showInputBox(options);
 
         if (passWord === undefined) {
             logger.info('Operation Cancelled');

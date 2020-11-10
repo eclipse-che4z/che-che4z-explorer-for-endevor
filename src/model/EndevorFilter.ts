@@ -18,7 +18,7 @@ import { Repository } from './Repository';
 import { Element } from './Element';
 import { EndevorQualifier } from './IEndevorQualifier';
 
-export const FILTER_ALL_STRING: string = '*/*/*/*/*/*';
+export const FILTER_ALL_STRING = '*/*/*/*/*/*';
 
 export class EndevorFilter extends EndevorEntity {
     private _envFilter: string;
@@ -122,7 +122,7 @@ export class EndevorFilter extends EndevorEntity {
     }
 
     public updateFilterString(filterString: string) {
-        let filterTokens: string[] = filterString.split('/');
+        const filterTokens: string[] = filterString.split('/');
         if (filterTokens.length !== 6) {
             throw new Error('Filter string is invalid!');
         }
@@ -135,7 +135,7 @@ export class EndevorFilter extends EndevorEntity {
     }
 
     public editFilter(name: string) {
-        let filters = this.getRepository().filters;
+        const filters = this.getRepository().filters;
         const index = filters.indexOf(this);
         if (index >= 0) {
             filters[index].updateFilterString(name);
@@ -143,7 +143,7 @@ export class EndevorFilter extends EndevorEntity {
     }
 
     public deleteFilter() {
-        let filters = this.getRepository().filters;
+        const filters = this.getRepository().filters;
         const index = filters.indexOf(this);
         if (index >= 0) {
             filters.splice(index, 1);

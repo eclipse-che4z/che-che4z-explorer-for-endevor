@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -12,7 +13,6 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from '../model/Repository';
 import { EndevorController } from '../EndevorController';
 import * as vscode from 'vscode';
 import { logger } from '../globals';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -34,6 +35,7 @@ export function deleteHost(arg: any) {
                             : '';
                         EndevorController.instance.removeRepository(
                             repo.getName(),
+                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                             profileLabel!
                         );
                         EndevorController.instance.updateSettings();
