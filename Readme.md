@@ -126,12 +126,12 @@ Creating a manual filter is a quick way to narrow down your search to only relev
 
 1.  Establish the exact parameters to search as follows:
 
-    - Environment (env)
-    - Stage Number (stgnum)
-    - System (sys)
-    - Subsystem (subsys)
-    - Type (type)
-    - Element (element)
+    -   Environment (env)
+    -   Stage Number (stgnum)
+    -   System (sys)
+    -   Subsystem (subsys)
+    -   Type (type)
+    -   Element (element)
 
         If you are unsure about any of the parameters, you can substitute up to two with a \* wildcard, or instead create a filter using the Map View option.
 
