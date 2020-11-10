@@ -12,37 +12,49 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { Element } from "../model/Element";
-import { IElement } from "../model/IEndevorEntities";
-import { EndevorQualifier } from "../model/IEndevorQualifier";
-import { Repository } from "../model/Repository";
-import { RetrieveElementService } from "../service/RetrieveElementService";
-import { logger } from "../globals";
+import * as vscode from 'vscode';
+import { Element } from '../model/Element';
+import { IElement } from '../model/IEndevorEntities';
+import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { Repository } from '../model/Repository';
+import { RetrieveElementService } from '../service/RetrieveElementService';
+import { logger } from '../globals';
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
-export function retrieveWithDependencies(arg: any, retrieveElementService: RetrieveElementService) {
+export function retrieveWithDependencies(
+    arg: any,
+    retrieveElementService: RetrieveElementService
+) {
     vscode.window.withProgress(
         {
             cancellable: true,
             location: vscode.ProgressLocation.Notification,
-            title: "Retrieving",
+            title: 'Retrieving',
         },
         async (progress, token) => {
             token.onCancellationRequested(() => {
-                logger.info("Retrieve Cancelled.");
+                logger.info('Retrieve Cancelled.');
             });
-            if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-                logger.error("Specify workspace before retrieving elements");
+            if (
+                !(
+                    vscode.workspace.workspaceFolders &&
+                    vscode.workspace.workspaceFolders.length > 0
+                )
+            ) {
+                logger.error('Specify workspace before retrieving elements');
                 return;
             }
-            const workspace: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];
+            const workspace: vscode.WorkspaceFolder =
+                vscode.workspace.workspaceFolders[0];
             const repo: Repository = arg.getRepository();
             const eq: EndevorQualifier = arg.getQualifier();
 
-            progress.report({ increment: 0, message: "Dependencies List" });
-            const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(repo, eq);
+            progress.report({ increment: 0, message: 'Dependencies List' });
+            const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
+                repo,
+                eq
+            );
             if (await hitLimit(elementsToRetrieve, eq)) {
                 return;
             }
@@ -58,16 +70,28 @@ export function retrieveWithDependencies(arg: any, retrieveElementService: Retri
                 }
                 const elName: string = elementsToRetrieve[i].elmName;
                 try {
-                    progress.report({ message: "(" + (i + 1) + "/" + elementsToRetrieve.length + ") " + elName });
-                    const eQualifier = createElementQualifier(elementsToRetrieve[i]);
+                    progress.report({
+                        message:
+                            '(' +
+                            (i + 1) +
+                            '/' +
+                            elementsToRetrieve.length +
+                            ') ' +
+                            elName,
+                    });
+                    const eQualifier = createElementQualifier(
+                        elementsToRetrieve[i]
+                    );
                     const filePath: string = await retrieveElementService.retrieveElement(
                         workspace,
                         repo,
                         elName,
-                        eQualifier,
+                        eQualifier
                     );
                     if (!firstOpened) {
-                        const doc = await vscode.workspace.openTextDocument(filePath);
+                        const doc = await vscode.workspace.openTextDocument(
+                            filePath
+                        );
                         vscode.window.showTextDocument(doc, { preview: false });
                     }
                 } catch (error) {
@@ -77,11 +101,17 @@ export function retrieveWithDependencies(arg: any, retrieveElementService: Retri
                     firstOpened = true;
                     progress.report({
                         increment: incrementNumber,
-                        message: "(" + (i + 1) + "/" + elementsToRetrieve.length + ") " + elName,
+                        message:
+                            '(' +
+                            (i + 1) +
+                            '/' +
+                            elementsToRetrieve.length +
+                            ') ' +
+                            elName,
                     });
                 }
             }
-        },
+        }
     );
 }
 
@@ -109,7 +139,10 @@ function createElementQualifier(element: Element): EndevorQualifier {
  * @param repo
  * @param eq
  */
-function createElementFromQualifier(repo: Repository, eq: EndevorQualifier): Element {
+function createElementFromQualifier(
+    repo: Repository,
+    eq: EndevorQualifier
+): Element {
     const iElement: IElement = {
         elmName: eq.element!,
         envName: eq.env!,
@@ -119,15 +152,24 @@ function createElementFromQualifier(repo: Repository, eq: EndevorQualifier): Ele
         stgNum: eq.stage!,
         typeName: eq.type!,
         fullElmName: eq.element!,
-        elmVVLL: "",
+        elmVVLL: '',
     };
     return new Element(repo, iElement);
 }
 
-async function hitLimit(elementsToRetrieve: Element[], eq: EndevorQualifier): Promise<boolean> {
+async function hitLimit(
+    elementsToRetrieve: Element[],
+    eq: EndevorQualifier
+): Promise<boolean> {
     if (elementsToRetrieve.length <= RETRIEVE_ELEMENTS_LIMIT) {
         return false;
     }
     const msg = `Element ${eq.element} has ${elementsToRetrieve.length} dependencies.`;
-    return (await vscode.window.showWarningMessage(msg, "Download all", "Cancel")) === "Cancel";
+    return (
+        (await vscode.window.showWarningMessage(
+            msg,
+            'Download all',
+            'Cancel'
+        )) === 'Cancel'
+    );
 }

@@ -8,4 +8,4 @@ module.exports = {
     // coverage
     coverageDirectory: '<rootDir>/results/unit/coverage',
     coverageReporters: ['text', 'text-summary', 'lcov'],
-  };
+};

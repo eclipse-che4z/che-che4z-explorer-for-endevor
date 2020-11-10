@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Filter } from "./IEndevorEntities";
+import { Filter } from './IEndevorEntities';
 
 export interface Host {
     id?: number;

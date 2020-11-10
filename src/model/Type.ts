@@ -12,10 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IType } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { EndevorQualifier } from "./IEndevorQualifier";
+import { IType } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
+import { EndevorQualifier } from './IEndevorQualifier';
 
 export class Type extends EndevorEntity implements IType {
     envName: string;
@@ -39,7 +39,7 @@ export class Type extends EndevorEntity implements IType {
         return this.typeName;
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
 
     public getTypeName(): string {

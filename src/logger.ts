@@ -1,7 +1,7 @@
-import * as vscode from "vscode";
-import { OUTPUT_CHANNEL_NAME } from "./constants";
-import { ILogger } from "./doc/ILogger";
-import { UnreachableCaseError } from "./typeHelpers";
+import * as vscode from 'vscode';
+import { OUTPUT_CHANNEL_NAME } from './constants';
+import { ILogger } from './doc/ILogger';
+import { UnreachableCaseError } from './typeHelpers';
 
 enum LOGEVEL {
     TRACE,
@@ -24,7 +24,7 @@ const logAndDisplay = (outputChannel: IChannel) => (lvl: LOGEVEL) => (
     logMsg?: string
 ) => {
     outputChannel.appendLine(userMsg);
-    outputChannel.appendLine(logMsg ?? "(no detail message)");
+    outputChannel.appendLine(logMsg ?? '(no detail message)');
 
     switch (lvl) {
         case LOGEVEL.TRACE:

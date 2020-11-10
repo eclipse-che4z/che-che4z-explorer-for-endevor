@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
-import { OUTPUT_CHANNEL_NAME } from "./constants";
-import { make as makeLogger } from "./logger";
+import * as vscode from 'vscode';
+import { OUTPUT_CHANNEL_NAME } from './constants';
+import { make as makeLogger } from './logger';
 
 /*
 This is the only module that is allowed to execute code directly

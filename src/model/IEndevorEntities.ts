@@ -52,16 +52,16 @@ export interface IElement {
     typeName: string;
 }
 
-export interface Filter{
+export interface Filter {
     uri: string;
 }
 
 export interface IElementDependencies {
-    elmName:string;
+    elmName: string;
     envName: string;
     sysName: string;
     sbsName: string;
     stgNumber: string;
     typeName: string;
-    components:IElement[];
+    components: IElement[];
 }

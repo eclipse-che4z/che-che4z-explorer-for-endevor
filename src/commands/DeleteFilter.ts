@@ -12,13 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorFilter } from "../model/EndevorFilter";
-import { EndevorController } from "../EndevorController";
-import * as vscode from "vscode";
-import { logger } from "../globals";
+import { EndevorFilter } from '../model/EndevorFilter';
+import { EndevorController } from '../EndevorController';
+import * as vscode from 'vscode';
+import { logger } from '../globals';
 
 export function deleteFilter(arg: any) {
-    if (arg.contextValue === "filter") {
+    if (arg.contextValue === 'filter') {
         const filter: EndevorFilter | undefined = <EndevorFilter>(
             arg.getEntity()
         );
@@ -26,16 +26,16 @@ export function deleteFilter(arg: any) {
             logger.trace(`Deleting filter ${filter.getName()}`);
             vscode.window
                 .showWarningMessage(
-                    "Delete filter: " + filter.getName() + "?",
-                    "OK"
+                    'Delete filter: ' + filter.getName() + '?',
+                    'OK'
                 )
                 .then((message) => {
-                    if (message === "OK") {
+                    if (message === 'OK') {
                         filter.deleteFilter();
                         EndevorController.instance.updateSettings();
                         logger.trace(`Filter deleted.`);
                     } else {
-                        logger.trace("Operation cancelled.");
+                        logger.trace('Operation cancelled.');
                     }
                 });
         }

@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
- // Place your settings in this file to overwrite default and user settings.
+// Place your settings in this file to overwrite default and user settings.
 {
     "search.exclude": {
         "out": true // set this to false to include "out" folder in search results
@@ -24,5 +24,5 @@
     // Enforce eslint and prettier on save
     "editor.formatOnSave": true,
     "eslint.alwaysShowStatus": true,
-    "files.insertFinalNewline": true,
+    "files.insertFinalNewline": true
 }

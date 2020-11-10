@@ -12,9 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IStage } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
+import { IStage } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
 
 export class Stage extends EndevorEntity implements IStage {
     envName: string;
@@ -23,7 +23,7 @@ export class Stage extends EndevorEntity implements IStage {
     stgNum: string;
     repository: Repository;
 
-    constructor (repo: Repository, stage: IStage) {
+    constructor(repo: Repository, stage: IStage) {
         super();
         this.envName = stage.envName;
         this.stgName = stage.stgName;
@@ -37,7 +37,7 @@ export class Stage extends EndevorEntity implements IStage {
     }
 
     public getDescription(): string {
-        return "";
+        return '';
     }
 
     public getRepository(): Repository {
@@ -55,5 +55,4 @@ export class Stage extends EndevorEntity implements IStage {
     public getStgNum(): string {
         return this.stgNum;
     }
-
 }

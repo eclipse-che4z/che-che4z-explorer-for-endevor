@@ -12,11 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { EndevorQualifier } from "../model/IEndevorQualifier";
-import { Repository } from "../model/Repository";
-import { proxyBrowseElement } from "../service/EndevorCliProxy";
-import { logger } from "../globals";
+import * as vscode from 'vscode';
+import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { Repository } from '../model/Repository';
+import { proxyBrowseElement } from '../service/EndevorCliProxy';
+import { logger } from '../globals';
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
@@ -27,13 +27,15 @@ export async function browseElement(arg: any) {
             location: vscode.ProgressLocation.Notification,
             title: `Loading: ${elementName}...`,
         },
-        async progress => {
+        async (progress) => {
             progress.report({ increment: 10 });
             try {
                 const data = await proxyBrowseElement(repo, eq);
                 progress.report({ increment: 50 });
                 let doc: vscode.TextDocument | undefined;
-                doc = await vscode.workspace.openTextDocument({ content: data });
+                doc = await vscode.workspace.openTextDocument({
+                    content: data,
+                });
                 progress.report({ increment: 100 });
                 return vscode.window.showTextDocument(doc, { preview: false });
             } catch (error) {
@@ -41,6 +43,6 @@ export async function browseElement(arg: any) {
                     logger.error(error.error);
                 }
             }
-        },
+        }
     );
 }

@@ -12,9 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { EndevorController } from "../../EndevorController";
-import { Repository } from "../../model/Repository";
+import * as vscode from 'vscode';
+import { EndevorController } from '../../EndevorController';
+import { Repository } from '../../model/Repository';
 export class CredentialsInputBox {
     /**
      * Ask credentions.
@@ -22,9 +22,11 @@ export class CredentialsInputBox {
      * @returns object with username and password attrinbutes of undefined if canceled.
      */
     public static async askforCredentials(
-        repo: Repository,
+        repo: Repository
     ): Promise<{ username: string; password: string } | undefined> {
-        const username = await CredentialsInputBox.showUserName(repo.getUsername());
+        const username = await CredentialsInputBox.showUserName(
+            repo.getUsername()
+        );
         if (username === undefined) {
             return undefined;
         }
@@ -37,23 +39,27 @@ export class CredentialsInputBox {
         EndevorController.instance.updateSettings();
         return { password, username };
     }
-    private static async showUserName(username?: string): Promise<string | undefined> {
-        username = username ? username : "";
+    private static async showUserName(
+        username?: string
+    ): Promise<string | undefined> {
+        username = username ? username : '';
         return vscode.window.showInputBox({
             ignoreFocusOut: true,
-            placeHolder: "Username",
-            prompt: "Enter the Username ",
-            validateInput: (text: string) => (text !== "" ? "" : "Username must not be empty"),
-            value: username
+            placeHolder: 'Username',
+            prompt: 'Enter the Username ',
+            validateInput: (text: string) =>
+                text !== '' ? '' : 'Username must not be empty',
+            value: username,
         });
     }
     private static async showPasswordBox(): Promise<string | undefined> {
         return vscode.window.showInputBox({
             ignoreFocusOut: true,
             password: true,
-            placeHolder: "Mainframe password",
-            prompt: "Enter the password ",
-            validateInput: (text: string) => (text !== "" ? "" : "Password must not be empty"),
+            placeHolder: 'Mainframe password',
+            prompt: 'Enter the password ',
+            validateInput: (text: string) =>
+                text !== '' ? '' : 'Password must not be empty',
         });
     }
 }

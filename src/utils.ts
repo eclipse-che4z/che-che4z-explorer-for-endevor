@@ -12,14 +12,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElementBasicData } from "@broadcom/endevor-for-zowe-cli";
-import { ISession, Session } from "@zowe/imperative";
-import { EndevorQualifier } from "./model/IEndevorQualifier";
-import { Repository } from "./model/Repository";
-import { CredentialsInputBox } from "./ui/tree/CredentialsInput";
-import { EndevorElementNode } from "./ui/tree/EndevorNodes";
-import { QuickPickItem, QuickPick } from "vscode";
-import { logger } from "./globals";
+import { IElementBasicData } from '@broadcom/endevor-for-zowe-cli';
+import { ISession, Session } from '@zowe/imperative';
+import { EndevorQualifier } from './model/IEndevorQualifier';
+import { Repository } from './model/Repository';
+import { CredentialsInputBox } from './ui/tree/CredentialsInput';
+import { EndevorElementNode } from './ui/tree/EndevorNodes';
+import { QuickPickItem, QuickPick } from 'vscode';
+import { logger } from './globals';
 
 export async function resolveQuickPickHelper(
     quickpick: QuickPick<QuickPickItem>
@@ -36,7 +36,7 @@ export class FilterItem implements QuickPickItem {
         return this.text;
     }
     get description(): string {
-        return "";
+        return '';
     }
     get alwaysShow(): boolean {
         return false;
@@ -50,7 +50,7 @@ export class FilterDescriptor implements QuickPickItem {
         return this.text;
     }
     get description(): string {
-        return "";
+        return '';
     }
     get alwaysShow(): boolean {
         return true;
@@ -68,27 +68,27 @@ export function toArray<T>(data: any): T[] {
 }
 
 export function constructFilterName(uri: string): string {
-    let name: string = "";
-    const splitString = uri.split("/");
+    let name: string = '';
+    const splitString = uri.split('/');
     splitString.forEach((member) => {
         if (
             !(
-                member === "env" ||
-                member === "stgnum" ||
-                member === "sys" ||
-                member === "subsys" ||
-                member === "type" ||
-                member === "ele"
+                member === 'env' ||
+                member === 'stgnum' ||
+                member === 'sys' ||
+                member === 'subsys' ||
+                member === 'type' ||
+                member === 'ele'
             )
         ) {
-            name = name + "/" + member;
+            name = name + '/' + member;
         }
     });
-    return name.replace("//", "/");
+    return name.replace('//', '/');
 }
 
 export function constructFilterUri(uri: string): string {
-    const uriFormatted: string = "";
+    const uriFormatted: string = '';
 
     return uriFormatted;
 }
@@ -114,38 +114,38 @@ export function multipleElementsSelected(selection: any[]): boolean {
 }
 function getBasePathFromRepo(repository: Repository): string {
     return (
-        repository.getUrlString().split(":")[2].split("/")[1] +
-        "/" +
-        repository.getUrlString().split(":")[2].split("/")[2]
+        repository.getUrlString().split(':')[2].split('/')[1] +
+        '/' +
+        repository.getUrlString().split(':')[2].split('/')[2]
     );
 }
 
 export async function buildSession(repository: Repository): Promise<Session> {
     // hacky solution to make ISession happy
-    logger.trace("Building the session.");
-    type PROTOCOL = "http" | "https";
-    const protocol = repository.getUrl().split(":")[0] as PROTOCOL;
-    const hostname: string = repository.getUrl().split(":")[1].split("/")[2];
-    const port = Number(repository.getUrl().split(":")[2]);
+    logger.trace('Building the session.');
+    type PROTOCOL = 'http' | 'https';
+    const protocol = repository.getUrl().split(':')[0] as PROTOCOL;
+    const hostname: string = repository.getUrl().split(':')[1].split('/')[2];
+    const port = Number(repository.getUrl().split(':')[2]);
     const basePath = getBasePathFromRepo(repository);
     if (!repository.getPassword()) {
-        logger.trace("Password not received. Prompting.");
+        logger.trace('Password not received. Prompting.');
         const creds = await CredentialsInputBox.askforCredentials(repository);
         if (!creds) {
-            logger.trace("Password not provided. Cancelling.");
+            logger.trace('Password not provided. Cancelling.');
             throw { cancelled: true };
         }
     }
     const sessionDetails: ISession = {
         base64EncodedAuth: Buffer.from(
-            repository.getUsername() + ":" + repository.getPassword()
-        ).toString("base64"),
+            repository.getUsername() + ':' + repository.getPassword()
+        ).toString('base64'),
         basePath,
         hostname,
         port,
         protocol,
         rejectUnauthorized: false,
-        type: "basic",
+        type: 'basic',
     };
     const session = new Session(sessionDetails);
     logger.trace(`Session created. ${JSON.stringify(session)}`);
@@ -157,14 +157,14 @@ export function endevorQualifierToElement(
     instance: string
 ): IElementBasicData {
     return {
-        element: endevorQualifier.element ? endevorQualifier.element : "*",
-        environment: endevorQualifier.env ? endevorQualifier.env : "*",
+        element: endevorQualifier.element ? endevorQualifier.element : '*',
+        environment: endevorQualifier.env ? endevorQualifier.env : '*',
         instance,
-        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : "*",
+        stageNumber: endevorQualifier.stage ? endevorQualifier.stage : '*',
         subsystem: endevorQualifier.subsystem
             ? endevorQualifier.subsystem
-            : "*",
-        system: endevorQualifier.system ? endevorQualifier.system : "*",
-        type: endevorQualifier.type ? endevorQualifier.type : "*",
+            : '*',
+        system: endevorQualifier.system ? endevorQualifier.system : '*',
+        type: endevorQualifier.type ? endevorQualifier.type : '*',
     };
 }

@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IProfile } from "@zowe/imperative";
+import { IProfile } from '@zowe/imperative';
 
 export interface IConnection extends IProfile {
     name: string;

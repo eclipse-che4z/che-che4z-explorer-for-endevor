@@ -12,13 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from "./EndevorEntity";
-import * as constants from "../constants";
-import { Repository } from "./Repository";
-import { Element } from "./Element";
-import { EndevorQualifier } from "./IEndevorQualifier";
+import { EndevorEntity } from './EndevorEntity';
+import * as constants from '../constants';
+import { Repository } from './Repository';
+import { Element } from './Element';
+import { EndevorQualifier } from './IEndevorQualifier';
 
-export const FILTER_ALL_STRING: string = "*/*/*/*/*/*";
+export const FILTER_ALL_STRING: string = '*/*/*/*/*/*';
 
 export class EndevorFilter extends EndevorEntity {
     private _envFilter: string;
@@ -47,22 +47,34 @@ export class EndevorFilter extends EndevorEntity {
         if (!append) {
             this.elements = [];
         }
-        newElements.forEach(element => {
+        newElements.forEach((element) => {
             this.elements.push(element);
         });
     }
 
     public getName(): string {
         if (this.filterAll()) {
-            return "Map";
+            return 'Map';
         }
         return this.getUri();
     }
-    public getUri(): string{
-        return this._envFilter + "/" + this._stageFilter + "/" + this._systemFilter + "/" + this._subsysFilter + "/" + this._typeFilter + "/" + this._elementFilter;
+    public getUri(): string {
+        return (
+            this._envFilter +
+            '/' +
+            this._stageFilter +
+            '/' +
+            this._systemFilter +
+            '/' +
+            this._subsysFilter +
+            '/' +
+            this._typeFilter +
+            '/' +
+            this._elementFilter
+        );
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
     public getRepository(): Repository {
         return this.repository;
@@ -83,7 +95,7 @@ export class EndevorFilter extends EndevorEntity {
             system: this._systemFilter,
             subsystem: this._subsysFilter,
             type: this._typeFilter,
-            element: this._elementFilter
+            element: this._elementFilter,
         };
     }
 
@@ -110,9 +122,9 @@ export class EndevorFilter extends EndevorEntity {
     }
 
     public updateFilterString(filterString: string) {
-        let filterTokens: string[] = filterString.split("/");
+        let filterTokens: string[] = filterString.split('/');
         if (filterTokens.length !== 6) {
-            throw new Error("Filter string is invalid!");
+            throw new Error('Filter string is invalid!');
         }
         this._envFilter = filterTokens[0];
         this._stageFilter = filterTokens[1];
@@ -128,14 +140,13 @@ export class EndevorFilter extends EndevorEntity {
         if (index >= 0) {
             filters[index].updateFilterString(name);
         }
-
     }
 
     public deleteFilter() {
         let filters = this.getRepository().filters;
         const index = filters.indexOf(this);
         if (index >= 0) {
-            filters.splice(index,1);
+            filters.splice(index, 1);
         }
     }
 

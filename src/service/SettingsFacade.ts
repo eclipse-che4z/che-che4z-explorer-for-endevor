@@ -12,15 +12,15 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { EndevorFilter } from "../model/EndevorFilter";
-import { Host } from "../model/IEndevorInstance";
-import { Repository } from "../model/Repository";
-import { Connection } from "../model/Connection";
-import { Profiles } from "./Profiles";
-import { logger } from "../globals";
+import * as vscode from 'vscode';
+import { EndevorFilter } from '../model/EndevorFilter';
+import { Host } from '../model/IEndevorInstance';
+import { Repository } from '../model/Repository';
+import { Connection } from '../model/Connection';
+import { Profiles } from './Profiles';
+import { logger } from '../globals';
 
-export const HOST_SETTINGS_KEY: string = "endevor.connections";
+export const HOST_SETTINGS_KEY: string = 'endevor.connections';
 
 export class SettingsFacade {
     public static listConnections(): any[] {
@@ -30,12 +30,19 @@ export class SettingsFacade {
     public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
         // tslint:disable-next-line: max-line-length
-        const allConnectionsInSettings: any[] = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
-        const connectionInSettings = allConnectionsInSettings.find(connection => connection.name === connectionLabel);
-        const hosts: Host[] = connectionInSettings ? connectionInSettings.hosts : [];
-        const profile = Profiles.getInstance().loadNamedProfile(connectionLabel).profile;
+        const allConnectionsInSettings: any[] = vscode.workspace
+            .getConfiguration()
+            .get(HOST_SETTINGS_KEY, []);
+        const connectionInSettings = allConnectionsInSettings.find(
+            (connection) => connection.name === connectionLabel
+        );
+        const hosts: Host[] = connectionInSettings
+            ? connectionInSettings.hosts
+            : [];
+        const profile = Profiles.getInstance().loadNamedProfile(connectionLabel)
+            .profile;
         if (profile) {
-            hosts.forEach(host => {
+            hosts.forEach((host) => {
                 const repo: Repository = new Repository(
                     host.name,
                     `${profile.protocol}://${profile.host}:${profile.port}`,
@@ -43,12 +50,15 @@ export class SettingsFacade {
                     profile.password,
                     host.datasource,
                     host.profileLabel,
-                    host.id,
+                    host.id
                 );
                 if (host.filters) {
                     const newFilters: Map<string, EndevorFilter> = new Map();
-                    host.filters.forEach(filter => {
-                        newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
+                    host.filters.forEach((filter) => {
+                        newFilters.set(
+                            filter.uri,
+                            new EndevorFilter(repo, filter.uri)
+                        );
                         repo.filters.push(new EndevorFilter(repo, filter.uri));
                     });
                     repo.filters = Array.from(newFilters.values());
@@ -61,14 +71,14 @@ export class SettingsFacade {
 
     public static async updateSettings(connections: Connection[]) {
         const conns: any[] = [];
-        connections.forEach(connection => {
+        connections.forEach((connection) => {
             const hostsArray: any[] = [];
             const toPush = {
                 name: connection.getName(),
                 // tslint:disable-next-line: object-literal-sort-keys
-                hosts: hostsArray
+                hosts: hostsArray,
             };
-            connection.getRepositoryList().forEach(repo => {
+            connection.getRepositoryList().forEach((repo) => {
                 toPush.hosts.push({
                     datasource: repo.getDatasource(),
                     filters: repo.getIFilters(),
@@ -82,17 +92,22 @@ export class SettingsFacade {
             conns.push(toPush);
         });
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns, vscode.ConfigurationTarget.Global);
+            await vscode.workspace
+                .getConfiguration()
+                .update(
+                    HOST_SETTINGS_KEY,
+                    conns,
+                    vscode.ConfigurationTarget.Global
+                );
         } catch (error) {
-            logger.error("Error saving to settings.", error);
+            logger.error('Error saving to settings.', error);
         }
-
     }
 
     public static async updateRepositories(connection: Connection) {
         const repos = connection.getRepositoryList();
         const hosts: Host[] = [];
-        repos.forEach(repo => {
+        repos.forEach((repo) => {
             hosts.push({
                 datasource: repo.getDatasource(),
                 filters: repo.getIFilters(),
@@ -100,17 +115,23 @@ export class SettingsFacade {
                 name: repo.getName(),
                 profileLabel: repo.getProfileLabel(),
                 url: repo.getUrl(),
-                username: repo.getUsername()
+                username: repo.getUsername(),
             });
         });
         const value = {
-            "endevor.hosts" : hosts,
-        }
+            'endevor.hosts': hosts,
+        };
 
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value, vscode.ConfigurationTarget.Global);
+            await vscode.workspace
+                .getConfiguration()
+                .update(
+                    HOST_SETTINGS_KEY,
+                    value,
+                    vscode.ConfigurationTarget.Global
+                );
         } catch (error) {
-            logger.error("Error saving to settings.", error);
+            logger.error('Error saving to settings.', error);
         }
     }
 }

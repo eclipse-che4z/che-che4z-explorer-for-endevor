@@ -12,10 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { Element } from "./model/Element";
-import { Repository } from "./model/Repository";
-import { EndevorFilterPathNode, EmptyNode } from "./ui/tree/EndevorNodes";
+import * as vscode from 'vscode';
+import { Element } from './model/Element';
+import { Repository } from './model/Repository';
+import { EndevorFilterPathNode, EmptyNode } from './ui/tree/EndevorNodes';
 
 /**
  * Validates a string based on the filter string conventions.
@@ -23,7 +23,10 @@ import { EndevorFilterPathNode, EmptyNode } from "./ui/tree/EndevorNodes";
  * @param value
  * @return If the string passes the validation undefined is returned. If it fails an appropriate message is returned.
  */
-export function filterStringValidator(repo: Repository, value: string): string | undefined {
+export function filterStringValidator(
+    repo: Repository,
+    value: string
+): string | undefined {
     let count = (value.match(/\//g) || []).length;
     let splitString = value.split('/');
     var invalidInputMessage;
@@ -64,7 +67,10 @@ export function filterStringValidator(repo: Repository, value: string): string |
                 return invalidInputMessage;
             }
             if (duplicateFilterString(repo, value)) {
-                return 'This filter string already exists for host: ' + repo.getName();
+                return (
+                    'This filter string already exists for host: ' +
+                    repo.getName()
+                );
             }
             return undefined;
         default:
@@ -110,14 +116,15 @@ function validateLocation(location: string, index: number): boolean {
         return valid;
     }
     if (index === 5) {
-        let elementRegex = new RegExp('^([_\\-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$');
+        let elementRegex = new RegExp(
+            '^([_\\-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
+        );
         let valid = elementRegex.test(location);
         return valid;
     }
     let locationRegex = new RegExp('^([@$#*A-Za-z0-9]{1,8})$');
     let valid = locationRegex.test(location);
     return valid;
-
 }
 
 /**
@@ -137,12 +144,23 @@ function duplicateFilterString(repo: Repository, value: string): boolean {
     return false;
 }
 
-
-export function createPathNodes(elements: Element[], repo: Repository): EndevorFilterPathNode[] {
+export function createPathNodes(
+    elements: Element[],
+    repo: Repository
+): EndevorFilterPathNode[] {
     let pathNodes: EndevorFilterPathNode[] = [];
     let pathNames: string[] = [];
     for (let i = 0; i < elements.length; i++) {
-        let tempPath = elements[i].envName + '/' + elements[i].stgNum + '/' + elements[i].sysName + '/' + elements[i].sbsName + '/' + elements[i].typeName;
+        let tempPath =
+            elements[i].envName +
+            '/' +
+            elements[i].stgNum +
+            '/' +
+            elements[i].sysName +
+            '/' +
+            elements[i].sbsName +
+            '/' +
+            elements[i].typeName;
         if (!pathNames.includes(tempPath)) {
             pathNames.push(tempPath);
         }
@@ -153,7 +171,16 @@ export function createPathNodes(elements: Element[], repo: Repository): EndevorF
     }
     for (let i = 0; i < pathNames.length; i++) {
         for (let j = 0; j < elements.length; j++) {
-            let tempPath = elements[j].envName + '/' + elements[j].stgNum + '/' + elements[j].sysName + '/' + elements[j].sbsName + '/' + elements[j].typeName;
+            let tempPath =
+                elements[j].envName +
+                '/' +
+                elements[j].stgNum +
+                '/' +
+                elements[j].sysName +
+                '/' +
+                elements[j].sbsName +
+                '/' +
+                elements[j].typeName;
             if (pathNames[i] === tempPath) {
                 pathNodes[i].getElements().push(elements[j]);
             }
@@ -162,7 +189,11 @@ export function createPathNodes(elements: Element[], repo: Repository): EndevorF
     return pathNodes;
 }
 
-export function createEmptyNode(repo: Repository, label: string, message: string): EmptyNode {
+export function createEmptyNode(
+    repo: Repository,
+    label: string,
+    message: string
+): EmptyNode {
     const pathName = label;
     const pathNode = new EmptyNode(pathName, repo, message);
     pathNode.collapsibleState = vscode.TreeItemCollapsibleState.None;

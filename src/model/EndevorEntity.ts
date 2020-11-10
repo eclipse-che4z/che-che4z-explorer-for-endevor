@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from "./Repository";
+import { Repository } from './Repository';
 
 export abstract class EndevorEntity {
     abstract getName(): string | undefined;

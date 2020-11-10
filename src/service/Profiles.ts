@@ -1,22 +1,30 @@
 /*
-* This program and the accompanying materials are made available under the terms of the *
-* Eclipse Public License v2.0 which accompanies this distribution, and is available at *
-* https://www.eclipse.org/legal/epl-v20.html                                      *
-*                                                                                 *
-* SPDX-License-Identifier: EPL-2.0                                                *
-*                                                                                 *
-* Copyright Contributors to the Zowe Project.                                     *
-*                                                                                 *
-*/
+ * This program and the accompanying materials are made available under the terms of the *
+ * Eclipse Public License v2.0 which accompanies this distribution, and is available at *
+ * https://www.eclipse.org/legal/epl-v20.html                                      *
+ *                                                                                 *
+ * SPDX-License-Identifier: EPL-2.0                                                *
+ *                                                                                 *
+ * Copyright Contributors to the Zowe Project.                                     *
+ *                                                                                 *
+ */
 
-import { CliProfileManager, ImperativeConfig, IProfile, IProfileLoaded, ISession, Logger, Session } from "@zowe/imperative";
-import { EndevorProfilesConfig } from "@broadcom/endevor-for-zowe-cli";
-import * as os from "os";
-import * as path from "path";
-import { URL } from "url";
-import * as vscode from "vscode";
-import { IConnection } from "../model/IConnection";
-import { logger } from "../globals";
+import {
+    CliProfileManager,
+    ImperativeConfig,
+    IProfile,
+    IProfileLoaded,
+    ISession,
+    Logger,
+    Session,
+} from '@zowe/imperative';
+import { EndevorProfilesConfig } from '@broadcom/endevor-for-zowe-cli';
+import * as os from 'os';
+import * as path from 'path';
+import { URL } from 'url';
+import * as vscode from 'vscode';
+import { IConnection } from '../model/IConnection';
+import { logger } from '../globals';
 
 interface IUrlValidator {
     valid: boolean;
@@ -30,7 +38,6 @@ export class Profiles {
         Profiles.loader = new Profiles(log);
         await Profiles.loader.refresh();
         return Profiles.loader;
-
     }
     public static getInstance() {
         return Profiles.loader;
@@ -47,29 +54,34 @@ export class Profiles {
 
     public loadNamedProfile(name: string): IProfileLoaded {
         for (const profile of this.allProfiles) {
-            if (profile.name === name && profile.type === "endevor") {
+            if (profile.name === name && profile.type === 'endevor') {
                 return profile;
             }
         }
-        throw new Error("Could not find profile named: "
-            + name + ".");
+        throw new Error('Could not find profile named: ' + name + '.');
     }
     public getDefaultProfile(): IProfileLoaded | undefined {
         return this.defaultProfile;
     }
     public async refresh() {
-        EndevorProfilesConfig
+        EndevorProfilesConfig;
         this.allProfiles = [];
         const profileManager = this.getEndevorCliProfileManager();
-        const endevorProfiles = (await (await profileManager).loadAll()).filter(profile => {
-            return profile.type === "endevor";
-        });
+        const endevorProfiles = (await (await profileManager).loadAll()).filter(
+            (profile) => {
+                return profile.type === 'endevor';
+            }
+        );
         if (endevorProfiles && endevorProfiles.length > 0) {
             this.allProfiles.push(...endevorProfiles);
             let defaultProfile: IProfileLoaded | undefined;
             try {
-                defaultProfile = await (await profileManager).load({ loadDefault: true});
-                this.defaultProfile = defaultProfile ? defaultProfile : undefined;
+                defaultProfile = await (await profileManager).load({
+                    loadDefault: true,
+                });
+                this.defaultProfile = defaultProfile
+                    ? defaultProfile
+                    : undefined;
             } catch (error) {
                 logger.error(error.message);
             }
@@ -82,7 +94,7 @@ export class Profiles {
 
     public validateAndParseUrl = (newUrl: string): IUrlValidator => {
         let url: URL;
-        const validProtocols: string[] = ["https", "http"];
+        const validProtocols: string[] = ['https', 'http'];
 
         const validationResult: IUrlValidator = {
             valid: false,
@@ -98,10 +110,14 @@ export class Profiles {
         }
 
         // overkill with only one valid protocol, but we may expand profile types and protocols in the future?
-        if (!validProtocols.some((validProtocol: string) => url.protocol.includes(validProtocol))) {
+        if (
+            !validProtocols.some((validProtocol: string) =>
+                url.protocol.includes(validProtocol)
+            )
+        ) {
             return validationResult;
         } else {
-            validationResult.protocol = url.protocol.replace(":", "");
+            validationResult.protocol = url.protocol.replace(':', '');
         }
 
         if (!url.port.trim()) {
@@ -113,22 +129,27 @@ export class Profiles {
         validationResult.host = url.hostname;
         validationResult.valid = true;
         return validationResult;
-    }
+    };
 
     public async getUrl(urlInputBox): Promise<string | undefined> {
-        return new Promise<string | undefined> (resolve => {
-            urlInputBox.onDidHide(() => { resolve(urlInputBox.value); });
+        return new Promise<string | undefined>((resolve) => {
+            urlInputBox.onDidHide(() => {
+                resolve(urlInputBox.value);
+            });
             urlInputBox.onDidAccept(() => {
                 if (this.validateAndParseUrl(urlInputBox.value).valid) {
                     resolve(urlInputBox.value);
                 } else {
-                    urlInputBox.validationMessage = "Please enter a valid URL in the format http(s)://url:port.";
+                    urlInputBox.validationMessage =
+                        'Please enter a valid URL in the format http(s)://url:port.';
                 }
             });
         });
     }
 
-    public async createNewConnection(profileName: string): Promise<string | undefined> {
+    public async createNewConnection(
+        profileName: string
+    ): Promise<string | undefined> {
         let userName: string | undefined;
         let passWord: string | undefined;
         let endevorURL: string | undefined;
@@ -137,68 +158,78 @@ export class Profiles {
 
         const urlInputBox = vscode.window.createInputBox();
         urlInputBox.ignoreFocusOut = true;
-        urlInputBox.placeholder = "http(s)://url:port";
-        urlInputBox.prompt = "Enter an Endevor URL in the format 'http(s)://url:port'.";
+        urlInputBox.placeholder = 'http(s)://url:port';
+        urlInputBox.prompt =
+            "Enter an Endevor URL in the format 'http(s)://url:port'.";
 
         urlInputBox.show();
         endevorURL = await this.getUrl(urlInputBox);
         urlInputBox.dispose();
 
         if (!endevorURL) {
-            logger.info("No valid value for Endevor URL. Operation Cancelled");
+            logger.info('No valid value for Endevor URL. Operation Cancelled');
             return undefined;
         }
 
         const endevorUrlParsed = this.validateAndParseUrl(endevorURL);
 
         options = {
-            placeHolder: "Optional: User Name",
-            prompt: "Enter the user name for the connection. Leave blank to not store."
+            placeHolder: 'Optional: User Name',
+            prompt:
+                'Enter the user name for the connection. Leave blank to not store.',
         };
         userName = await vscode.window.showInputBox(options);
 
         if (userName === undefined) {
-            logger.info("Operation Cancelled");
+            logger.info('Operation Cancelled');
             return;
         }
 
         options = {
-            placeHolder: "Optional: Password",
-            prompt: "Enter the password for the connection. Leave blank to not store.",
-            password: true
+            placeHolder: 'Optional: Password',
+            prompt:
+                'Enter the password for the connection. Leave blank to not store.',
+            password: true,
         };
         passWord = await vscode.window.showInputBox(options);
 
         if (passWord === undefined) {
-            logger.info("Operation Cancelled");
+            logger.info('Operation Cancelled');
             return;
         }
 
         const quickPickOptions: vscode.QuickPickOptions = {
-            placeHolder: "Reject Unauthorized Connections",
+            placeHolder: 'Reject Unauthorized Connections',
             ignoreFocusOut: true,
             canPickMany: false,
         };
 
-        const selectRU = ["True - Reject connections with self-signed certificates",
-            "False - Accept connections with self-signed certificates"];
+        const selectRU = [
+            'True - Reject connections with self-signed certificates',
+            'False - Accept connections with self-signed certificates',
+        ];
 
         const ruOptions = Array.from(selectRU);
 
-        const chosenRU = await vscode.window.showQuickPick(ruOptions, quickPickOptions);
+        const chosenRU = await vscode.window.showQuickPick(
+            ruOptions,
+            quickPickOptions
+        );
 
         if (chosenRU === ruOptions[0]) {
             rejectUnauthorize = true;
         } else if (chosenRU === ruOptions[1]) {
             rejectUnauthorize = false;
         } else {
-            logger.info("Operation Cancelled");
+            logger.info('Operation Cancelled');
             return undefined;
         }
 
         for (const profile of this.allProfiles) {
             if (profile.name === profileName) {
-                logger.error("Profile name already exists. Please create a profile using a different name");
+                logger.error(
+                    'Profile name already exists. Please create a profile using a different name'
+                );
                 return undefined;
             }
         }
@@ -216,20 +247,26 @@ export class Profiles {
         let newProfile: IProfile;
 
         try {
-            newProfile = await this.saveProfile(connection, connection.name, "endevor");
+            newProfile = await this.saveProfile(
+                connection,
+                connection.name,
+                'endevor'
+            );
             await this.createBasicEndevorSession(newProfile);
             logger.info(`Profile ${profileName} was created.`);
             await this.refresh();
             return profileName;
         } catch (error) {
-            logger.error("Error saving profile", error.message);
+            logger.error('Error saving profile', error.message);
         }
     }
 
     public async createBasicEndevorSession(profile) {
-        logger.trace(`Creating an Endevor session from the profile named ${profile.name}`);
+        logger.trace(
+            `Creating an Endevor session from the profile named ${profile.name}`
+        );
         return new Session({
-            type: "basic",
+            type: 'basic',
             hostname: profile.host,
             port: profile.port,
             user: profile.user,
@@ -250,13 +287,15 @@ export class Profiles {
 
         if (!loadSession.user) {
             options = {
-                placeHolder: "User Name",
-                prompt: "Enter the user name for the connection"
+                placeHolder: 'User Name',
+                prompt: 'Enter the user name for the connection',
             };
             userName = await vscode.window.showInputBox(options);
 
             if (!userName) {
-                logger.error("Please enter your z/OS username. Operation Cancelled");
+                logger.error(
+                    'Please enter your z/OS username. Operation Cancelled'
+                );
                 return;
             } else {
                 loadSession.user = userName;
@@ -267,42 +306,57 @@ export class Profiles {
             passWord = loadSession.password;
 
             options = {
-                placeHolder: "Password",
-                prompt: "Enter a password for the connection",
+                placeHolder: 'Password',
+                prompt: 'Enter a password for the connection',
                 password: true,
                 value: passWord,
             };
             passWord = await vscode.window.showInputBox(options);
 
             if (!passWord) {
-                logger.error("Please enter your z/OS password. Operation Cancelled");
+                logger.error(
+                    'Please enter your z/OS password. Operation Cancelled'
+                );
                 return;
             } else {
                 loadSession.password = passWord.trim();
             }
         }
-        const updSession = await this.createBasicEndevorSession(loadSession as IProfile);
-        return [updSession.ISession.user, updSession.ISession.password, updSession.ISession.base64EncodedAuth];
+        const updSession = await this.createBasicEndevorSession(
+            loadSession as IProfile
+        );
+        return [
+            updSession.ISession.user,
+            updSession.ISession.password,
+            updSession.ISession.base64EncodedAuth,
+        ];
     }
 
     public async getEndevorCliProfileManager(): Promise<CliProfileManager> {
         let profileManager = this.endevorProfileManager;
         if (!profileManager) {
             try {
-                await CliProfileManager.initialize(
-                    {
-                        configuration: EndevorProfilesConfig,
-                        profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
-                        reinitialize: false
-                    }
-                );
+                await CliProfileManager.initialize({
+                    configuration: EndevorProfilesConfig,
+                    profileRootDirectory: path.join(
+                        this.getZoweDir(),
+                        'profiles'
+                    ),
+                    reinitialize: false,
+                });
                 profileManager = new CliProfileManager({
-                    profileRootDirectory: path.join(this.getZoweDir(), "profiles"),
-                    type: "endevor",
+                    profileRootDirectory: path.join(
+                        this.getZoweDir(),
+                        'profiles'
+                    ),
+                    type: 'endevor',
                 });
                 this.endevorProfileManager = profileManager;
             } catch (error) {
-                logger.error("Failed to load Imperative Profile Manager.", error.message);
+                logger.error(
+                    'Failed to load Imperative Profile Manager.',
+                    error.message
+                );
             }
         }
         return profileManager;
@@ -310,8 +364,8 @@ export class Profiles {
 
     private getZoweDir(): string {
         ImperativeConfig.instance.loadedConfig = {
-            defaultHome: path.join(os.homedir(), ".zowe"),
-            envVariablePrefix: "ZOWE"
+            defaultHome: path.join(os.homedir(), '.zowe'),
+            envVariablePrefix: 'ZOWE',
         };
         return ImperativeConfig.instance.cliHome;
     }
@@ -319,10 +373,16 @@ export class Profiles {
     private async saveProfile(ProfileInfo, ProfileName, ProfileType) {
         let endevorProfile: IProfile;
         try {
-            endevorProfile = await (await this.getEndevorCliProfileManager()).save({ profile: ProfileInfo, name: ProfileName, type: ProfileType });
+            endevorProfile = await (
+                await this.getEndevorCliProfileManager()
+            ).save({
+                profile: ProfileInfo,
+                name: ProfileName,
+                type: ProfileType,
+            });
             return endevorProfile.profile;
         } catch (error) {
-            logger.error("Error saving profile.", error.message);
+            logger.error('Error saving profile.', error.message);
         }
     }
 }

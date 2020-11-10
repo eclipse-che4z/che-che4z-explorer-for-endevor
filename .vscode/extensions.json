@@ -11,7 +11,7 @@
  * Contributors:
  *   Broadcom, Inc. - initial API and implementation
  */
- 
+
 {
-  "recommendations": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint"]
+    "recommendations": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint"]
 }

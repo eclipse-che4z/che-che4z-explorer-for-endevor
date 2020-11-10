@@ -19,5 +19,5 @@ export enum Commands {
     DeleteHost = 'endevorexplorer.deleteHost',
     DeleteFilter = 'endevorexplorer.deleteFilter',
     EditFilter = 'endevorexplorer.editFilter',
-    AddFilter = 'endevorexplorer.addFilter'
+    AddFilter = 'endevorexplorer.addFilter',
 }

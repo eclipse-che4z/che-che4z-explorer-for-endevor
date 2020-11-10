@@ -12,11 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ISystem } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { SubSystem } from "./SubSystem";
-import { Type } from "./Type";
+import { ISystem } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
+import { SubSystem } from './SubSystem';
+import { Type } from './Type';
 
 export class System extends EndevorEntity implements ISystem {
     envName: string;
@@ -25,7 +25,7 @@ export class System extends EndevorEntity implements ISystem {
     types: Map<string, Type>;
     repository: Repository;
 
-    constructor (repo: Repository, system: ISystem) {
+    constructor(repo: Repository, system: ISystem) {
         super();
         this.envName = system.envName;
         this.sysName = system.sysName;
@@ -38,7 +38,7 @@ export class System extends EndevorEntity implements ISystem {
         if (!append) {
             this.subsystems = new Map();
         }
-        newSubSystems.forEach(subsys => {
+        newSubSystems.forEach((subsys) => {
             this.subsystems.set(subsys.sbsName, subsys);
         });
     }
@@ -47,7 +47,7 @@ export class System extends EndevorEntity implements ISystem {
         if (!append) {
             this.types = new Map();
         }
-        newTypes.forEach(type => {
+        newTypes.forEach((type) => {
             this.types.set(type.typeName, type);
         });
     }
@@ -72,7 +72,7 @@ export class System extends EndevorEntity implements ISystem {
         return this.sysName;
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
 
     public getSysName(): string {
@@ -82,5 +82,4 @@ export class System extends EndevorEntity implements ISystem {
     public getRepository(): Repository {
         return this.repository;
     }
-
 }

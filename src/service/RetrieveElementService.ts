@@ -12,14 +12,18 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
-import { Element } from "../model/Element";
-import { EndevorQualifier } from "../model/IEndevorQualifier";
-import { Repository } from "../model/Repository";
-import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
-import { logger } from "../globals";
+import * as fs from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { Element } from '../model/Element';
+import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { Repository } from '../model/Repository';
+import {
+    proxyRetrieveAcmComponents,
+    proxyRetrieveElement,
+    proxyListType,
+} from './EndevorCliProxy';
+import { logger } from '../globals';
 
 export class RetrieveElementService {
     // tslint:disable-next-line: no-empty
@@ -29,16 +33,19 @@ export class RetrieveElementService {
         workspace: vscode.WorkspaceFolder,
         repo: Repository,
         elementName: string,
-        eq: EndevorQualifier,
+        eq: EndevorQualifier
     ): Promise<string> {
         const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
-        const type = eq.type ? eq.type : "";
+        const type = eq.type ? eq.type : '';
         const typeDirectory = path.join(workspace.uri.fsPath, type);
         if (!fs.existsSync(typeDirectory)) {
             fs.mkdirSync(typeDirectory);
         }
-        const filePath: string = path.join(typeDirectory, elementName + (ext ? "." + ext : ""));
+        const filePath: string = path.join(
+            typeDirectory,
+            elementName + (ext ? '.' + ext : '')
+        );
         fs.writeFileSync(filePath, data!);
 
         return filePath;
@@ -46,7 +53,7 @@ export class RetrieveElementService {
 
     public async processRetrieveElementError(error: any) {
         if (!error.cancelled) {
-            logger.error("Error retrieving elements.", error.error);
+            logger.error('Error retrieving elements.', error.error);
         }
     }
 
@@ -54,7 +61,10 @@ export class RetrieveElementService {
      * List dependencies
      * @returns list of dependencies with origin element. Origin element always first.
      */
-    public async retrieveDependenciesList(repo: Repository, eq: EndevorQualifier): Promise<Element[]> {
+    public async retrieveDependenciesList(
+        repo: Repository,
+        eq: EndevorQualifier
+    ): Promise<Element[]> {
         const result: Element[] = [];
         const elements = await proxyRetrieveAcmComponents(repo, eq);
         if (elements.length === 0) {
@@ -62,9 +72,9 @@ export class RetrieveElementService {
         }
         const el = elements[0];
         result.push(new Element(repo, el));
-        if (Object.getOwnPropertyDescriptor(el, "components")) {
+        if (Object.getOwnPropertyDescriptor(el, 'components')) {
             // tslint:disable-next-line: no-string-literal
-            for (const dep of el["components"]) {
+            for (const dep of el['components']) {
                 if (dep.elmName.trim()) {
                     const element: Element = new Element(repo, dep);
                     result.push(element);
@@ -74,14 +84,19 @@ export class RetrieveElementService {
         return result;
     }
 
-    private async getExtension(repo: Repository, eq: EndevorQualifier): Promise<string> {
+    private async getExtension(
+        repo: Repository,
+        eq: EndevorQualifier
+    ): Promise<string> {
         const types = await proxyListType(repo, eq);
         for (const type of types) {
             if (type.typeName === eq.type && type.fileExt) {
                 return type.fileExt;
             }
         }
-        logger.trace(`No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`);
+        logger.trace(
+            `No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`
+        );
         return (eq.type as string).toLowerCase();
     }
 }

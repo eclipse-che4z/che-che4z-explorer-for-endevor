@@ -12,57 +12,86 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorInstance, ListInstance} from "@broadcom/endevor-for-zowe-cli";
-import * as fs from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
-import { EndevorController } from "../../EndevorController";
-import { Repository } from "../../model/Repository";
-import * as utils from "../../utils";
-import { logger } from "../../globals";
+import { IEndevorInstance, ListInstance } from '@broadcom/endevor-for-zowe-cli';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { EndevorController } from '../../EndevorController';
+import { Repository } from '../../model/Repository';
+import * as utils from '../../utils';
+import { logger } from '../../globals';
 
 export class HostPanel {
-    public static readonly viewType = "endevorHostPanel";
-    public static createOrShow(context: vscode.ExtensionContext, repo?: Repository) {
-        if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-            logger.error("Specify a workspace before creating a repository.");
+    public static readonly viewType = 'endevorHostPanel';
+    public static createOrShow(
+        context: vscode.ExtensionContext,
+        repo?: Repository
+    ) {
+        if (
+            !(
+                vscode.workspace.workspaceFolders &&
+                vscode.workspace.workspaceFolders.length > 0
+            )
+        ) {
+            logger.error('Specify a workspace before creating a repository.');
             return;
         }
         const panel = vscode.window.createWebviewPanel(
             HostPanel.viewType,
-            repo ? repo.getName() : "New Endevor Host",
+            repo ? repo.getName() : 'New Endevor Host',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
-            },
+            }
         );
-        const filePath: vscode.Uri = vscode.Uri.file(path.join(context.extensionPath, "resources", "hostpanel.html"));
+        const filePath: vscode.Uri = vscode.Uri.file(
+            path.join(context.extensionPath, 'resources', 'hostpanel.html')
+        );
         panel.webview.html = fs
-            .readFileSync(filePath.fsPath, "utf8")
-            .split("${name}")
-            .join(repo ? repo.getName() : "New host");
+            .readFileSync(filePath.fsPath, 'utf8')
+            .split('${name}')
+            .join(repo ? repo.getName() : 'New host');
         panel.webview.onDidReceiveMessage(
-            async message => {
+            async (message) => {
                 switch (message.command) {
-                    case "update":
+                    case 'update':
                         const name = message.data.name;
                         const url = message.data.url;
                         const username = message.data.username;
                         const password = message.data.password;
                         const datasource = message.data.configuration;
 
-                        const targetRepo: Repository = new Repository(name, url, username, password, datasource, "");
-                        EndevorController.instance.addRepository(targetRepo, "");
+                        const targetRepo: Repository = new Repository(
+                            name,
+                            url,
+                            username,
+                            password,
+                            datasource,
+                            ''
+                        );
+                        EndevorController.instance.addRepository(
+                            targetRepo,
+                            ''
+                        );
                         EndevorController.instance.updateSettings();
                         panel.dispose();
                         break;
-                    case "configuration":
+                    case 'configuration':
                         const restUrl = message.data.url;
-                        const newRepo = new Repository("", restUrl, "", "", "", "");
+                        const newRepo = new Repository(
+                            '',
+                            restUrl,
+                            '',
+                            '',
+                            '',
+                            ''
+                        );
                         try {
                             const session = await utils.buildSession(newRepo);
-                            const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
+                            const datasources: IEndevorInstance[] = await ListInstance.listInstance(
+                                session
+                            );
                             // tslint:disable-next-line: no-commented-code
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
@@ -77,36 +106,38 @@ export class HostPanel {
                 }
             },
             undefined,
-            context.subscriptions,
+            context.subscriptions
         );
     }
     public static editHost(context: vscode.ExtensionContext, repo: Repository) {
         const panel = vscode.window.createWebviewPanel(
             HostPanel.viewType,
-            repo ? repo.getName() : "New Endevor Host",
+            repo ? repo.getName() : 'New Endevor Host',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
-            },
+            }
         );
 
-        const filePath: vscode.Uri = vscode.Uri.file(path.join(context.extensionPath, "resources", "edithost.html"));
+        const filePath: vscode.Uri = vscode.Uri.file(
+            path.join(context.extensionPath, 'resources', 'edithost.html')
+        );
         panel.webview.html = fs
-            .readFileSync(filePath.fsPath, "utf8")
-            .split("${name}")
-            .join(repo.getName().replace(/\"/g, "&quot;"))
-            .split("${username}")
-            .join(repo ? repo.getUsername() : "")
-            .split("${url}")
-            .join(repo ? repo.getUrl() : "")
-            .split("${datasource}")
-            .join(repo ? repo.getDatasource() : "")
-            .split("${password}")
-            .join(repo.getPassword() !== undefined ? repo.getPassword() : "");
+            .readFileSync(filePath.fsPath, 'utf8')
+            .split('${name}')
+            .join(repo.getName().replace(/\"/g, '&quot;'))
+            .split('${username}')
+            .join(repo ? repo.getUsername() : '')
+            .split('${url}')
+            .join(repo ? repo.getUrl() : '')
+            .split('${datasource}')
+            .join(repo ? repo.getDatasource() : '')
+            .split('${password}')
+            .join(repo.getPassword() !== undefined ? repo.getPassword() : '');
         panel.webview.onDidReceiveMessage(
-            message => {
-                if (message.command !== "editHost") {
+            (message) => {
+                if (message.command !== 'editHost') {
                     return;
                 }
                 const name = message.data.name;
@@ -119,7 +150,7 @@ export class HostPanel {
                 panel.dispose();
             },
             undefined,
-            context.subscriptions,
+            context.subscriptions
         );
     }
 }

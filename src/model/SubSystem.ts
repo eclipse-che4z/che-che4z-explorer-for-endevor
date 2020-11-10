@@ -12,9 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from "./EndevorEntity";
-import { ISubsystem } from "./IEndevorEntities";
-import { Repository } from "./Repository";
+import { EndevorEntity } from './EndevorEntity';
+import { ISubsystem } from './IEndevorEntities';
+import { Repository } from './Repository';
 
 export class SubSystem extends EndevorEntity implements ISubsystem {
     envName: string;
@@ -22,7 +22,7 @@ export class SubSystem extends EndevorEntity implements ISubsystem {
     sbsName: string;
     repository: Repository;
 
-    constructor (repo: Repository, subsys: ISubsystem) {
+    constructor(repo: Repository, subsys: ISubsystem) {
         super();
         this.envName = subsys.envName;
         this.sysName = subsys.sysName;
@@ -34,10 +34,9 @@ export class SubSystem extends EndevorEntity implements ISubsystem {
         return this.sbsName;
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
     public getRepository(): Repository {
         return this.repository;
     }
-
 }

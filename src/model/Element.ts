@@ -12,10 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { EndevorQualifier } from "./IEndevorQualifier";
+import { IElement } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
+import { EndevorQualifier } from './IEndevorQualifier';
 
 export class Element extends EndevorEntity implements IElement {
     envName: string;
@@ -45,7 +45,7 @@ export class Element extends EndevorEntity implements IElement {
         return this.elmName;
     }
     getDescription(): string {
-        return "";
+        return '';
     }
 
     public getElmName(): string {
@@ -67,7 +67,7 @@ export class Element extends EndevorEntity implements IElement {
             system: this.sysName,
             subsystem: this.sbsName,
             type: this.typeName,
-            element: this.fullElmName
+            element: this.fullElmName,
         };
     }
 }

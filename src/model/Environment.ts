@@ -12,11 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from "./EndevorEntity";
-import { IEnvironment } from "./IEndevorEntities";
-import { Repository } from "./Repository";
-import { Stage } from "./Stage";
-import { System } from "./System";
+import { EndevorEntity } from './EndevorEntity';
+import { IEnvironment } from './IEndevorEntities';
+import { Repository } from './Repository';
+import { Stage } from './Stage';
+import { System } from './System';
 
 export class Environment extends EndevorEntity implements IEnvironment {
     envName: string;
@@ -24,7 +24,7 @@ export class Environment extends EndevorEntity implements IEnvironment {
     systems: Map<string, System>;
     stages: Stage[];
 
-    constructor (repository: Repository, env: IEnvironment) {
+    constructor(repository: Repository, env: IEnvironment) {
         super();
         this.repository = repository;
         this.envName = env.envName;
@@ -36,14 +36,14 @@ export class Environment extends EndevorEntity implements IEnvironment {
         if (!append) {
             this.systems = new Map();
         }
-        newSystems.forEach(sys => {
+        newSystems.forEach((sys) => {
             this.systems.set(sys.sysName, sys);
         });
     }
 
     public loadStages(newStages: Stage[]) {
         if (newStages.length !== 2) {
-            throw Error("Incorrect number of stages");
+            throw Error('Incorrect number of stages');
         }
         this.stages[0] = newStages[0];
         this.stages[1] = newStages[1];
@@ -53,7 +53,7 @@ export class Environment extends EndevorEntity implements IEnvironment {
         return this.envName;
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
 
     public getEnvName(): string {
@@ -79,5 +79,4 @@ export class Environment extends EndevorEntity implements IEnvironment {
     public getStages(): Stage[] {
         return this.stages;
     }
-
 }

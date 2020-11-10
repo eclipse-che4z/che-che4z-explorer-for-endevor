@@ -12,11 +12,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from "./EndevorEntity";
-import { EndevorFilter, FILTER_ALL_STRING } from "./EndevorFilter";
-import { Environment } from "./Environment";
-import { Filter } from "./IEndevorEntities";
-import { System } from "./System";
+import { EndevorEntity } from './EndevorEntity';
+import { EndevorFilter, FILTER_ALL_STRING } from './EndevorFilter';
+import { Environment } from './Environment';
+import { Filter } from './IEndevorEntities';
+import { System } from './System';
 
 export class Repository extends EndevorEntity {
     private _id?: number;
@@ -30,7 +30,15 @@ export class Repository extends EndevorEntity {
     private _map: EndevorFilter;
     private _profileLabel: string | undefined;
 
-    constructor(name: string, url: string, username: string | undefined, password: string | undefined, datasource: string, profileLabel: string | undefined, id?: number) {
+    constructor(
+        name: string,
+        url: string,
+        username: string | undefined,
+        password: string | undefined,
+        datasource: string,
+        profileLabel: string | undefined,
+        id?: number
+    ) {
         super();
         this._id = id;
         this.name = name;
@@ -50,7 +58,7 @@ export class Repository extends EndevorEntity {
         this.username = repo.username;
         this.datasource = repo.datasource;
         this._filters = repo.filters;
-        this._filters.forEach(filter => {
+        this._filters.forEach((filter) => {
             filter.setRepository(this);
         });
     }
@@ -59,7 +67,7 @@ export class Repository extends EndevorEntity {
         if (!append) {
             this._environments = new Map();
         }
-        envs.forEach(env => {
+        envs.forEach((env) => {
             env.repository = this;
             this._environments.set(env.envName, env);
         });
@@ -134,7 +142,7 @@ export class Repository extends EndevorEntity {
     }
 
     public getDescription(): string {
-        return this.url + " | " + this.datasource;
+        return this.url + ' | ' + this.datasource;
     }
 
     public getUrl(): string {
@@ -178,12 +186,12 @@ export class Repository extends EndevorEntity {
     }
 
     public getUrlString(): string {
-        let urlPath: string = "EndevorService/rest/" + this.datasource;
-        if (this.datasource !== "") {
-            urlPath = urlPath + "/";
+        let urlPath: string = 'EndevorService/rest/' + this.datasource;
+        if (this.datasource !== '') {
+            urlPath = urlPath + '/';
         }
-        if (!this.url.endsWith("/")) {
-            urlPath = "/" + urlPath;
+        if (!this.url.endsWith('/')) {
+            urlPath = '/' + urlPath;
         }
         return this.url + urlPath;
     }
@@ -194,7 +202,7 @@ export class Repository extends EndevorEntity {
 
     public getIFilters(): Filter[] {
         const resultFilters: Filter[] = [];
-        this._filters.forEach(filter => {
+        this._filters.forEach((filter) => {
             resultFilters.push({ uri: filter.getUri() });
         });
         return resultFilters;

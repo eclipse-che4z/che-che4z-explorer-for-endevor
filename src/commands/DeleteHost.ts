@@ -12,29 +12,34 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from "../model/Repository";
-import { EndevorController } from "../EndevorController";
-import * as vscode from "vscode";
-import { logger } from "../globals";
+import { Repository } from '../model/Repository';
+import { EndevorController } from '../EndevorController';
+import * as vscode from 'vscode';
+import { logger } from '../globals';
 
 export function deleteHost(arg: any) {
-    if (arg.contextValue === "repository") {
+    if (arg.contextValue === 'repository') {
         const repo: Repository | undefined = arg.getRepository();
         if (repo) {
             logger.trace(`Remove configuration ${repo.getName()}`);
             vscode.window
                 .showWarningMessage(
-                    "Remove Configuration: " + repo.getName() + "?",
-                    "OK"
+                    'Remove Configuration: ' + repo.getName() + '?',
+                    'OK'
                 )
-                .then(message => {
-                    if (message === "OK") {
-                      const profileLabel = repo.getProfileLabel() ? repo.getProfileLabel() : "";
-                      EndevorController.instance.removeRepository(repo.getName(), profileLabel!);
-                      EndevorController.instance.updateSettings();
-                      logger.trace("Configuration removed");
+                .then((message) => {
+                    if (message === 'OK') {
+                        const profileLabel = repo.getProfileLabel()
+                            ? repo.getProfileLabel()
+                            : '';
+                        EndevorController.instance.removeRepository(
+                            repo.getName(),
+                            profileLabel!
+                        );
+                        EndevorController.instance.updateSettings();
+                        logger.trace('Configuration removed');
                     } else {
-                        logger.trace("Operation cancelled.");
+                        logger.trace('Operation cancelled.');
                     }
                 });
         }

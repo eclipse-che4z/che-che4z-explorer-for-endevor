@@ -12,26 +12,26 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from "../model/Repository";
-import { EndevorController } from "../EndevorController";
-import * as vscode from "vscode";
-import { logger } from "../globals";
+import { Repository } from '../model/Repository';
+import { EndevorController } from '../EndevorController';
+import * as vscode from 'vscode';
+import { logger } from '../globals';
 
 export function deleteConnection(arg: any) {
-    if (arg.contextValue === "connection") {
+    if (arg.contextValue === 'connection') {
         logger.trace(`Remove session ${arg.label}`);
         vscode.window
-            .showWarningMessage("Remove session?", "OK", "Cancel")
-            .then(selection => {
-                if (selection === "OK") {
+            .showWarningMessage('Remove session?', 'OK', 'Cancel')
+            .then((selection) => {
+                if (selection === 'OK') {
                     EndevorController.instance.removeConnection(arg.label);
                     vscode.commands.executeCommand(
-                        "endevorexplorer.refreshHosts"
+                        'endevorexplorer.refreshHosts'
                     );
-                    logger.info("Session removed.");
+                    logger.info('Session removed.');
                     EndevorController.instance.updateSettings();
                 } else {
-                    logger.info("Operation cancelled.");
+                    logger.info('Operation cancelled.');
                 }
             });
     }

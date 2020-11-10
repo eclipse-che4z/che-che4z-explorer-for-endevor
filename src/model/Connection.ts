@@ -12,13 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from "./IEndevorEntities";
-import { IConnection } from "./IConnection";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { EndevorQualifier } from "./IEndevorQualifier";
-import { IProfileLoaded, IProfile } from "@zowe/imperative";
-import { SnippetString } from "vscode";
+import { IElement } from './IEndevorEntities';
+import { IConnection } from './IConnection';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
+import { EndevorQualifier } from './IEndevorQualifier';
+import { IProfileLoaded, IProfile } from '@zowe/imperative';
+import { SnippetString } from 'vscode';
 
 export class Connection extends EndevorEntity implements IProfileLoaded {
     message: string;
@@ -53,7 +53,7 @@ export class Connection extends EndevorEntity implements IProfileLoaded {
     }
 
     public getRepository(): Repository {
-        throw new Error("Method not implemented.");
+        throw new Error('Method not implemented.');
     }
 
     public getRepositoryMap(): Map<string, Repository> {
@@ -65,7 +65,7 @@ export class Connection extends EndevorEntity implements IProfileLoaded {
     }
 
     public setRepositoryList(repos: Repository[]) {
-        repos.forEach(repo => {
+        repos.forEach((repo) => {
             this._repositories.set(repo.getName(), repo);
         });
     }
@@ -85,11 +85,10 @@ export class Connection extends EndevorEntity implements IProfileLoaded {
         return this.name;
     }
     public getDescription(): string {
-        return "";
+        return '';
     }
 
     public getProfile(): IProfile | undefined {
         return this.profile;
     }
-
 }
