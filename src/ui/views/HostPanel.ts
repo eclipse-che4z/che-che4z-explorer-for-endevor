@@ -23,136 +23,126 @@ import * as utils from '../../utils';
 import { logger } from '../../globals';
 
 export class HostPanel {
-    public static readonly viewType = 'endevorHostPanel';
-    public static createOrShow(
-        context: vscode.ExtensionContext,
-        repo?: Repository
+  public static readonly viewType = 'endevorHostPanel';
+  public static createOrShow(
+    context: vscode.ExtensionContext,
+    repo?: Repository
+  ) {
+    if (
+      !(
+        vscode.workspace.workspaceFolders &&
+        vscode.workspace.workspaceFolders.length > 0
+      )
     ) {
-        if (
-            !(
-                vscode.workspace.workspaceFolders &&
-                vscode.workspace.workspaceFolders.length > 0
-            )
-        ) {
-            logger.error('Specify a workspace before creating a repository.');
-            return;
+      logger.error('Specify a workspace before creating a repository.');
+      return;
+    }
+    const panel = vscode.window.createWebviewPanel(
+      HostPanel.viewType,
+      repo ? repo.getName() : 'New Endevor Host',
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      }
+    );
+    const filePath: vscode.Uri = vscode.Uri.file(
+      path.join(context.extensionPath, 'resources', 'hostpanel.html')
+    );
+    panel.webview.html = fs
+      .readFileSync(filePath.fsPath, 'utf8')
+      .split('${name}')
+      .join(repo ? repo.getName() : 'New host');
+    panel.webview.onDidReceiveMessage(
+      async (message) => {
+        switch (message.command) {
+          case 'update':
+            const name = message.data.name;
+            const url = message.data.url;
+            const username = message.data.username;
+            const password = message.data.password;
+            const datasource = message.data.configuration;
+
+            const targetRepo: Repository = new Repository(
+              name,
+              url,
+              username,
+              password,
+              datasource,
+              ''
+            );
+            EndevorController.instance.addRepository(targetRepo, '');
+            EndevorController.instance.updateSettings();
+            panel.dispose();
+            break;
+          case 'configuration':
+            const restUrl = message.data.url;
+            const newRepo = new Repository('', restUrl, '', '', '', '');
+            try {
+              const session = await utils.buildSession(newRepo);
+              const datasources: IEndevorInstance[] = await ListInstance.listInstance(
+                session
+              );
+              const dsNames: string[] = [];
+              for (const ds of datasources) {
+                // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+                dsNames.push(ds.name as string);
+              }
+              dsNames.sort();
+              panel.webview.postMessage({ data: dsNames });
+            } catch (error) {
+              panel.webview.postMessage({ data: [] });
+            }
+            break;
         }
-        const panel = vscode.window.createWebviewPanel(
-            HostPanel.viewType,
-            repo ? repo.getName() : 'New Endevor Host',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-            }
-        );
-        const filePath: vscode.Uri = vscode.Uri.file(
-            path.join(context.extensionPath, 'resources', 'hostpanel.html')
-        );
-        panel.webview.html = fs
-            .readFileSync(filePath.fsPath, 'utf8')
-            .split('${name}')
-            .join(repo ? repo.getName() : 'New host');
-        panel.webview.onDidReceiveMessage(
-            async (message) => {
-                switch (message.command) {
-                    case 'update':
-                        const name = message.data.name;
-                        const url = message.data.url;
-                        const username = message.data.username;
-                        const password = message.data.password;
-                        const datasource = message.data.configuration;
+      },
+      undefined,
+      context.subscriptions
+    );
+  }
+  public static editHost(context: vscode.ExtensionContext, repo: Repository) {
+    const panel = vscode.window.createWebviewPanel(
+      HostPanel.viewType,
+      repo ? repo.getName() : 'New Endevor Host',
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      }
+    );
 
-                        const targetRepo: Repository = new Repository(
-                            name,
-                            url,
-                            username,
-                            password,
-                            datasource,
-                            ''
-                        );
-                        EndevorController.instance.addRepository(
-                            targetRepo,
-                            ''
-                        );
-                        EndevorController.instance.updateSettings();
-                        panel.dispose();
-                        break;
-                    case 'configuration':
-                        const restUrl = message.data.url;
-                        const newRepo = new Repository(
-                            '',
-                            restUrl,
-                            '',
-                            '',
-                            '',
-                            ''
-                        );
-                        try {
-                            const session = await utils.buildSession(newRepo);
-                            const datasources: IEndevorInstance[] = await ListInstance.listInstance(
-                                session
-                            );
-                            const dsNames: string[] = [];
-                            for (const ds of datasources) {
-                                // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-                                dsNames.push(ds.name as string);
-                            }
-                            dsNames.sort();
-                            panel.webview.postMessage({ data: dsNames });
-                        } catch (error) {
-                            panel.webview.postMessage({ data: [] });
-                        }
-                        break;
-                }
-            },
-            undefined,
-            context.subscriptions
-        );
-    }
-    public static editHost(context: vscode.ExtensionContext, repo: Repository) {
-        const panel = vscode.window.createWebviewPanel(
-            HostPanel.viewType,
-            repo ? repo.getName() : 'New Endevor Host',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-            }
-        );
-
-        const filePath: vscode.Uri = vscode.Uri.file(
-            path.join(context.extensionPath, 'resources', 'edithost.html')
-        );
-        panel.webview.html = fs
-            .readFileSync(filePath.fsPath, 'utf8')
-            .split('${name}')
-            // eslint-disable-next-line no-useless-escape
-            .join(repo.getName().replace(/\"/g, '&quot;'))
-            .split('${username}')
-            .join(repo ? repo.getUsername() : '')
-            .split('${url}')
-            .join(repo ? repo.getUrl() : '')
-            .split('${datasource}')
-            .join(repo ? repo.getDatasource() : '')
-            .split('${password}')
-            .join(repo.getPassword() !== undefined ? repo.getPassword() : '');
-        panel.webview.onDidReceiveMessage(
-            (message) => {
-                if (message.command !== 'editHost') {
-                    return;
-                }
-                const name = message.data.name;
-                const username = message.data.username;
-                const password = message.data.password;
-                repo.setName(name);
-                repo.setUsername(username);
-                repo.setPassword(password);
-                EndevorController.instance.updateSettings();
-                panel.dispose();
-            },
-            undefined,
-            context.subscriptions
-        );
-    }
+    const filePath: vscode.Uri = vscode.Uri.file(
+      path.join(context.extensionPath, 'resources', 'edithost.html')
+    );
+    panel.webview.html = fs
+      .readFileSync(filePath.fsPath, 'utf8')
+      .split('${name}')
+      // eslint-disable-next-line no-useless-escape
+      .join(repo.getName().replace(/\"/g, '&quot;'))
+      .split('${username}')
+      .join(repo ? repo.getUsername() : '')
+      .split('${url}')
+      .join(repo ? repo.getUrl() : '')
+      .split('${datasource}')
+      .join(repo ? repo.getDatasource() : '')
+      .split('${password}')
+      .join(repo.getPassword() !== undefined ? repo.getPassword() : '');
+    panel.webview.onDidReceiveMessage(
+      (message) => {
+        if (message.command !== 'editHost') {
+          return;
+        }
+        const name = message.data.name;
+        const username = message.data.username;
+        const password = message.data.password;
+        repo.setName(name);
+        repo.setUsername(username);
+        repo.setPassword(password);
+        EndevorController.instance.updateSettings();
+        panel.dispose();
+      },
+      undefined,
+      context.subscriptions
+    );
+  }
 }

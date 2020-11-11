@@ -24,82 +24,79 @@ import { EndevorFilterPathNode, EmptyNode } from './ui/tree/EndevorNodes';
  * @return If the string passes the validation undefined is returned. If it fails an appropriate message is returned.
  */
 export function filterStringValidator(
-    repo: Repository,
-    value: string
+  repo: Repository,
+  value: string
 ): string | undefined {
-    const count = (value.match(/\//g) || []).length;
-    const splitString = value.split('/');
-    let invalidInputMessage;
-    switch (count) {
-        case 0:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            return 'Valid Enviroment, type "/" to move to Stage Number';
-        case 1:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            return 'Valid Stage Number, type "/" to move to System';
-        case 2:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            return 'Valid System, type "/" to move to SubSystem';
-        case 3:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            return 'Valid SubSystem, type "/" to move to Type';
-        case 4:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            return 'Valid Type, type "/" to move to Element';
-        case 5:
-            invalidInputMessage = checkForInvalidInput(splitString);
-            if (invalidInputMessage) {
-                return invalidInputMessage;
-            }
-            if (duplicateFilterString(repo, value)) {
-                return (
-                    'This filter string already exists for host: ' +
-                    repo.getName()
-                );
-            }
-            return undefined;
-        default:
-            return 'There are no more arguments';
-    }
+  const count = (value.match(/\//g) || []).length;
+  const splitString = value.split('/');
+  let invalidInputMessage;
+  switch (count) {
+    case 0:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      return 'Valid Enviroment, type "/" to move to Stage Number';
+    case 1:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      return 'Valid Stage Number, type "/" to move to System';
+    case 2:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      return 'Valid System, type "/" to move to SubSystem';
+    case 3:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      return 'Valid SubSystem, type "/" to move to Type';
+    case 4:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      return 'Valid Type, type "/" to move to Element';
+    case 5:
+      invalidInputMessage = checkForInvalidInput(splitString);
+      if (invalidInputMessage) {
+        return invalidInputMessage;
+      }
+      if (duplicateFilterString(repo, value)) {
+        return 'This filter string already exists for host: ' + repo.getName();
+      }
+      return undefined;
+    default:
+      return 'There are no more arguments';
+  }
 }
 /**
  * Validates an entire filter string in the form of a string array and returns an appropriate message.
  * @param arrayString
  */
 function checkForInvalidInput(arrayString: string[]): string | undefined {
-    for (let i = 0; i < arrayString.length; i++) {
-        if (validateLocation(arrayString[i], i) === false) {
-            switch (i) {
-                case 0:
-                    return 'Invalid Environment';
-                case 1:
-                    return 'Invalid Stage Number';
-                case 2:
-                    return 'Invalid System';
-                case 3:
-                    return 'Invalid SubSystem';
-                case 4:
-                    return 'Invalid Type';
-                case 5:
-                    return 'Invalid Element';
-            }
-        }
+  for (let i = 0; i < arrayString.length; i++) {
+    if (validateLocation(arrayString[i], i) === false) {
+      switch (i) {
+        case 0:
+          return 'Invalid Environment';
+        case 1:
+          return 'Invalid Stage Number';
+        case 2:
+          return 'Invalid System';
+        case 3:
+          return 'Invalid SubSystem';
+        case 4:
+          return 'Invalid Type';
+        case 5:
+          return 'Invalid Element';
+      }
     }
+  }
 }
 
 /**
@@ -109,22 +106,20 @@ function checkForInvalidInput(arrayString: string[]): string | undefined {
  * @param index
  */
 function validateLocation(location: string, index: number): boolean {
-    // for element name '^([_-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
-    if (index === 1) {
-        const stageNumberRegex = new RegExp('^([1-2]{1}|[*]{1})$');
-        const valid = stageNumberRegex.test(location);
-        return valid;
-    }
-    if (index === 5) {
-        const elementRegex = new RegExp(
-            '^([_\\-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
-        );
-        const valid = elementRegex.test(location);
-        return valid;
-    }
-    const locationRegex = new RegExp('^([@$#*A-Za-z0-9]{1,8})$');
-    const valid = locationRegex.test(location);
+  // for element name '^([_-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$'
+  if (index === 1) {
+    const stageNumberRegex = new RegExp('^([1-2]{1}|[*]{1})$');
+    const valid = stageNumberRegex.test(location);
     return valid;
+  }
+  if (index === 5) {
+    const elementRegex = new RegExp('^([_\\-.@ $#*A-Za-z0-9]{1,255}|[*]{1})$');
+    const valid = elementRegex.test(location);
+    return valid;
+  }
+  const locationRegex = new RegExp('^([@$#*A-Za-z0-9]{1,8})$');
+  const valid = locationRegex.test(location);
+  return valid;
 }
 
 /**
@@ -134,68 +129,68 @@ function validateLocation(location: string, index: number): boolean {
  * @return True or False based on whether a duplicate filter is found.
  */
 function duplicateFilterString(repo: Repository, value: string): boolean {
-    if (repo.filters) {
-        for (let i = 0; i < repo.filters.length; i++) {
-            if (repo.filters[i].getUri() === value) {
-                return true;
-            }
-        }
+  if (repo.filters) {
+    for (let i = 0; i < repo.filters.length; i++) {
+      if (repo.filters[i].getUri() === value) {
+        return true;
+      }
     }
-    return false;
+  }
+  return false;
 }
 
 export function createPathNodes(
-    elements: Element[],
-    repo: Repository
+  elements: Element[],
+  repo: Repository
 ): EndevorFilterPathNode[] {
-    const pathNodes: EndevorFilterPathNode[] = [];
-    const pathNames: string[] = [];
-    for (let i = 0; i < elements.length; i++) {
-        const tempPath =
-            elements[i].envName +
-            '/' +
-            elements[i].stgNum +
-            '/' +
-            elements[i].sysName +
-            '/' +
-            elements[i].sbsName +
-            '/' +
-            elements[i].typeName;
-        if (!pathNames.includes(tempPath)) {
-            pathNames.push(tempPath);
-        }
+  const pathNodes: EndevorFilterPathNode[] = [];
+  const pathNames: string[] = [];
+  for (let i = 0; i < elements.length; i++) {
+    const tempPath =
+      elements[i].envName +
+      '/' +
+      elements[i].stgNum +
+      '/' +
+      elements[i].sysName +
+      '/' +
+      elements[i].sbsName +
+      '/' +
+      elements[i].typeName;
+    if (!pathNames.includes(tempPath)) {
+      pathNames.push(tempPath);
     }
-    for (let i = 0; i < pathNames.length; i++) {
-        const elements: Element[] = [];
-        pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
+  }
+  for (let i = 0; i < pathNames.length; i++) {
+    const elements: Element[] = [];
+    pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
+  }
+  for (let i = 0; i < pathNames.length; i++) {
+    for (let j = 0; j < elements.length; j++) {
+      const tempPath =
+        elements[j].envName +
+        '/' +
+        elements[j].stgNum +
+        '/' +
+        elements[j].sysName +
+        '/' +
+        elements[j].sbsName +
+        '/' +
+        elements[j].typeName;
+      if (pathNames[i] === tempPath) {
+        pathNodes[i].getElements().push(elements[j]);
+      }
     }
-    for (let i = 0; i < pathNames.length; i++) {
-        for (let j = 0; j < elements.length; j++) {
-            const tempPath =
-                elements[j].envName +
-                '/' +
-                elements[j].stgNum +
-                '/' +
-                elements[j].sysName +
-                '/' +
-                elements[j].sbsName +
-                '/' +
-                elements[j].typeName;
-            if (pathNames[i] === tempPath) {
-                pathNodes[i].getElements().push(elements[j]);
-            }
-        }
-    }
-    return pathNodes;
+  }
+  return pathNodes;
 }
 
 export function createEmptyNode(
-    repo: Repository,
-    label: string,
-    message: string
+  repo: Repository,
+  label: string,
+  message: string
 ): EmptyNode {
-    const pathName = label;
-    const pathNode = new EmptyNode(pathName, repo, message);
-    pathNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
-    return pathNode;
+  const pathName = label;
+  const pathNode = new EmptyNode(pathName, repo, message);
+  pathNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
+  return pathNode;
 }

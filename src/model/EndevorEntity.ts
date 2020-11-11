@@ -15,7 +15,7 @@
 import { Repository } from './Repository';
 
 export abstract class EndevorEntity {
-    abstract getName(): string | undefined;
-    abstract getDescription(): string;
-    abstract getRepository(): Repository;
+  abstract getName(): string | undefined;
+  abstract getDescription(): string;
+  abstract getRepository(): Repository;
 }

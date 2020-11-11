@@ -6,52 +6,52 @@ All notable changes to Explorer for Endevor will be documented in this file.
 
 ### Added
 
--   Endevor Plug-in for Zowe CLI profile interoperability
-    -   ability to create a profile
-    -   ability to use an already created profile
-    -   automatically load default profile
--   dependency on `@broadcom/endevor-for-zowe-cli` npm package
--   dependency on `@zowe/imperative` npm package
+- Endevor Plug-in for Zowe CLI profile interoperability
+  - ability to create a profile
+  - ability to use an already created profile
+  - automatically load default profile
+- dependency on `@broadcom/endevor-for-zowe-cli` npm package
+- dependency on `@zowe/imperative` npm package
 
 ### Changed
 
--   Readme.md updated
+- Readme.md updated
 
 ### Removed
 
--   Endevor Bridge for Git support
--   dependency on `request` npm package
+- Endevor Bridge for Git support
+- dependency on `request` npm package
 
 ## [0.9.1] 2020-03-02
 
 ### Changed
 
--   Readme.md updated
--   License changed to EPL 2.0
--   Open-source release and move to public repository
+- Readme.md updated
+- License changed to EPL 2.0
+- Open-source release and move to public repository
 
 ## [0.9.0] - 2019-09-13
 
 ### Added
 
--   New Host Creation
+- New Host Creation
 
 ### Changed
 
--   UX Enhancements
+- UX Enhancements
 
 ## [0.8.0] - 2019-08-21
 
 ### Changed
 
--   Fix for Theia 0.9 applied
--   Changed category in package.json
--   Pre-requisites expanded
+- Fix for Theia 0.9 applied
+- Changed category in package.json
+- Pre-requisites expanded
 
 ## [0.8.0] - 2019-08-16
 
 ### Changed
 
--   Extension name changed
--   Corrected Links
--   Third Party Licence texts applied
+- Extension name changed
+- Corrected Links
+- Third Party Licence texts applied

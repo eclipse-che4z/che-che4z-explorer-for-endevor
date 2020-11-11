@@ -20,26 +20,21 @@ import * as vscode from 'vscode';
 import { logger } from '../globals';
 
 export function deleteFilter(arg: any) {
-    if (arg.contextValue === 'filter') {
-        const filter: EndevorFilter | undefined = <EndevorFilter>(
-            arg.getEntity()
-        );
-        if (filter) {
-            logger.trace(`Deleting filter ${filter.getName()}`);
-            vscode.window
-                .showWarningMessage(
-                    'Delete filter: ' + filter.getName() + '?',
-                    'OK'
-                )
-                .then((message) => {
-                    if (message === 'OK') {
-                        filter.deleteFilter();
-                        EndevorController.instance.updateSettings();
-                        logger.trace(`Filter deleted.`);
-                    } else {
-                        logger.trace('Operation cancelled.');
-                    }
-                });
-        }
+  if (arg.contextValue === 'filter') {
+    const filter: EndevorFilter | undefined = <EndevorFilter>arg.getEntity();
+    if (filter) {
+      logger.trace(`Deleting filter ${filter.getName()}`);
+      vscode.window
+        .showWarningMessage('Delete filter: ' + filter.getName() + '?', 'OK')
+        .then((message) => {
+          if (message === 'OK') {
+            filter.deleteFilter();
+            EndevorController.instance.updateSettings();
+            logger.trace(`Filter deleted.`);
+          } else {
+            logger.trace('Operation cancelled.');
+          }
+        });
     }
+  }
 }

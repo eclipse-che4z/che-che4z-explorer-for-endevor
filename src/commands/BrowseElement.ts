@@ -20,29 +20,29 @@ import { proxyBrowseElement } from '../service/EndevorCliProxy';
 import { logger } from '../globals';
 
 export async function browseElement(arg: any) {
-    const repo: Repository = arg.getRepository();
-    const elementName: string = arg.label;
-    const eq: EndevorQualifier = arg.getQualifier();
-    vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: `Loading: ${elementName}...`,
-        },
-        async (progress) => {
-            progress.report({ increment: 10 });
-            try {
-                const data = await proxyBrowseElement(repo, eq);
-                progress.report({ increment: 50 });
-                const doc = await vscode.workspace.openTextDocument({
-                    content: data,
-                });
-                progress.report({ increment: 100 });
-                return vscode.window.showTextDocument(doc, { preview: false });
-            } catch (error) {
-                if (!error.cancelled) {
-                    logger.error(error.error);
-                }
-            }
+  const repo: Repository = arg.getRepository();
+  const elementName: string = arg.label;
+  const eq: EndevorQualifier = arg.getQualifier();
+  vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Loading: ${elementName}...`,
+    },
+    async (progress) => {
+      progress.report({ increment: 10 });
+      try {
+        const data = await proxyBrowseElement(repo, eq);
+        progress.report({ increment: 50 });
+        const doc = await vscode.workspace.openTextDocument({
+          content: data,
+        });
+        progress.report({ increment: 100 });
+        return vscode.window.showTextDocument(doc, { preview: false });
+      } catch (error) {
+        if (!error.cancelled) {
+          logger.error(error.error);
         }
-    );
+      }
+    }
+  );
 }

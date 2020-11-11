@@ -21,27 +21,27 @@ import { EndevorNode } from '../ui/tree/EndevorNodes';
 import * as vscode from 'vscode';
 
 export function editFilter(arg: any) {
-    const inputBoxOptions: vscode.InputBoxOptions = {
-        value: arg.getEntity().getName(),
-        prompt: 'Edit filter.',
-        placeHolder: 'env/stgnum/sys/subsys/type/element',
-        ignoreFocusOut: true,
-        validateInput(value: string) {
-            return filterStringValidator(arg.getRepository(), value);
-        },
-    };
-    vscode.window.showInputBox(inputBoxOptions).then((filterUri) => {
-        if (filterUri) {
-            if (arg.contextValue === 'filter') {
-                const filter: EndevorFilter | undefined = <EndevorFilter>(
-                    arg.getEntity()
-                );
-                if (filter.getUri() !== filterUri) {
-                    filter.editFilter(filterUri);
-                    (<EndevorNode>arg).children = [];
-                    EndevorController.instance.updateSettings();
-                }
-            }
+  const inputBoxOptions: vscode.InputBoxOptions = {
+    value: arg.getEntity().getName(),
+    prompt: 'Edit filter.',
+    placeHolder: 'env/stgnum/sys/subsys/type/element',
+    ignoreFocusOut: true,
+    validateInput(value: string) {
+      return filterStringValidator(arg.getRepository(), value);
+    },
+  };
+  vscode.window.showInputBox(inputBoxOptions).then((filterUri) => {
+    if (filterUri) {
+      if (arg.contextValue === 'filter') {
+        const filter: EndevorFilter | undefined = <EndevorFilter>(
+          arg.getEntity()
+        );
+        if (filter.getUri() !== filterUri) {
+          filter.editFilter(filterUri);
+          (<EndevorNode>arg).children = [];
+          EndevorController.instance.updateSettings();
         }
-    });
+      }
+    }
+  });
 }

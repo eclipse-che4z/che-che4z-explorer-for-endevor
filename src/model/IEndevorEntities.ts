@@ -13,55 +13,55 @@
  */
 
 export interface IEnvironment {
-    envName: string;
+  envName: string;
 }
 
 export interface IStage {
-    envName: string;
-    stgName: string;
-    stgId: string;
-    stgNum: string;
+  envName: string;
+  stgName: string;
+  stgId: string;
+  stgNum: string;
 }
 
 export interface ISystem {
-    envName: string;
-    sysName: string;
+  envName: string;
+  sysName: string;
 }
 export interface ISubsystem {
-    envName: string;
-    sysName: string;
-    sbsName: string;
+  envName: string;
+  sysName: string;
+  sbsName: string;
 }
 
 export interface IType {
-    envName: string;
-    sysName: string;
-    stgNum: string;
-    typeName: string;
-    fileExt: string;
+  envName: string;
+  sysName: string;
+  stgNum: string;
+  typeName: string;
+  fileExt: string;
 }
 
 export interface IElement {
-    elmName: string;
-    fullElmName: string;
-    elmVVLL: string;
-    envName: string;
-    sysName: string;
-    sbsName: string;
-    stgNum: string;
-    typeName: string;
+  elmName: string;
+  fullElmName: string;
+  elmVVLL: string;
+  envName: string;
+  sysName: string;
+  sbsName: string;
+  stgNum: string;
+  typeName: string;
 }
 
 export interface Filter {
-    uri: string;
+  uri: string;
 }
 
 export interface IElementDependencies {
-    elmName: string;
-    envName: string;
-    sysName: string;
-    sbsName: string;
-    stgNumber: string;
-    typeName: string;
-    components: IElement[];
+  elmName: string;
+  envName: string;
+  sysName: string;
+  sbsName: string;
+  stgNumber: string;
+  typeName: string;
+  components: IElement[];
 }

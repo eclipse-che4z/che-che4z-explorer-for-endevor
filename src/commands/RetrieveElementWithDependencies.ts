@@ -25,96 +25,82 @@ import { logger } from '../globals';
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
 export function retrieveWithDependencies(
-    arg: any,
-    retrieveElementService: RetrieveElementService
+  arg: any,
+  retrieveElementService: RetrieveElementService
 ) {
-    vscode.window.withProgress(
-        {
-            cancellable: true,
-            location: vscode.ProgressLocation.Notification,
-            title: 'Retrieving',
-        },
-        async (progress, token) => {
-            token.onCancellationRequested(() => {
-                logger.info('Retrieve Cancelled.');
-            });
-            if (
-                !(
-                    vscode.workspace.workspaceFolders &&
-                    vscode.workspace.workspaceFolders.length > 0
-                )
-            ) {
-                logger.error('Specify workspace before retrieving elements');
-                return;
-            }
-            const workspace: vscode.WorkspaceFolder =
-                vscode.workspace.workspaceFolders[0];
-            const repo: Repository = arg.getRepository();
-            const eq: EndevorQualifier = arg.getQualifier();
+  vscode.window.withProgress(
+    {
+      cancellable: true,
+      location: vscode.ProgressLocation.Notification,
+      title: 'Retrieving',
+    },
+    async (progress, token) => {
+      token.onCancellationRequested(() => {
+        logger.info('Retrieve Cancelled.');
+      });
+      if (
+        !(
+          vscode.workspace.workspaceFolders &&
+          vscode.workspace.workspaceFolders.length > 0
+        )
+      ) {
+        logger.error('Specify workspace before retrieving elements');
+        return;
+      }
+      const workspace: vscode.WorkspaceFolder =
+        vscode.workspace.workspaceFolders[0];
+      const repo: Repository = arg.getRepository();
+      const eq: EndevorQualifier = arg.getQualifier();
 
-            progress.report({ increment: 0, message: 'Dependencies List' });
-            const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
-                repo,
-                eq
-            );
-            if (await hitLimit(elementsToRetrieve, eq)) {
-                return;
-            }
-            if (elementsToRetrieve.length === 0) {
-                elementsToRetrieve.push(createElementFromQualifier(repo, eq));
-            }
-            const incrementNumber = 100 / (elementsToRetrieve.length + 1);
-            // retrieve dependencies
-            let firstOpened = false;
-            for (let i = 0; i < elementsToRetrieve.length; i++) {
-                if (token.isCancellationRequested) {
-                    return;
-                }
-                const elName: string = elementsToRetrieve[i].elmName;
-                try {
-                    progress.report({
-                        message:
-                            '(' +
-                            (i + 1) +
-                            '/' +
-                            elementsToRetrieve.length +
-                            ') ' +
-                            elName,
-                    });
-                    const eQualifier = createElementQualifier(
-                        elementsToRetrieve[i]
-                    );
-                    const filePath: string = await retrieveElementService.retrieveElement(
-                        workspace,
-                        repo,
-                        elName,
-                        eQualifier
-                    );
-                    if (!firstOpened) {
-                        const doc = await vscode.workspace.openTextDocument(
-                            filePath
-                        );
-                        vscode.window.showTextDocument(doc, { preview: false });
-                    }
-                } catch (error) {
-                    retrieveElementService.processRetrieveElementError(error);
-                } finally {
-                    // If first with error, don't open anything
-                    firstOpened = true;
-                    progress.report({
-                        increment: incrementNumber,
-                        message:
-                            '(' +
-                            (i + 1) +
-                            '/' +
-                            elementsToRetrieve.length +
-                            ') ' +
-                            elName,
-                    });
-                }
-            }
+      progress.report({ increment: 0, message: 'Dependencies List' });
+      const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
+        repo,
+        eq
+      );
+      if (await hitLimit(elementsToRetrieve, eq)) {
+        return;
+      }
+      if (elementsToRetrieve.length === 0) {
+        elementsToRetrieve.push(createElementFromQualifier(repo, eq));
+      }
+      const incrementNumber = 100 / (elementsToRetrieve.length + 1);
+      // retrieve dependencies
+      let firstOpened = false;
+      for (let i = 0; i < elementsToRetrieve.length; i++) {
+        if (token.isCancellationRequested) {
+          return;
         }
-    );
+        const elName: string = elementsToRetrieve[i].elmName;
+        try {
+          progress.report({
+            message:
+              '(' + (i + 1) + '/' + elementsToRetrieve.length + ') ' + elName,
+          });
+          const eQualifier = createElementQualifier(elementsToRetrieve[i]);
+          const filePath: string = await retrieveElementService.retrieveElement(
+            workspace,
+            repo,
+            elName,
+            eQualifier
+          );
+          if (!firstOpened) {
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            vscode.window.showTextDocument(doc, { preview: false });
+          }
+        } catch (error) {
+          retrieveElementService.processRetrieveElementError(error);
+        } finally {
+          // If first with error, don't open anything
+          firstOpened = true;
+          progress.report({
+            increment: incrementNumber,
+            message:
+              '(' + (i + 1) + '/' + elementsToRetrieve.length + ') ' + elName,
+          });
+        }
+      }
+    }
+  );
 }
 
 /**
@@ -123,15 +109,15 @@ export function retrieveWithDependencies(
  * @param element
  */
 function createElementQualifier(element: Element): EndevorQualifier {
-    const eQualifier: EndevorQualifier = {
-        element: element.elmName,
-        env: element.envName,
-        stage: element.stgNum,
-        subsystem: element.sbsName,
-        system: element.sysName,
-        type: element.typeName,
-    };
-    return eQualifier;
+  const eQualifier: EndevorQualifier = {
+    element: element.elmName,
+    env: element.envName,
+    stage: element.stgNum,
+    subsystem: element.sbsName,
+    system: element.sysName,
+    type: element.typeName,
+  };
+  return eQualifier;
 }
 
 /**
@@ -141,35 +127,32 @@ function createElementQualifier(element: Element): EndevorQualifier {
  * @param eq
  */
 function createElementFromQualifier(
-    repo: Repository,
-    eq: EndevorQualifier
+  repo: Repository,
+  eq: EndevorQualifier
 ): Element {
-    const iElement: IElement = {
-        elmName: eq.element!,
-        envName: eq.env!,
-        sysName: eq.system!,
-        sbsName: eq.subsystem!,
-        stgNum: eq.stage!,
-        typeName: eq.type!,
-        fullElmName: eq.element!,
-        elmVVLL: '',
-    };
-    return new Element(repo, iElement);
+  const iElement: IElement = {
+    elmName: eq.element!,
+    envName: eq.env!,
+    sysName: eq.system!,
+    sbsName: eq.subsystem!,
+    stgNum: eq.stage!,
+    typeName: eq.type!,
+    fullElmName: eq.element!,
+    elmVVLL: '',
+  };
+  return new Element(repo, iElement);
 }
 
 async function hitLimit(
-    elementsToRetrieve: Element[],
-    eq: EndevorQualifier
+  elementsToRetrieve: Element[],
+  eq: EndevorQualifier
 ): Promise<boolean> {
-    if (elementsToRetrieve.length <= RETRIEVE_ELEMENTS_LIMIT) {
-        return false;
-    }
-    const msg = `Element ${eq.element} has ${elementsToRetrieve.length} dependencies.`;
-    return (
-        (await vscode.window.showWarningMessage(
-            msg,
-            'Download all',
-            'Cancel'
-        )) === 'Cancel'
-    );
+  if (elementsToRetrieve.length <= RETRIEVE_ELEMENTS_LIMIT) {
+    return false;
+  }
+  const msg = `Element ${eq.element} has ${elementsToRetrieve.length} dependencies.`;
+  return (
+    (await vscode.window.showWarningMessage(msg, 'Download all', 'Cancel')) ===
+    'Cancel'
+  );
 }

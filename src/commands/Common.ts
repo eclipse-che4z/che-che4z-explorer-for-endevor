@@ -13,11 +13,11 @@
  */
 
 export enum Commands {
-    RetrieveElement = 'endevorexplorer.retrieveElement',
-    BrowseElement = 'endevorexplorer.browseElement',
-    RetrieveWithDependencies = 'endevorexplorer.retrieveElementWithDependencies',
-    DeleteHost = 'endevorexplorer.deleteHost',
-    DeleteFilter = 'endevorexplorer.deleteFilter',
-    EditFilter = 'endevorexplorer.editFilter',
-    AddFilter = 'endevorexplorer.addFilter',
+  RetrieveElement = 'endevorexplorer.retrieveElement',
+  BrowseElement = 'endevorexplorer.browseElement',
+  RetrieveWithDependencies = 'endevorexplorer.retrieveElementWithDependencies',
+  DeleteHost = 'endevorexplorer.deleteHost',
+  DeleteFilter = 'endevorexplorer.deleteFilter',
+  EditFilter = 'endevorexplorer.editFilter',
+  AddFilter = 'endevorexplorer.addFilter',
 }

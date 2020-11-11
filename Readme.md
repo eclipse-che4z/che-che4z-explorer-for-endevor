@@ -18,37 +18,37 @@ Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.c
 
 ## **Contents**
 
--   [Explorer for Endevor](#explorer-for-endevor)
-    -   [**Contents**](#contents)
-    -   [Prerequisites](#prerequisites)
-    -   [Installing](#installing)
-    -   [Getting Started](#getting-started)
-        -   [Create a Profile](#create-a-profile)
-        -   [Profile Persistence](#profile-persistence)
-        -   [Manage your Profiles](#manage-your-profiles)
-        -   [Working with Endevor Configurations](#working-with-endevor-configurations)
-        -   [Filters](#filters)
-            -   [Create a Filter](#create-a-filter)
-            -   [Create a Manual Filter:](#create-a-manual-filter)
-            -   [Create a Filter in Map View:](#create-a-filter-in-map-view)
-        -   [Browse or Retrieve an Element](#browse-or-retrieve-an-element)
-    -   [Configuration and Usage Tips](#configuration-and-usage-tips)
-    -   [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
+- [Explorer for Endevor](#explorer-for-endevor)
+  - [**Contents**](#contents)
+  - [Prerequisites](#prerequisites)
+  - [Installing](#installing)
+  - [Getting Started](#getting-started)
+    - [Create a Profile](#create-a-profile)
+    - [Profile Persistence](#profile-persistence)
+    - [Manage your Profiles](#manage-your-profiles)
+    - [Working with Endevor Configurations](#working-with-endevor-configurations)
+    - [Filters](#filters)
+      - [Create a Filter](#create-a-filter)
+      - [Create a Manual Filter:](#create-a-manual-filter)
+      - [Create a Filter in Map View:](#create-a-filter-in-map-view)
+    - [Browse or Retrieve an Element](#browse-or-retrieve-an-element)
+  - [Configuration and Usage Tips](#configuration-and-usage-tips)
+  - [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
 
 ## Prerequisites
 
 Prior to using Explorer for Endevor, ensure that you meet the following prerequisites:
 
--   Access to Mainframe
--   Access to CA Endevor® SCM
+- Access to Mainframe
+- Access to CA Endevor® SCM
 
--   CA Endevor® SCM version 18.0.12 or higher with the following PTFs applied:
-    -   (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
-    -   (if using version 18.1.x) PTF SO11272
-    -   (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
--   CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/how-to-enable-web-services.html)
--   (Optional) Zowe CLI v1-LTS
--   (Optional) CA Endevor plug-in for Zowe CLI version 6.0.0
+- CA Endevor® SCM version 18.0.12 or higher with the following PTFs applied:
+  - (if using version 18.0.x) PTFs SO09580, SO09581, SO10013 and SO11268
+  - (if using version 18.1.x) PTF SO11272
+  - (Optional) For use of Web Services with STC Pooling, ensure that you also have PTFs SO03928 and SO03929.
+- CA Endevor® SCM Web Services installed and configured. For more information, see the [CA Endevor® SCM documentation](https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-1/how-to-enable-web-services.html)
+- (Optional) Zowe CLI v1-LTS
+- (Optional) CA Endevor plug-in for Zowe CLI version 6.0.0
 
 ## Installing
 
@@ -70,8 +70,8 @@ After you create your profile, specify the configurations that you want to work 
 4. (Optional) To add your mainframe credentials to your profile, enter your username and password. Adding your credentials to your profile lets you access different configurations without entering your credentials.
    If you do not add credentials to your profile, a credential prompt displays whenever you click on an Endevor configuration in the tree.
 5. Specify whether to Reject or Accept connections with self-signed certificates.
-    - **True**: Reject connections with self-signed certificates.
-    - **False**: Accept connections with self-signed certificates.
+   - **True**: Reject connections with self-signed certificates.
+   - **False**: Accept connections with self-signed certificates.
 
 Your profile is now available in the panel on the left. You can also use this profile in Zowe CLI directly.
 
@@ -114,9 +114,9 @@ Filters that you create are associated with your profile. Once you log in, the s
 
 Explorer for Endevor filters can be created in two ways:
 
--   Create a filter manually by entering all the required parameters.
+- Create a filter manually by entering all the required parameters.
 
--   Search in Map View, and save a filter from the path followed.
+- Search in Map View, and save a filter from the path followed.
 
 #### Create a Manual Filter:
 
@@ -126,14 +126,14 @@ Creating a manual filter is a quick way to narrow down your search to only relev
 
 1.  Establish the exact parameters to search as follows:
 
-    -   Environment (env)
-    -   Stage Number (stgnum)
-    -   System (sys)
-    -   Subsystem (subsys)
-    -   Type (type)
-    -   Element (element)
+    - Environment (env)
+    - Stage Number (stgnum)
+    - System (sys)
+    - Subsystem (subsys)
+    - Type (type)
+    - Element (element)
 
-        If you are unsure about any of the parameters, you can substitute up to two with a \* wildcard, or instead create a filter using the Map View option.
+      If you are unsure about any of the parameters, you can substitute up to two with a \* wildcard, or instead create a filter using the Map View option.
 
 2.  Click the plus icon next to **Filter** on the **Explorer for Endevor** tab.
 
@@ -170,21 +170,21 @@ The Browse Element action displays the entire contents of the Element, including
 
 1. Right-click on the element in either the Map or Filters view.
 
-    The options to Browse or Retrieve the Element appear.
+   The options to Browse or Retrieve the Element appear.
 
 2. Select the Browse Element option.
 
-    The Element is displayed in the panel, including related information, as shown below:
+   The Element is displayed in the panel, including related information, as shown below:
 
 3. Review the displayed information to determine if it is relevant or useful to you.
 
-    You have successfully opened an element for inspection. If you wish, you can now Retrieve the Element, with or without Dependencies.
+   You have successfully opened an element for inspection. If you wish, you can now Retrieve the Element, with or without Dependencies.
 
 ## Configuration and Usage Tips
 
--   Delete any filters when no longer required. Filters are saved automatically and so the list might become hard to manage.
+- Delete any filters when no longer required. Filters are saved automatically and so the list might become hard to manage.
 
--   Restrict filters to a maximum of two wildcard entries to avoid heavy resource usage. If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Restrict filters to a maximum of two wildcard entries to avoid heavy resource usage. If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
 ---
 
@@ -198,11 +198,11 @@ https://techdocs.broadcom.com/us/product-content/admin-content/ca-support-polici
 
 This support generally includes:
 
--   Telephone and online access to technical support
--   Ability to submit new incidents 24x7x365
--   24x7x365 continuous support for Severity 1 incidents
--   24x7x365 access to CA Support Online
--   Interactive remote diagnostic support
+- Telephone and online access to technical support
+- Ability to submit new incidents 24x7x365
+- 24x7x365 continuous support for Severity 1 incidents
+- 24x7x365 access to CA Support Online
+- Interactive remote diagnostic support
 
 Technical support cases must be submitted to Broadcom in accordance with guidance provided in “Working with Support”.
 

@@ -22,81 +22,72 @@ import { prepareElementNodesForRetrieve } from '../utils';
 import { logger } from '../globals';
 
 export function retrieveElement(
-    arg: any,
-    selection: EndevorNode[],
-    retrieveElementService: RetrieveElementService
+  arg: any,
+  selection: EndevorNode[],
+  retrieveElementService: RetrieveElementService
 ) {
-    vscode.window.withProgress(
-        {
-            cancellable: true,
-            location: vscode.ProgressLocation.Notification,
-            title: 'Retrieving element',
-        },
-        async (progress, token) => {
-            token.onCancellationRequested(() => {
-                logger.info('Retrieve Cancelled.');
-            });
-            const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(
-                selection
-            );
-            if (processedSelection.length === 0) {
-                processedSelection.push(arg);
-            }
-            const incrementNumber = 100 / processedSelection.length;
-            if (
-                !(
-                    vscode.workspace.workspaceFolders &&
-                    vscode.workspace.workspaceFolders.length > 0
-                )
-            ) {
-                logger.error('Specify workspace before retrieving elements');
-                return;
-            }
-            const workspace = vscode.workspace.workspaceFolders[0];
-            for (let i = 0; i < processedSelection.length; i++) {
-                if (token.isCancellationRequested) {
-                    return;
-                }
-                const currentElement: EndevorElementNode =
-                    processedSelection[i];
-
-                const repo:
-                    | Repository
-                    | undefined = currentElement.getRepository();
-                const elementName: string | undefined = currentElement.label;
-                const eq:
-                    | EndevorQualifier
-                    | undefined = currentElement.getQualifier();
-                if (!(repo && elementName && eq)) {
-                    throw new Error(JSON.stringify({ repo, elementName, eq }));
-                }
-                try {
-                    progress.report({
-                        message: `(${i + 1}/${
-                            processedSelection.length
-                        }) ${elementName}`,
-                    });
-                    const filePath: string = await retrieveElementService.retrieveElement(
-                        workspace,
-                        repo,
-                        elementName,
-                        eq
-                    );
-                    const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(
-                        filePath
-                    );
-                    vscode.window.showTextDocument(doc, { preview: false });
-
-                    progress.report({
-                        increment: incrementNumber,
-                        message: `(${i + 1}/${
-                            processedSelection.length
-                        }) ${elementName}`,
-                    });
-                } catch (error) {
-                    retrieveElementService.processRetrieveElementError(error);
-                }
-            }
+  vscode.window.withProgress(
+    {
+      cancellable: true,
+      location: vscode.ProgressLocation.Notification,
+      title: 'Retrieving element',
+    },
+    async (progress, token) => {
+      token.onCancellationRequested(() => {
+        logger.info('Retrieve Cancelled.');
+      });
+      const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(
+        selection
+      );
+      if (processedSelection.length === 0) {
+        processedSelection.push(arg);
+      }
+      const incrementNumber = 100 / processedSelection.length;
+      if (
+        !(
+          vscode.workspace.workspaceFolders &&
+          vscode.workspace.workspaceFolders.length > 0
+        )
+      ) {
+        logger.error('Specify workspace before retrieving elements');
+        return;
+      }
+      const workspace = vscode.workspace.workspaceFolders[0];
+      for (let i = 0; i < processedSelection.length; i++) {
+        if (token.isCancellationRequested) {
+          return;
         }
-    );
+        const currentElement: EndevorElementNode = processedSelection[i];
+
+        const repo: Repository | undefined = currentElement.getRepository();
+        const elementName: string | undefined = currentElement.label;
+        const eq: EndevorQualifier | undefined = currentElement.getQualifier();
+        if (!(repo && elementName && eq)) {
+          throw new Error(JSON.stringify({ repo, elementName, eq }));
+        }
+        try {
+          progress.report({
+            message: `(${i + 1}/${processedSelection.length}) ${elementName}`,
+          });
+          const filePath: string = await retrieveElementService.retrieveElement(
+            workspace,
+            repo,
+            elementName,
+            eq
+          );
+          const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(
+            filePath
+          );
+          vscode.window.showTextDocument(doc, { preview: false });
+
+          progress.report({
+            increment: incrementNumber,
+            message: `(${i + 1}/${processedSelection.length}) ${elementName}`,
+          });
+        } catch (error) {
+          retrieveElementService.processRetrieveElementError(error);
+        }
+      }
+    }
+  );
 }

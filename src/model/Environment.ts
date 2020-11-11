@@ -19,64 +19,64 @@ import { Stage } from './Stage';
 import { System } from './System';
 
 export class Environment extends EndevorEntity implements IEnvironment {
-    envName: string;
-    repository: Repository;
-    systems: Map<string, System>;
-    stages: Stage[];
+  envName: string;
+  repository: Repository;
+  systems: Map<string, System>;
+  stages: Stage[];
 
-    constructor(repository: Repository, env: IEnvironment) {
-        super();
-        this.repository = repository;
-        this.envName = env.envName;
-        this.systems = new Map();
-        this.stages = new Array(2);
-    }
+  constructor(repository: Repository, env: IEnvironment) {
+    super();
+    this.repository = repository;
+    this.envName = env.envName;
+    this.systems = new Map();
+    this.stages = new Array(2);
+  }
 
-    public loadSystems(newSystems: System[], append: boolean) {
-        if (!append) {
-            this.systems = new Map();
-        }
-        newSystems.forEach((sys) => {
-            this.systems.set(sys.sysName, sys);
-        });
+  public loadSystems(newSystems: System[], append: boolean) {
+    if (!append) {
+      this.systems = new Map();
     }
+    newSystems.forEach((sys) => {
+      this.systems.set(sys.sysName, sys);
+    });
+  }
 
-    public loadStages(newStages: Stage[]) {
-        if (newStages.length !== 2) {
-            throw Error('Incorrect number of stages');
-        }
-        this.stages[0] = newStages[0];
-        this.stages[1] = newStages[1];
+  public loadStages(newStages: Stage[]) {
+    if (newStages.length !== 2) {
+      throw Error('Incorrect number of stages');
     }
+    this.stages[0] = newStages[0];
+    this.stages[1] = newStages[1];
+  }
 
-    public getName(): string {
-        return this.envName;
-    }
-    public getDescription(): string {
-        return '';
-    }
+  public getName(): string {
+    return this.envName;
+  }
+  public getDescription(): string {
+    return '';
+  }
 
-    public getEnvName(): string {
-        return this.envName;
-    }
+  public getEnvName(): string {
+    return this.envName;
+  }
 
-    public getRepository(): Repository {
-        return this.repository;
-    }
+  public getRepository(): Repository {
+    return this.repository;
+  }
 
-    public findSystem(sysName: string): System | undefined {
-        return this.systems.get(sysName);
-    }
+  public findSystem(sysName: string): System | undefined {
+    return this.systems.get(sysName);
+  }
 
-    public getSystems(): System[] {
-        return Array.from(this.systems.values());
-    }
+  public getSystems(): System[] {
+    return Array.from(this.systems.values());
+  }
 
-    public getStage(num: number): Stage | undefined {
-        return this.stages[num];
-    }
+  public getStage(num: number): Stage | undefined {
+    return this.stages[num];
+  }
 
-    public getStages(): Stage[] {
-        return this.stages;
-    }
+  public getStages(): Stage[] {
+    return this.stages;
+  }
 }

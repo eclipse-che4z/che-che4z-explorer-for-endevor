@@ -18,21 +18,19 @@ import * as vscode from 'vscode';
 import { logger } from '../globals';
 
 export function deleteConnection(arg: any) {
-    if (arg.contextValue === 'connection') {
-        logger.trace(`Remove session ${arg.label}`);
-        vscode.window
-            .showWarningMessage('Remove session?', 'OK', 'Cancel')
-            .then((selection) => {
-                if (selection === 'OK') {
-                    EndevorController.instance.removeConnection(arg.label);
-                    vscode.commands.executeCommand(
-                        'endevorexplorer.refreshHosts'
-                    );
-                    logger.info('Session removed.');
-                    EndevorController.instance.updateSettings();
-                } else {
-                    logger.info('Operation cancelled.');
-                }
-            });
-    }
+  if (arg.contextValue === 'connection') {
+    logger.trace(`Remove session ${arg.label}`);
+    vscode.window
+      .showWarningMessage('Remove session?', 'OK', 'Cancel')
+      .then((selection) => {
+        if (selection === 'OK') {
+          EndevorController.instance.removeConnection(arg.label);
+          vscode.commands.executeCommand('endevorexplorer.refreshHosts');
+          logger.info('Session removed.');
+          EndevorController.instance.updateSettings();
+        } else {
+          logger.info('Operation cancelled.');
+        }
+      });
+  }
 }

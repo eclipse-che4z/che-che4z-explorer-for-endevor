@@ -19,31 +19,31 @@ import * as vscode from 'vscode';
 import { logger } from '../globals';
 
 export function deleteHost(arg: any) {
-    if (arg.contextValue === 'repository') {
-        const repo: Repository | undefined = arg.getRepository();
-        if (repo) {
-            logger.trace(`Remove configuration ${repo.getName()}`);
-            vscode.window
-                .showWarningMessage(
-                    'Remove Configuration: ' + repo.getName() + '?',
-                    'OK'
-                )
-                .then((message) => {
-                    if (message === 'OK') {
-                        const profileLabel = repo.getProfileLabel()
-                            ? repo.getProfileLabel()
-                            : '';
-                        EndevorController.instance.removeRepository(
-                            repo.getName(),
-                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                            profileLabel!
-                        );
-                        EndevorController.instance.updateSettings();
-                        logger.trace('Configuration removed');
-                    } else {
-                        logger.trace('Operation cancelled.');
-                    }
-                });
-        }
+  if (arg.contextValue === 'repository') {
+    const repo: Repository | undefined = arg.getRepository();
+    if (repo) {
+      logger.trace(`Remove configuration ${repo.getName()}`);
+      vscode.window
+        .showWarningMessage(
+          'Remove Configuration: ' + repo.getName() + '?',
+          'OK'
+        )
+        .then((message) => {
+          if (message === 'OK') {
+            const profileLabel = repo.getProfileLabel()
+              ? repo.getProfileLabel()
+              : '';
+            EndevorController.instance.removeRepository(
+              repo.getName(),
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              profileLabel!
+            );
+            EndevorController.instance.updateSettings();
+            logger.trace('Configuration removed');
+          } else {
+            logger.trace('Operation cancelled.');
+          }
+        });
     }
+  }
 }

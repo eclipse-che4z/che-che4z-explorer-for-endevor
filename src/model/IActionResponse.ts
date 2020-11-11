@@ -13,7 +13,7 @@
  */
 
 export interface ActionResponse {
-    returnCode: string;
-    reasonCode: string;
-    messages: string;
+  returnCode: string;
+  reasonCode: string;
+  messages: string;
 }

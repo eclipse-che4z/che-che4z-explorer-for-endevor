@@ -1,6 +1,6 @@
 export async function sampleString(name: string) {
-    return 'Hello' + ' ' + name;
+  return 'Hello' + ' ' + name;
 }
 export async function arithmatic(num1: number, num2: number) {
-    return num1 + num2;
+  return num1 + num2;
 }

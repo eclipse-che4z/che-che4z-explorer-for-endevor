@@ -19,86 +19,86 @@ import { Element } from '../model/Element';
 import { EndevorQualifier } from '../model/IEndevorQualifier';
 import { Repository } from '../model/Repository';
 import {
-    proxyRetrieveAcmComponents,
-    proxyRetrieveElement,
-    proxyListType,
+  proxyRetrieveAcmComponents,
+  proxyRetrieveElement,
+  proxyListType,
 } from './EndevorCliProxy';
 import { logger } from '../globals';
 
 export class RetrieveElementService {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    constructor() {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  constructor() {}
 
-    public async retrieveElement(
-        workspace: vscode.WorkspaceFolder,
-        repo: Repository,
-        elementName: string,
-        eq: EndevorQualifier
-    ): Promise<string> {
-        const data = await proxyRetrieveElement(repo, eq);
-        const ext = await this.getExtension(repo, eq);
-        const type = eq.type ? eq.type : '';
-        const typeDirectory = path.join(workspace.uri.fsPath, type);
-        if (!fs.existsSync(typeDirectory)) {
-            fs.mkdirSync(typeDirectory);
-        }
-        const filePath: string = path.join(
-            typeDirectory,
-            elementName + (ext ? '.' + ext : '')
-        );
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        fs.writeFileSync(filePath, data!);
-
-        return filePath;
+  public async retrieveElement(
+    workspace: vscode.WorkspaceFolder,
+    repo: Repository,
+    elementName: string,
+    eq: EndevorQualifier
+  ): Promise<string> {
+    const data = await proxyRetrieveElement(repo, eq);
+    const ext = await this.getExtension(repo, eq);
+    const type = eq.type ? eq.type : '';
+    const typeDirectory = path.join(workspace.uri.fsPath, type);
+    if (!fs.existsSync(typeDirectory)) {
+      fs.mkdirSync(typeDirectory);
     }
+    const filePath: string = path.join(
+      typeDirectory,
+      elementName + (ext ? '.' + ext : '')
+    );
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    fs.writeFileSync(filePath, data!);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public async processRetrieveElementError(error: any) {
-        if (!error.cancelled) {
-            logger.error('Error retrieving elements.', error.error);
-        }
-    }
+    return filePath;
+  }
 
-    /**
-     * List dependencies
-     * @returns list of dependencies with origin element. Origin element always first.
-     */
-    public async retrieveDependenciesList(
-        repo: Repository,
-        eq: EndevorQualifier
-    ): Promise<Element[]> {
-        const result: Element[] = [];
-        const elements = await proxyRetrieveAcmComponents(repo, eq);
-        if (elements.length === 0) {
-            return [];
-        }
-        const el = elements[0];
-        result.push(new Element(repo, el));
-        if (Object.getOwnPropertyDescriptor(el, 'components')) {
-            for (const dep of el['components']) {
-                if (dep.elmName.trim()) {
-                    const element: Element = new Element(repo, dep);
-                    result.push(element);
-                }
-            }
-        }
-        return result;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async processRetrieveElementError(error: any) {
+    if (!error.cancelled) {
+      logger.error('Error retrieving elements.', error.error);
     }
+  }
 
-    private async getExtension(
-        repo: Repository,
-        eq: EndevorQualifier
-    ): Promise<string> {
-        const types = await proxyListType(repo, eq);
-        for (const type of types) {
-            if (type.typeName === eq.type && type.fileExt) {
-                return type.fileExt;
-            }
-        }
-        logger.trace(
-            `No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`
-        );
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        return (eq.type as string).toLowerCase();
+  /**
+   * List dependencies
+   * @returns list of dependencies with origin element. Origin element always first.
+   */
+  public async retrieveDependenciesList(
+    repo: Repository,
+    eq: EndevorQualifier
+  ): Promise<Element[]> {
+    const result: Element[] = [];
+    const elements = await proxyRetrieveAcmComponents(repo, eq);
+    if (elements.length === 0) {
+      return [];
     }
+    const el = elements[0];
+    result.push(new Element(repo, el));
+    if (Object.getOwnPropertyDescriptor(el, 'components')) {
+      for (const dep of el['components']) {
+        if (dep.elmName.trim()) {
+          const element: Element = new Element(repo, dep);
+          result.push(element);
+        }
+      }
+    }
+    return result;
+  }
+
+  private async getExtension(
+    repo: Repository,
+    eq: EndevorQualifier
+  ): Promise<string> {
+    const types = await proxyListType(repo, eq);
+    for (const type of types) {
+      if (type.typeName === eq.type && type.fileExt) {
+        return type.fileExt;
+      }
+    }
+    logger.trace(
+      `No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`
+    );
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return (eq.type as string).toLowerCase();
+  }
 }

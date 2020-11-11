@@ -2,7 +2,7 @@
 
 This content is produced and maintained by the Eclipse Che4z project.
 
--   Project home: https://projects.eclipse.org/projects/ecd.che.che4z
+- Project home: https://projects.eclipse.org/projects/ecd.che.che4z
 
 ## Trademarks
 
@@ -26,7 +26,7 @@ SPDX-License-Identifier: EPL-2.0
 
 The project maintains the following source code repositories:
 
--   https://github.com/eclipse/che-che4z-explorer-for-endevor
+- https://github.com/eclipse/che-che4z-explorer-for-endevor
 
 ## Third-party Content
 
@@ -34,8 +34,8 @@ This project leverages the following third party content.
 
 request (2.88.0)
 
--   License: Apache-2.0
--   Project: https://www.npmjs.com/package/request
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/request
 
 ## Cryptography
 

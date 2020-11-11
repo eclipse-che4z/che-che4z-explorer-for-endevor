@@ -17,42 +17,42 @@ import { EndevorEntity } from './EndevorEntity';
 import { Repository } from './Repository';
 
 export class Stage extends EndevorEntity implements IStage {
-    envName: string;
-    stgName: string;
-    stgId: string;
-    stgNum: string;
-    repository: Repository;
+  envName: string;
+  stgName: string;
+  stgId: string;
+  stgNum: string;
+  repository: Repository;
 
-    constructor(repo: Repository, stage: IStage) {
-        super();
-        this.envName = stage.envName;
-        this.stgName = stage.stgName;
-        this.stgId = stage.stgId;
-        this.stgNum = stage.stgNum;
-        this.repository = repo;
-    }
+  constructor(repo: Repository, stage: IStage) {
+    super();
+    this.envName = stage.envName;
+    this.stgName = stage.stgName;
+    this.stgId = stage.stgId;
+    this.stgNum = stage.stgNum;
+    this.repository = repo;
+  }
 
-    public getName(): string {
-        return this.stgNum.toString();
-    }
+  public getName(): string {
+    return this.stgNum.toString();
+  }
 
-    public getDescription(): string {
-        return '';
-    }
+  public getDescription(): string {
+    return '';
+  }
 
-    public getRepository(): Repository {
-        return this.repository;
-    }
+  public getRepository(): Repository {
+    return this.repository;
+  }
 
-    public getStgName(): string {
-        return this.stgName;
-    }
+  public getStgName(): string {
+    return this.stgName;
+  }
 
-    public getStgId(): string {
-        return this.stgId;
-    }
+  public getStgId(): string {
+    return this.stgId;
+  }
 
-    public getStgNum(): string {
-        return this.stgNum;
-    }
+  public getStgNum(): string {
+    return this.stgNum;
+  }
 }
