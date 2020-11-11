@@ -30,7 +30,6 @@ export class Profiles {
         Profiles.loader = new Profiles(log);
         await Profiles.loader.refresh();
         return Profiles.loader;
-
     }
     public static getInstance() {
         return Profiles.loader;
@@ -137,6 +136,18 @@ export class Profiles {
         let rejectUnauthorize: boolean;
         let options: vscode.InputBoxOptions;
 
+        if (!profileName || profileName === "") {
+            logger.info("No valid value for new profile name. Operation Cancelled");
+            return undefined;
+        }
+
+        for (const profile of this.allProfiles) {
+            if (profile.name === profileName) {
+                logger.error("Profile name already exists. Please create a profile using a different name");
+                return undefined;
+            }
+        }
+
         const urlInputBox = vscode.window.createInputBox();
         urlInputBox.ignoreFocusOut = true;
         urlInputBox.placeholder = "http(s)://url:port";
@@ -154,26 +165,26 @@ export class Profiles {
         const endevorUrlParsed = this.validateAndParseUrl(endevorURL);
 
         options = {
-            placeHolder: "Optional: User Name",
-            prompt: "Enter the user name for the connection. Leave blank to not store.",
+            placeHolder: "Username",
+            prompt: "Enter the username for the connection.",
         };
         userName = await vscode.window.showInputBox(options);
 
         if (userName === undefined) {
-            logger.info("Operation Cancelled");
+            logger.info("No valid value for username. Operation Cancelled");
             return;
         }
 
         options = {
             password: true,
-            placeHolder: "Optional: Password",
-            prompt: "Enter the password for the connection. Leave blank to not store.",
+            placeHolder: "Password",
+            prompt: "Enter the password for the connection.",
             value: passWord,
         };
         passWord = await vscode.window.showInputBox(options);
 
         if (passWord === undefined) {
-            logger.info("Operation Cancelled");
+            logger.info("No valid value for password. Operation Cancelled");
             return;
         }
 
@@ -195,15 +206,8 @@ export class Profiles {
         } else if (chosenRU === ruOptions[1]) {
             rejectUnauthorize = false;
         } else {
-            logger.info("Operation Cancelled");
+            logger.info("No valid value for Reject Unauthorized. Operation Cancelled");
             return undefined;
-        }
-
-        for (const profile of this.allProfiles) {
-            if (profile.name === profileName) {
-                logger.error("Profile name already exists. Please create a profile using a different name");
-                return undefined;
-            }
         }
 
         const connection: IConnection = {
@@ -225,7 +229,7 @@ export class Profiles {
             await this.refresh();
             return profileName;
         } catch (error) {
-            logger.error("Error saving profile", error.message);
+            logger.error("Error saving profile: ", error.message);
         }
     }
 
@@ -329,7 +333,7 @@ export class Profiles {
             });
             return endevorProfile.profile;
         } catch (error) {
-            logger.error("Error saving profile.", error.message);
+            throw error;
         }
     }
 }
