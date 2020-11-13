@@ -33,6 +33,7 @@ import { proxyListElement,
     proxyListSystem,
     proxyListType } from "../../service/EndevorCliProxy";
 import { Session } from "@zowe/imperative";
+import { logger } from "../../globals";
 
 export class EndevorNode extends vscode.TreeItem {
     private entity?: EndevorEntity;
@@ -40,7 +41,8 @@ export class EndevorNode extends vscode.TreeItem {
     private _needReload: boolean;
 
     constructor(entity?: EndevorEntity) {
-        super(entity ? entity.getName() : "unknown", vscode.TreeItemCollapsibleState.Collapsed);
+        const entityName = entity ? entity.getName() : "unknown";
+        super(entityName!, vscode.TreeItemCollapsibleState.Collapsed);
         this._needReload = true;
         this.description = "";
         this._children = [];
@@ -209,7 +211,7 @@ export class EndevorBrowsingNode extends EndevorNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error creating the root tree.", error.error);
             }
             return [];
         }
@@ -323,7 +325,7 @@ export class FilterNode extends EndevorNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing filters.", error.error);
             }
             const resultNodes = [createEmptyNode(repo, "<Invalid Path>", error.error)];
             this.children = resultNodes;
@@ -384,7 +386,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing environments.", error.error);
             }
             return [];
         }
@@ -420,7 +422,7 @@ export class StageNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing stages.", error.error);
             }
             return [];
         }
@@ -453,7 +455,7 @@ export class SystemNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing systems.", error.error);
             }
             return [];
         }
@@ -489,7 +491,7 @@ export class SubsystemNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing subsystems.", error.error);
             }
             return [];
         }
@@ -509,7 +511,7 @@ export class TypeNode extends EndevorQualifiedNode {
         this.needReload = false;
         try {
             const resultNodes: EndevorNode[] = [];
-            const elements = await proxyListElement(repo, nodeQualType)
+            const elements = await proxyListElement(repo, nodeQualType);
             elements.forEach(element => {
                 const eleEntity: Element = new Element(repo, element);
                 resultNodes.push(new EndevorElementNode(eleEntity, { ...nodeQualType, element: element.fullElmName }));
@@ -521,7 +523,7 @@ export class TypeNode extends EndevorQualifiedNode {
             return resultNodes;
         } catch (error) {
             if (!error.cancelled) {
-                vscode.window.showErrorMessage(error.error);
+                logger.error("Error listing types.", error.error);
             }
             return [];
         }
@@ -529,9 +531,9 @@ export class TypeNode extends EndevorQualifiedNode {
 }
 
 export class ConnectionNode extends EndevorNode {
-    private _session: Session;
-    private _connection: Connection;
-    private _connectionName: string;
+    private _session: Session | undefined = undefined;
+    private _connection: Connection | undefined = undefined;
+    private _connectionName: string | undefined = undefined;
 
     constructor(session?: Session, label?: string, connection?: Connection) {
         super();
@@ -546,14 +548,14 @@ export class ConnectionNode extends EndevorNode {
         }
     }
 
-    public getProfileName(): string {
+    public getProfileName(): string | undefined {
         return this._connectionName;
     }
 
-    public getConnection(): Connection {
+    public getConnection(): Connection | undefined {
         return this._connection;
     }
-    public getSession(): Session {
+    public getSession(): Session | undefined {
         return this._session;
     }
 

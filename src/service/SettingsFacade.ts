@@ -13,12 +13,12 @@
  */
 
 import * as vscode from "vscode";
-import { EndevorController } from "../EndevorController";
 import { EndevorFilter } from "../model/EndevorFilter";
 import { Host } from "../model/IEndevorInstance";
 import { Repository } from "../model/Repository";
 import { Connection } from "../model/Connection";
 import { Profiles } from "./Profiles";
+import { logger } from "../globals";
 
 export const HOST_SETTINGS_KEY: string = "endevor.connections";
 
@@ -30,39 +30,43 @@ export class SettingsFacade {
     public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
         // tslint:disable-next-line: max-line-length
-        const connectionInSettings = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []).find(connection => connection.name === connectionLabel);
+        const allConnectionsInSettings: any[] = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
+        const connectionInSettings = allConnectionsInSettings.find(connection => connection.name === connectionLabel);
         const hosts: Host[] = connectionInSettings ? connectionInSettings.hosts : [];
         const profile = Profiles.getInstance().loadNamedProfile(connectionLabel).profile;
-        hosts.forEach(host => {
-            const repo: Repository = new Repository(
-                host.name,
-                `${profile.protocol}://${profile.host}:${profile.port}`,
-                profile.user,
-                profile.password,
-                host.datasource,
-                host.profileLabel,
-                host.id,
-            );
-            if (host.filters) {
-                const newFilters: Map<string, EndevorFilter> = new Map();
-                host.filters.forEach(filter => {
-                    newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
-                    repo.filters.push(new EndevorFilter(repo, filter.uri));
-                });
-                repo.filters = Array.from(newFilters.values());
-            }
-            repos.push(repo);
-        });
+        if (profile) {
+            hosts.forEach(host => {
+                const repo: Repository = new Repository(
+                    host.name,
+                    `${profile.protocol}://${profile.host}:${profile.port}`,
+                    profile.user,
+                    profile.password,
+                    host.datasource,
+                    host.profileLabel,
+                    host.id,
+                );
+                if (host.filters) {
+                    const newFilters: Map<string, EndevorFilter> = new Map();
+                    host.filters.forEach(filter => {
+                        newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
+                        repo.filters.push(new EndevorFilter(repo, filter.uri));
+                    });
+                    repo.filters = Array.from(newFilters.values());
+                }
+                repos.push(repo);
+            });
+        }
         return repos;
     }
 
     public static async updateSettings(connections: Connection[]) {
-        const conns = [];
+        const conns: any[] = [];
         connections.forEach(connection => {
+            const hostsArray: any[] = [];
             const toPush = {
                 name: connection.getName(),
                 // tslint:disable-next-line: object-literal-sort-keys
-                hosts: [],
+                hosts: hostsArray
             };
             connection.getRepositoryList().forEach(repo => {
                 toPush.hosts.push({
@@ -75,14 +79,12 @@ export class SettingsFacade {
                     username: repo.getUsername(),
                 });
             });
-            if (toPush.hosts.length > 0) {
-                conns.push(toPush);
-            }
+            conns.push(toPush);
         });
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns);
+            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, conns, vscode.ConfigurationTarget.Global);
         } catch (error) {
-            vscode.window.showErrorMessage("Save settings error: " + error);
+            logger.error("Error saving to settings.", error);
         }
 
     }
@@ -98,7 +100,7 @@ export class SettingsFacade {
                 name: repo.getName(),
                 profileLabel: repo.getProfileLabel(),
                 url: repo.getUrl(),
-                username: repo.getUsername(),
+                username: repo.getUsername()
             });
         });
         const value = {
@@ -106,9 +108,9 @@ export class SettingsFacade {
         }
 
         try {
-            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value);
+            await vscode.workspace.getConfiguration().update(HOST_SETTINGS_KEY, value, vscode.ConfigurationTarget.Global);
         } catch (error) {
-            vscode.window.showErrorMessage("Save settings error: " + error);
+            logger.error("Error saving to settings.", error);
         }
     }
 }

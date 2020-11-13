@@ -19,6 +19,7 @@ import { Element } from "../model/Element";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
+import { logger } from "../globals";
 
 export class RetrieveElementService {
     // tslint:disable-next-line: no-empty
@@ -32,19 +33,20 @@ export class RetrieveElementService {
     ): Promise<string> {
         const data = await proxyRetrieveElement(repo, eq);
         const ext = await this.getExtension(repo, eq);
-        const typeDirectory = path.join(workspace.uri.fsPath, eq.type);
+        const type = eq.type ? eq.type : "";
+        const typeDirectory = path.join(workspace.uri.fsPath, type);
         if (!fs.existsSync(typeDirectory)) {
             fs.mkdirSync(typeDirectory);
         }
         const filePath: string = path.join(typeDirectory, elementName + (ext ? "." + ext : ""));
-        fs.writeFileSync(filePath, data);
+        fs.writeFileSync(filePath, data!);
 
         return filePath;
     }
 
     public async processRetrieveElementError(error: any) {
         if (!error.cancelled) {
-            vscode.window.showErrorMessage(error.error);
+            logger.error("Error retrieving elements.", error.error);
         }
     }
 
@@ -79,9 +81,7 @@ export class RetrieveElementService {
                 return type.fileExt;
             }
         }
-        vscode.window.showWarningMessage(
-            `No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`,
-        );
+        logger.trace(`No fileExt information in element type ${eq.type} for ${eq.element}. Type name will be used.`);
         return (eq.type as string).toLowerCase();
     }
 }

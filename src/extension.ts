@@ -32,6 +32,7 @@ import { multipleElementsSelected } from "./utils";
 import { Logger } from "@zowe/imperative";
 import * as path from "path";
 import { Profiles } from "./service/Profiles";
+import {logger as vscodeLogger} from './globals';
 
 let log: Logger;
 
@@ -50,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
         log.debug("Initialized logger from VSCode extension");
     } catch (err) {
         log.error("Error encountered while activating and initializing logger! " + JSON.stringify(err));
-        vscode.window.showErrorMessage(err.message);
+        vscodeLogger.error(err.message)
     }
 
     await Profiles.createInstance(log);

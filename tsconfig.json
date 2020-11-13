@@ -20,9 +20,9 @@
         "lib": [
             "es7"
         ],
+        "skipLibCheck": true,
         "sourceMap": true,
-        "rootDir": "src",
-        "strict": false, /* enable all strict type-checking options */
+        "strict": true, /* enable all strict type-checking options */
         /* Additional Checks */
         "noImplicitAny": false
         // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
@@ -32,5 +32,6 @@
     "exclude": [
         "node_modules",
         ".vscode-test"
-    ]
+    ],
+    "include": ["src", "test"]
 }

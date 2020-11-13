@@ -1,9 +1,21 @@
 # Changelog
 All notable changes to Explorer for Endevor will be documented in this file.
 
+## [0.11.0] 2020-11-06
+
+### Added
+- An output channel, "Explorer for Endevor", for logs
+- Improved messaging for core functionalities
+
+### Changed
+- Fix for persistence of connections
+- Location of Endevor connections moved from workspace settings to user settings
+>Ensure that you delete the `endevor.connections` entry from the Workspace settings if it exists.
+- Readme.md updated
+
 ## [0.10.0] 2020-06-25
 ### Added
-- Endevor Plug-in for Zowe CLI profile interoperability 
+- Endevor Plug-in for Zowe CLI profile interoperability
     - ability to create a profile
     - ability to use an already created profile
     - automatically load default profile
