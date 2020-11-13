@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Explorer for Endevor will be documented in this file.
 
-## [0.10.1] 2020-11-13
+## [0.11.0] 2020-11-13
 
 ### Added
 - An output channel, "Explorer for Endevor", for logs
