@@ -33,7 +33,7 @@ jobs:
 
       - run: npm install
 
-      - run: npm run vscode:prepublish
+      - run: npm run compile
 
       # run audit on 1 system to avoid overloading the audit API
       - name: Audit from Windows / Node 12.x
