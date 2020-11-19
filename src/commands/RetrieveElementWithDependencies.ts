@@ -67,7 +67,7 @@ export async function retrieveWithDependencies(
       }
       const incrementNumber = 100 / (elementsToRetrieve.length + 1);
       // retrieve dependencies
-      let firstOpened: boolean = false;
+      let firstOpened = false;
       for (let i = 0; i < elementsToRetrieve.length; i++) {
         if (token && token.isCancellationRequested) {
           return;

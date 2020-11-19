@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { EndevorProfilesConfig } from '@broadcom/endevor-for-zowe-cli';
 import {
   CliProfileManager,
@@ -134,9 +135,6 @@ export class Profiles {
   public async createNewConnection(
     profileName: string
   ): Promise<string | undefined> {
-    let userName: string | undefined;
-    let passWord: string | undefined;
-    let endevorURL: string | undefined;
     let rejectUnauthorize: boolean;
     let options: vscode.InputBoxOptions;
 
@@ -161,7 +159,7 @@ export class Profiles {
       "Enter an Endevor URL in the format 'http(s)://url:port'.";
 
     urlInputBox.show();
-    endevorURL = await this.getUrl(urlInputBox);
+    const endevorURL = await this.getUrl(urlInputBox);
     urlInputBox.dispose();
 
     if (!endevorURL) {
@@ -175,7 +173,7 @@ export class Profiles {
       placeHolder: 'Username',
       prompt: 'Enter the username for the connection.',
     };
-    userName = await vscode.window.showInputBox(options);
+    const userName = await vscode.window.showInputBox(options);
 
     if (userName === undefined) {
       logger.info('No valid value for username. Operation Cancelled');
@@ -186,9 +184,8 @@ export class Profiles {
       password: true,
       placeHolder: 'Password',
       prompt: 'Enter the password for the connection.',
-      value: passWord,
     };
-    passWord = await vscode.window.showInputBox(options);
+    const passWord = await vscode.window.showInputBox(options);
 
     if (passWord === undefined) {
       logger.info('No valid value for password. Operation Cancelled');
@@ -234,7 +231,7 @@ export class Profiles {
       user: userName,
     };
 
-    let newProfile: IProfile;
+    let newProfile: IProfile | undefined;
 
     try {
       newProfile = await this.saveProfile(
@@ -297,7 +294,6 @@ export class Profiles {
         password: true,
         placeHolder: 'Password',
         prompt: 'Enter a password for the connection',
-        value: passWord,
       };
       passWord = await vscode.window.showInputBox(options);
 
@@ -351,16 +347,13 @@ export class Profiles {
   }
 
   private async saveProfile(ProfileInfo, ProfileName, ProfileType) {
-    let endevorProfile: IProfile;
-    try {
-      endevorProfile = await (await this.getEndevorCliProfileManager()).save({
-        name: ProfileName,
-        profile: ProfileInfo,
-        type: ProfileType,
-      });
-      return endevorProfile.profile;
-    } catch (error) {
-      throw error;
-    }
+    const endevorProfile = await (
+      await this.getEndevorCliProfileManager()
+    ).save({
+      name: ProfileName,
+      profile: ProfileInfo,
+      type: ProfileType,
+    });
+    return endevorProfile.profile;
   }
 }

@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-namespace */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * This program and the accompanying materials are made available under the terms of the *
  * Eclipse Public License v2.0 which accompanies this distribution, and is available at *
