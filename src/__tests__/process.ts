@@ -1,5 +1,5 @@
 declare namespace NodeJS {
-	export interface Process {
-		vscode?: any
-	}
+  export interface Process {
+    vscode?: any;
+  }
 }

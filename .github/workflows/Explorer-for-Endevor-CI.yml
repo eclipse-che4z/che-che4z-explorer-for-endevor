@@ -2,7 +2,7 @@ name: Explorer for Endevor CI
 
 on:
   push:
-     branches:
+    branches:
       - master
       - development
   pull_request:
@@ -43,5 +43,4 @@ jobs:
       - name: Extension Test
         uses: GabrielBB/xvfb-action@v1.0
         with:
-            run: npm test
-
+          run: npm test

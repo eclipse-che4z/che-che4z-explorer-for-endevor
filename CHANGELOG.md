@@ -5,13 +5,15 @@ All notable changes to Explorer for Endevor will be documented in this file.
 ## [0.11.0] 2020-11-13
 
 ### Added
+
 - An output channel, "Explorer for Endevor", for logs
 - Improved messaging for core functionalities
 
 ### Changed
+
 - Fix for persistence of connections
 - Location of Endevor connections moved from workspace settings to user settings
->Ensure that you delete the `endevor.connections` entry from the Workspace settings if it exists.
+  > Ensure that you delete the `endevor.connections` entry from the Workspace settings if it exists.
 - Readme.md updated
 
 ## [0.10.0] 2020-06-25

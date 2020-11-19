@@ -30,7 +30,6 @@ Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.c
 - [Configuration and Usage Tips](#configuration-and-usage-tips)
 - [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
 
-
 ## Prerequisites
 
 Prior to using Explorer for Endevor, ensure that you meet the following prerequisites:

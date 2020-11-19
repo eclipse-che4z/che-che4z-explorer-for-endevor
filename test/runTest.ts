@@ -22,25 +22,25 @@ async function main() {
     // Have to use insiders version if we want to run it from CLI as well (as opposed to Run from Activity Bar only)
     // See: https://code.visualstudio.com/api/working-with-extensions/testing-extension#tips
     if (process.argv.length > 2 && process.argv[2] == 'insiders') {
-        const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
-        testOptions = {
-            vscodeExecutablePath,
-            extensionDevelopmentPath,
-            extensionTestsPath,
-            launchArgs: ['--disable-extensions'],
-            extensionTestsEnv: {
-                MOCHA_grep: MOCHA_grep_value,
-            }
-        }
+      const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
+      testOptions = {
+        vscodeExecutablePath,
+        extensionDevelopmentPath,
+        extensionTestsPath,
+        launchArgs: ['--disable-extensions'],
+        extensionTestsEnv: {
+          MOCHA_grep: MOCHA_grep_value,
+        },
+      };
     } else {
-        testOptions = {
-            extensionDevelopmentPath,
-            extensionTestsPath,
-            launchArgs: ['--disable-extensions'],
-            extensionTestsEnv: {
-                MOCHA_grep: MOCHA_grep_value,
-            }
-        }
+      testOptions = {
+        extensionDevelopmentPath,
+        extensionTestsPath,
+        launchArgs: ['--disable-extensions'],
+        extensionTestsEnv: {
+          MOCHA_grep: MOCHA_grep_value,
+        },
+      };
     }
     // Download VS Code, unzip it and run the integration test
     await runTests(testOptions);

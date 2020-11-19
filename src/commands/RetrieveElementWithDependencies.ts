@@ -14,79 +14,95 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
-import { logger } from "../globals";
-import { Element } from "../model/Element";
-import { IElement } from "../model/IEndevorEntities";
-import { EndevorQualifier } from "../model/IEndevorQualifier";
-import { Repository } from "../model/Repository";
-import { RetrieveElementService } from "../service/RetrieveElementService";
+import * as vscode from 'vscode';
+import { logger } from '../globals';
+import { Element } from '../model/Element';
+import { IElement } from '../model/IEndevorEntities';
+import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { Repository } from '../model/Repository';
+import { RetrieveElementService } from '../service/RetrieveElementService';
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
-export async function retrieveWithDependencies(arg: any, retrieveElementService: RetrieveElementService) {
-    await vscode.window.withProgress(
-        {
-            cancellable: true,
-            location: vscode.ProgressLocation.Notification,
-            title: "Retrieving",
-        },
-        async (progress, token) => {
-            if (token) {
-                token.onCancellationRequested(() => {
-                    logger.info("Retrieve Cancelled.");
-                });
-            }
-            if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
-                logger.error("Specify workspace before retrieving elements");
-                return;
-            }
-            const workspace: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];
-            const repo: Repository = arg.getRepository();
-            const eq: EndevorQualifier = arg.getQualifier();
+export async function retrieveWithDependencies(
+  arg: any,
+  retrieveElementService: RetrieveElementService
+) {
+  await vscode.window.withProgress(
+    {
+      cancellable: true,
+      location: vscode.ProgressLocation.Notification,
+      title: 'Retrieving',
+    },
+    async (progress, token) => {
+      if (token) {
+        token.onCancellationRequested(() => {
+          logger.info('Retrieve Cancelled.');
+        });
+      }
+      if (
+        !(
+          vscode.workspace.workspaceFolders &&
+          vscode.workspace.workspaceFolders.length > 0
+        )
+      ) {
+        logger.error('Specify workspace before retrieving elements');
+        return;
+      }
+      const workspace: vscode.WorkspaceFolder =
+        vscode.workspace.workspaceFolders[0];
+      const repo: Repository = arg.getRepository();
+      const eq: EndevorQualifier = arg.getQualifier();
 
-            progress.report({ increment: 0, message: "Dependencies List" });
-            const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(repo, eq);
-            if (await hitLimit(elementsToRetrieve, eq)) {
-                return;
-            }
-            if (elementsToRetrieve.length === 0) {
-                elementsToRetrieve.push(createElementFromQualifier(repo, eq));
-            }
-            const incrementNumber = 100 / (elementsToRetrieve.length + 1);
-            // retrieve dependencies
-            let firstOpened: boolean = false;
-            for (let i = 0; i < elementsToRetrieve.length; i++) {
-                if (token && token.isCancellationRequested) {
-                    return;
-                }
-                const elName: string = elementsToRetrieve[i].elmName;
-                try {
-                    progress.report({ message: "(" + (i + 1) + "/" + elementsToRetrieve.length + ") " + elName });
-                    const eQualifier = createElementQualifier(elementsToRetrieve[i]);
-                    const filePath: string = await retrieveElementService.retrieveElement(
-                        workspace,
-                        repo,
-                        elName,
-                        eQualifier,
-                    );
-                    if (!firstOpened) {
-                        const doc = await vscode.workspace.openTextDocument(filePath);
-                        vscode.window.showTextDocument(doc, { preview: false });
-                    }
-                } catch (error) {
-                    retrieveElementService.processRetrieveElementError(error);
-                } finally {
-                    // If first with error, don't open anything
-                    firstOpened = true;
-                    progress.report({
-                        increment: incrementNumber,
-                        message: "(" + (i + 1) + "/" + elementsToRetrieve.length + ") " + elName,
-                    });
-                }
-            }
-        },
-    );
+      progress.report({ increment: 0, message: 'Dependencies List' });
+      const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
+        repo,
+        eq
+      );
+      if (await hitLimit(elementsToRetrieve, eq)) {
+        return;
+      }
+      if (elementsToRetrieve.length === 0) {
+        elementsToRetrieve.push(createElementFromQualifier(repo, eq));
+      }
+      const incrementNumber = 100 / (elementsToRetrieve.length + 1);
+      // retrieve dependencies
+      let firstOpened: boolean = false;
+      for (let i = 0; i < elementsToRetrieve.length; i++) {
+        if (token && token.isCancellationRequested) {
+          return;
+        }
+        const elName: string = elementsToRetrieve[i].elmName;
+        try {
+          progress.report({
+            message:
+              '(' + (i + 1) + '/' + elementsToRetrieve.length + ') ' + elName,
+          });
+          const eQualifier = createElementQualifier(elementsToRetrieve[i]);
+          const filePath: string = await retrieveElementService.retrieveElement(
+            workspace,
+            repo,
+            elName,
+            eQualifier
+          );
+          if (!firstOpened) {
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            vscode.window.showTextDocument(doc, { preview: false });
+          }
+        } catch (error) {
+          retrieveElementService.processRetrieveElementError(error);
+        } finally {
+          // If first with error, don't open anything
+          firstOpened = true;
+          progress.report({
+            increment: incrementNumber,
+            message:
+              '(' + (i + 1) + '/' + elementsToRetrieve.length + ') ' + elName,
+          });
+        }
+      }
+    }
+  );
 }
 
 /**
