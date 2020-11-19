@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
+// import * as vscode from "vscode";
 
 import { PrintElementComponents } from "@broadcom/endevor-for-zowe-cli";
 import { browseElement } from "../../../commands/BrowseElement";
@@ -22,6 +22,7 @@ import { EndevorQualifier } from "../../../model/IEndevorQualifier";
 import { Repository } from "../../../model/Repository";
 import { EndevorElementNode } from "../../../ui/tree/EndevorNodes";
 
+const vscode = require("vscode");
 jest.mock("vscode");
 
 describe("Test function browseElement", () => {

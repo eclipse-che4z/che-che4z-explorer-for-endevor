@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
+// import * as vscode from "vscode";
 
 import { retrieveElement } from "../../../commands/RetrieveElement";
 import { logger } from "../../../globals";
@@ -23,6 +23,7 @@ import { Repository } from "../../../model/Repository";
 import { RetrieveElementService } from "../../../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
 
+const vscode = require("vscode");
 jest.mock("vscode");
 
 describe("Test function retrieveElement", () => {
