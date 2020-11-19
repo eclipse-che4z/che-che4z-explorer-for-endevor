@@ -15,11 +15,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { logger } from "../globals";
 import { Element } from "../model/Element";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
-import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from "./EndevorCliProxy";
-import { logger } from "../globals";
+import { proxyListType, proxyRetrieveAcmComponents, proxyRetrieveElement } from "./EndevorCliProxy";
 
 export class RetrieveElementService {
     // tslint:disable-next-line: no-empty

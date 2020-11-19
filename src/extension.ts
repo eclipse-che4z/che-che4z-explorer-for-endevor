@@ -12,27 +12,27 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Logger } from "@zowe/imperative";
+import * as path from "path";
 import * as vscode from "vscode";
 import { addFilter } from "./commands/AddFilter";
 import { browseElement } from "./commands/BrowseElement";
 import { Commands } from "./commands/Common";
+import { deleteConnection } from "./commands/DeleteConnection";
 import { deleteFilter } from "./commands/DeleteFilter";
 import { deleteHost } from "./commands/DeleteHost";
-import { deleteConnection } from "./commands/DeleteConnection";
 import { editFilter } from "./commands/EditFilter";
 import { HostDialogs } from "./commands/HostDialogs";
 import { retrieveElement } from "./commands/RetrieveElement";
 import { retrieveWithDependencies } from "./commands/RetrieveElementWithDependencies";
 import { EndevorController } from "./EndevorController";
+import {logger as vscodeLogger} from "./globals";
+import { Profiles } from "./service/Profiles";
 import { RetrieveElementService } from "./service/RetrieveElementService";
 import { HOST_SETTINGS_KEY } from "./service/SettingsFacade";
 import { createEndevorTree } from "./ui/tree/EndevorDataProvider";
 import { EndevorNode } from "./ui/tree/EndevorNodes";
 import { multipleElementsSelected } from "./utils";
-import { Logger } from "@zowe/imperative";
-import * as path from "path";
-import { Profiles } from "./service/Profiles";
-import {logger as vscodeLogger} from './globals';
 
 let log: Logger;
 
@@ -51,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
         log.debug("Initialized logger from VSCode extension");
     } catch (err) {
         log.error("Error encountered while activating and initializing logger! " + JSON.stringify(err));
-        vscodeLogger.error(err.message)
+        vscodeLogger.error(err.message);
     }
 
     await Profiles.createInstance(log);
@@ -125,13 +125,13 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(Commands.DeleteFilter, deleteFilter));
     context.subscriptions.push(vscode.commands.registerCommand(Commands.DeleteHost, deleteHost));
     context.subscriptions.push(
-        vscode.commands.registerCommand(Commands.RetrieveElement, (arg: any) => {
-            retrieveElement(arg, endevorExplorerView.selection, retrieveElementService);
+        vscode.commands.registerCommand(Commands.RetrieveElement, async (arg: any) => {
+            await retrieveElement(arg, endevorExplorerView.selection, retrieveElementService);
         }),
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand(Commands.RetrieveWithDependencies, (arg: any) => {
-            retrieveWithDependencies(arg, retrieveElementService);
+        vscode.commands.registerCommand(Commands.RetrieveWithDependencies, async (arg: any) => {
+            await retrieveWithDependencies(arg, retrieveElementService);
         }),
     );
     context.subscriptions.push(vscode.commands.registerCommand(Commands.BrowseElement, browseElement));

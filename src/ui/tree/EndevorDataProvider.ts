@@ -12,20 +12,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from 'vscode';
-import { EndevorNode, EndevorBrowsingNode, FilterNode, EndevorFilterPathNode, NewRepositoryNode, ConnectionNode, NewConnectionButton } from './EndevorNodes';
-import { EnvironmentNode, StageNode, SystemNode, SubsystemNode, TypeNode } from './EndevorNodes';
-import { EndevorController } from '../../EndevorController';
-import { Repository } from '../../model/Repository';
+import { IProfileLoaded, Logger } from "@zowe/imperative";
+import * as vscode from "vscode";
+import { EndevorController } from "../../EndevorController";
+import { logger } from "../../globals";
+import { Connection } from "../../model/Connection";
+import { Repository } from "../../model/Repository";
 import { Profiles } from "../../service/Profiles";
-import { Logger, IProfileLoaded } from "@zowe/imperative";
-import { Connection } from '../../model/Connection';
-import { logger } from '../../globals';
-
+import { ConnectionNode, EndevorBrowsingNode, EndevorFilterPathNode, EndevorNode, FilterNode, NewConnectionButton } from "./EndevorNodes";
+import { EnvironmentNode, StageNode, SubsystemNode, SystemNode, TypeNode } from "./EndevorNodes";
 
 export async function createEndevorTree(log: Logger) {
     const tree = new EndevorDataProvider();
-    await tree.addSession();
+    tree.addSession();
     return tree;
 }
 export class EndevorDataProvider implements vscode.TreeDataProvider<EndevorNode> {
