@@ -30,7 +30,7 @@
 			"preLaunchTask": "npm: watch"
 		},
 		{
-			"name": "Extension Tests",
+			"name": "Extension Tests (VSCode)",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
@@ -44,7 +44,7 @@
         },
         {
             "type": "node",
-            "name": "Extension Unit Tests (Jest)",
+            "name": "Extension Tests (No VSCode)",
             "request": "launch",
             "program": "${workspaceFolder}/node_modules/jest/bin/jest",
             "args": ["--runInBand"],

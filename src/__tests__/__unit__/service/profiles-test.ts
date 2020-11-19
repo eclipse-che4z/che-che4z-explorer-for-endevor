@@ -30,9 +30,11 @@ import * as vscode from "vscode";
 import { CliProfileManager, IProfileLoaded, Logger } from "@zowe/imperative";
 import { logger } from "../../../globals";
 import { Profiles } from "../../../service/Profiles";
-import { FilterDescriptor } from "../../../utils";
 
 const log: Logger = Logger.getAppLogger();
+
+jest.mock('@zowe/imperative/lib/console/src/Console'); // disable imperative logging
+
 const mockZosmfProfile: IProfileLoaded = {
     failNotFound: false,
     message: "",
@@ -181,6 +183,14 @@ describe("Profiles Unit Tests - Creating a new connection", () => {
         // Redefine mocks, because we clear them after each run
         getUrlSpy = jest.spyOn(profilesInstance, "getUrl");
         saveSpy = jest.spyOn(cliProfileManager, "save");
+
+        saveSpy.mockImplementation(() => {
+            return {
+                name: mockZosmfProfile.name,
+                profile: mockZosmfProfile.profile,
+                type: mockZosmfProfile.type,
+            };
+        });
     });
 
     afterEach(() => {
