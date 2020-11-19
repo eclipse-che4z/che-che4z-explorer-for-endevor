@@ -35,6 +35,7 @@ const log: Logger = Logger.getAppLogger();
 
 jest.mock("@zowe/imperative/lib/console/src/Console"); // disable imperative logging
 
+// Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
 
 const mockZosmfProfile: IProfileLoaded = {

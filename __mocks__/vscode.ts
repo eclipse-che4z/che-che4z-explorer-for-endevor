@@ -127,6 +127,23 @@ export namespace window {
          */
         isCloseAffordance?: boolean;
     }
+
+    /**
+     * Creates a new [output channel](#OutputChannel) with the given name.
+     *
+     * @param name Human-readable string which will be used to represent the channel in the UI.
+     */
+    export function createOutputChannel(name: string): any {
+        return {
+            name,
+            append: (value: string) => {},
+            appendLine: (value: string) => {},
+            clear: () => {},
+            show: (column?, preserveFocus?) => {},
+            hide: () => {},
+            dispose: () => {},
+        };
+    }
 }
 // tslint:disable-next-line: no-namespace
 export namespace commands {

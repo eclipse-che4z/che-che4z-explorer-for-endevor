@@ -24,6 +24,7 @@ import { Repository } from "../../../model/Repository";
 import { RetrieveElementService } from "../../../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
 
+// Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
 
 describe("Test function retrieveWithDependencies (retrieve element with dependencies)", () => {
