@@ -376,6 +376,8 @@ export namespace workspace {
      */
     export let rootPath: string | undefined;
 
+    export function openTextDocument(fileName: string) {};
+
     /**
      * A workspace folder is one of potentially many roots opened by the editor. All workspace folders
      * are equal which means there is no notion of an active or master workspace folder.
