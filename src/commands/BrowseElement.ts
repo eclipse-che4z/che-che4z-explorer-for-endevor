@@ -13,16 +13,16 @@
  */
 
 import * as vscode from "vscode";
+import { logger } from "../globals";
 import { EndevorQualifier } from "../model/IEndevorQualifier";
 import { Repository } from "../model/Repository";
 import { proxyBrowseElement } from "../service/EndevorCliProxy";
-import { logger } from "../globals";
 
 export async function browseElement(arg: any) {
     const repo: Repository = arg.getRepository();
     const elementName: string = arg.label;
     const eq: EndevorQualifier = arg.getQualifier();
-    vscode.window.withProgress(
+    await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
             title: `Loading: ${elementName}...`,

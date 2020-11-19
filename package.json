@@ -2,7 +2,7 @@
     "name": "explorer-for-endevor",
     "displayName": "Explorer for Endevor",
     "description": "Explorer for Endevor",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "publisher": "broadcomMFD",
     "repository": {
         "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
@@ -321,7 +321,7 @@
         "ts-jest": "^26.4.0"
     },
     "dependencies": {
-        "@broadcom/endevor-for-zowe-cli": "^5.1.1",
-        "@zowe/imperative": "^4.6.0"
+        "@broadcom/endevor-for-zowe-cli": "^5.7.2",
+        "@zowe/imperative": "^4.7.4"
     }
 }

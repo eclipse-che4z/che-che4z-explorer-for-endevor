@@ -16,24 +16,20 @@ This extension is a part of the [Che4z](https://github.com/eclipse/che-che4z) op
 
 Explorer for Endevor is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe) and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
 
-## **Contents**
+## Table of Contents
 
-- [Explorer for Endevor](#explorer-for-endevor)
-  - [**Contents**](#contents)
-  - [Prerequisites](#prerequisites)
-  - [Installing](#installing)
-  - [Getting Started](#getting-started)
-    - [Create a Profile](#create-a-profile)
-    - [Profile Persistence](#profile-persistence)
-    - [Manage your Profiles](#manage-your-profiles)
-    - [Working with Endevor Configurations](#working-with-endevor-configurations)
-    - [Filters](#filters)
-      - [Create a Filter](#create-a-filter)
-      - [Create a Manual Filter:](#create-a-manual-filter)
-      - [Create a Filter in Map View:](#create-a-filter-in-map-view)
-    - [Browse or Retrieve an Element](#browse-or-retrieve-an-element)
-  - [Configuration and Usage Tips](#configuration-and-usage-tips)
-  - [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
+- [Prerequisites](#prerequisites)
+- [Installing](#installing)
+- [Getting Started](#getting-started)
+  - [Create a Profile](#create-a-profile)
+  - [Profile Persistence](#profile-persistence)
+  - [Manage your Profiles](#manage-your-profiles)
+  - [Working with Endevor Configurations](#working-with-endevor-configurations)
+  - [Filters](#filters)
+  - [Browse or Retrieve an Element](#browse-or-retrieve-an-element)
+- [Configuration and Usage Tips](#configuration-and-usage-tips)
+- [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
+
 
 ## Prerequisites
 

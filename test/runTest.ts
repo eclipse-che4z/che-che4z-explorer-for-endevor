@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { runTests } from 'vscode-test';
+import { downloadAndUnzipVSCode, runTests } from 'vscode-test';
 import { TestOptions } from 'vscode-test/out/runTest';
 
 async function main() {
@@ -18,17 +18,30 @@ async function main() {
     const MOCHA_grep_value =
       process.argv.length > 2 ? `(${process.argv[2]})` : '';
 
-    const testOptions: TestOptions = {
-      // Have to use insiders version if we want to run it from CLI as well (as opposed to Run from Activity Bar only)
-      // See: https://code.visualstudio.com/api/working-with-extensions/testing-extension#tips
-      version: 'insiders',
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      launchArgs: ['--disable-extensions'],
-      extensionTestsEnv: {
-        MOCHA_grep: MOCHA_grep_value,
-      },
-    };
+    let testOptions: TestOptions;
+    // Have to use insiders version if we want to run it from CLI as well (as opposed to Run from Activity Bar only)
+    // See: https://code.visualstudio.com/api/working-with-extensions/testing-extension#tips
+    if (process.argv.length > 2 && process.argv[2] == 'insiders') {
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
+        testOptions = {
+            vscodeExecutablePath,
+            extensionDevelopmentPath,
+            extensionTestsPath,
+            launchArgs: ['--disable-extensions'],
+            extensionTestsEnv: {
+                MOCHA_grep: MOCHA_grep_value,
+            }
+        }
+    } else {
+        testOptions = {
+            extensionDevelopmentPath,
+            extensionTestsPath,
+            launchArgs: ['--disable-extensions'],
+            extensionTestsEnv: {
+                MOCHA_grep: MOCHA_grep_value,
+            }
+        }
+    }
     // Download VS Code, unzip it and run the integration test
     await runTests(testOptions);
   } catch (err) {
