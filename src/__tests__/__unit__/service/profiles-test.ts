@@ -25,7 +25,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-// import * as vscode from "vscode";
+import * as vscode from "vscode";
 
 import { CliProfileManager, IProfileLoaded, Logger } from "@zowe/imperative";
 import { logger } from "../../../globals";
@@ -34,8 +34,10 @@ import { Profiles } from "../../../service/Profiles";
 const log: Logger = Logger.getAppLogger();
 
 jest.mock("@zowe/imperative/lib/console/src/Console"); // disable imperative logging
-const vscode = require("vscode");
-jest.mock("vscode");
+// const vscode = require("vscode");
+// jest.mock("vscode");
+
+process.vscode = vscode;
 
 const mockZosmfProfile: IProfileLoaded = {
     failNotFound: false,

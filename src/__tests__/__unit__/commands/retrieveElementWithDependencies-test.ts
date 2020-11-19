@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-// import * as vscode from "vscode";
+import * as vscode from "vscode";
 
 import { QueryACMComponents } from "@broadcom/endevor-for-zowe-cli";
 import { retrieveWithDependencies } from "../../../commands/RetrieveElementWithDependencies";
@@ -24,8 +24,10 @@ import { Repository } from "../../../model/Repository";
 import { RetrieveElementService } from "../../../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
 
-const vscode = require("vscode");
-jest.mock("vscode");
+// const vscode = require("vscode");
+// jest.mock("vscode");
+
+process.vscode = vscode;
 
 describe("Test function retrieveWithDependencies (retrieve element with dependencies)", () => {
     // Mock the workspace folder so it is selected/unselected, as needed
