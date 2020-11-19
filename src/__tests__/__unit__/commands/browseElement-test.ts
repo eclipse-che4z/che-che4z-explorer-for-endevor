@@ -22,9 +22,6 @@ import { EndevorQualifier } from "../../../model/IEndevorQualifier";
 import { Repository } from "../../../model/Repository";
 import { EndevorElementNode } from "../../../ui/tree/EndevorNodes";
 
-// const vscode = require("vscode");
-// jest.mock("vscode");
-
 process.vscode = vscode;
 
 describe("Test function browseElement", () => {

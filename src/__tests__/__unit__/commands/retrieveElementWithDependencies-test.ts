@@ -24,9 +24,6 @@ import { Repository } from "../../../model/Repository";
 import { RetrieveElementService } from "../../../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
 
-// const vscode = require("vscode");
-// jest.mock("vscode");
-
 process.vscode = vscode;
 
 describe("Test function retrieveWithDependencies (retrieve element with dependencies)", () => {
