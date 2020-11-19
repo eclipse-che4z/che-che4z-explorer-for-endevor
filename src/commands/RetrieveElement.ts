@@ -13,51 +13,46 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from 'vscode';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
-import { Repository } from '../model/Repository';
-import { RetrieveElementService } from '../service/RetrieveElementService';
-import { EndevorElementNode, EndevorNode } from '../ui/tree/EndevorNodes';
-import { prepareElementNodesForRetrieve } from '../utils';
-import { logger } from '../globals';
+import * as vscode from "vscode";
+import { logger } from "../globals";
+import { EndevorQualifier } from "../model/IEndevorQualifier";
+import { Repository } from "../model/Repository";
+import { RetrieveElementService } from "../service/RetrieveElementService";
+import { EndevorElementNode, EndevorNode } from "../ui/tree/EndevorNodes";
+import { prepareElementNodesForRetrieve } from "../utils";
 
-export function retrieveElement(
-  arg: any,
-  selection: EndevorNode[],
-  retrieveElementService: RetrieveElementService
-) {
-  vscode.window.withProgress(
-    {
-      cancellable: true,
-      location: vscode.ProgressLocation.Notification,
-      title: 'Retrieving element',
-    },
-    async (progress, token) => {
-      token.onCancellationRequested(() => {
-        logger.info('Retrieve Cancelled.');
-      });
-      const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(
-        selection
-      );
-      if (processedSelection.length === 0) {
-        processedSelection.push(arg);
-      }
-      const incrementNumber = 100 / processedSelection.length;
-      if (
-        !(
-          vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders.length > 0
-        )
-      ) {
-        logger.error('Specify workspace before retrieving elements');
-        return;
-      }
-      const workspace = vscode.workspace.workspaceFolders[0];
-      for (let i = 0; i < processedSelection.length; i++) {
-        if (token.isCancellationRequested) {
-          return;
-        }
-        const currentElement: EndevorElementNode = processedSelection[i];
+export async function retrieveElement(
+        arg: any,
+        selection: EndevorNode[],
+        retrieveElementService: RetrieveElementService,
+    ) {
+    await vscode.window.withProgress(
+        {
+            cancellable: true,
+            location: vscode.ProgressLocation.Notification,
+            title: "Retrieving element",
+        },
+        async (progress, token) => {
+            if (token) {
+                token.onCancellationRequested(() => {
+                    logger.info("Retrieve Cancelled.");
+                });
+            }
+            const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(selection);
+            if (processedSelection.length === 0) {
+                processedSelection.push(arg);
+            }
+            const incrementNumber = 100 / processedSelection.length;
+            if (!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)) {
+                logger.error("Specify workspace before retrieving elements");
+                return;
+            }
+            const workspace = vscode.workspace.workspaceFolders[0];
+            for (let i = 0; i < processedSelection.length; i++) {
+                if (token && token.isCancellationRequested) {
+                    return;
+                }
+                const currentElement: EndevorElementNode = processedSelection[i];
 
         const repo: Repository | undefined = currentElement.getRepository();
         const elementName: string | undefined = currentElement.label;

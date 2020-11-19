@@ -23,7 +23,7 @@ export async function browseElement(arg: any) {
   const repo: Repository = arg.getRepository();
   const elementName: string = arg.label;
   const eq: EndevorQualifier = arg.getQualifier();
-  vscode.window.withProgress(
+  await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Loading: ${elementName}...`,

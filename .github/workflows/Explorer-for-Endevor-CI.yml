@@ -1,0 +1,47 @@
+name: Explorer for Endevor CI
+
+on:
+  push:
+     branches:
+      - master
+      - development
+  pull_request:
+    branches:
+      - master
+      - development
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Continue to run tests on the other systems if one fails
+      fail-fast: false
+      matrix:
+        node-version: [10.x, 12.x]
+        # order operating systems from best to worst
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm install
+
+      - run: npm run compile
+
+      # run audit on 1 system to avoid overloading the audit API
+      - name: Audit from Windows / Node 12.x
+        run: npm audit --production --audit-level=moderate
+        if: matrix.os == 'windows-latest' && matrix.node-version == '12.x'
+
+      - name: Extension Test
+        uses: GabrielBB/xvfb-action@v1.0
+        with:
+            run: npm test
+
