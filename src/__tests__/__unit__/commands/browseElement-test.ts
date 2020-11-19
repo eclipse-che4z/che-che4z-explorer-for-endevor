@@ -22,6 +22,8 @@ import { EndevorQualifier } from "../../../model/IEndevorQualifier";
 import { Repository } from "../../../model/Repository";
 import { EndevorElementNode } from "../../../ui/tree/EndevorNodes";
 
+jest.mock("vscode");
+
 describe("Test function browseElement", () => {
     // Mock vscode's progress function
     const mockWithProgress = jest.fn();

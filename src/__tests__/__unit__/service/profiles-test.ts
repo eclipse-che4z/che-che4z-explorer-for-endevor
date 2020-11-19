@@ -33,7 +33,8 @@ import { Profiles } from "../../../service/Profiles";
 
 const log: Logger = Logger.getAppLogger();
 
-jest.mock('@zowe/imperative/lib/console/src/Console'); // disable imperative logging
+jest.mock("@zowe/imperative/lib/console/src/Console"); // disable imperative logging
+jest.mock("vscode");
 
 const mockZosmfProfile: IProfileLoaded = {
     failNotFound: false,

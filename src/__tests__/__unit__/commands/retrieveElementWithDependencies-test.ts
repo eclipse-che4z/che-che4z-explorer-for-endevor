@@ -24,6 +24,8 @@ import { Repository } from "../../../model/Repository";
 import { RetrieveElementService } from "../../../service/RetrieveElementService";
 import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
 
+jest.mock("vscode");
+
 describe("Test function retrieveWithDependencies (retrieve element with dependencies)", () => {
     // Mock the workspace folder so it is selected/unselected, as needed
     const mockWorkspaceFolders = ["testFolder"];
