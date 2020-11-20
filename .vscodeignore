@@ -9,18 +9,18 @@
 #
 # Contributors:
 #   Broadcom, Inc. - initial API and implementation
-apimock/**
-.vscode/**
-.vscode-test/**
-out/test/**
-src/**
-.gitignore
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/*.map
-**/*.ts
-_cacache
-_npx
-anonymous-cli-metrics.json
-Jenkinsfile
-sonar-project.properties
+
+# Ignore everything
+*
+**/*
+
+# Allow the following
+!out/**
+!resources/**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE
+!node_modules
+!log4jsconfig.json
+
