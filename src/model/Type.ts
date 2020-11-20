@@ -12,41 +12,40 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IType } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { EndevorQualifier } from "./IEndevorQualifier";
+import { IType } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
 
 export class Type extends EndevorEntity implements IType {
-    envName: string;
-    sysName: string;
-    stgNum: string;
-    typeName: string;
-    repository: Repository;
-    fileExt: string;
+  envName: string;
+  sysName: string;
+  stgNum: string;
+  typeName: string;
+  repository: Repository;
+  fileExt: string;
 
-    constructor(repo: Repository, type: IType) {
-        super();
-        this.envName = type.envName;
-        this.sysName = type.sysName;
-        this.stgNum = type.stgNum;
-        this.typeName = type.typeName;
-        this.fileExt = type.fileExt;
-        this.repository = repo;
-    }
+  constructor(repo: Repository, type: IType) {
+    super();
+    this.envName = type.envName;
+    this.sysName = type.sysName;
+    this.stgNum = type.stgNum;
+    this.typeName = type.typeName;
+    this.fileExt = type.fileExt;
+    this.repository = repo;
+  }
 
-    public getName(): string {
-        return this.typeName;
-    }
-    public getDescription(): string {
-        return "";
-    }
+  public getName(): string {
+    return this.typeName;
+  }
+  public getDescription(): string {
+    return '';
+  }
 
-    public getTypeName(): string {
-        return this.typeName;
-    }
+  public getTypeName(): string {
+    return this.typeName;
+  }
 
-    public getRepository(): Repository {
-        return this.repository;
-    }
+  public getRepository(): Repository {
+    return this.repository;
+  }
 }

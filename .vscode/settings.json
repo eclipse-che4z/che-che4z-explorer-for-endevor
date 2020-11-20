@@ -12,15 +12,17 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
- // Place your settings in this file to overwrite default and user settings.
+// Place your settings in this file to overwrite default and user settings.
 {
-    "files.exclude": {
-        "**/node_modules": true,
-        "out": false
-    },
-    "search.exclude": {
-        "out": true // set this to false to include "out" folder in search results
-    },
-    // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
-    "typescript.tsc.autoDetect": "off"
+  "search.exclude": {
+    "out": true // set this to false to include "out" folder in search results
+  },
+  // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
+  "typescript.tsc.autoDetect": "off",
+  // Standardize on the Prettier formatter
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // Enforce eslint and prettier on save
+  "editor.formatOnSave": true,
+  "eslint.alwaysShowStatus": true,
+  "files.insertFinalNewline": true
 }

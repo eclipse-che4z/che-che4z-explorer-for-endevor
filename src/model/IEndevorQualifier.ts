@@ -13,10 +13,10 @@
  */
 
 export interface EndevorQualifier {
-    env?: string;
-    stage?: string;
-    system?: string;
-    subsystem?: string;
-    type?: string;
-    element?: string;
+  env?: string;
+  stage?: string;
+  system?: string;
+  subsystem?: string;
+  type?: string;
+  element?: string;
 }

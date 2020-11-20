@@ -12,19 +12,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Filter } from "./IEndevorEntities";
+import { Filter } from './IEndevorEntities';
 
 export interface Host {
-    id?: number;
-    name: string;
-    url: string;
-    username?: string;
-    password?: string;
-    datasource: string;
-    filters?: Filter[];
-    profileLabel?: string;
+  id?: number;
+  name: string;
+  url: string;
+  username?: string;
+  password?: string;
+  datasource: string;
+  filters?: Filter[];
+  profileLabel?: string;
 }
 
 export interface DataSource {
-    name: string;
+  name: string;
 }

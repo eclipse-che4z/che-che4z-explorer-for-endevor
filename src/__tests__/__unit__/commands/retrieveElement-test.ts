@@ -12,114 +12,170 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from "vscode";
+import * as vscode from 'vscode';
 
-import { retrieveElement } from "../../../commands/RetrieveElement";
-import { logger } from "../../../globals";
-import { Element } from "../../../model/Element";
-import { IElement } from "../../../model/IEndevorEntities";
-import { EndevorQualifier } from "../../../model/IEndevorQualifier";
-import { Repository } from "../../../model/Repository";
-import { RetrieveElementService } from "../../../service/RetrieveElementService";
-import { EndevorElementNode, EndevorNode } from "../../../ui/tree/EndevorNodes";
+import { retrieveElement } from '../../../commands/RetrieveElement';
+import { logger } from '../../../globals';
+import { Element } from '../../../model/Element';
+import { IElement } from '../../../model/IEndevorEntities';
+import { EndevorQualifier } from '../../../model/IEndevorQualifier';
+import { Repository } from '../../../model/Repository';
+import { RetrieveElementService } from '../../../service/RetrieveElementService';
+import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
 
-describe("Test function retrieveElement", () => {
-    // Mock the workspace folder so it is selected/unselected, as needed
-    const mockWorkspaceFolders = ["testFolder"];
-    Object.defineProperty(vscode.workspace, "workspaceFolders", { value: mockWorkspaceFolders });
+describe('Test function retrieveElement', () => {
+  // Mock the workspace folder so it is selected/unselected, as needed
+  const mockWorkspaceFolders = ['testFolder'];
+  Object.defineProperty(vscode.workspace, 'workspaceFolders', {
+    value: mockWorkspaceFolders,
+  });
 
-    // Mock vscode's progress function
-    const mockWithProgress = jest.fn();
-    Object.defineProperty(vscode, "ProgressLocation", { value: { Notification: 15 } });
-    Object.defineProperty(vscode.window, "withProgress", { value: mockWithProgress });
+  // Mock vscode's progress function
+  const mockWithProgress = jest.fn();
+  Object.defineProperty(vscode, 'ProgressLocation', {
+    value: { Notification: 15 },
+  });
+  Object.defineProperty(vscode.window, 'withProgress', {
+    value: mockWithProgress,
+  });
 
-    // Mock the elements, nodes, and repo
-    const mockRetrieveElement = jest.fn();
-    const testRetrieveEltService: RetrieveElementService = new RetrieveElementService();
-    Object.defineProperty(testRetrieveEltService, "retrieveElement", { value: mockRetrieveElement });
-    const testRepo = new Repository("testRepo", "https://example.com:1234", "testUser", "testPass", "testRepo", "testConnLabel");
-    const testIElements: IElement[] = [{elmName: "elmTest1", fullElmName: "elmTest1", elmVVLL: "1100",
-                                        envName: "envTest", sysName: "sysTest", sbsName: "sbsTest",
-                                        stgNum: "1", typeName: "COBOL"},
-                                       {elmName: "elmTest2", fullElmName: "elmTest2", elmVVLL: "1100",
-                                        envName: "envTest", sysName: "sysTest", sbsName: "sbsTest",
-                                        stgNum: "1", typeName: "COBOL"}];
-    const testElements: Element[] = [new Element(testRepo, testIElements[0]),
-                                     new Element(testRepo, testIElements[1])];
-    const qualifier1: EndevorQualifier = {
-        element: testElements[0].elmName,
-        env: "envTest",
-        stage: "1",
-        subsystem: "sbsTest",
-        system: "sysTest",
-        type: "COBOL",
-    };
-    const qualifier2: EndevorQualifier = {
-        element: testElements[1].elmName,
-        env: "envTest",
-        stage: "1",
-        subsystem: "sbsTest",
-        system: "sysTest",
-        type: "COBOL",
-    };
-    const testEndevorElementNodes: EndevorNode[] = [new EndevorElementNode(testElements[0], qualifier1),
-                                                    new EndevorElementNode(testElements[1], qualifier2)];
+  // Mock the elements, nodes, and repo
+  const mockRetrieveElement = jest.fn();
+  const testRetrieveEltService: RetrieveElementService = new RetrieveElementService();
+  Object.defineProperty(testRetrieveEltService, 'retrieveElement', {
+    value: mockRetrieveElement,
+  });
+  const testRepo = new Repository(
+    'testRepo',
+    'https://example.com:1234',
+    'testUser',
+    'testPass',
+    'testRepo',
+    'testConnLabel'
+  );
+  const testIElements: IElement[] = [
+    {
+      elmName: 'elmTest1',
+      fullElmName: 'elmTest1',
+      elmVVLL: '1100',
+      envName: 'envTest',
+      sysName: 'sysTest',
+      sbsName: 'sbsTest',
+      stgNum: '1',
+      typeName: 'COBOL',
+    },
+    {
+      elmName: 'elmTest2',
+      fullElmName: 'elmTest2',
+      elmVVLL: '1100',
+      envName: 'envTest',
+      sysName: 'sysTest',
+      sbsName: 'sbsTest',
+      stgNum: '1',
+      typeName: 'COBOL',
+    },
+  ];
+  const testElements: Element[] = [
+    new Element(testRepo, testIElements[0]),
+    new Element(testRepo, testIElements[1]),
+  ];
+  const qualifier1: EndevorQualifier = {
+    element: testElements[0].elmName,
+    env: 'envTest',
+    stage: '1',
+    subsystem: 'sbsTest',
+    system: 'sysTest',
+    type: 'COBOL',
+  };
+  const qualifier2: EndevorQualifier = {
+    element: testElements[1].elmName,
+    env: 'envTest',
+    stage: '1',
+    subsystem: 'sbsTest',
+    system: 'sysTest',
+    type: 'COBOL',
+  };
+  const testEndevorElementNodes: EndevorNode[] = [
+    new EndevorElementNode(testElements[0], qualifier1),
+    new EndevorElementNode(testElements[1], qualifier2),
+  ];
 
-    // All spies are listed here
-    const openDocumentSpy = jest.spyOn(vscode.workspace, "openTextDocument");
-    const retrieveElementErrorSpy = jest.spyOn(testRetrieveEltService, "processRetrieveElementError");
-    const loggerErrorSpy = jest.spyOn(logger, "error");
+  // All spies are listed here
+  const openDocumentSpy = jest.spyOn(vscode.workspace, 'openTextDocument');
+  const retrieveElementErrorSpy = jest.spyOn(
+    testRetrieveEltService,
+    'processRetrieveElementError'
+  );
+  const loggerErrorSpy = jest.spyOn(logger, 'error');
 
-    beforeEach(() => {
-        // Redefine mocks, because we clear them after each run
-        mockWithProgress.mockImplementation(async (progLocation, callback) => {
-            const ProgressLocation = {
-                Notification: 15,
-                report: jest.fn(),
-            };
-            return await callback(ProgressLocation);
-        });
-
-        mockRetrieveElement.mockReturnValue("test/elt/path");
+  beforeEach(() => {
+    // Redefine mocks, because we clear them after each run
+    mockWithProgress.mockImplementation(async (progLocation, callback) => {
+      const ProgressLocation = {
+        Notification: 15,
+        report: jest.fn(),
+      };
+      return await callback(ProgressLocation);
     });
 
-    afterEach(() => {
-        // This is here to clear the spies
-        jest.clearAllMocks();
-    });
+    mockRetrieveElement.mockReturnValue('test/elt/path');
+  });
 
-    test("Should preview one element in the text editor, if passed in as arg", async () => {
-        await retrieveElement(testEndevorElementNodes[0], [], testRetrieveEltService);
+  afterEach(() => {
+    // This is here to clear the spies
+    jest.clearAllMocks();
+  });
 
-        expect(openDocumentSpy).toBeCalledWith("test/elt/path");
-    });
+  test('Should preview one element in the text editor, if passed in as arg', async () => {
+    await retrieveElement(
+      testEndevorElementNodes[0],
+      [],
+      testRetrieveEltService
+    );
 
-    test("Should preview many elements in the text editor, if passed in as array", async () => {
-        mockRetrieveElement.mockReturnValueOnce("test/elt/path/first");
+    expect(openDocumentSpy).toBeCalledWith('test/elt/path');
+  });
 
-        await retrieveElement(null, testEndevorElementNodes, testRetrieveEltService);
+  test('Should preview many elements in the text editor, if passed in as array', async () => {
+    mockRetrieveElement.mockReturnValueOnce('test/elt/path/first');
 
-        expect(openDocumentSpy).toBeCalledTimes(2);
-        expect(openDocumentSpy.mock.calls[0]).toEqual(["test/elt/path/first"]);
-        expect(openDocumentSpy.mock.calls[1]).toEqual(["test/elt/path"]);
-    });
+    await retrieveElement(
+      null,
+      testEndevorElementNodes,
+      testRetrieveEltService
+    );
 
-    test("Should throw an error, if element cannot be retrieved from Endevor", async () => {
-        mockRetrieveElement.mockRejectedValueOnce("test error!");
+    expect(openDocumentSpy).toBeCalledTimes(2);
+    expect(openDocumentSpy.mock.calls[0]).toEqual(['test/elt/path/first']);
+    expect(openDocumentSpy.mock.calls[1]).toEqual(['test/elt/path']);
+  });
 
-        await retrieveElement(testEndevorElementNodes[0], [], testRetrieveEltService);
+  test('Should throw an error, if element cannot be retrieved from Endevor', async () => {
+    mockRetrieveElement.mockRejectedValueOnce('test error!');
 
-        expect(retrieveElementErrorSpy).toBeCalledWith("test error!");
-    });
+    await retrieveElement(
+      testEndevorElementNodes[0],
+      [],
+      testRetrieveEltService
+    );
 
-    test("Should throw an error, if no folder is open in the workspace", async () => {
-        mockWorkspaceFolders.pop();
+    expect(retrieveElementErrorSpy).toBeCalledWith('test error!');
+  });
 
-        await retrieveElement(testEndevorElementNodes[0], [], testRetrieveEltService);
+  test('Should throw an error, if no folder is open in the workspace', async () => {
+    mockWorkspaceFolders.pop();
 
-        expect(loggerErrorSpy).toBeCalledWith("Specify workspace before retrieving elements");
-    });
+    await retrieveElement(
+      testEndevorElementNodes[0],
+      [],
+      testRetrieveEltService
+    );
+
+    expect(loggerErrorSpy).toBeCalledWith(
+      'Specify workspace before retrieving elements'
+    );
+  });
 });
