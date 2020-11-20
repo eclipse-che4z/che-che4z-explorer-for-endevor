@@ -1,3 +1,0 @@
-- create profile with same name (error OK)
-- bad credentials
-- load default profile (trace message in place)
