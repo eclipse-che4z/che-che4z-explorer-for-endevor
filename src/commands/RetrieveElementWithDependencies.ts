@@ -91,7 +91,6 @@ export function retrieveWithDependencies(arg: any, retrieveElementService: Retri
  * @param element
  */
 function createElementQualifier(element: Element): EndevorQualifier {
-    // tslint:disable-next-line: prefer-immediate-return
     const eQualifier: EndevorQualifier = {
         element: element.elmName,
         env: element.envName,
@@ -114,7 +113,6 @@ function createElementFromQualifier(repo: Repository, eq: EndevorQualifier): Ele
         elmName: eq.element!,
         envName: eq.env!,
         sysName: eq.system!,
-        // tslint:disable-next-line:object-literal-sort-keys
         sbsName: eq.subsystem!,
         stgNum: eq.stage!,
         typeName: eq.type!,

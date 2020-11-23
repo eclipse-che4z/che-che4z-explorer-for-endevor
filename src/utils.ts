@@ -29,7 +29,6 @@ export async function resolveQuickPickHelper(
     );
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class FilterItem implements QuickPickItem {
     constructor(private text: string) {}
     get label(): string {
@@ -43,7 +42,6 @@ export class FilterItem implements QuickPickItem {
     }
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class FilterDescriptor implements QuickPickItem {
     constructor(private text: string) {}
     get label(): string {

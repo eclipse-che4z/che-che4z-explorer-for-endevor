@@ -22,7 +22,6 @@ import { proxyRetrieveAcmComponents, proxyRetrieveElement, proxyListType } from 
 import { logger } from "../globals";
 
 export class RetrieveElementService {
-    // tslint:disable-next-line: no-empty
     constructor() {}
 
     public async retrieveElement(
@@ -63,7 +62,6 @@ export class RetrieveElementService {
         const el = elements[0];
         result.push(new Element(repo, el));
         if (Object.getOwnPropertyDescriptor(el, "components")) {
-            // tslint:disable-next-line: no-string-literal
             for (const dep of el["components"]) {
                 if (dep.elmName.trim()) {
                     const element: Element = new Element(repo, dep);

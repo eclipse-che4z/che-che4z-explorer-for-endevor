@@ -136,7 +136,6 @@ export class EndevorController {
      * In case `id` is not present in the settings.json, function [updateIDs](#EndevorController.updateIDs) is used to determine it
      * and store in the settings.json.
      */
-    // tslint:disable-next-line:member-ordering
     public loadRepositories() {
         const connectionsFromSettings: Map <string, Host[]> = new Map();
         SettingsFacade.listConnections().forEach(conn => connectionsFromSettings.set(conn.name, conn.hosts));
@@ -197,7 +196,6 @@ export class EndevorController {
         return false;
     }
 
-    // tslint:disable-next-line: member-ordering
     public findNodeByRepoID(id: number | undefined, connectionLabel: string): EndevorNode | undefined {
         if (id === undefined) {
             return undefined;
@@ -214,7 +212,6 @@ export class EndevorController {
         return undefined;
     }
 
-    // tslint:disable-next-line: member-ordering
     public findNodeByConnectionName(name: string): EndevorNode | undefined {
         if (!name) {
             return undefined;

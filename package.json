@@ -310,8 +310,6 @@
         "@types/vscode": "^1.32.0",
         "glob": "^7.1.6",
         "mocha": "^8.2.0",
-        "tslint": "^5.18.0",
-        "tslint-sonarts": "^1.9.0",
         "ts-node": "^9.0.0",
         "typescript": "^3.5.3",
         "vscode-test": "^1.4.1",

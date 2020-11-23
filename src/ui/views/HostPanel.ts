@@ -63,7 +63,6 @@ export class HostPanel {
                         try {
                             const session = await utils.buildSession(newRepo);
                             const datasources: IEndevorInstance[] = await ListInstance.listInstance(session);
-                            // tslint:disable-next-line: no-commented-code
                             const dsNames: string[] = [];
                             for (const ds of datasources) {
                                 dsNames.push(ds.name as string);

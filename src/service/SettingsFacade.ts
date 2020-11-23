@@ -29,7 +29,6 @@ export class SettingsFacade {
 
     public static listRepositories(connectionLabel: string): Repository[] {
         const repos: Repository[] = [];
-        // tslint:disable-next-line: max-line-length
         const allConnectionsInSettings: any[] = vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
         const connectionInSettings = allConnectionsInSettings.find(connection => connection.name === connectionLabel);
         const hosts: Host[] = connectionInSettings ? connectionInSettings.hosts : [];
@@ -65,7 +64,6 @@ export class SettingsFacade {
             const hostsArray: any[] = [];
             const toPush = {
                 name: connection.getName(),
-                // tslint:disable-next-line: object-literal-sort-keys
                 hosts: hostsArray
             };
             connection.getRepositoryList().forEach(repo => {

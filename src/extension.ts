@@ -41,7 +41,6 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         // Initialize Imperative Logger and load Profiles
         const loggerConfig = require(path.join(context.extensionPath, "log4jsconfig.json"));
-        // tslint:disable-next-line: max-line-length
         loggerConfig.log4jsConfig.appenders.default.filename = path.join(context.extensionPath, "logs", "imperative.log");
         loggerConfig.log4jsConfig.appenders.imperative.filename = path.join(context.extensionPath, "logs", "imperative.log");
         loggerConfig.log4jsConfig.appenders.app.filename = path.join(context.extensionPath, "logs", "zowe.log");
@@ -78,7 +77,6 @@ export async function activate(context: vscode.ExtensionContext) {
             );
         });
     } catch (ignore) {
-        // tslint:disable-next-line:no-console
         console.warn(ignore);
         vscode.commands.executeCommand("setContext", "multipleSelection", false);
     }
@@ -146,5 +144,4 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 }
 
-// tslint:disable-next-line: no-empty
 export function deactivate() {}

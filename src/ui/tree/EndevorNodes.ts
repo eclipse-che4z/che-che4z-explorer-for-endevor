@@ -12,7 +12,6 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-// tslint:disable: max-classes-per-file
 import * as vscode from "vscode";
 import { createEmptyNode, createPathNodes } from "../../FilterUtils";
 import { Element } from "../../model/Element";
@@ -242,7 +241,6 @@ export class EndevorFilterPathNode extends EndevorNode {
                 env: element.envName,
                 stage: element.stgNum,
                 system: element.sysName,
-                // tslint:disable-next-line:object-literal-sort-keys
                 subsystem: element.sbsName,
                 type: element.typeName,
                 element: element.fullElmName,
