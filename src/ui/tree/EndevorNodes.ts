@@ -19,11 +19,10 @@ import * as vscode from 'vscode';
 import { createEmptyNode, createPathNodes } from '../../FilterUtils';
 import { Element } from '../../model/Element';
 import { Connection } from '../../model/Connection';
-import { EndevorEntity } from '../../model/EndevorEntity';
+import { EndevorEntity } from '../../model/IEndevorEntity';
 import { EndevorFilter } from '../../model/EndevorFilter';
 import { Environment } from '../../model/Environment';
 import { EndevorQualifier } from '../../model/IEndevorQualifier';
-import { Repository } from '../../model/Repository';
 import { Stage } from '../../model/Stage';
 import { SubSystem } from '../../model/SubSystem';
 import { System } from '../../model/System';
@@ -38,6 +37,7 @@ import {
 } from '../../service/EndevorCliProxy';
 import { Session } from '@zowe/imperative';
 import { logger } from '../../globals';
+import { IEndevorElementNode } from '../../model/IEndevorElementNode';
 
 export class EndevorNode extends vscode.TreeItem {
   private entity?: EndevorEntity;
@@ -88,7 +88,7 @@ export class EndevorNode extends vscode.TreeItem {
     this.entity = value;
   }
 
-  public getRepository(): Repository | undefined {
+  public getRepository(): EndevorEntity | undefined {
     if (this.entity) {
       return this.entity.getRepository();
     }
@@ -139,9 +139,9 @@ export class EndevorNode extends vscode.TreeItem {
 }
 
 export class EndevorBrowsingNode extends EndevorNode {
-  private repository?: Repository;
+  private repository?: EndevorEntity;
 
-  constructor(name: string, repo: Repository | undefined) {
+  constructor(name: string, repo: EndevorEntity | undefined) {
     super();
     this.label = name;
     this.repository = repo;
@@ -184,12 +184,12 @@ export class EndevorBrowsingNode extends EndevorNode {
     );
   }
 
-  public getRepository(): Repository | undefined {
+  public getRepository(): EndevorEntity | undefined {
     return this.repository;
   }
 
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     if (!repo) {
       return Promise.resolve([]);
     }
@@ -232,8 +232,12 @@ export class EndevorBrowsingNode extends EndevorNode {
 
 export class EndevorFilterPathNode extends EndevorNode {
   private elements: Element[];
-  private repository?: Repository;
-  constructor(name: string, repo: Repository | undefined, elements: Element[]) {
+  private repository?: EndevorEntity;
+  constructor(
+    name: string,
+    repo: EndevorEntity | undefined,
+    elements: Element[]
+  ) {
     super();
     this.elements = elements;
     this.label = name;
@@ -241,7 +245,7 @@ export class EndevorFilterPathNode extends EndevorNode {
   }
 
   public lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     if (!repo) {
       return Promise.resolve([]);
     }
@@ -269,7 +273,7 @@ export class EndevorFilterPathNode extends EndevorNode {
     return this.elements;
   }
 
-  public getRepository(): Repository | undefined {
+  public getRepository(): EndevorEntity | undefined {
     return this.repository;
   }
 
@@ -279,9 +283,9 @@ export class EndevorFilterPathNode extends EndevorNode {
 }
 
 export class EmptyNode extends EndevorNode {
-  private repository?: Repository;
+  private repository?: EndevorEntity;
   private message: string;
-  constructor(name: string, repo: Repository | undefined, message: string) {
+  constructor(name: string, repo: EndevorEntity | undefined, message: string) {
     super();
     this.label = name;
     this.repository = repo;
@@ -293,7 +297,7 @@ export class EmptyNode extends EndevorNode {
     return this.message;
   }
 
-  public getRepository(): Repository | undefined {
+  public getRepository(): EndevorEntity | undefined {
     return this.repository;
   }
 
@@ -304,7 +308,7 @@ export class EmptyNode extends EndevorNode {
 
 export class FilterNode extends EndevorNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const filterEntity:
       | EndevorFilter
       | undefined = this.getEntity() as EndevorFilter;
@@ -366,7 +370,9 @@ export class EndevorQualifiedNode extends EndevorNode {
   }
 }
 
-export class EndevorElementNode extends EndevorNode {
+export class EndevorElementNode
+  extends EndevorNode
+  implements IEndevorElementNode {
   private qualifier?: EndevorQualifier;
 
   constructor(entity: EndevorEntity, qualifier: EndevorQualifier) {
@@ -381,7 +387,7 @@ export class EndevorElementNode extends EndevorNode {
 
 export class EnvironmentNode extends EndevorQualifiedNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const envEntity: Environment | undefined = this.getEntity() as Environment;
     const nodeQualEnv: EndevorQualifier | undefined = this.getQualifier();
     if (!envEntity || !nodeQualEnv || !repo) {
@@ -419,7 +425,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
 
 export class StageNode extends EndevorQualifiedNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const stageEntity: Stage | undefined = this.getEntity() as Stage;
     const nodeQualStage: EndevorQualifier | undefined = this.getQualifier();
     if (!stageEntity || !nodeQualStage || !repo) {
@@ -462,7 +468,7 @@ export class StageNode extends EndevorQualifiedNode {
 
 export class SystemNode extends EndevorQualifiedNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const systemEntity: System | undefined = this.getEntity() as System;
     const nodeQualSystem: EndevorQualifier | undefined = this.getQualifier();
     if (!systemEntity || !nodeQualSystem || !repo) {
@@ -500,7 +506,7 @@ export class SystemNode extends EndevorQualifiedNode {
 
 export class SubsystemNode extends EndevorQualifiedNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const subsysEntity: SubSystem | undefined = this.getEntity() as SubSystem;
     const nodeQualSubsys: EndevorQualifier | undefined = this.getQualifier();
     if (!subsysEntity || !nodeQualSubsys || !repo) {
@@ -544,7 +550,7 @@ export class SubsystemNode extends EndevorQualifiedNode {
 
 export class TypeNode extends EndevorQualifiedNode {
   public async lazyLoadChildren(): Promise<EndevorNode[]> {
-    const repo: Repository | undefined = this.getRepository();
+    const repo: EndevorEntity | undefined = this.getRepository();
     const nodeQualType: EndevorQualifier | undefined = this.getQualifier();
     if (!nodeQualType || !repo) {
       return Promise.resolve([]);

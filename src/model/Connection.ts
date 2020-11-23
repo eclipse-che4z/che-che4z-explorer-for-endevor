@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './EndevorEntity';
+import { EndevorEntity } from './IEndevorEntity';
 import { Repository } from './Repository';
 import { IProfileLoaded, IProfile } from '@zowe/imperative';
 

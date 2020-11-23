@@ -13,11 +13,11 @@
  */
 
 import { IElement } from './IEndevorEntities';
-import { EndevorEntity } from './EndevorEntity';
-import { Repository } from './Repository';
+import { IEndevorEntity } from './IEndevorEntity';
 import { EndevorQualifier } from './IEndevorQualifier';
+import { Repository } from './Repository';
 
-export class Element extends EndevorEntity implements IElement {
+export class Element implements IEndevorEntity {
   envName: string;
   sysName: string;
   sbsName: string;
@@ -29,7 +29,6 @@ export class Element extends EndevorEntity implements IElement {
   repository: Repository;
 
   constructor(repo: Repository, element: IElement) {
-    super();
     this.elmName = element.elmName;
     this.fullElmName = element.fullElmName;
     this.elmVVLL = element.elmVVLL;

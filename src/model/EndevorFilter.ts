@@ -12,26 +12,24 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './EndevorEntity';
+import { EndevorEntity } from './IEndevorEntity';
 import * as constants from '../constants';
-import { Repository } from './Repository';
 import { Element } from './Element';
 import { EndevorQualifier } from './IEndevorQualifier';
 
 export const FILTER_ALL_STRING = '*/*/*/*/*/*';
 
-export class EndevorFilter extends EndevorEntity {
+export class EndevorFilter implements EndevorEntity {
   private _envFilter: string;
   private _stageFilter: string;
   private _systemFilter: string;
   private _subsysFilter: string;
   private _typeFilter: string;
   private _elementFilter: string;
-  private repository: Repository;
+  private repository: EndevorEntity;
   private elements: Element[];
 
-  constructor(repository: Repository, filterString: string) {
-    super();
+  constructor(repository: EndevorEntity, filterString: string) {
     this.repository = repository;
     this._envFilter = constants.ASTERISK;
     this._stageFilter = constants.ASTERISK;
@@ -76,11 +74,11 @@ export class EndevorFilter extends EndevorEntity {
   public getDescription(): string {
     return '';
   }
-  public getRepository(): Repository {
+  public getRepository(): EndevorEntity {
     return this.repository;
   }
 
-  public setRepository(value: Repository) {
+  public setRepository(value: EndevorEntity) {
     this.repository = value;
   }
 
@@ -136,17 +134,21 @@ export class EndevorFilter extends EndevorEntity {
 
   public editFilter(name: string) {
     const filters = this.getRepository().filters;
-    const index = filters.indexOf(this);
-    if (index >= 0) {
-      filters[index].updateFilterString(name);
+    if (filters) {
+      const index = filters.indexOf(this);
+      if (index >= 0) {
+        filters[index].updateFilterString(name);
+      }
     }
   }
 
   public deleteFilter() {
     const filters = this.getRepository().filters;
-    const index = filters.indexOf(this);
-    if (index >= 0) {
-      filters.splice(index, 1);
+    if (filters) {
+      const index = filters.indexOf(this);
+      if (index >= 0) {
+        filters.splice(index, 1);
+      }
     }
   }
 

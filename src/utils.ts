@@ -19,9 +19,9 @@ import { ISession, Session } from '@zowe/imperative';
 import { EndevorQualifier } from './model/IEndevorQualifier';
 import { Repository } from './model/Repository';
 import { CredentialsInputBox } from './ui/tree/CredentialsInput';
-import { EndevorElementNode } from './ui/tree/EndevorNodes';
 import { QuickPickItem, QuickPick } from 'vscode';
 import { logger } from './globals';
+import { IEndevorElementNode } from './model/IEndevorElementNode';
 
 export async function resolveQuickPickHelper(
   quickpick: QuickPick<QuickPickItem>
@@ -96,10 +96,10 @@ export function constructFilterUri(uri: string): string {
 
 export function prepareElementNodesForRetrieve(
   selection: any[]
-): EndevorElementNode[] {
-  const selectedElementNodes: EndevorElementNode[] = [];
+): IEndevorElementNode[] {
+  const selectedElementNodes: IEndevorElementNode[] = [];
   for (let i = 0; i < selection.length; i++) {
-    if (selection[i] instanceof EndevorElementNode) {
+    if ('qualifier' in selection[i]) {
       selectedElementNodes.push(selection[i]);
     }
   }

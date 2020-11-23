@@ -13,20 +13,18 @@
  */
 
 import { ISystem } from './IEndevorEntities';
-import { EndevorEntity } from './EndevorEntity';
-import { Repository } from './Repository';
+import { EndevorEntity } from './IEndevorEntity';
 import { SubSystem } from './SubSystem';
 import { Type } from './Type';
 
-export class System extends EndevorEntity implements ISystem {
+export class System implements EndevorEntity {
   envName: string;
   sysName: string;
   subsystems: Map<string, SubSystem>;
   types: Map<string, Type>;
-  repository: Repository;
+  repository: EndevorEntity;
 
-  constructor(repo: Repository, system: ISystem) {
-    super();
+  constructor(repo: EndevorEntity, system: ISystem) {
     this.envName = system.envName;
     this.sysName = system.sysName;
     this.subsystems = new Map();
@@ -79,7 +77,7 @@ export class System extends EndevorEntity implements ISystem {
     return this.sysName;
   }
 
-  public getRepository(): Repository {
+  public getRepository(): EndevorEntity {
     return this.repository;
   }
 }

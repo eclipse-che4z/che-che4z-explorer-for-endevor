@@ -12,10 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from './Repository';
+import { EndevorQualifier } from './IEndevorQualifier';
 
-export abstract class EndevorEntity {
-  abstract getName(): string | undefined;
-  abstract getDescription(): string;
-  abstract getRepository(): Repository;
+export interface IEndevorElementNode {
+  qualifier?: EndevorQualifier;
+  getQualifier(): EndevorQualifier;
 }

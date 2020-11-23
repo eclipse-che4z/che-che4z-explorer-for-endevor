@@ -13,19 +13,17 @@
  */
 
 import { IType } from './IEndevorEntities';
-import { EndevorEntity } from './EndevorEntity';
-import { Repository } from './Repository';
+import { EndevorEntity } from './IEndevorEntity';
 
-export class Type extends EndevorEntity implements IType {
+export class Type implements EndevorEntity {
   envName: string;
   sysName: string;
   stgNum: string;
   typeName: string;
-  repository: Repository;
+  repository: EndevorEntity;
   fileExt: string;
 
-  constructor(repo: Repository, type: IType) {
-    super();
+  constructor(repo: EndevorEntity, type: IType) {
     this.envName = type.envName;
     this.sysName = type.sysName;
     this.stgNum = type.stgNum;
@@ -45,7 +43,7 @@ export class Type extends EndevorEntity implements IType {
     return this.typeName;
   }
 
-  public getRepository(): Repository {
+  public getRepository(): EndevorEntity {
     return this.repository;
   }
 }

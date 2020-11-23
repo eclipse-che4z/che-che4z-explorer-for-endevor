@@ -13,18 +13,16 @@
  */
 
 import { IStage } from './IEndevorEntities';
-import { EndevorEntity } from './EndevorEntity';
-import { Repository } from './Repository';
+import { EndevorEntity } from './IEndevorEntity';
 
-export class Stage extends EndevorEntity implements IStage {
+export class Stage implements EndevorEntity {
   envName: string;
   stgName: string;
   stgId: string;
   stgNum: string;
-  repository: Repository;
+  repository: EndevorEntity;
 
-  constructor(repo: Repository, stage: IStage) {
-    super();
+  constructor(repo: EndevorEntity, stage: IStage) {
     this.envName = stage.envName;
     this.stgName = stage.stgName;
     this.stgId = stage.stgId;
@@ -40,7 +38,7 @@ export class Stage extends EndevorEntity implements IStage {
     return '';
   }
 
-  public getRepository(): Repository {
+  public getRepository(): EndevorEntity {
     return this.repository;
   }
 

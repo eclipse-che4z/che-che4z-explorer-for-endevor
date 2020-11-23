@@ -12,20 +12,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './EndevorEntity';
+import { EndevorEntity } from './IEndevorEntity';
 import { IEnvironment } from './IEndevorEntities';
 import { Repository } from './Repository';
 import { Stage } from './Stage';
 import { System } from './System';
 
-export class Environment extends EndevorEntity implements IEnvironment {
+export class Environment implements EndevorEntity {
   envName: string;
   repository: Repository;
   systems: Map<string, System>;
   stages: Stage[];
 
   constructor(repository: Repository, env: IEnvironment) {
-    super();
     this.repository = repository;
     this.envName = env.envName;
     this.systems = new Map();

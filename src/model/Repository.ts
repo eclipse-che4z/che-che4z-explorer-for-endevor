@@ -12,13 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './EndevorEntity';
+import { EndevorEntity } from './IEndevorEntity';
 import { EndevorFilter, FILTER_ALL_STRING } from './EndevorFilter';
 import { Environment } from './Environment';
 import { Filter } from './IEndevorEntities';
 import { System } from './System';
 
-export class Repository extends EndevorEntity {
+export class Repository implements EndevorEntity {
   private _id?: number;
   private name: string;
   private url: string;
@@ -39,7 +39,6 @@ export class Repository extends EndevorEntity {
     profileLabel: string | undefined,
     id?: number
   ) {
-    super();
     this._id = id;
     this.name = name;
     this.url = url;
@@ -196,7 +195,7 @@ export class Repository extends EndevorEntity {
     return this.url + urlPath;
   }
 
-  public getRepository(): Repository {
+  public getRepository(): EndevorEntity {
     return this;
   }
 
