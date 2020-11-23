@@ -12,21 +12,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Element } from './Element';
-import { EndevorQualifier } from './IEndevorQualifier';
-import { Repository } from './Repository';
-
-export const FILTER_ALL_STRING = '*/*/*/*/*/*';
+import { IElement } from './IElement';
+import { IEndevorQualifier } from './IEndevorQualifier';
+import { IRepository } from './IRepository';
 
 export interface IEndevorFilter {
-  loadElements: (newElements: Element[], append: boolean) => void;
+  loadElements: (newElements: IElement[], append: boolean) => void;
   getName: () => string;
   getUri: () => string;
   getDescription: () => string;
-  getRepository: () => Repository;
-  setRepository: (value: Repository) => void;
-  getElements: () => Element[];
-  getQualifier: () => EndevorQualifier;
+  getRepository: () => IRepository;
+  setRepository: (value: IRepository) => void;
+  getElements: () => IElement[];
+  getQualifier: () => IEndevorQualifier;
   updateFilterString: (filterString: string) => void;
   editFilter: (name: string) => void;
   deleteFilter: () => void;

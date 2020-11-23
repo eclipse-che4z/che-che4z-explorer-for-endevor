@@ -1,4 +1,3 @@
-/* eslint-disable no-case-declarations */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -13,12 +12,17 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-/**
- * You forgot a switch case and your switch is not exhaustive.
- * That's why typescript compiler errors on instantiation of this class.
- */
-export class UnreachableCaseError extends Error {
-  constructor(value: never) {
-    super(`Unreachable case: ${value}`);
-  }
+import { IRepository } from './IRepository';
+
+export interface IType {
+  envName: string;
+  sysName: string;
+  stgNum: string;
+  typeName: string;
+  fileExt: string;
+  repository: IRepository;
+  getName: () => string;
+  getDescription: () => string;
+  getTypeName: () => string;
+  getRepository: () => IRepository;
 }

@@ -14,7 +14,7 @@ import * as path from 'path';
 import { URL } from 'url';
 import * as vscode from 'vscode';
 import { logger } from '../globals';
-import { IConnection } from '../model/IConnection';
+import { IConnection } from '../interface/IConnection';
 
 interface UrlValidator {
   valid: boolean;

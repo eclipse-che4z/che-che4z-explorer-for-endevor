@@ -12,16 +12,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from './model/Repository';
+// import { Repository } from './model/Repository';
 import { SettingsFacade } from './service/SettingsFacade';
 import {
   EndevorNode,
   EndevorBrowsingNode,
   FilterNode,
 } from './ui/tree/EndevorNodes';
-import { Connection } from './model/Connection';
+// import { Connection } from './model/Connection';
 import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
-import { Host } from './model/IEndevorInstance';
+import { Host } from './interface/IEndevorInstance';
+import { IConnection } from './interface/IConnection';
+import { IRepository } from './interface/IRepository';
+import { Connection } from './model/Connection';
 
 export class EndevorController {
   /**
@@ -35,7 +38,7 @@ export class EndevorController {
    */
   private _rootNode: EndevorNode = new EndevorNode(undefined);
 
-  private connections: Map<string, Connection> = new Map();
+  private connections: Map<string, IConnection> = new Map();
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
@@ -55,7 +58,7 @@ export class EndevorController {
     this._rootNode = value;
   }
 
-  public addRepository(repo: Repository, connectionLabel: string) {
+  public addRepository(repo: IRepository, connectionLabel: string) {
     if (typeof repo.id === 'undefined') {
       repo.id = this.findNextId(connectionLabel);
     }
@@ -72,7 +75,7 @@ export class EndevorController {
     });
   }
 
-  public getConnections(): Connection[] {
+  public getConnections(): IConnection[] {
     return Array.from(this.connections.values());
   }
   public addConnection(connection: Connection) {
@@ -168,10 +171,10 @@ export class EndevorController {
         connName
       );
       if (connNode) {
-        const reposFromSettings: Repository[] = SettingsFacade.listRepositories(
+        const reposFromSettings: IRepository[] = SettingsFacade.listRepositories(
           connName
         );
-        const updatedRepos: Map<string, Repository> = new Map();
+        const updatedRepos: Map<string, IRepository> = new Map();
         reposFromSettings.forEach((settingsRepo) => {
           const repoNode:
             | EndevorNode
@@ -179,9 +182,9 @@ export class EndevorController {
             settingsRepo.id,
             connName
           );
-          let repoToKeep: Repository = settingsRepo;
+          let repoToKeep: IRepository = settingsRepo;
           if (repoNode) {
-            const modelRepo: Repository | undefined = repoNode.getRepository();
+            const modelRepo: IRepository | undefined = repoNode.getRepository();
             if (modelRepo) {
               if (modelRepo.isEqual(settingsRepo)) {
                 this.rootNode.needReload = true;
@@ -239,7 +242,7 @@ export class EndevorController {
     const connection = this.findNodeByConnectionName(connectionLabel);
     if (connection) {
       for (const node of connection.children) {
-        const nodeRepo: Repository | undefined = node.getRepository();
+        const nodeRepo: IRepository | undefined = node.getRepository();
         if (nodeRepo && nodeRepo.id === id) {
           return node;
         }
@@ -311,7 +314,7 @@ export class EndevorController {
    * @param repoNode `EndevorNode` containing repository with current filters.
    * @param repo Repository loaded from settings.json
    */
-  private checkAndReloadFilters(repoNode: EndevorNode, repo: Repository) {
+  private checkAndReloadFilters(repoNode: EndevorNode, repo: IRepository) {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     const filtersNode: EndevorBrowsingNode = <EndevorBrowsingNode>(
       repoNode.children.find((child) =>

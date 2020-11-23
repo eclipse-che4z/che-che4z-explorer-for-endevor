@@ -12,9 +12,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorQualifier } from './IEndevorQualifier';
+import { IElement } from './IElement';
 
-export interface IEndevorElementNode {
-  qualifier?: EndevorQualifier;
-  getQualifier(): EndevorQualifier;
+export interface IElementDependencies {
+  elmName: string;
+  envName: string;
+  sysName: string;
+  sbsName: string;
+  stgNumber: string;
+  typeName: string;
+  components: IElement[];
 }

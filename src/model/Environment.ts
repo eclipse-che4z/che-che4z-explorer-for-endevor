@@ -12,26 +12,26 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './IEndevorEntity';
-import { IEnvironment } from './IEndevorEntities';
-import { Repository } from './Repository';
-import { Stage } from './Stage';
-import { System } from './System';
+import { IEndevorEntity } from '../interface/IEndevorEntity';
+import { IEnvironment } from '../interface/IEnvironment';
+import { IRepository } from '../interface/IRepository';
+import { IStage } from '../interface/IStage';
+import { ISystem } from '../interface/ISystem';
 
-export class Environment implements EndevorEntity {
+export class Environment implements IEndevorEntity {
   envName: string;
-  repository: Repository;
-  systems: Map<string, System>;
-  stages: Stage[];
+  repository: IRepository;
+  systems: Map<string, ISystem>;
+  stages: IStage[];
 
-  constructor(repository: Repository, env: IEnvironment) {
+  constructor(repository: IRepository, env: IEnvironment) {
     this.repository = repository;
     this.envName = env.envName;
     this.systems = new Map();
     this.stages = new Array(2);
   }
 
-  public loadSystems(newSystems: System[], append: boolean) {
+  public loadSystems(newSystems: ISystem[], append: boolean) {
     if (!append) {
       this.systems = new Map();
     }
@@ -40,7 +40,7 @@ export class Environment implements EndevorEntity {
     });
   }
 
-  public loadStages(newStages: Stage[]) {
+  public loadStages(newStages: IStage[]) {
     if (newStages.length !== 2) {
       throw Error('Incorrect number of stages');
     }
@@ -59,23 +59,23 @@ export class Environment implements EndevorEntity {
     return this.envName;
   }
 
-  public getRepository(): Repository {
+  public getRepository(): IRepository {
     return this.repository;
   }
 
-  public findSystem(sysName: string): System | undefined {
+  public findSystem(sysName: string): ISystem | undefined {
     return this.systems.get(sysName);
   }
 
-  public getSystems(): System[] {
+  public getSystems(): ISystem[] {
     return Array.from(this.systems.values());
   }
 
-  public getStage(num: number): Stage | undefined {
+  public getStage(num: number): IStage | undefined {
     return this.stages[num];
   }
 
-  public getStages(): Stage[] {
+  public getStages(): IStage[] {
     return this.stages;
   }
 }

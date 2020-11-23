@@ -13,8 +13,8 @@
  */
 
 import * as vscode from 'vscode';
-import { Element } from './model/Element';
-import { Repository } from './model/Repository';
+import { IElement } from './interface/IElement';
+import { IRepository } from './interface/IRepository';
 import { EndevorFilterPathNode, EmptyNode } from './ui/tree/EndevorNodes';
 
 /**
@@ -24,7 +24,7 @@ import { EndevorFilterPathNode, EmptyNode } from './ui/tree/EndevorNodes';
  * @return If the string passes the validation undefined is returned. If it fails an appropriate message is returned.
  */
 export function filterStringValidator(
-  repo: Repository,
+  repo: IRepository,
   value: string
 ): string | undefined {
   const count = (value.match(/\//g) || []).length;
@@ -128,7 +128,7 @@ function validateLocation(location: string, index: number): boolean {
  * @param value
  * @return True or False based on whether a duplicate filter is found.
  */
-function duplicateFilterString(repo: Repository, value: string): boolean {
+function duplicateFilterString(repo: IRepository, value: string): boolean {
   if (repo.filters) {
     for (let i = 0; i < repo.filters.length; i++) {
       if (repo.filters[i].getUri() === value) {
@@ -140,8 +140,8 @@ function duplicateFilterString(repo: Repository, value: string): boolean {
 }
 
 export function createPathNodes(
-  elements: Element[],
-  repo: Repository
+  elements: IElement[],
+  repo: IRepository
 ): EndevorFilterPathNode[] {
   const pathNodes: EndevorFilterPathNode[] = [];
   const pathNames: string[] = [];
@@ -161,7 +161,7 @@ export function createPathNodes(
     }
   }
   for (let i = 0; i < pathNames.length; i++) {
-    const elements: Element[] = [];
+    const elements: IElement[] = [];
     pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
   }
   for (let i = 0; i < pathNames.length; i++) {
@@ -185,7 +185,7 @@ export function createPathNodes(
 }
 
 export function createEmptyNode(
-  repo: Repository,
+  repo: IRepository,
   label: string,
   message: string
 ): EmptyNode {

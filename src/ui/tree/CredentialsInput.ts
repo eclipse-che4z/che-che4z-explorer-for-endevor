@@ -14,7 +14,8 @@
 
 import * as vscode from 'vscode';
 import { EndevorController } from '../../EndevorController';
-import { Repository } from '../../model/Repository';
+import { IRepository } from '../../interface/IRepository';
+
 export class CredentialsInputBox {
   /**
    * Ask credentions.
@@ -22,7 +23,7 @@ export class CredentialsInputBox {
    * @returns object with username and password attrinbutes of undefined if canceled.
    */
   public static async askforCredentials(
-    repo: Repository
+    repo: IRepository
   ): Promise<{ username: string; password: string } | undefined> {
     const username = await CredentialsInputBox.showUserName(repo.getUsername());
     if (username === undefined) {

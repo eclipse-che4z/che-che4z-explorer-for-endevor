@@ -29,11 +29,11 @@ import {
   TypeNode,
 } from './EndevorNodes';
 import { EndevorController } from '../../EndevorController';
-import { Repository } from '../../model/Repository';
 import { Profiles } from '../../service/Profiles';
 import { Logger, IProfileLoaded } from '@zowe/imperative';
 import { Connection } from '../../model/Connection';
 import { logger } from '../../globals';
+import { IRepository } from '../../interface/IRepository';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function createEndevorTree(log: Logger) {
@@ -116,7 +116,7 @@ export class EndevorDataProvider
       case 'connection':
         return Promise.resolve((<ConnectionNode>node).children);
       case 'repository':
-        const repo: Repository | undefined = this.getNodeRepository(node);
+        const repo: IRepository | undefined = this.getNodeRepository(node);
         if (!repo) {
           return Promise.resolve([]);
         }
@@ -157,8 +157,8 @@ export class EndevorDataProvider
     this._onDidChangeTreeData.fire(null);
   }
 
-  private getNodeRepository(node: EndevorNode): Repository | undefined {
-    let repo: Repository | undefined = node.getRepository();
+  private getNodeRepository(node: EndevorNode): IRepository | undefined {
+    let repo: IRepository | undefined = node.getRepository();
     if (node instanceof EndevorBrowsingNode) {
       repo = (<EndevorBrowsingNode>node).getRepository();
     }

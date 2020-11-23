@@ -16,12 +16,12 @@
 
 import { IElementBasicData } from '@broadcom/endevor-for-zowe-cli';
 import { ISession, Session } from '@zowe/imperative';
-import { EndevorQualifier } from './model/IEndevorQualifier';
-import { Repository } from './model/Repository';
+import { IEndevorQualifier } from './interface/IEndevorQualifier';
 import { CredentialsInputBox } from './ui/tree/CredentialsInput';
 import { QuickPickItem, QuickPick } from 'vscode';
 import { logger } from './globals';
-import { IEndevorElementNode } from './model/IEndevorElementNode';
+import { IEndevorElementNode } from './interface/IEndevorElementNode';
+import { IRepository } from './interface/IRepository';
 
 export async function resolveQuickPickHelper(
   quickpick: QuickPick<QuickPickItem>
@@ -113,7 +113,7 @@ export function multipleElementsSelected(selection: any[]): boolean {
     return false;
   }
 }
-function getBasePathFromRepo(repository: Repository): string {
+function getBasePathFromRepo(repository: IRepository): string {
   return (
     repository.getUrlString().split(':')[2].split('/')[1] +
     '/' +
@@ -121,13 +121,19 @@ function getBasePathFromRepo(repository: Repository): string {
   );
 }
 
-export async function buildSession(repository: Repository): Promise<Session> {
+export async function buildSession(repository: IRepository): Promise<Session> {
   // hacky solution to make ISession happy
   logger.trace('Building the session.');
   type PROTOCOL = 'http' | 'https';
-  const protocol = repository.getUrl().split(':')[0] as PROTOCOL;
-  const hostname: string = repository.getUrl().split(':')[1].split('/')[2];
-  const port = Number(repository.getUrl().split(':')[2]);
+  let protocol = 'https' as PROTOCOL;
+  let hostname = '';
+  let port = 443;
+  const repoUrl = repository.getUrl();
+  if (repoUrl) {
+    protocol = repoUrl.split(':')[0] as PROTOCOL;
+    hostname = repoUrl.split(':')[1].split('/')[2];
+    port = Number(repoUrl.split(':')[2]);
+  }
   const basePath = getBasePathFromRepo(repository);
   if (!repository.getPassword()) {
     logger.trace('Password not received. Prompting.');
@@ -154,7 +160,7 @@ export async function buildSession(repository: Repository): Promise<Session> {
 }
 
 export function endevorQualifierToElement(
-  endevorQualifier: EndevorQualifier,
+  endevorQualifier: IEndevorQualifier,
   instance: string
 ): IElementBasicData {
   return {

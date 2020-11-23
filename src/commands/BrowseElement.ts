@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { EndevorQualifier } from '../interface/IEndevorQualifier';
 import { Repository } from '../model/Repository';
 import { proxyBrowseElement } from '../service/EndevorCliProxy';
 import { logger } from '../globals';

@@ -12,10 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from './IEndevorEntities';
-import { IEndevorEntity } from './IEndevorEntity';
-import { EndevorQualifier } from './IEndevorQualifier';
-import { Repository } from './Repository';
+import { IElement } from '../interface/IElement';
+import { IEndevorEntity } from '../interface/IEndevorEntity';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
+import { IRepository } from '../interface/IRepository';
 
 export class Element implements IEndevorEntity {
   envName: string;
@@ -26,9 +26,9 @@ export class Element implements IEndevorEntity {
   elmName: string;
   fullElmName: string;
   elmVVLL: string;
-  repository: Repository;
+  repository: IRepository;
 
-  constructor(repo: Repository, element: IElement) {
+  constructor(repo: IRepository, element: IElement) {
     this.elmName = element.elmName;
     this.fullElmName = element.fullElmName;
     this.elmVVLL = element.elmVVLL;
@@ -55,11 +55,11 @@ export class Element implements IEndevorEntity {
     return this.elmVVLL;
   }
 
-  public getRepository(): Repository {
+  public getRepository(): IRepository {
     return this.repository;
   }
 
-  public getQualifier(): EndevorQualifier {
+  public getQualifier(): IEndevorQualifier {
     return {
       env: this.envName,
       stage: this.stgNum,

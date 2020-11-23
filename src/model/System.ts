@@ -12,19 +12,20 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ISystem } from './IEndevorEntities';
-import { EndevorEntity } from './IEndevorEntity';
-import { SubSystem } from './SubSystem';
+import { IRepository } from '../interface/IRepository';
+import { ISubsystem } from '../interface/ISubsystem';
+import { ISystem } from '../interface/ISystem';
+import { IType } from '../interface/IType';
 import { Type } from './Type';
 
-export class System implements EndevorEntity {
+export class System implements ISystem {
   envName: string;
   sysName: string;
-  subsystems: Map<string, SubSystem>;
+  subsystems: Map<string, ISubsystem>;
   types: Map<string, Type>;
-  repository: EndevorEntity;
+  repository: IRepository;
 
-  constructor(repo: EndevorEntity, system: ISystem) {
+  constructor(repo: IRepository, system: ISystem) {
     this.envName = system.envName;
     this.sysName = system.sysName;
     this.subsystems = new Map();
@@ -32,7 +33,7 @@ export class System implements EndevorEntity {
     this.repository = repo;
   }
 
-  public loadSubSystems(newSubSystems: SubSystem[], append: boolean) {
+  public loadSubSystems(newSubSystems: ISubsystem[], append: boolean) {
     if (!append) {
       this.subsystems = new Map();
     }
@@ -41,7 +42,7 @@ export class System implements EndevorEntity {
     });
   }
 
-  public loadTypes(newTypes: Type[], append: boolean) {
+  public loadTypes(newTypes: IType[], append: boolean) {
     if (!append) {
       this.types = new Map();
     }
@@ -50,7 +51,7 @@ export class System implements EndevorEntity {
     });
   }
 
-  public findType(typeName: string): Type | undefined {
+  public findType(typeName: string): IType | undefined {
     return this.types.get(typeName);
   }
 
@@ -58,11 +59,11 @@ export class System implements EndevorEntity {
     return Array.from(this.types.values());
   }
 
-  public findSubSystem(subsysName: string): SubSystem | undefined {
+  public findSubSystem(subsysName: string): ISubsystem | undefined {
     return this.subsystems.get(subsysName);
   }
 
-  public getSubSystems(): SubSystem[] {
+  public getSubSystems(): ISubsystem[] {
     return Array.from(this.subsystems.values());
   }
 
@@ -77,7 +78,7 @@ export class System implements EndevorEntity {
     return this.sysName;
   }
 
-  public getRepository(): EndevorEntity {
+  public getRepository(): IRepository {
     return this.repository;
   }
 }

@@ -12,23 +12,24 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './IEndevorEntity';
 import { EndevorFilter, FILTER_ALL_STRING } from './EndevorFilter';
-import { Environment } from './Environment';
-import { Filter } from './IEndevorEntities';
-import { System } from './System';
+import { IRepository } from '../interface/IRepository';
+import { IEndevorFilter } from '../interface/IEndevorFilter';
+import { IFilter } from '../interface/IFilter';
+import { IEnvironment } from '../interface/IEnvironment';
+import { ISystem } from '../interface/ISystem';
 
-export class Repository implements EndevorEntity {
+export class Repository implements IRepository {
   private _id?: number;
-  private name: string;
-  private url: string;
-  private username: string | undefined;
-  private password: string | undefined;
-  private datasource: string;
-  private _environments: Map<string, Environment>;
-  private _filters: EndevorFilter[];
-  private _map: EndevorFilter;
-  private _profileLabel: string | undefined;
+  private _name?: string;
+  private url?: string;
+  private username?: string | undefined;
+  private password?: string | undefined;
+  private datasource?: string;
+  private _environments?: Map<string, IEnvironment>;
+  private _filters?: IEndevorFilter[];
+  private _map?: IEndevorFilter;
+  private _profileLabel?: string | undefined;
 
   constructor(
     name: string,
@@ -40,7 +41,7 @@ export class Repository implements EndevorEntity {
     id?: number
   ) {
     this._id = id;
-    this.name = name;
+    this._name = name;
     this.url = url;
     this.username = username;
     this.password = password;
@@ -51,49 +52,58 @@ export class Repository implements EndevorEntity {
     this._profileLabel = profileLabel;
   }
 
-  public loadInfoFromConfig(repo: Repository) {
-    this.name = repo.name;
-    this.url = repo.url;
-    this.username = repo.username;
-    this.datasource = repo.datasource;
-    this._filters = repo.filters;
-    this._filters.forEach((filter) => {
-      filter.setRepository(this);
-    });
+  public loadInfoFromConfig(repo: IRepository) {
+    this._name = repo.getName();
+    this.url = repo.getUrl();
+    this.username = repo.getUsername();
+    this.datasource = repo.getDatasource();
+    this._filters = repo.getEndevorFilters();
+    if (this._filters) {
+      this._filters.forEach((filter) => {
+        filter.setRepository(this);
+      });
+    }
   }
 
-  public loadEnvironments(envs: Environment[], append: boolean) {
+  public loadEnvironments(envs: IEnvironment[], append: boolean) {
     if (!append) {
       this._environments = new Map();
     }
     envs.forEach((env) => {
       env.repository = this;
-      this._environments.set(env.envName, env);
+      if (this._environments) {
+        this._environments.set(env.envName, env);
+      }
     });
   }
 
-  public findEnvironment(envName: string): Environment | undefined {
-    return this._environments.get(envName);
+  public findEnvironment(envName: string): IEnvironment | undefined {
+    if (this._environments) {
+      this._environments.get(envName);
+    }
+    return undefined;
   }
 
-  public findSystem(envName: string, sysName: string): System | undefined {
-    const env: Environment | undefined = this.findEnvironment(envName);
+  public findSystem(envName: string, sysName: string): ISystem | undefined {
+    const env: IEnvironment | undefined = this.findEnvironment(envName);
     if (env) {
       return env.findSystem(sysName);
     }
   }
 
   public findType(typeName: string, envName: string, sysName: string) {
-    const system: System | undefined = this.findSystem(envName, sysName);
+    const system: ISystem | undefined = this.findSystem(envName, sysName);
     if (system) {
       return system.findType(typeName);
     }
   }
 
-  public findFilter(uri: string): EndevorFilter | undefined {
-    for (const filter of this.filters) {
-      if (filter.getUri() === uri) {
-        return filter;
+  public findFilter(uri: string): IEndevorFilter | undefined {
+    if (this._filters) {
+      for (const filter of this._filters) {
+        if (filter.getUri() === uri) {
+          return filter;
+        }
       }
     }
   }
@@ -106,11 +116,11 @@ export class Repository implements EndevorEntity {
   }
 
   public setName(value: string) {
-    this.name = value;
+    this._name = value;
   }
 
-  public getName(): string {
-    return this.name;
+  public getName(): string | undefined {
+    return this._name;
   }
   public setProfileLabel(value: string) {
     this._profileLabel = value;
@@ -140,11 +150,11 @@ export class Repository implements EndevorEntity {
     return this.password;
   }
 
-  public getDescription(): string {
+  public getDescription(): string | undefined {
     return this.url + ' | ' + this.datasource;
   }
 
-  public getUrl(): string {
+  public getUrl(): string | undefined {
     return this.url;
   }
 
@@ -152,7 +162,7 @@ export class Repository implements EndevorEntity {
     this.url = value;
   }
 
-  public getDatasource(): string {
+  public getDatasource(): string | undefined {
     return this.datasource;
   }
 
@@ -160,27 +170,31 @@ export class Repository implements EndevorEntity {
     this.datasource = value;
   }
 
-  public getEnvironmentMap(): Map<string, Environment> {
+  public getEnvironmentMap(): Map<string, IEnvironment> | undefined {
     return this._environments;
   }
 
-  public get environments(): Environment[] {
-    return Array.from(this._environments.values());
+  public get environments(): IEnvironment[] | undefined {
+    if (this._environments) {
+      return Array.from(this._environments.values());
+    } else {
+      return undefined;
+    }
   }
 
-  public get filters(): EndevorFilter[] {
+  public get filters(): IEndevorFilter[] | undefined {
     return this._filters;
   }
 
-  public set filters(value: EndevorFilter[]) {
+  public set filters(value: IEndevorFilter[] | undefined) {
     this._filters = value;
   }
 
-  public get map(): EndevorFilter {
+  public get map(): IEndevorFilter | undefined {
     return this._map;
   }
 
-  public set map(value: EndevorFilter) {
+  public set map(value: IEndevorFilter | undefined) {
     this._map = value;
   }
 
@@ -189,22 +203,31 @@ export class Repository implements EndevorEntity {
     if (this.datasource !== '') {
       urlPath = urlPath + '/';
     }
-    if (!this.url.endsWith('/')) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    if (!this.url && this.url!.endsWith('/')) {
       urlPath = '/' + urlPath;
     }
     return this.url + urlPath;
   }
 
-  public getRepository(): EndevorEntity {
+  public getRepository(): IRepository {
     return this;
   }
 
-  public getIFilters(): Filter[] {
-    const resultFilters: Filter[] = [];
-    this._filters.forEach((filter) => {
-      resultFilters.push({ uri: filter.getUri() });
-    });
-    return resultFilters;
+  public getFilters(): IFilter[] | undefined {
+    const resultFilters: IFilter[] = [];
+    if (this._filters) {
+      this._filters.forEach((filter) => {
+        resultFilters.push({ uri: filter.getUri() });
+      });
+      return resultFilters;
+    } else {
+      return undefined;
+    }
+  }
+
+  public getEndevorFilters(): IEndevorFilter[] | undefined {
+    return this._filters;
   }
 
   /**
@@ -212,7 +235,7 @@ export class Repository implements EndevorEntity {
    * @param repo Repository to compare with this repository
    * @return True if this repository and `repo` have the same Endevor instance.
    */
-  public isSameInstance(repo: Repository | undefined): boolean {
+  public isSameInstance(repo: IRepository | undefined): boolean {
     if (!repo) {
       return false;
     }
@@ -233,19 +256,21 @@ export class Repository implements EndevorEntity {
    * @param repo Repository to compare with this repository
    * @return True if this repository and `repo` are the same.
    */
-  public isEqual(repo: Repository | undefined): boolean {
+  public isEqual(repo: IRepository | undefined): boolean {
     if (!repo || !this.isSameInstance(repo)) {
       return false;
     }
     if (repo.getName() !== this.getName()) {
       return false;
     }
-    if (repo.filters.length !== this.filters.length) {
-      return false;
-    }
-    for (const filter of repo.filters) {
-      if (!this.findFilter(filter.getUri())) {
+    if (this._filters) {
+      if (this._filters.length !== this._filters.length) {
         return false;
+      }
+      for (const filter of this._filters) {
+        if (!this.findFilter(filter.getUri())) {
+          return false;
+        }
       }
     }
 

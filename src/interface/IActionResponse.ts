@@ -12,11 +12,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export interface EndevorQualifier {
-  env?: string;
-  stage?: string;
-  system?: string;
-  subsystem?: string;
-  type?: string;
-  element?: string;
+export interface IActionResponse {
+  returnCode: string;
+  reasonCode: string;
+  messages: string;
 }

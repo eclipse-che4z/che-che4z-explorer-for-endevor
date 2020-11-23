@@ -14,12 +14,14 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorFilter } from '../model/EndevorFilter';
-import { Host } from '../model/IEndevorInstance';
+import { Host } from '../interface/IEndevorInstance';
 import { Repository } from '../model/Repository';
-import { Connection } from '../model/Connection';
 import { Profiles } from './Profiles';
 import { logger } from '../globals';
+import { IConnection } from '../interface/IConnection';
+import { IEndevorFilter } from '../interface/IEndevorFilter';
+import { IRepository } from '../interface/IRepository';
+import { EndevorFilter } from '../model/EndevorFilter';
 
 export const HOST_SETTINGS_KEY = 'endevor.connections';
 
@@ -28,8 +30,8 @@ export class SettingsFacade {
     return vscode.workspace.getConfiguration().get(HOST_SETTINGS_KEY, []);
   }
 
-  public static listRepositories(connectionLabel: string): Repository[] {
-    const repos: Repository[] = [];
+  public static listRepositories(connectionLabel: string): IRepository[] {
+    const repos: IRepository[] = [];
     const allConnectionsInSettings: any[] = vscode.workspace
       .getConfiguration()
       .get(HOST_SETTINGS_KEY, []);
@@ -43,7 +45,7 @@ export class SettingsFacade {
       .profile;
     if (profile) {
       hosts.forEach((host) => {
-        const repo: Repository = new Repository(
+        const repo: IRepository = new Repository(
           host.name,
           `${profile.protocol}://${profile.host}:${profile.port}`,
           profile.user,
@@ -53,9 +55,12 @@ export class SettingsFacade {
           host.id
         );
         if (host.filters) {
-          const newFilters: Map<string, EndevorFilter> = new Map();
+          const newFilters: Map<string, IEndevorFilter> = new Map();
           host.filters.forEach((filter) => {
             newFilters.set(filter.uri, new EndevorFilter(repo, filter.uri));
+            if (!repo.filters) {
+              repo.filters = [];
+            }
             repo.filters.push(new EndevorFilter(repo, filter.uri));
           });
           repo.filters = Array.from(newFilters.values());
@@ -66,7 +71,7 @@ export class SettingsFacade {
     return repos;
   }
 
-  public static async updateSettings(connections: Connection[]) {
+  public static async updateSettings(connections: IConnection[]) {
     const conns: any[] = [];
     connections.forEach((connection) => {
       const hostsArray: any[] = [];
@@ -96,7 +101,7 @@ export class SettingsFacade {
     }
   }
 
-  public static async updateRepositories(connection: Connection) {
+  public static async updateRepositories(connection: IConnection) {
     const repos = connection.getRepositoryList();
     const hosts: Host[] = [];
     repos.forEach((repo) => {

@@ -11,28 +11,26 @@ import {
   QueryACMComponents,
   RetrieveElement,
 } from '@broadcom/endevor-for-zowe-cli';
-import {
-  IElement,
-  IEnvironment,
-  IStage,
-  ISubsystem,
-  ISystem,
-  IType,
-} from '../model/IEndevorEntities';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
-import { Repository } from '../model/Repository';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { buildSession, endevorQualifierToElement, toArray } from '../utils';
 import { logger } from '../globals';
+import { IElement } from '../interface/IElement';
+import { IEnvironment } from '../interface/IEnvironment';
+import { IStage } from '../interface/IStage';
+import { ISubsystem } from '../interface/ISubsystem';
+import { ISystem } from '../interface/ISystem';
+import { IType } from '../interface/IType';
+import { IRepository } from '../interface/IRepository';
 
 export async function proxyBrowseElement(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<string | undefined> {
   const session = await buildSession(repository);
-  const element = endevorQualifierToElement(
-    endevorQualifier,
-    repository.getDatasource()
-  );
+
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
+  const element = endevorQualifierToElement(IEndevorQualifier, instance);
   const requestBody = PrintElementComponents.setupPrintRequest({});
   const printResult = await PrintElementComponents.printElementComponents(
     session,
@@ -43,7 +41,7 @@ export async function proxyBrowseElement(
 }
 
 export async function proxyGetDsNamesFromInstance(
-  repository: Repository
+  repository: IRepository
 ): Promise<string[]> {
   const session = await buildSession(repository);
   const dataSources = await ListInstance.listInstance(session);
@@ -51,14 +49,13 @@ export async function proxyGetDsNamesFromInstance(
 }
 
 export async function proxyRetrieveElement(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<string | undefined> {
   const session = await buildSession(repository);
-  const element = endevorQualifierToElement(
-    endevorQualifier,
-    repository.getDatasource()
-  );
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
+  const element = endevorQualifierToElement(IEndevorQualifier, instance);
   const requestArgs = {
     nosignout: 'yes',
   };
@@ -72,11 +69,12 @@ export async function proxyRetrieveElement(
 }
 
 export async function proxyRetrieveAcmComponents(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  endevorQualifier: IEndevorQualifier
 ): Promise<IElement[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
   const requestArguments = {
     excCirculars: 'yes',
@@ -96,11 +94,12 @@ export async function proxyRetrieveAcmComponents(
 }
 
 export async function proxyListType(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  endevorQualifier: IEndevorQualifier
 ): Promise<IType[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const typeInput = endevorQualifierToElement(endevorQualifier, instance);
   const requestBody = ListType.setupListTypeRequest({});
   const listResponse = await ListType.listType(
@@ -121,11 +120,12 @@ export async function proxyListType(
 }
 
 export async function proxyListElement(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  endevorQualifier: IEndevorQualifier
 ): Promise<IElement[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
   const requestBody = ListElement.setupListElementRequest({});
   const listResponse = await ListElement.listElement(
@@ -146,10 +146,11 @@ export async function proxyListElement(
 }
 
 export async function proxyListEnvironment(
-  repository: Repository
+  repository: IRepository
 ): Promise<IEnvironment[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const environment = endevorQualifierToElement({}, instance);
   const requestBody = ListEnvironment.setupListEnvironmentRequest({});
   const envResponse = await ListEnvironment.listEnvironment(
@@ -170,11 +171,12 @@ export async function proxyListEnvironment(
 }
 
 export async function proxyListStage(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  endevorQualifier: IEndevorQualifier
 ): Promise<IStage[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const stageNumber = endevorQualifierToElement(endevorQualifier, instance);
   const requestBody = ListStage.setupListStageRequest({});
   const listResponse = await ListStage.listStage(
@@ -195,13 +197,14 @@ export async function proxyListStage(
 }
 
 export async function proxyListSubsystem(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<ISubsystem[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const endevorSubsystem = endevorQualifierToElement(
-    endevorQualifier,
+    IEndevorQualifier,
     instance
   );
   const requestBody = ListSubsystem.setupListSubsystemRequest({});
@@ -223,11 +226,12 @@ export async function proxyListSubsystem(
 }
 
 export async function proxyListSystem(
-  repository: Repository,
-  endevorQualifier: EndevorQualifier
+  repository: IRepository,
+  endevorQualifier: IEndevorQualifier
 ): Promise<ISystem[]> {
   const session = await buildSession(repository);
-  const instance = repository.getDatasource();
+  const dataSource = repository.getDatasource();
+  const instance = dataSource ? dataSource : '';
   const endevorSystem = endevorQualifierToElement(endevorQualifier, instance);
   const requestBody = ListSystem.setupListSystemRequest({});
   const listSystemResponse = await ListSystem.listSystem(

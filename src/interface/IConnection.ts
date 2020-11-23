@@ -12,8 +12,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export interface ActionResponse {
-  returnCode: string;
-  reasonCode: string;
-  messages: string;
+import { IProfile } from '@zowe/imperative';
+
+export interface IConnection extends IProfile {
+  name?: string | undefined;
+  host?: string | undefined;
+  port?: number | undefined;
+  user?: string | undefined;
+  password?: string | undefined;
+  rejectUnauthorized?: boolean | undefined;
+  protocol?: string | undefined;
 }

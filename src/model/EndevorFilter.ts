@@ -12,24 +12,25 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorEntity } from './IEndevorEntity';
 import * as constants from '../constants';
-import { Element } from './Element';
-import { EndevorQualifier } from './IEndevorQualifier';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
+import { IEndevorFilter } from '../interface/IEndevorFilter';
+import { IRepository } from '../interface/IRepository';
+import { IElement } from '../interface/IElement';
 
 export const FILTER_ALL_STRING = '*/*/*/*/*/*';
 
-export class EndevorFilter implements EndevorEntity {
+export class EndevorFilter implements IEndevorFilter {
   private _envFilter: string;
   private _stageFilter: string;
   private _systemFilter: string;
   private _subsysFilter: string;
   private _typeFilter: string;
   private _elementFilter: string;
-  private repository: EndevorEntity;
-  private elements: Element[];
+  private repository: IRepository;
+  private elements: IElement[];
 
-  constructor(repository: EndevorEntity, filterString: string) {
+  constructor(repository: IRepository, filterString: string) {
     this.repository = repository;
     this._envFilter = constants.ASTERISK;
     this._stageFilter = constants.ASTERISK;
@@ -41,7 +42,7 @@ export class EndevorFilter implements EndevorEntity {
     this.updateFilterString(filterString);
   }
 
-  public loadElements(newElements: Element[], append: boolean) {
+  public loadElements(newElements: IElement[], append: boolean) {
     if (!append) {
       this.elements = [];
     }
@@ -74,19 +75,19 @@ export class EndevorFilter implements EndevorEntity {
   public getDescription(): string {
     return '';
   }
-  public getRepository(): EndevorEntity {
+  public getRepository(): IRepository {
     return this.repository;
   }
 
-  public setRepository(value: EndevorEntity) {
+  public setRepository(value: IRepository) {
     this.repository = value;
   }
 
-  public getElements(): Element[] {
+  public getElements(): IElement[] {
     return this.elements;
   }
 
-  public getQualifier(): EndevorQualifier {
+  public getQualifier(): IEndevorQualifier {
     return {
       env: this._envFilter,
       stage: this._stageFilter,
@@ -133,7 +134,7 @@ export class EndevorFilter implements EndevorEntity {
   }
 
   public editFilter(name: string) {
-    const filters = this.getRepository().filters;
+    const filters = this.getRepository().getEndevorFilters();
     if (filters) {
       const index = filters.indexOf(this);
       if (index >= 0) {
@@ -143,7 +144,7 @@ export class EndevorFilter implements EndevorEntity {
   }
 
   public deleteFilter() {
-    const filters = this.getRepository().filters;
+    const filters = this.getRepository().getEndevorFilters();
     if (filters) {
       const index = filters.indexOf(this);
       if (index >= 0) {

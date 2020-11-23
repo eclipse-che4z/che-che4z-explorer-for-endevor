@@ -17,11 +17,11 @@ import * as vscode from 'vscode';
 import { retrieveElement } from '../../../commands/RetrieveElement';
 import { logger } from '../../../globals';
 import { Element } from '../../../model/Element';
-import { IElement } from '../../../model/IEndevorEntities';
-import { EndevorQualifier } from '../../../model/IEndevorQualifier';
+import { IEndevorQualifier } from '../../../interface/IEndevorQualifier';
 import { Repository } from '../../../model/Repository';
 import { RetrieveElementService } from '../../../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
+import { IElement } from '../../../interface/IElement';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -82,7 +82,7 @@ describe('Test function retrieveElement', () => {
     new Element(testRepo, testIElements[0]),
     new Element(testRepo, testIElements[1]),
   ];
-  const qualifier1: EndevorQualifier = {
+  const qualifier1: IEndevorQualifier = {
     element: testElements[0].elmName,
     env: 'envTest',
     stage: '1',
@@ -90,7 +90,7 @@ describe('Test function retrieveElement', () => {
     system: 'sysTest',
     type: 'COBOL',
   };
-  const qualifier2: EndevorQualifier = {
+  const qualifier2: IEndevorQualifier = {
     element: testElements[1].elmName,
     env: 'envTest',
     stage: '1',

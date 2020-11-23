@@ -17,10 +17,10 @@
 import * as vscode from 'vscode';
 import { logger } from '../globals';
 import { Element } from '../model/Element';
-import { IElement } from '../model/IEndevorEntities';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { Repository } from '../model/Repository';
 import { RetrieveElementService } from '../service/RetrieveElementService';
+import { IElement } from '../interface/IElement';
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
@@ -52,7 +52,7 @@ export async function retrieveWithDependencies(
       const workspace: vscode.WorkspaceFolder =
         vscode.workspace.workspaceFolders[0];
       const repo: Repository = arg.getRepository();
-      const eq: EndevorQualifier = arg.getQualifier();
+      const eq: IEndevorQualifier = arg.getQualifier();
 
       progress.report({ increment: 0, message: 'Dependencies List' });
       const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
@@ -110,8 +110,8 @@ export async function retrieveWithDependencies(
  * Creates the Element Qualifier for the dependencies.
  * @param element
  */
-function createElementQualifier(element: Element): EndevorQualifier {
-  const eQualifier: EndevorQualifier = {
+function createElementQualifier(element: Element): IEndevorQualifier {
+  const eQualifier: IEndevorQualifier = {
     element: element.elmName,
     env: element.envName,
     stage: element.stgNum,
@@ -130,7 +130,7 @@ function createElementQualifier(element: Element): EndevorQualifier {
  */
 function createElementFromQualifier(
   repo: Repository,
-  eq: EndevorQualifier
+  eq: IEndevorQualifier
 ): Element {
   const iElement: IElement = {
     elmName: eq.element!,
@@ -147,7 +147,7 @@ function createElementFromQualifier(
 
 async function hitLimit(
   elementsToRetrieve: Element[],
-  eq: EndevorQualifier
+  eq: IEndevorQualifier
 ): Promise<boolean> {
   if (elementsToRetrieve.length <= RETRIEVE_ELEMENTS_LIMIT) {
     return false;

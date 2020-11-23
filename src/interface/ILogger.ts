@@ -1,4 +1,3 @@
-/* eslint-disable no-case-declarations */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -13,12 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-/**
- * You forgot a switch case and your switch is not exhaustive.
- * That's why typescript compiler errors on instantiation of this class.
- */
-export class UnreachableCaseError extends Error {
-  constructor(value: never) {
-    super(`Unreachable case: ${value}`);
-  }
+export interface ILogger {
+  trace: (msg: string) => void;
+  info: (userMsg: string, logMsg?: string) => void;
+  warn: (userMsg: string, logMsg?: string) => void;
+  error: (userMsg: string, logMsg?: string) => void;
 }

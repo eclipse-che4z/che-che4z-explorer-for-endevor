@@ -12,12 +12,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorFilter } from './IEndevorFilter';
-import { Repository } from './Repository';
+import { IEndevorQualifier } from './IEndevorQualifier';
 
-export interface IEndevorEntity {
-  filters?: IEndevorFilter[];
-  getName(): string | undefined;
-  getDescription(): string;
-  getRepository(): Repository;
+export interface IEndevorElementNode {
+  qualifier?: IEndevorQualifier;
+  getQualifier(): IEndevorQualifier;
 }

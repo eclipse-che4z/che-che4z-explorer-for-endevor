@@ -18,7 +18,7 @@ import { PrintElementComponents } from '@broadcom/endevor-for-zowe-cli';
 import { browseElement } from '../../../commands/BrowseElement';
 import { logger } from '../../../globals';
 import { Element } from '../../../model/Element';
-import { EndevorQualifier } from '../../../model/IEndevorQualifier';
+import { EndevorQualifier } from '../../../interface/IEndevorQualifier';
 import { Repository } from '../../../model/Repository';
 import { EndevorElementNode } from '../../../ui/tree/EndevorNodes';
 

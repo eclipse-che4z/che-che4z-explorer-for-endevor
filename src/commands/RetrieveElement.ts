@@ -15,7 +15,7 @@
 
 import * as vscode from 'vscode';
 import { logger } from '../globals';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
+import { EndevorQualifier } from '../interface/IEndevorQualifier';
 import { Repository } from '../model/Repository';
 import { RetrieveElementService } from '../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../ui/tree/EndevorNodes';

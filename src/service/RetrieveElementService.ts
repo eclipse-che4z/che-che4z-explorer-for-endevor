@@ -15,15 +15,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Element } from '../model/Element';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
-import { Repository } from '../model/Repository';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import {
   proxyRetrieveAcmComponents,
   proxyRetrieveElement,
   proxyListType,
 } from './EndevorCliProxy';
 import { logger } from '../globals';
+import { IElement } from '../interface/IElement';
+import { IRepository } from '../interface/IRepository';
+import { Element } from '../model/Element';
 
 export class RetrieveElementService {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -31,9 +32,9 @@ export class RetrieveElementService {
 
   public async retrieveElement(
     workspace: vscode.WorkspaceFolder,
-    repo: Repository,
+    repo: IRepository,
     elementName: string,
-    eq: EndevorQualifier
+    eq: IEndevorQualifier
   ): Promise<string> {
     const data = await proxyRetrieveElement(repo, eq);
     const ext = await this.getExtension(repo, eq);
@@ -64,10 +65,10 @@ export class RetrieveElementService {
    * @returns list of dependencies with origin element. Origin element always first.
    */
   public async retrieveDependenciesList(
-    repo: Repository,
-    eq: EndevorQualifier
-  ): Promise<Element[]> {
-    const result: Element[] = [];
+    repo: IRepository,
+    eq: IEndevorQualifier
+  ): Promise<IElement[]> {
+    const result: IElement[] = [];
     const elements = await proxyRetrieveAcmComponents(repo, eq);
     if (elements.length === 0) {
       return [];
@@ -77,7 +78,7 @@ export class RetrieveElementService {
     if (Object.getOwnPropertyDescriptor(el, 'components')) {
       for (const dep of el['components']) {
         if (dep.elmName.trim()) {
-          const element: Element = new Element(repo, dep);
+          const element: IElement = new Element(repo, dep);
           result.push(element);
         }
       }
@@ -86,8 +87,8 @@ export class RetrieveElementService {
   }
 
   private async getExtension(
-    repo: Repository,
-    eq: EndevorQualifier
+    repo: IRepository,
+    eq: IEndevorQualifier
   ): Promise<string> {
     const types = await proxyListType(repo, eq);
     for (const type of types) {
