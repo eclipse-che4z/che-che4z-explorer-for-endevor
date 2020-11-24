@@ -22,9 +22,9 @@ import {
   proxyListType,
 } from './EndevorCliProxy';
 import { logger } from '../globals';
-import { IElement } from '../interface/IElement';
-import { IRepository } from '../interface/IRepository';
-import { Element } from '../model/Element';
+import { Element } from '../entities/Element';
+import { EndevorController } from '../EndevorController';
+import { IElement, IRepository } from '../interface/entities';
 
 export class RetrieveElementService {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -36,7 +36,11 @@ export class RetrieveElementService {
     elementName: string,
     eq: IEndevorQualifier
   ): Promise<string> {
-    const data = await proxyRetrieveElement(repo, eq);
+    const data = await proxyRetrieveElement(
+      repo,
+      eq,
+      EndevorController.instance
+    );
     const ext = await this.getExtension(repo, eq);
     const type = eq.type ? eq.type : '';
     const typeDirectory = path.join(workspace.uri.fsPath, type);
@@ -69,7 +73,11 @@ export class RetrieveElementService {
     eq: IEndevorQualifier
   ): Promise<IElement[]> {
     const result: IElement[] = [];
-    const elements = await proxyRetrieveAcmComponents(repo, eq);
+    const elements = await proxyRetrieveAcmComponents(
+      repo,
+      eq,
+      EndevorController.instance
+    );
     if (elements.length === 0) {
       return [];
     }
@@ -90,7 +98,7 @@ export class RetrieveElementService {
     repo: IRepository,
     eq: IEndevorQualifier
   ): Promise<string> {
-    const types = await proxyListType(repo, eq);
+    const types = await proxyListType(repo, eq, EndevorController.instance);
     for (const type of types) {
       if (type.typeName === eq.type && type.fileExt) {
         return type.fileExt;

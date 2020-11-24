@@ -28,26 +28,35 @@ import {
   SubsystemNode,
   TypeNode,
 } from './EndevorNodes';
-import { EndevorController } from '../../EndevorController';
 import { Profiles } from '../../service/Profiles';
 import { Logger, IProfileLoaded } from '@zowe/imperative';
-import { Connection } from '../../model/Connection';
 import { logger } from '../../globals';
-import { IRepository } from '../../interface/IRepository';
+import { Connection } from '../../entities/Connection';
+import { IEndevorNode } from '../../interface/IEndevorNode';
+import { IEndevorEntity, IRepository } from '../../interface/entities';
+import { IEndevorController } from '../../interface/dataProvider_controller';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function createEndevorTree(log: Logger) {
-  const tree = new EndevorDataProvider();
+export async function createEndevorTree(
+  log: Logger,
+  controllerInstance: IEndevorController
+) {
+  const tree = new EndevorDataProvider(controllerInstance);
   await tree.addSession();
   return tree;
 }
 export class EndevorDataProvider
-  implements vscode.TreeDataProvider<EndevorNode> {
-  public _sessionNodes: EndevorNode[] = [];
-  public _onDidChangeTreeData = new vscode.EventEmitter<EndevorNode | null>();
+  implements vscode.TreeDataProvider<IEndevorNode> {
+  public _sessionNodes: IEndevorNode[] = [];
+  public _onDidChangeTreeData = new vscode.EventEmitter<IEndevorNode | null>();
+  public controllerInstance: IEndevorController;
   public readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  public getTreeItem(element: EndevorNode): vscode.TreeItem {
+  constructor(controllerInstance: IEndevorController) {
+    this.controllerInstance = controllerInstance;
+  }
+
+  public getTreeItem(element: IEndevorNode): vscode.TreeItem {
     return element;
   }
 
@@ -83,52 +92,65 @@ export class EndevorDataProvider
   }
 
   public getChildren(
-    node?: EndevorNode
-  ): EndevorNode[] | Promise<EndevorNode[]> {
+    node?: IEndevorNode
+  ): IEndevorNode[] | Promise<IEndevorNode[]> {
     if (!node) {
-      const root: EndevorNode = EndevorController.instance.rootNode;
-      if (!root.needReload) {
-        return Promise.resolve([new NewConnectionButton(), ...root.children]);
+      const root: IEndevorNode = this.controllerInstance.getRootNode();
+      if (!root.getNeedReload()) {
+        return Promise.resolve([
+          new NewConnectionButton(this.controllerInstance),
+          ...root.getChildren(),
+        ]);
       }
-      const connections = EndevorController.instance.getConnections();
-      const newChildren: EndevorNode[] = [];
+      const connections = this.controllerInstance.getConnections();
+      const newChildren: IEndevorNode[] = [];
       connections.forEach((connection) => {
-        const newConnectionNode: EndevorNode = new EndevorNode(connection);
-        let foundConnection: EndevorNode | undefined;
+        const newConnectionNode: IEndevorNode = new EndevorNode(
+          this.controllerInstance,
+          connection as IEndevorEntity
+        );
+        let foundConnection: IEndevorNode | undefined;
         const connectionName = connection.getName();
         if (connectionName) {
-          foundConnection = EndevorController.instance.findNodeByConnectionName(
+          foundConnection = this.controllerInstance.findNodeByConnectionName(
             connectionName
           );
         }
-        if (foundConnection && foundConnection.needReload) {
-          newConnectionNode.children = foundConnection.children;
-          newConnectionNode.needReload = false;
+        if (foundConnection && foundConnection.getNeedReload()) {
+          newConnectionNode.setChildren(foundConnection.getChildren());
+          newConnectionNode.setNeedReload(false);
           newConnectionNode.collapsibleState = foundConnection.collapsibleState;
         }
         newChildren.push(newConnectionNode);
       });
-      root.needReload = false;
-      root.children = newChildren;
-      return Promise.resolve([new NewConnectionButton(), ...newChildren]);
+      root.setNeedReload(false);
+      root.setChildren(newChildren);
+      return Promise.resolve([
+        new NewConnectionButton(this.controllerInstance),
+        ...newChildren,
+      ]);
     }
     switch (node.contextValue) {
       case 'connection':
-        return Promise.resolve((<ConnectionNode>node).children);
+        return Promise.resolve((<ConnectionNode>node).getChildren());
       case 'repository':
         const repo: IRepository | undefined = this.getNodeRepository(node);
         if (!repo) {
           return Promise.resolve([]);
         }
-        if (!node.needReload) {
-          return Promise.resolve(node.children);
+        if (!node.getNeedReload()) {
+          return Promise.resolve(node.getChildren());
         }
         return new Promise((resolve) => {
-          const resultNodes: EndevorNode[] = [];
-          resultNodes.push(new EndevorBrowsingNode('Filters', repo));
-          resultNodes.push(new EndevorBrowsingNode('Map', repo));
-          node.children = resultNodes;
-          node.needReload = false;
+          const resultNodes: IEndevorNode[] = [];
+          resultNodes.push(
+            new EndevorBrowsingNode('Filters', repo, this.controllerInstance)
+          );
+          resultNodes.push(
+            new EndevorBrowsingNode('Map', repo, this.controllerInstance)
+          );
+          node.setChildren(resultNodes);
+          node.setNeedReload(false);
           resolve(resultNodes);
         });
       case 'filters':
@@ -157,7 +179,7 @@ export class EndevorDataProvider
     this._onDidChangeTreeData.fire(null);
   }
 
-  private getNodeRepository(node: EndevorNode): IRepository | undefined {
+  private getNodeRepository(node: IEndevorNode): IRepository | undefined {
     let repo: IRepository | undefined = node.getRepository();
     if (node instanceof EndevorBrowsingNode) {
       repo = (<EndevorBrowsingNode>node).getRepository();
@@ -179,8 +201,12 @@ export class EndevorDataProvider
       endevorProfile.profile
     );
     logger.trace(`Session created: ${JSON.stringify(session)}`);
-    const node = new ConnectionNode(session, endevorProfile.name);
-    EndevorController.instance.addConnection(new Connection(endevorProfile));
+    const node = new ConnectionNode(
+      this.controllerInstance,
+      session,
+      endevorProfile.name
+    );
+    this.controllerInstance.addConnection(new Connection(endevorProfile));
     this._sessionNodes.push(node);
   }
 }

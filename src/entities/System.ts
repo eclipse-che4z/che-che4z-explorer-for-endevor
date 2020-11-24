@@ -12,10 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IRepository } from '../interface/IRepository';
-import { ISubsystem } from '../interface/ISubsystem';
-import { ISystem } from '../interface/ISystem';
-import { IType } from '../interface/IType';
+import { ISystem, ISubsystem, IRepository, IType } from '../interface/entities';
 import { Type } from './Type';
 
 export class System implements ISystem {

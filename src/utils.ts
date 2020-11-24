@@ -21,7 +21,8 @@ import { CredentialsInputBox } from './ui/tree/CredentialsInput';
 import { QuickPickItem, QuickPick } from 'vscode';
 import { logger } from './globals';
 import { IEndevorElementNode } from './interface/IEndevorElementNode';
-import { IRepository } from './interface/IRepository';
+import { IEndevorController } from './interface/dataProvider_controller';
+import { IRepository } from './interface/entities';
 
 export async function resolveQuickPickHelper(
   quickpick: QuickPick<QuickPickItem>
@@ -121,7 +122,10 @@ function getBasePathFromRepo(repository: IRepository): string {
   );
 }
 
-export async function buildSession(repository: IRepository): Promise<Session> {
+export async function buildSession(
+  repository: IRepository,
+  controllerInstance: IEndevorController
+): Promise<Session> {
   // hacky solution to make ISession happy
   logger.trace('Building the session.');
   type PROTOCOL = 'http' | 'https';
@@ -137,7 +141,10 @@ export async function buildSession(repository: IRepository): Promise<Session> {
   const basePath = getBasePathFromRepo(repository);
   if (!repository.getPassword()) {
     logger.trace('Password not received. Prompting.');
-    const creds = await CredentialsInputBox.askforCredentials(repository);
+    const creds = await CredentialsInputBox.askforCredentials(
+      repository,
+      controllerInstance
+    );
     if (!creds) {
       logger.trace('Password not provided. Cancelling.');
       throw { cancelled: true };

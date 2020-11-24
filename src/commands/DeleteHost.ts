@@ -13,7 +13,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Repository } from '../model/Repository';
+import { Repository } from '../entities/Repository';
 import { EndevorController } from '../EndevorController';
 import * as vscode from 'vscode';
 import { logger } from '../globals';
@@ -33,11 +33,14 @@ export function deleteHost(arg: any) {
             const profileLabel = repo.getProfileLabel()
               ? repo.getProfileLabel()
               : '';
-            EndevorController.instance.removeRepository(
-              repo.getName(),
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              profileLabel!
-            );
+            const repoName = repo.getName();
+            if (repoName) {
+              EndevorController.instance.removeRepository(
+                repoName,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                profileLabel!
+              );
+            }
             EndevorController.instance.updateSettings();
             logger.trace('Configuration removed');
           } else {

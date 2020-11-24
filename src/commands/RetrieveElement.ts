@@ -15,15 +15,16 @@
 
 import * as vscode from 'vscode';
 import { logger } from '../globals';
-import { EndevorQualifier } from '../interface/IEndevorQualifier';
-import { Repository } from '../model/Repository';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { RetrieveElementService } from '../service/RetrieveElementService';
-import { EndevorElementNode, EndevorNode } from '../ui/tree/EndevorNodes';
 import { prepareElementNodesForRetrieve } from '../utils';
+import { IEndevorElementNode } from '../interface/IEndevorElementNode';
+import { IEndevorNode } from '../interface/IEndevorNode';
+import { IRepository } from '../interface/entities';
 
 export async function retrieveElement(
   arg: any,
-  selection: EndevorNode[],
+  selection: IEndevorNode[],
   retrieveElementService: RetrieveElementService
 ) {
   await vscode.window.withProgress(
@@ -38,7 +39,7 @@ export async function retrieveElement(
           logger.info('Retrieve Cancelled.');
         });
       }
-      const processedSelection: EndevorElementNode[] = prepareElementNodesForRetrieve(
+      const processedSelection: IEndevorElementNode[] = prepareElementNodesForRetrieve(
         selection
       );
       if (processedSelection.length === 0) {
@@ -59,11 +60,11 @@ export async function retrieveElement(
         if (token && token.isCancellationRequested) {
           return;
         }
-        const currentElement: EndevorElementNode = processedSelection[i];
+        const currentElement: IEndevorElementNode = processedSelection[i];
 
-        const repo: Repository | undefined = currentElement.getRepository();
+        const repo: IRepository | undefined = currentElement.getRepository();
         const elementName: string | undefined = currentElement.label;
-        const eq: EndevorQualifier | undefined = currentElement.getQualifier();
+        const eq: IEndevorQualifier | undefined = currentElement.getQualifier();
         if (!(repo && elementName && eq)) {
           throw new Error(JSON.stringify({ repo, elementName, eq }));
         }

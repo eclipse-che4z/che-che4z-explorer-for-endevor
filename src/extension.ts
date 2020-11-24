@@ -28,12 +28,12 @@ import { EndevorController } from './EndevorController';
 import { RetrieveElementService } from './service/RetrieveElementService';
 import { HOST_SETTINGS_KEY } from './service/SettingsFacade';
 import { createEndevorTree } from './ui/tree/EndevorDataProvider';
-import { EndevorNode } from './ui/tree/EndevorNodes';
 import { multipleElementsSelected } from './utils';
 import { Logger } from '@zowe/imperative';
 import * as path from 'path';
 import { Profiles } from './service/Profiles';
 import { logger as vscodeLogger } from './globals';
+import { IEndevorNode } from './interface/IEndevorNode';
 
 let log: Logger;
 
@@ -73,11 +73,14 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   await Profiles.createInstance(log);
-  const endevorDataProvider = await createEndevorTree(log);
+  const endevorDataProvider = await createEndevorTree(
+    log,
+    EndevorController.instance
+  );
   const retrieveElementService: RetrieveElementService = new RetrieveElementService();
-  EndevorController.instance.loadRepositories();
+  EndevorController.instance.loadRepositories(endevorDataProvider);
 
-  const endevorExplorerView: vscode.TreeView<EndevorNode> = vscode.window.createTreeView(
+  const endevorExplorerView: vscode.TreeView<IEndevorNode> = vscode.window.createTreeView(
     'endevorExplorer',
     {
       treeDataProvider: endevorDataProvider,
@@ -146,7 +149,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('endevorexplorer.refreshHosts', () => {
       EndevorController.instance.updateNeedReloadInTree(
         true,
-        EndevorController.instance.rootNode
+        EndevorController.instance.getRootNode()
       );
       endevorDataProvider.refresh();
     })
@@ -181,7 +184,11 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand(Commands.BrowseElement, browseElement)
+    vscode.commands.registerCommand(
+      Commands.BrowseElement,
+      browseElement,
+      EndevorController.instance
+    )
   );
 
   context.subscriptions.push(

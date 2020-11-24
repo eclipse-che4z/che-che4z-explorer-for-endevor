@@ -12,11 +12,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorEntity } from '../interface/IEndevorEntity';
-import { IEnvironment } from '../interface/IEnvironment';
-import { IRepository } from '../interface/IRepository';
-import { IStage } from '../interface/IStage';
-import { ISystem } from '../interface/ISystem';
+import {
+  IEndevorEntity,
+  IEnvironment,
+  IRepository,
+  IStage,
+  ISystem,
+} from '../interface/entities';
 
 export class Environment implements IEndevorEntity {
   envName: string;

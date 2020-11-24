@@ -13,10 +13,8 @@
  */
 
 import * as constants from '../constants';
+import { IEndevorFilter, IElement, IRepository } from '../interface/entities';
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
-import { IEndevorFilter } from '../interface/IEndevorFilter';
-import { IRepository } from '../interface/IRepository';
-import { IElement } from '../interface/IElement';
 
 export const FILTER_ALL_STRING = '*/*/*/*/*/*';
 

@@ -13,11 +13,13 @@
  */
 
 import { EndevorFilter, FILTER_ALL_STRING } from './EndevorFilter';
-import { IRepository } from '../interface/IRepository';
-import { IEndevorFilter } from '../interface/IEndevorFilter';
 import { IFilter } from '../interface/IFilter';
-import { IEnvironment } from '../interface/IEnvironment';
-import { ISystem } from '../interface/ISystem';
+import {
+  IEndevorFilter,
+  IEnvironment,
+  IRepository,
+  ISystem,
+} from '../interface/entities';
 
 export class Repository implements IRepository {
   private _id?: number;

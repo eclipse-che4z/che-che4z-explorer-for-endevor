@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from './IElement';
+import { IElement } from './entities';
 
 export interface IElementDependencies {
   elmName: string;

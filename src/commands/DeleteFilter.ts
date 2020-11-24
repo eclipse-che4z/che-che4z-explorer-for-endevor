@@ -14,7 +14,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorFilter } from '../model/EndevorFilter';
+import { EndevorFilter } from '../entities/EndevorFilter';
 import { EndevorController } from '../EndevorController';
 import * as vscode from 'vscode';
 import { logger } from '../globals';

@@ -15,8 +15,8 @@
  */
 
 import { filterStringValidator } from '../FilterUtils';
-import { Repository } from '../model/Repository';
-import { EndevorFilter } from '../model/EndevorFilter';
+import { Repository } from '../entities/Repository';
+import { EndevorFilter } from '../entities/EndevorFilter';
 import { EndevorController } from '../EndevorController';
 import * as vscode from 'vscode';
 
@@ -48,7 +48,10 @@ export function addFilter(arg: any) {
   vscode.window.showInputBox(inputBoxOptions).then((filterUri) => {
     if (filterUri) {
       const repo: Repository = <Repository>arg.getRepository();
-      repo.filters.push(new EndevorFilter(repo, filterUri));
+      const repoFilters = repo.getEndevorFilters();
+      if (repoFilters) {
+        repoFilters.push(new EndevorFilter(repo, filterUri));
+      }
       EndevorController.instance.updateSettings();
     }
   });

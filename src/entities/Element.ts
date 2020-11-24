@@ -12,10 +12,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IElement } from '../interface/IElement';
-import { IEndevorEntity } from '../interface/IEndevorEntity';
+import { IEndevorEntity, IElement, IRepository } from '../interface/entities';
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
-import { IRepository } from '../interface/IRepository';
 
 export class Element implements IEndevorEntity {
   envName: string;

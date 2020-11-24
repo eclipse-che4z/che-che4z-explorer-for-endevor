@@ -12,10 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import * as vscode from 'vscode';
-import { IElement } from './interface/IElement';
-import { IRepository } from './interface/IRepository';
-import { EndevorFilterPathNode, EmptyNode } from './ui/tree/EndevorNodes';
+import { IRepository } from './interface/entities';
 
 /**
  * Validates a string based on the filter string conventions.
@@ -137,60 +134,4 @@ function duplicateFilterString(repo: IRepository, value: string): boolean {
     }
   }
   return false;
-}
-
-export function createPathNodes(
-  elements: IElement[],
-  repo: IRepository
-): EndevorFilterPathNode[] {
-  const pathNodes: EndevorFilterPathNode[] = [];
-  const pathNames: string[] = [];
-  for (let i = 0; i < elements.length; i++) {
-    const tempPath =
-      elements[i].envName +
-      '/' +
-      elements[i].stgNum +
-      '/' +
-      elements[i].sysName +
-      '/' +
-      elements[i].sbsName +
-      '/' +
-      elements[i].typeName;
-    if (!pathNames.includes(tempPath)) {
-      pathNames.push(tempPath);
-    }
-  }
-  for (let i = 0; i < pathNames.length; i++) {
-    const elements: IElement[] = [];
-    pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
-  }
-  for (let i = 0; i < pathNames.length; i++) {
-    for (let j = 0; j < elements.length; j++) {
-      const tempPath =
-        elements[j].envName +
-        '/' +
-        elements[j].stgNum +
-        '/' +
-        elements[j].sysName +
-        '/' +
-        elements[j].sbsName +
-        '/' +
-        elements[j].typeName;
-      if (pathNames[i] === tempPath) {
-        pathNodes[i].getElements().push(elements[j]);
-      }
-    }
-  }
-  return pathNodes;
-}
-
-export function createEmptyNode(
-  repo: IRepository,
-  label: string,
-  message: string
-): EmptyNode {
-  const pathName = label;
-  const pathNode = new EmptyNode(pathName, repo, message);
-  pathNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
-  return pathNode;
 }

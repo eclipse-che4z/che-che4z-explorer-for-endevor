@@ -12,38 +12,44 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IRepository } from '../interface/IRepository';
-import { IType } from '../interface/IType';
+import { IStage, IRepository } from '../interface/entities';
 
-export class Type implements IType {
+export class Stage implements IStage {
   envName: string;
-  sysName: string;
+  stgName: string;
+  stgId: string;
   stgNum: string;
-  typeName: string;
   repository: IRepository;
-  fileExt: string;
 
-  constructor(repo: IRepository, type: IType) {
-    this.envName = type.envName;
-    this.sysName = type.sysName;
-    this.stgNum = type.stgNum;
-    this.typeName = type.typeName;
-    this.fileExt = type.fileExt;
+  constructor(repo: IRepository, stage: IStage) {
+    this.envName = stage.envName;
+    this.stgName = stage.stgName;
+    this.stgId = stage.stgId;
+    this.stgNum = stage.stgNum;
     this.repository = repo;
   }
 
   public getName(): string {
-    return this.typeName;
+    return this.stgNum.toString();
   }
+
   public getDescription(): string {
     return '';
   }
 
-  public getTypeName(): string {
-    return this.typeName;
-  }
-
   public getRepository(): IRepository {
     return this.repository;
+  }
+
+  public getStgName(): string {
+    return this.stgName;
+  }
+
+  public getStgId(): string {
+    return this.stgId;
+  }
+
+  public getStgNum(): string {
+    return this.stgNum;
   }
 }

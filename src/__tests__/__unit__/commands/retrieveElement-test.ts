@@ -16,12 +16,13 @@ import * as vscode from 'vscode';
 
 import { retrieveElement } from '../../../commands/RetrieveElement';
 import { logger } from '../../../globals';
-import { Element } from '../../../model/Element';
+import { Element } from '../../../entities/Element';
 import { IEndevorQualifier } from '../../../interface/IEndevorQualifier';
-import { Repository } from '../../../model/Repository';
+import { Repository } from '../../../entities/Repository';
 import { RetrieveElementService } from '../../../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
-import { IElement } from '../../../interface/IElement';
+import { EndevorController } from '../../../EndevorController';
+import { IElement } from '../../../interface/entities';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -66,6 +67,25 @@ describe('Test function retrieveElement', () => {
       sbsName: 'sbsTest',
       stgNum: '1',
       typeName: 'COBOL',
+      repository: testRepo,
+      getName: () => {
+        return 'elmTest1';
+      },
+      getDescription: () => {
+        return 'testDescription';
+      },
+      getElmName: () => {
+        return 'elmTest1';
+      },
+      getElmVVLL: () => {
+        return '1100';
+      },
+      getRepository: () => {
+        return testRepo;
+      },
+      getQualifier: () => {
+        return qualifier1;
+      },
     },
     {
       elmName: 'elmTest2',
@@ -76,6 +96,25 @@ describe('Test function retrieveElement', () => {
       sbsName: 'sbsTest',
       stgNum: '1',
       typeName: 'COBOL',
+      repository: testRepo,
+      getName: () => {
+        return 'elmTest1';
+      },
+      getDescription: () => {
+        return 'testDescription';
+      },
+      getElmName: () => {
+        return 'elmTest1';
+      },
+      getElmVVLL: () => {
+        return '1100';
+      },
+      getRepository: () => {
+        return testRepo;
+      },
+      getQualifier: () => {
+        return qualifier2;
+      },
     },
   ];
   const testElements: Element[] = [
@@ -99,8 +138,16 @@ describe('Test function retrieveElement', () => {
     type: 'COBOL',
   };
   const testEndevorElementNodes: EndevorNode[] = [
-    new EndevorElementNode(testElements[0], qualifier1),
-    new EndevorElementNode(testElements[1], qualifier2),
+    new EndevorElementNode(
+      testElements[0],
+      qualifier1,
+      EndevorController.instance
+    ),
+    new EndevorElementNode(
+      testElements[1],
+      qualifier2,
+      EndevorController.instance
+    ),
   ];
 
   // All spies are listed here

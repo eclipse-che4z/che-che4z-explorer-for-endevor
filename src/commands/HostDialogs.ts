@@ -17,13 +17,14 @@
 import { URL } from 'url';
 // import { ProgressLocation, window, workspace } from 'vscode';
 import { EndevorController } from '../EndevorController';
-import { Repository } from '../model/Repository';
+import { Repository } from '../entities/Repository';
 import { proxyGetDsNamesFromInstance } from '../service/EndevorCliProxy';
 import { Profiles } from '../service/Profiles';
 import * as utils from '../utils';
 import * as vscode from 'vscode';
-import { Connection } from '../model/Connection';
+import { Connection } from '../entities/Connection';
 import { logger } from '../globals';
+import { IConnection } from '../interface/entities';
 
 export class HostDialogs {
   public static async addConnection() {
@@ -41,7 +42,7 @@ export class HostDialogs {
           !EndevorController.instance
             .getConnections()
             .find(
-              (connection: Connection) => connection.getName() === profileNames
+              (connection: IConnection) => connection.getName() === profileNames
             )
       );
     }
@@ -154,7 +155,10 @@ export class HostDialogs {
           increment: 10,
         });
         try {
-          const dsNames = await proxyGetDsNamesFromInstance(newRepo);
+          const dsNames = await proxyGetDsNamesFromInstance(
+            newRepo,
+            EndevorController.instance
+          );
           progress.report({ increment: 100 });
           const dsItem = await vscode.window.showQuickPick(
             dsNames.map((label) => ({ label })),
@@ -215,11 +219,13 @@ export class HostDialogs {
         return;
       }
       const oldName = repo.getName();
-      EndevorController.instance.updateRepositoryName(
-        oldName,
-        newName,
-        profileLabel!
-      );
+      if (oldName) {
+        EndevorController.instance.updateRepositoryName(
+          oldName,
+          newName,
+          profileLabel!
+        );
+      }
       EndevorController.instance.updateSettings();
       logger.info(
         'Configuration renamed.',

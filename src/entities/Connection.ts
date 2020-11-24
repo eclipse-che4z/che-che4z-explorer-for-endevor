@@ -13,8 +13,7 @@
  */
 
 import { IProfileLoaded, IProfile } from '@zowe/imperative';
-import { IConnection } from '../interface/IConnection';
-import { IRepository } from '../interface/IRepository';
+import { IConnection, IRepository } from '../interface/entities';
 
 export class Connection implements IConnection {
   message: string;
@@ -40,7 +39,10 @@ export class Connection implements IConnection {
   }
 
   public loadRepository(repo: IRepository) {
-    this._repositories.set(repo.getName(), repo);
+    const repoName = repo.getName();
+    if (repoName) {
+      this._repositories.set(repoName, repo);
+    }
   }
 
   public findRepository(repoName: string): IRepository | undefined {
@@ -61,7 +63,10 @@ export class Connection implements IConnection {
 
   public setRepositoryList(repos: IRepository[]) {
     repos.forEach((repo) => {
-      this._repositories.set(repo.getName(), repo);
+      const repoName = repo.getName();
+      if (repoName) {
+        this._repositories.set(repoName, repo);
+      }
     });
   }
   public get repositories(): Map<string, IRepository> {

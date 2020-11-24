@@ -15,7 +15,7 @@
  */
 
 import { filterStringValidator } from '../FilterUtils';
-import { EndevorFilter } from '../model/EndevorFilter';
+import { EndevorFilter } from '../entities/EndevorFilter';
 import { EndevorController } from '../EndevorController';
 import { EndevorNode } from '../ui/tree/EndevorNodes';
 import * as vscode from 'vscode';
@@ -38,7 +38,7 @@ export function editFilter(arg: any) {
         );
         if (filter.getUri() !== filterUri) {
           filter.editFilter(filterUri);
-          (<EndevorNode>arg).children = [];
+          (<EndevorNode>arg).setChildren([]);
           EndevorController.instance.updateSettings();
         }
       }

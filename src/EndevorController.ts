@@ -12,19 +12,17 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-// import { Repository } from './model/Repository';
 import { SettingsFacade } from './service/SettingsFacade';
 import {
   EndevorNode,
   EndevorBrowsingNode,
   FilterNode,
 } from './ui/tree/EndevorNodes';
-// import { Connection } from './model/Connection';
-import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
 import { Host } from './interface/IEndevorInstance';
-import { IConnection } from './interface/IConnection';
-import { IRepository } from './interface/IRepository';
-import { Connection } from './model/Connection';
+import { Connection } from './entities/Connection';
+import { IEndevorNode } from './interface/IEndevorNode';
+import { IEndevorDataProvider } from './interface/dataProvider_controller';
+import { IConnection, IRepository } from './interface/entities';
 
 export class EndevorController {
   /**
@@ -36,7 +34,10 @@ export class EndevorController {
    * This is the root node of Explorer for Endevor view. It is derived from [TreeItem](#TreeItem).
    * Its children are repository nodes.
    */
-  private _rootNode: EndevorNode = new EndevorNode(undefined);
+  private _rootNode: IEndevorNode = new EndevorNode(
+    EndevorController.instance,
+    undefined
+  );
 
   private connections: Map<string, IConnection> = new Map();
 
@@ -50,11 +51,11 @@ export class EndevorController {
     return this._instance;
   }
 
-  public get rootNode(): EndevorNode {
+  public getRootNode(): IEndevorNode {
     return this._rootNode;
   }
 
-  public set rootNode(value: EndevorNode) {
+  public setRootNode(value: IEndevorNode) {
     this._rootNode = value;
   }
 
@@ -62,15 +63,18 @@ export class EndevorController {
     if (typeof repo.id === 'undefined') {
       repo.id = this.findNextId(connectionLabel);
     }
-    const newRepoNode: EndevorNode = new EndevorNode(repo);
+    const newRepoNode: IEndevorNode = new EndevorNode(
+      EndevorController.instance,
+      repo
+    );
     const conn = this.connections.get(connectionLabel);
     if (conn) {
       conn.loadRepository(repo);
     }
-    this._rootNode.children.forEach((child) => {
+    this._rootNode.getChildren().forEach((child) => {
       const entity = child.getEntity();
       if (entity && entity.getName() === connectionLabel) {
-        child.children.push(newRepoNode);
+        child.getChildren().push(newRepoNode);
       }
     });
   }
@@ -83,15 +87,18 @@ export class EndevorController {
       connection.name = '';
     }
     this.connections.set(connection.name, connection);
-    const newConnectionNode = new EndevorNode(connection);
-    this._rootNode.children.push(newConnectionNode);
+    const newConnectionNode = new EndevorNode(
+      EndevorController.instance,
+      connection
+    );
+    this._rootNode.getChildren().push(newConnectionNode);
   }
 
   public removeConnection(connectionName: string) {
     this.connections.delete(connectionName);
-    this._rootNode.children.forEach((connection, index) => {
+    this._rootNode.getChildren().forEach((connection, index) => {
       if (connection.label === connectionName) {
-        this._rootNode.children.splice(index, 1);
+        this._rootNode.getChildren().splice(index, 1);
       }
     });
   }
@@ -101,11 +108,13 @@ export class EndevorController {
     if (conn) {
       conn.getRepositoryMap().delete(repoName);
     }
-    this._rootNode.children.forEach((connection, index) => {
+    this._rootNode.getChildren().forEach((connection, index) => {
       if (connection.label === connectionLabel) {
-        this._rootNode.children[index].children = connection.children.filter(
-          (repo) => repo.label !== repoName
-        );
+        this._rootNode
+          .getChildren()
+          [index].setChildren(
+            connection.getChildren().filter((repo) => repo.label !== repoName)
+          );
       }
     });
   }
@@ -128,13 +137,16 @@ export class EndevorController {
       });
       conn.repositories = newMap;
     }
-    const cnxIdx = this.rootNode.children.findIndex(
-      (node) => node.label === connectionLabel
-    );
-    const repoIdx = this.rootNode.children[cnxIdx].children.findIndex(
-      (repo) => repo.label === oldRepoName
-    );
-    this.rootNode.children[cnxIdx].children[repoIdx].label = newRepoName;
+    const cnxIdx = this.getRootNode()
+      .getChildren()
+      .findIndex((node) => node.label === connectionLabel);
+    const repoIdx = this.getRootNode()
+      .getChildren()
+      [cnxIdx].getChildren()
+      .findIndex((repo) => repo.label === oldRepoName);
+    this.getRootNode().getChildren()[cnxIdx].getChildren()[
+      repoIdx
+    ].label = newRepoName;
   }
 
   public updateSettings() {
@@ -143,7 +155,7 @@ export class EndevorController {
 
   public updateNeedReloadInTree(
     parNeedReload: boolean,
-    refreshTreeRoot: EndevorNode
+    refreshTreeRoot: IEndevorNode
   ) {
     refreshTreeRoot.updateNeedReload(parNeedReload);
   }
@@ -157,14 +169,14 @@ export class EndevorController {
    * In case `id` is not present in the settings.json, function [updateIDs](#EndevorController.updateIDs) is used to determine it
    * and store in the settings.json.
    */
-  public loadRepositories() {
+  public loadRepositories(endevorDataProvider: IEndevorDataProvider) {
     const connectionsFromSettings: Map<string, Host[]> = new Map();
     SettingsFacade.listConnections().forEach((conn) =>
       connectionsFromSettings.set(conn.name, conn.hosts)
     );
-    this.rootNode.needReload = false;
-    if (this.rootNode.children.length !== this.connections.size) {
-      this.rootNode.needReload = true;
+    this.getRootNode().setNeedReload(false);
+    if (this.getRootNode().getChildren().length !== this.connections.size) {
+      this.getRootNode().setNeedReload(true);
     }
     connectionsFromSettings.forEach((hostList, connName) => {
       const connNode = EndevorController.instance.findNodeByConnectionName(
@@ -177,7 +189,7 @@ export class EndevorController {
         const updatedRepos: Map<string, IRepository> = new Map();
         reposFromSettings.forEach((settingsRepo) => {
           const repoNode:
-            | EndevorNode
+            | IEndevorNode
             | undefined = EndevorController.instance.findNodeByRepoID(
             settingsRepo.id,
             connName
@@ -187,11 +199,11 @@ export class EndevorController {
             const modelRepo: IRepository | undefined = repoNode.getRepository();
             if (modelRepo) {
               if (modelRepo.isEqual(settingsRepo)) {
-                this.rootNode.needReload = true;
+                this.getRootNode().setNeedReload(true);
                 if (!modelRepo.isSameInstance(settingsRepo)) {
-                  repoNode.needReload = !repoNode.hasChildren();
+                  repoNode.setNeedReload(!repoNode.hasChildren());
                 } else {
-                  repoNode.needReload = true;
+                  repoNode.setNeedReload(true);
                 }
                 modelRepo.loadInfoFromConfig(settingsRepo);
               }
@@ -200,9 +212,12 @@ export class EndevorController {
             this.checkAndReloadFilters(repoNode, repoToKeep);
             repoNode.updateInfo();
           } else {
-            this.rootNode.needReload = true;
+            this.getRootNode().setNeedReload(true);
           }
-          updatedRepos.set(repoToKeep.getName(), repoToKeep);
+          const repoName = repoToKeep.getName();
+          if (repoName) {
+            updatedRepos.set(repoName, repoToKeep);
+          }
         });
         const currentRepos = updatedRepos;
         currentRepos.forEach((repo) => {
@@ -214,7 +229,7 @@ export class EndevorController {
         });
         this.updateIDs(connName);
       } else {
-        const endevorDataProvider = new EndevorDataProvider();
+        // const endevorDataProvider = new EndevorDataProvider(this);
         endevorDataProvider.addSession(connName);
       }
     });
@@ -235,13 +250,13 @@ export class EndevorController {
   public findNodeByRepoID(
     id: number | undefined,
     connectionLabel: string
-  ): EndevorNode | undefined {
+  ): IEndevorNode | undefined {
     if (id === undefined) {
       return undefined;
     }
     const connection = this.findNodeByConnectionName(connectionLabel);
     if (connection) {
-      for (const node of connection.children) {
+      for (const node of connection.getChildren()) {
         const nodeRepo: IRepository | undefined = node.getRepository();
         if (nodeRepo && nodeRepo.id === id) {
           return node;
@@ -251,11 +266,11 @@ export class EndevorController {
     return undefined;
   }
 
-  public findNodeByConnectionName(name: string): EndevorNode | undefined {
+  public findNodeByConnectionName(name: string): IEndevorNode | undefined {
     if (!name) {
       return undefined;
     }
-    for (const node of this._rootNode.children) {
+    for (const node of this._rootNode.getChildren()) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       if (node.getEntity() && node.getEntity()!.getName() === name) {
         return node;
@@ -314,10 +329,10 @@ export class EndevorController {
    * @param repoNode `EndevorNode` containing repository with current filters.
    * @param repo Repository loaded from settings.json
    */
-  private checkAndReloadFilters(repoNode: EndevorNode, repo: IRepository) {
+  private checkAndReloadFilters(repoNode: IEndevorNode, repo: IRepository) {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     const filtersNode: EndevorBrowsingNode = <EndevorBrowsingNode>(
-      repoNode.children.find((child) =>
+      repoNode.getChildren().find((child) =>
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         (<EndevorBrowsingNode>child).isFiltersNode()
       )
@@ -325,18 +340,23 @@ export class EndevorController {
     if (!filtersNode) {
       return;
     }
-    const newChildren: Map<string, EndevorNode> = new Map();
-    repo.filters.forEach((filter) => {
-      let newNode: EndevorNode | undefined = filtersNode.findFilterNode(filter);
-      if (newNode) {
-        newNode.updateInfo();
-        newNode.needReload = !newNode.hasChildren();
-      } else {
-        newNode = new FilterNode(filter);
-      }
-      newChildren.set(filter.getUri(), newNode);
-    });
-    filtersNode.children = Array.from(newChildren.values());
-    filtersNode.needReload = false;
+    const newChildren: Map<string, IEndevorNode> = new Map();
+    const repoFilters = repo.getEndevorFilters();
+    if (repoFilters) {
+      repoFilters.forEach((filter) => {
+        let newNode: IEndevorNode | undefined = filtersNode.findFilterNode(
+          filter
+        );
+        if (newNode) {
+          newNode.updateInfo();
+          newNode.setNeedReload(!newNode.hasChildren());
+        } else {
+          newNode = new FilterNode(EndevorController.instance, filter);
+        }
+        newChildren.set(filter.getUri(), newNode);
+      });
+      filtersNode.setChildren(Array.from(newChildren.values()));
+      filtersNode.setNeedReload(false);
+    }
   }
 }

@@ -14,15 +14,19 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorQualifier } from '../interface/IEndevorQualifier';
-import { Repository } from '../model/Repository';
+import { IEndevorQualifier } from '../interface/IEndevorQualifier';
+import { Repository } from '../entities/Repository';
 import { proxyBrowseElement } from '../service/EndevorCliProxy';
 import { logger } from '../globals';
+import { IEndevorController } from '../interface/dataProvider_controller';
 
-export async function browseElement(arg: any) {
+export async function browseElement(
+  arg: any,
+  controllerInstance: IEndevorController
+) {
   const repo: Repository = arg.getRepository();
   const elementName: string = arg.label;
-  const eq: EndevorQualifier = arg.getQualifier();
+  const eq: IEndevorQualifier = arg.getQualifier();
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -31,7 +35,7 @@ export async function browseElement(arg: any) {
     async (progress) => {
       progress.report({ increment: 10 });
       try {
-        const data = await proxyBrowseElement(repo, eq);
+        const data = await proxyBrowseElement(repo, eq, controllerInstance);
         progress.report({ increment: 50 });
         const doc = await vscode.workspace.openTextDocument({
           content: data,

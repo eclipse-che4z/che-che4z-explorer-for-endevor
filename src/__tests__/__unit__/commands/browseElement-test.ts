@@ -17,10 +17,11 @@ import * as vscode from 'vscode';
 import { PrintElementComponents } from '@broadcom/endevor-for-zowe-cli';
 import { browseElement } from '../../../commands/BrowseElement';
 import { logger } from '../../../globals';
-import { Element } from '../../../model/Element';
-import { EndevorQualifier } from '../../../interface/IEndevorQualifier';
-import { Repository } from '../../../model/Repository';
+import { Element } from '../../../entities/Element';
+import { Repository } from '../../../entities/Repository';
 import { EndevorElementNode } from '../../../ui/tree/EndevorNodes';
+import { IEndevorQualifier } from '../../../interface/IEndevorQualifier';
+import { EndevorController } from '../../../EndevorController';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -61,9 +62,28 @@ describe('Test function browseElement', () => {
     sbsName: 'sbsTest',
     stgNum: '1',
     typeName: 'COBOL',
+    repository: testRepo,
+    getName: () => {
+      return 'elmTest1';
+    },
+    getDescription: () => {
+      return 'testDescription';
+    },
+    getElmName: () => {
+      return 'elmTest1';
+    },
+    getElmVVLL: () => {
+      return '1100';
+    },
+    getRepository: () => {
+      return testRepo;
+    },
+    getQualifier: () => {
+      return testQualifier;
+    },
   };
   const testElement = new Element(testRepo, testIElement);
-  const testQualifier: EndevorQualifier = {
+  const testQualifier: IEndevorQualifier = {
     element: testElement.elmName,
     env: 'envTest',
     stage: '1',
@@ -73,7 +93,8 @@ describe('Test function browseElement', () => {
   };
   const testEndevorElementNode = new EndevorElementNode(
     testElement,
-    testQualifier
+    testQualifier,
+    EndevorController.instance
   );
 
   // All spies are listed here
@@ -99,7 +120,7 @@ describe('Test function browseElement', () => {
   test("Should show an element's components in the text editor", async () => {
     mockPrintElementComponents.mockReturnValueOnce({ data: 'test file data' });
 
-    await browseElement(testEndevorElementNode);
+    await browseElement(testEndevorElementNode, EndevorController.instance);
 
     expect(openDocumentSpy).toBeCalledWith({ content: 'test file data' });
   });
@@ -110,7 +131,7 @@ describe('Test function browseElement', () => {
       error: 'Test error!',
     });
 
-    await browseElement(testEndevorElementNode);
+    await browseElement(testEndevorElementNode, EndevorController.instance);
 
     expect(loggerErrorSpy).toBeCalledWith('Test error!');
   });

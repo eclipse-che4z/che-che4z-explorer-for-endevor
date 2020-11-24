@@ -12,9 +12,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { IEndevorNode } from './IEndevorNode';
 import { IEndevorQualifier } from './IEndevorQualifier';
 
-export interface IEndevorElementNode {
-  qualifier?: IEndevorQualifier;
-  getQualifier(): IEndevorQualifier;
+export interface IEndevorElementNode extends IEndevorNode {
+  qualifier: IEndevorQualifier;
+  getQualifier: () => IEndevorQualifier;
 }

@@ -16,11 +16,11 @@
 
 import * as vscode from 'vscode';
 import { logger } from '../globals';
-import { Element } from '../model/Element';
+import { Element } from '../entities/Element';
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
-import { Repository } from '../model/Repository';
+import { Repository } from '../entities/Repository';
 import { RetrieveElementService } from '../service/RetrieveElementService';
-import { IElement } from '../interface/IElement';
+import { IElement } from '../interface/entities';
 
 const RETRIEVE_ELEMENTS_LIMIT = 20;
 
@@ -141,6 +141,25 @@ function createElementFromQualifier(
     typeName: eq.type!,
     fullElmName: eq.element!,
     elmVVLL: '',
+    repository: repo,
+    getName: () => {
+      return '';
+    },
+    getDescription: () => {
+      return '';
+    },
+    getRepository: () => {
+      return repo;
+    },
+    getElmName: () => {
+      return '';
+    },
+    getElmVVLL: () => {
+      return '';
+    },
+    getQualifier: () => {
+      return eq;
+    },
   };
   return new Element(repo, iElement);
 }

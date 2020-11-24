@@ -12,28 +12,36 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IRepository } from '../interface/IRepository';
-import { ISubsystem } from '../interface/ISubsystem';
+import { IType, IRepository } from '../interface/entities';
 
-export class Subsystem implements ISubsystem {
+export class Type implements IType {
   envName: string;
   sysName: string;
-  sbsName: string;
+  stgNum: string;
+  typeName: string;
   repository: IRepository;
+  fileExt: string;
 
-  constructor(repo: IRepository, subsys: ISubsystem) {
-    this.envName = subsys.envName;
-    this.sysName = subsys.sysName;
-    this.sbsName = subsys.sbsName;
+  constructor(repo: IRepository, type: IType) {
+    this.envName = type.envName;
+    this.sysName = type.sysName;
+    this.stgNum = type.stgNum;
+    this.typeName = type.typeName;
+    this.fileExt = type.fileExt;
     this.repository = repo;
   }
 
   public getName(): string {
-    return this.sbsName;
+    return this.typeName;
   }
   public getDescription(): string {
     return '';
   }
+
+  public getTypeName(): string {
+    return this.typeName;
+  }
+
   public getRepository(): IRepository {
     return this.repository;
   }

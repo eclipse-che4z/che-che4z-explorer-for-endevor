@@ -14,19 +14,23 @@ import {
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { buildSession, endevorQualifierToElement, toArray } from '../utils';
 import { logger } from '../globals';
-import { IElement } from '../interface/IElement';
-import { IEnvironment } from '../interface/IEnvironment';
-import { IStage } from '../interface/IStage';
-import { ISubsystem } from '../interface/ISubsystem';
-import { ISystem } from '../interface/ISystem';
-import { IType } from '../interface/IType';
-import { IRepository } from '../interface/IRepository';
+import {
+  IElement,
+  IEnvironment,
+  IRepository,
+  IStage,
+  ISubsystem,
+  ISystem,
+  IType,
+} from '../interface/entities';
+import { IEndevorController } from '../interface/dataProvider_controller';
 
 export async function proxyBrowseElement(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier
+  IEndevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<string | undefined> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
 
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -41,18 +45,20 @@ export async function proxyBrowseElement(
 }
 
 export async function proxyGetDsNamesFromInstance(
-  repository: IRepository
+  repository: IRepository,
+  controllerInstance: IEndevorController
 ): Promise<string[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSources = await ListInstance.listInstance(session);
   return dataSources.map((ds) => ds.name as string).sort();
 }
 
 export async function proxyRetrieveElement(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier
+  IEndevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<string | undefined> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const element = endevorQualifierToElement(IEndevorQualifier, instance);
@@ -70,9 +76,10 @@ export async function proxyRetrieveElement(
 
 export async function proxyRetrieveAcmComponents(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier
+  endevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<IElement[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
@@ -95,9 +102,10 @@ export async function proxyRetrieveAcmComponents(
 
 export async function proxyListType(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier
+  endevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<IType[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const typeInput = endevorQualifierToElement(endevorQualifier, instance);
@@ -121,9 +129,10 @@ export async function proxyListType(
 
 export async function proxyListElement(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier
+  endevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<IElement[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
@@ -146,9 +155,10 @@ export async function proxyListElement(
 }
 
 export async function proxyListEnvironment(
-  repository: IRepository
+  repository: IRepository,
+  controllerInstance: IEndevorController
 ): Promise<IEnvironment[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const environment = endevorQualifierToElement({}, instance);
@@ -172,9 +182,10 @@ export async function proxyListEnvironment(
 
 export async function proxyListStage(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier
+  endevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<IStage[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const stageNumber = endevorQualifierToElement(endevorQualifier, instance);
@@ -198,9 +209,10 @@ export async function proxyListStage(
 
 export async function proxyListSubsystem(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier
+  IEndevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<ISubsystem[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorSubsystem = endevorQualifierToElement(
@@ -227,9 +239,10 @@ export async function proxyListSubsystem(
 
 export async function proxyListSystem(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier
+  endevorQualifier: IEndevorQualifier,
+  controllerInstance: IEndevorController
 ): Promise<ISystem[]> {
-  const session = await buildSession(repository);
+  const session = await buildSession(repository, controllerInstance);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorSystem = endevorQualifierToElement(endevorQualifier, instance);

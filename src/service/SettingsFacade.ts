@@ -15,13 +15,15 @@
 
 import * as vscode from 'vscode';
 import { Host } from '../interface/IEndevorInstance';
-import { Repository } from '../model/Repository';
+import { Repository } from '../entities/Repository';
 import { Profiles } from './Profiles';
 import { logger } from '../globals';
-import { IConnection } from '../interface/IConnection';
-import { IEndevorFilter } from '../interface/IEndevorFilter';
-import { IRepository } from '../interface/IRepository';
-import { EndevorFilter } from '../model/EndevorFilter';
+import { EndevorFilter } from '../entities/EndevorFilter';
+import {
+  IConnection,
+  IEndevorFilter,
+  IRepository,
+} from '../interface/entities';
 
 export const HOST_SETTINGS_KEY = 'endevor.connections';
 
