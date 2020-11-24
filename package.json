@@ -173,10 +173,6 @@
           "group": "inline"
         },
         {
-          "command": "endevorexplorer.browseElement",
-          "when": "view == endevorExplorer && viewItem == element"
-        },
-        {
           "command": "endevorexplorer.retrieveElement",
           "when": "view == endevorExplorer && viewItem == element"
         },
