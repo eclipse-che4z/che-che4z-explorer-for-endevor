@@ -38,6 +38,7 @@ import {
 } from '../../service/EndevorCliProxy';
 import { Session } from '@zowe/imperative';
 import { logger } from '../../globals';
+import { Commands } from '../../commands/Common';
 
 export class EndevorNode extends vscode.TreeItem {
   private entity?: EndevorEntity;
@@ -372,6 +373,11 @@ export class EndevorElementNode extends EndevorNode {
   constructor(entity: EndevorEntity, qualifier: EndevorQualifier) {
     super(entity);
     this.qualifier = qualifier;
+    this.command = {
+      title: 'Browse element',
+      command: Commands.BrowseElement,
+      arguments: [this]
+    }
   }
 
   public getQualifier(): EndevorQualifier | undefined {
