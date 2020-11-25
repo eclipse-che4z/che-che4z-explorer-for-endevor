@@ -93,8 +93,7 @@ describe('Test function browseElement', () => {
   };
   const testEndevorElementNode = new EndevorElementNode(
     testElement,
-    testQualifier,
-    EndevorController.instance
+    testQualifier
   );
 
   // All spies are listed here

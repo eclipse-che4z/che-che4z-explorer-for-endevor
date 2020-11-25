@@ -48,22 +48,20 @@ import {
   ISystem,
   IType,
 } from '../../interface/entities';
-import { IEndevorController } from '../../interface/dataProvider_controller';
+import { EndevorController } from '../../EndevorController';
 
 export class EndevorNode extends vscode.TreeItem implements IEndevorNode {
   private entity?: IEndevorEntity;
   private _children: IEndevorNode[];
   private _needReload: boolean;
-  public controllerInstance: IEndevorController;
 
-  constructor(controllerInstance: IEndevorController, entity?: IEndevorEntity) {
+  constructor(entity?: IEndevorEntity) {
     const entityName = entity ? entity.getName() : 'unknown';
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     super(entityName!, vscode.TreeItemCollapsibleState.Collapsed);
     this._needReload = true;
     this.description = '';
     this._children = [];
-    this.controllerInstance = controllerInstance;
 
     if (entity instanceof Element) {
       this.collapsibleState = vscode.TreeItemCollapsibleState.None;
@@ -155,12 +153,8 @@ export class EndevorNode extends vscode.TreeItem implements IEndevorNode {
 export class EndevorBrowsingNode extends EndevorNode {
   private repository?: IRepository;
 
-  constructor(
-    name: string,
-    repo: IRepository | undefined,
-    controllerInstance: IEndevorController
-  ) {
-    super(controllerInstance);
+  constructor(name: string, repo: IRepository | undefined) {
+    super();
     this.label = name;
     this.repository = repo;
   }
@@ -223,7 +217,7 @@ export class EndevorBrowsingNode extends EndevorNode {
         const resultNodes: EndevorNode[] = [];
         if (repo.filters) {
           repo.filters.forEach((filter) => {
-            resultNodes.push(new FilterNode(this.controllerInstance, filter));
+            resultNodes.push(new FilterNode(filter));
           });
         }
         this.setChildren(resultNodes);
@@ -233,17 +227,11 @@ export class EndevorBrowsingNode extends EndevorNode {
     try {
       const resultNodes: EndevorQualifiedNode[] = [];
       const resultEntities: IEnvironment[] = [];
-      const envs = await proxyListEnvironment(repo, this.controllerInstance);
+      const envs = await proxyListEnvironment(repo, EndevorController.instance);
       envs.forEach((env) => {
         const envEntity: IEnvironment = new Environment(repo, env);
         resultEntities.push(envEntity);
-        resultNodes.push(
-          new EnvironmentNode(
-            envEntity,
-            { env: env.envName },
-            this.controllerInstance
-          )
-        );
+        resultNodes.push(new EnvironmentNode(envEntity, { env: env.envName }));
       });
       repo.loadEnvironments(resultEntities, true);
       this.setChildren(resultNodes);
@@ -263,10 +251,9 @@ export class EndevorFilterPathNode extends EndevorNode {
   constructor(
     name: string,
     repo: IRepository | undefined,
-    elements: Element[],
-    controllerInstance: IEndevorController
+    elements: Element[]
   ) {
-    super(controllerInstance);
+    super();
     this.elements = elements;
     this.label = name;
     this.repository = repo;
@@ -290,9 +277,7 @@ export class EndevorFilterPathNode extends EndevorNode {
         type: element.typeName,
         element: element.fullElmName,
       };
-      resultNodes.push(
-        new EndevorQualifiedNode(element, qualifier, this.controllerInstance)
-      );
+      resultNodes.push(new EndevorQualifiedNode(element, qualifier));
     });
     this.setChildren(resultNodes);
     this.setNeedReload(false);
@@ -315,13 +300,8 @@ export class EndevorFilterPathNode extends EndevorNode {
 export class EmptyNode extends EndevorNode {
   private repository?: IRepository;
   private message: string;
-  constructor(
-    name: string,
-    repo: IRepository | undefined,
-    message: string,
-    controllerInstance: IEndevorController
-  ) {
-    super(controllerInstance);
+  constructor(name: string, repo: IRepository | undefined, message: string) {
+    super();
     this.label = name;
     this.repository = repo;
     this.message = message;
@@ -362,7 +342,7 @@ export class FilterNode extends EndevorNode {
       const elements = await proxyListElement(
         repo,
         qualifier,
-        this.controllerInstance
+        EndevorController.instance
       );
       const resultEntities: Element[] = [];
       let resultNodes: EndevorNode[] = [];
@@ -370,30 +350,17 @@ export class FilterNode extends EndevorNode {
         const eleEntity: Element = new Element(repo, element);
         resultEntities.push(eleEntity);
         resultNodes.push(
-          new EndevorElementNode(
-            eleEntity,
-            eleEntity.getQualifier(),
-            this.controllerInstance
-          )
+          new EndevorElementNode(eleEntity, eleEntity.getQualifier())
         );
       }
       filterEntity.loadElements(resultEntities, false);
-      const pathNodes = createPathNodes(
-        resultEntities,
-        repo,
-        this.controllerInstance
-      );
+      const pathNodes = createPathNodes(resultEntities, repo);
       if (pathNodes.length > 1) {
         resultNodes = pathNodes;
       }
       if (resultNodes.length === 0) {
         resultNodes = [
-          createEmptyNode(
-            repo,
-            '<Empty>',
-            'This filter is empty',
-            this.controllerInstance
-          ),
+          createEmptyNode(repo, '<Empty>', 'This filter is empty'),
         ];
       }
       this.setChildren(resultNodes);
@@ -403,12 +370,7 @@ export class FilterNode extends EndevorNode {
         logger.error('Error listing filters.', error.error);
       }
       const resultNodes = [
-        createEmptyNode(
-          repo,
-          '<Invalid Path>',
-          error.error,
-          this.controllerInstance
-        ),
+        createEmptyNode(repo, '<Invalid Path>', error.error),
       ];
       this.setChildren(resultNodes);
       return resultNodes;
@@ -419,12 +381,8 @@ export class FilterNode extends EndevorNode {
 export class EndevorQualifiedNode extends EndevorNode {
   private qualifier?: IEndevorQualifier;
 
-  constructor(
-    entity: IEndevorEntity,
-    qualifier: IEndevorQualifier,
-    controllerInstance: IEndevorController
-  ) {
-    super(controllerInstance, entity);
+  constructor(entity: IEndevorEntity, qualifier: IEndevorQualifier) {
+    super(entity);
     this.qualifier = qualifier;
   }
 
@@ -436,12 +394,8 @@ export class EndevorQualifiedNode extends EndevorNode {
 export class EndevorElementNode extends EndevorNode {
   qualifier: IEndevorQualifier;
 
-  constructor(
-    entity: IEndevorEntity,
-    qualifier: IEndevorQualifier,
-    controllerInstance: IEndevorController
-  ) {
-    super(controllerInstance, entity);
+  constructor(entity: IEndevorEntity, qualifier: IEndevorQualifier) {
+    super(entity);
     this.qualifier = qualifier;
   }
 
@@ -468,7 +422,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
       const stages = await proxyListStage(
         repo,
         nodeQualEnv,
-        this.controllerInstance
+        EndevorController.instance
       );
       const resultEntities: Stage[] = [];
       const resultNodes: EndevorQualifiedNode[] = [];
@@ -476,14 +430,10 @@ export class EnvironmentNode extends EndevorQualifiedNode {
         const stageEntity = new Stage(repo, stage);
         resultEntities.push(stageEntity);
         resultNodes.push(
-          new StageNode(
-            stageEntity,
-            {
-              ...nodeQualEnv,
-              stage: stage.stgNum,
-            },
-            this.controllerInstance
-          )
+          new StageNode(stageEntity, {
+            ...nodeQualEnv,
+            stage: stage.stgNum,
+          })
         );
       });
       envEntity.loadStages(resultEntities);
@@ -516,20 +466,16 @@ export class StageNode extends EndevorQualifiedNode {
       const systems = await proxyListSystem(
         repo,
         nodeQualStage,
-        this.controllerInstance
+        EndevorController.instance
       );
       systems.forEach((system) => {
         const systemEntity: System = new System(repo, system);
         resultEntities.push(systemEntity);
         resultNodes.push(
-          new SystemNode(
-            systemEntity,
-            {
-              ...nodeQualStage,
-              system: system.sysName,
-            },
-            this.controllerInstance
-          )
+          new SystemNode(systemEntity, {
+            ...nodeQualStage,
+            system: system.sysName,
+          })
         );
       });
       const env: IEnvironment | undefined = repo.findEnvironment(
@@ -567,20 +513,16 @@ export class SystemNode extends EndevorQualifiedNode {
       const subsystems = await proxyListSubsystem(
         repo,
         nodeQualSystem,
-        this.controllerInstance
+        EndevorController.instance
       );
       subsystems.forEach((subsystem) => {
         const subsysEntity: ISubsystem = new Subsystem(repo, subsystem);
         resultEntities.push(subsysEntity);
         resultNodes.push(
-          new SubsystemNode(
-            subsysEntity,
-            {
-              ...nodeQualSystem,
-              subsystem: subsystem.sbsName,
-            },
-            this.controllerInstance
-          )
+          new SubsystemNode(subsysEntity, {
+            ...nodeQualSystem,
+            subsystem: subsystem.sbsName,
+          })
         );
       });
       systemEntity.loadSubSystems(resultEntities, true);
@@ -613,20 +555,16 @@ export class SubsystemNode extends EndevorQualifiedNode {
       const types = await proxyListType(
         repo,
         nodeQualSubsys,
-        this.controllerInstance
+        EndevorController.instance
       );
       types.forEach((type) => {
         const typeEntity: Type = new Type(repo, type);
         resultEntities.push(typeEntity);
         resultNodes.push(
-          new TypeNode(
-            typeEntity,
-            {
-              ...nodeQualSubsys,
-              type: type.typeName,
-            },
-            this.controllerInstance
-          )
+          new TypeNode(typeEntity, {
+            ...nodeQualSubsys,
+            type: type.typeName,
+          })
         );
       });
       const system: ISystem | undefined = repo.findSystem(
@@ -663,29 +601,20 @@ export class TypeNode extends EndevorQualifiedNode {
       const elements = await proxyListElement(
         repo,
         nodeQualType,
-        this.controllerInstance
+        EndevorController.instance
       );
       elements.forEach((element) => {
         const eleEntity: Element = new Element(repo, element);
         resultNodes.push(
-          new EndevorElementNode(
-            eleEntity,
-            {
-              ...nodeQualType,
-              element: element.fullElmName,
-            },
-            this.controllerInstance
-          )
+          new EndevorElementNode(eleEntity, {
+            ...nodeQualType,
+            element: element.fullElmName,
+          })
         );
       });
       if (resultNodes.length === 0) {
         resultNodes.push(
-          createEmptyNode(
-            repo,
-            '<Empty>',
-            'This Type is empty',
-            this.controllerInstance
-          )
+          createEmptyNode(repo, '<Empty>', 'This Type is empty')
         );
       }
       this.setChildren(resultNodes);
@@ -704,13 +633,8 @@ export class ConnectionNode extends EndevorNode {
   private _connection: IConnection | undefined = undefined;
   private _connectionName: string | undefined = undefined;
 
-  constructor(
-    controllerInstance: IEndevorController,
-    session?: Session,
-    label?: string,
-    connection?: IConnection
-  ) {
-    super(controllerInstance);
+  constructor(session?: Session, label?: string, connection?: IConnection) {
+    super();
     if (session) {
       this._session = session;
     }
@@ -738,8 +662,8 @@ export class ConnectionNode extends EndevorNode {
   }
 }
 export class NewConnectionButton extends EndevorNode {
-  constructor(controllerInstance: IEndevorController) {
-    super(controllerInstance);
+  constructor() {
+    super();
     this.command = {
       command: 'endevorexplorer.newConnection',
       title: 'Add a New Profile',
@@ -759,8 +683,8 @@ export class NewConnectionButton extends EndevorNode {
   }
 }
 export class NewRepositoryNode extends EndevorNode {
-  constructor(controllerInstance: IEndevorController) {
-    super(controllerInstance);
+  constructor() {
+    super();
     this.command = {
       command: 'endevorexplorer.newHost',
       title: 'Create New Host',
@@ -783,8 +707,7 @@ export class NewRepositoryNode extends EndevorNode {
 // Utility functions
 export function createPathNodes(
   elements: IElement[],
-  repo: IRepository,
-  controllerInstance: IEndevorController
+  repo: IRepository
 ): EndevorFilterPathNode[] {
   const pathNodes: EndevorFilterPathNode[] = [];
   const pathNames: string[] = [];
@@ -805,14 +728,7 @@ export function createPathNodes(
   }
   for (let i = 0; i < pathNames.length; i++) {
     const elements: IElement[] = [];
-    pathNodes.push(
-      new EndevorFilterPathNode(
-        pathNames[i],
-        repo,
-        elements,
-        controllerInstance
-      )
-    );
+    pathNodes.push(new EndevorFilterPathNode(pathNames[i], repo, elements));
   }
   for (let i = 0; i < pathNames.length; i++) {
     for (let j = 0; j < elements.length; j++) {
@@ -837,11 +753,10 @@ export function createPathNodes(
 export function createEmptyNode(
   repo: IRepository,
   label: string,
-  message: string,
-  controllerInstance: IEndevorController
+  message: string
 ): EmptyNode {
   const pathName = label;
-  const pathNode = new EmptyNode(pathName, repo, message, controllerInstance);
+  const pathNode = new EmptyNode(pathName, repo, message);
   pathNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
   return pathNode;
 }

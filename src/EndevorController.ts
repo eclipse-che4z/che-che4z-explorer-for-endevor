@@ -34,10 +34,7 @@ export class EndevorController {
    * This is the root node of Explorer for Endevor view. It is derived from [TreeItem](#TreeItem).
    * Its children are repository nodes.
    */
-  private _rootNode: IEndevorNode = new EndevorNode(
-    EndevorController.instance,
-    undefined
-  );
+  private _rootNode: IEndevorNode = new EndevorNode(undefined);
 
   private connections: Map<string, IConnection> = new Map();
 
@@ -63,10 +60,7 @@ export class EndevorController {
     if (typeof repo.id === 'undefined') {
       repo.id = this.findNextId(connectionLabel);
     }
-    const newRepoNode: IEndevorNode = new EndevorNode(
-      EndevorController.instance,
-      repo
-    );
+    const newRepoNode: IEndevorNode = new EndevorNode(repo);
     const conn = this.connections.get(connectionLabel);
     if (conn) {
       conn.loadRepository(repo);
@@ -87,10 +81,7 @@ export class EndevorController {
       connection.name = '';
     }
     this.connections.set(connection.name, connection);
-    const newConnectionNode = new EndevorNode(
-      EndevorController.instance,
-      connection
-    );
+    const newConnectionNode = new EndevorNode(connection);
     this._rootNode.getChildren().push(newConnectionNode);
   }
 
@@ -351,7 +342,7 @@ export class EndevorController {
           newNode.updateInfo();
           newNode.setNeedReload(!newNode.hasChildren());
         } else {
-          newNode = new FilterNode(EndevorController.instance, filter);
+          newNode = new FilterNode(filter);
         }
         newChildren.set(filter.getUri(), newNode);
       });

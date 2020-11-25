@@ -98,7 +98,7 @@ export class EndevorDataProvider
       const root: IEndevorNode = this.controllerInstance.getRootNode();
       if (!root.getNeedReload()) {
         return Promise.resolve([
-          new NewConnectionButton(this.controllerInstance),
+          new NewConnectionButton(),
           ...root.getChildren(),
         ]);
       }
@@ -106,7 +106,6 @@ export class EndevorDataProvider
       const newChildren: IEndevorNode[] = [];
       connections.forEach((connection) => {
         const newConnectionNode: IEndevorNode = new EndevorNode(
-          this.controllerInstance,
           connection as IEndevorEntity
         );
         let foundConnection: IEndevorNode | undefined;
@@ -125,10 +124,7 @@ export class EndevorDataProvider
       });
       root.setNeedReload(false);
       root.setChildren(newChildren);
-      return Promise.resolve([
-        new NewConnectionButton(this.controllerInstance),
-        ...newChildren,
-      ]);
+      return Promise.resolve([new NewConnectionButton(), ...newChildren]);
     }
     switch (node.contextValue) {
       case 'connection':
@@ -143,12 +139,8 @@ export class EndevorDataProvider
         }
         return new Promise((resolve) => {
           const resultNodes: IEndevorNode[] = [];
-          resultNodes.push(
-            new EndevorBrowsingNode('Filters', repo, this.controllerInstance)
-          );
-          resultNodes.push(
-            new EndevorBrowsingNode('Map', repo, this.controllerInstance)
-          );
+          resultNodes.push(new EndevorBrowsingNode('Filters', repo));
+          resultNodes.push(new EndevorBrowsingNode('Map', repo));
           node.setChildren(resultNodes);
           node.setNeedReload(false);
           resolve(resultNodes);
@@ -201,11 +193,7 @@ export class EndevorDataProvider
       endevorProfile.profile
     );
     logger.trace(`Session created: ${JSON.stringify(session)}`);
-    const node = new ConnectionNode(
-      this.controllerInstance,
-      session,
-      endevorProfile.name
-    );
+    const node = new ConnectionNode(session, endevorProfile.name);
     this.controllerInstance.addConnection(new Connection(endevorProfile));
     this._sessionNodes.push(node);
   }

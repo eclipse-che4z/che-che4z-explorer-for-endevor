@@ -73,10 +73,8 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   await Profiles.createInstance(log);
-  const endevorDataProvider = await createEndevorTree(
-    log,
-    EndevorController.instance
-  );
+  const controllerInstance = EndevorController.instance;
+  const endevorDataProvider = await createEndevorTree(log, controllerInstance);
   const retrieveElementService: RetrieveElementService = new RetrieveElementService();
   EndevorController.instance.loadRepositories(endevorDataProvider);
 
