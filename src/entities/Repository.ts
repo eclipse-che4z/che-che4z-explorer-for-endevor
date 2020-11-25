@@ -206,7 +206,7 @@ export class Repository implements IRepository {
       urlPath = urlPath + '/';
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    if (!this.url && this.url!.endsWith('/')) {
+    if (this.url && !this.url.endsWith('/')) {
       urlPath = '/' + urlPath;
     }
     return this.url + urlPath;
