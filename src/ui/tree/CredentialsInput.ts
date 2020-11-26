@@ -13,8 +13,10 @@
  */
 
 import * as vscode from 'vscode';
-import { IEndevorController } from '../../interface/dataProvider_controller';
+import { Connection } from '../../entities/Connection';
 import { IRepository } from '../../interface/entities';
+import { Profiles } from '../../service/Profiles';
+import { SettingsFacade } from '../../service/SettingsFacade';
 
 export class CredentialsInputBox {
   /**
@@ -23,8 +25,7 @@ export class CredentialsInputBox {
    * @returns object with username and password attrinbutes of undefined if canceled.
    */
   public static async askforCredentials(
-    repo: IRepository,
-    controllerInstance: IEndevorController
+    repo: IRepository
   ): Promise<{ username: string; password: string } | undefined> {
     const username = await CredentialsInputBox.showUserName(repo.getUsername());
     if (username === undefined) {
@@ -36,8 +37,16 @@ export class CredentialsInputBox {
     }
     repo.setUsername(username);
     repo.setPassword(password);
-    controllerInstance.updateSettings();
+    const allConnections = Profiles.getInstance().allProfiles.map((profile) => {
+      return new Connection(profile);
+    });
+    SettingsFacade.updateSettings(allConnections);
+    // EndevorController.instance.updateSettings();
     return { password, username };
+  }
+  public createCredentialsInput() {
+    const box = new CredentialsInputBox();
+    return box;
   }
   private static async showUserName(
     username?: string

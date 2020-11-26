@@ -155,10 +155,7 @@ export class HostDialogs {
           increment: 10,
         });
         try {
-          const dsNames = await proxyGetDsNamesFromInstance(
-            newRepo,
-            EndevorController.instance
-          );
+          const dsNames = await proxyGetDsNamesFromInstance(newRepo);
           progress.report({ increment: 100 });
           const dsItem = await vscode.window.showQuickPick(
             dsNames.map((label) => ({ label })),

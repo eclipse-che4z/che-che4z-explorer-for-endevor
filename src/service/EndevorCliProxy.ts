@@ -23,14 +23,12 @@ import {
   ISystem,
   IType,
 } from '../interface/entities';
-import { IEndevorController } from '../interface/dataProvider_controller';
 
 export async function proxyBrowseElement(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<string | undefined> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
 
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -45,20 +43,18 @@ export async function proxyBrowseElement(
 }
 
 export async function proxyGetDsNamesFromInstance(
-  repository: IRepository,
-  controllerInstance: IEndevorController
+  repository: IRepository
 ): Promise<string[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSources = await ListInstance.listInstance(session);
   return dataSources.map((ds) => ds.name as string).sort();
 }
 
 export async function proxyRetrieveElement(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<string | undefined> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const element = endevorQualifierToElement(IEndevorQualifier, instance);
@@ -76,10 +72,9 @@ export async function proxyRetrieveElement(
 
 export async function proxyRetrieveAcmComponents(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  endevorQualifier: IEndevorQualifier
 ): Promise<IElement[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
@@ -102,10 +97,9 @@ export async function proxyRetrieveAcmComponents(
 
 export async function proxyListType(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  endevorQualifier: IEndevorQualifier
 ): Promise<IType[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const typeInput = endevorQualifierToElement(endevorQualifier, instance);
@@ -129,10 +123,9 @@ export async function proxyListType(
 
 export async function proxyListElement(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  endevorQualifier: IEndevorQualifier
 ): Promise<IElement[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorElement = endevorQualifierToElement(endevorQualifier, instance);
@@ -155,10 +148,9 @@ export async function proxyListElement(
 }
 
 export async function proxyListEnvironment(
-  repository: IRepository,
-  controllerInstance: IEndevorController
+  repository: IRepository
 ): Promise<IEnvironment[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const environment = endevorQualifierToElement({}, instance);
@@ -182,10 +174,9 @@ export async function proxyListEnvironment(
 
 export async function proxyListStage(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  endevorQualifier: IEndevorQualifier
 ): Promise<IStage[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const stageNumber = endevorQualifierToElement(endevorQualifier, instance);
@@ -209,10 +200,9 @@ export async function proxyListStage(
 
 export async function proxyListSubsystem(
   repository: IRepository,
-  IEndevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  IEndevorQualifier: IEndevorQualifier
 ): Promise<ISubsystem[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorSubsystem = endevorQualifierToElement(
@@ -239,10 +229,9 @@ export async function proxyListSubsystem(
 
 export async function proxyListSystem(
   repository: IRepository,
-  endevorQualifier: IEndevorQualifier,
-  controllerInstance: IEndevorController
+  endevorQualifier: IEndevorQualifier
 ): Promise<ISystem[]> {
-  const session = await buildSession(repository, controllerInstance);
+  const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
   const endevorSystem = endevorQualifierToElement(endevorQualifier, instance);

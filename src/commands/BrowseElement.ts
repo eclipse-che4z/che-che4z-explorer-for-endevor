@@ -18,12 +18,8 @@ import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { Repository } from '../entities/Repository';
 import { proxyBrowseElement } from '../service/EndevorCliProxy';
 import { logger } from '../globals';
-import { IEndevorController } from '../interface/dataProvider_controller';
 
-export async function browseElement(
-  arg: any,
-  controllerInstance: IEndevorController
-) {
+export async function browseElement(arg: any) {
   const repo: Repository = arg.getRepository();
   const elementName: string = arg.label;
   const eq: IEndevorQualifier = arg.getQualifier();
@@ -35,7 +31,7 @@ export async function browseElement(
     async (progress) => {
       progress.report({ increment: 10 });
       try {
-        const data = await proxyBrowseElement(repo, eq, controllerInstance);
+        const data = await proxyBrowseElement(repo, eq);
         progress.report({ increment: 50 });
         const doc = await vscode.workspace.openTextDocument({
           content: data,

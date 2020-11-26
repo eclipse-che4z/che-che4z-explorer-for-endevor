@@ -23,7 +23,6 @@ import {
 } from './EndevorCliProxy';
 import { logger } from '../globals';
 import { Element } from '../entities/Element';
-import { EndevorController } from '../EndevorController';
 import { IElement, IRepository } from '../interface/entities';
 
 export class RetrieveElementService {
@@ -36,11 +35,7 @@ export class RetrieveElementService {
     elementName: string,
     eq: IEndevorQualifier
   ): Promise<string> {
-    const data = await proxyRetrieveElement(
-      repo,
-      eq,
-      EndevorController.instance
-    );
+    const data = await proxyRetrieveElement(repo, eq);
     const ext = await this.getExtension(repo, eq);
     const type = eq.type ? eq.type : '';
     const typeDirectory = path.join(workspace.uri.fsPath, type);
@@ -73,11 +68,7 @@ export class RetrieveElementService {
     eq: IEndevorQualifier
   ): Promise<IElement[]> {
     const result: IElement[] = [];
-    const elements = await proxyRetrieveAcmComponents(
-      repo,
-      eq,
-      EndevorController.instance
-    );
+    const elements = await proxyRetrieveAcmComponents(repo, eq);
     if (elements.length === 0) {
       return [];
     }
@@ -98,7 +89,7 @@ export class RetrieveElementService {
     repo: IRepository,
     eq: IEndevorQualifier
   ): Promise<string> {
-    const types = await proxyListType(repo, eq, EndevorController.instance);
+    const types = await proxyListType(repo, eq);
     for (const type of types) {
       if (type.typeName === eq.type && type.fileExt) {
         return type.fileExt;

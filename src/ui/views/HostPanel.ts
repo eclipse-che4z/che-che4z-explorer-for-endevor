@@ -83,10 +83,7 @@ export class HostPanel {
                 const restUrl = message.data.url;
                 const newRepo = new Repository('', restUrl, '', '', '', '');
                 try {
-                  const session = await utils.buildSession(
-                    newRepo,
-                    EndevorController.instance
-                  );
+                  const session = await utils.buildSession(newRepo);
                   const datasources: IEndevorInstance[] = await ListInstance.listInstance(
                     session
                   );

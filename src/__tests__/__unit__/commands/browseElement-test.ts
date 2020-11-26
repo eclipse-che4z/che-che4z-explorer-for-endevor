@@ -21,7 +21,6 @@ import { Element } from '../../../entities/Element';
 import { Repository } from '../../../entities/Repository';
 import { EndevorElementNode } from '../../../ui/tree/EndevorNodes';
 import { IEndevorQualifier } from '../../../interface/IEndevorQualifier';
-import { EndevorController } from '../../../EndevorController';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -119,7 +118,7 @@ describe('Test function browseElement', () => {
   test("Should show an element's components in the text editor", async () => {
     mockPrintElementComponents.mockReturnValueOnce({ data: 'test file data' });
 
-    await browseElement(testEndevorElementNode, EndevorController.instance);
+    await browseElement(testEndevorElementNode);
 
     expect(openDocumentSpy).toBeCalledWith({ content: 'test file data' });
   });
@@ -130,7 +129,7 @@ describe('Test function browseElement', () => {
       error: 'Test error!',
     });
 
-    await browseElement(testEndevorElementNode, EndevorController.instance);
+    await browseElement(testEndevorElementNode);
 
     expect(loggerErrorSpy).toBeCalledWith('Test error!');
   });

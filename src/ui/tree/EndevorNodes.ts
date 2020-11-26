@@ -48,7 +48,6 @@ import {
   ISystem,
   IType,
 } from '../../interface/entities';
-import { EndevorController } from '../../EndevorController';
 
 export class EndevorNode extends vscode.TreeItem implements IEndevorNode {
   private entity?: IEndevorEntity;
@@ -227,7 +226,7 @@ export class EndevorBrowsingNode extends EndevorNode {
     try {
       const resultNodes: EndevorQualifiedNode[] = [];
       const resultEntities: IEnvironment[] = [];
-      const envs = await proxyListEnvironment(repo, EndevorController.instance);
+      const envs = await proxyListEnvironment(repo);
       envs.forEach((env) => {
         const envEntity: IEnvironment = new Environment(repo, env);
         resultEntities.push(envEntity);
@@ -339,11 +338,7 @@ export class FilterNode extends EndevorNode {
     this.setNeedReload(false);
 
     try {
-      const elements = await proxyListElement(
-        repo,
-        qualifier,
-        EndevorController.instance
-      );
+      const elements = await proxyListElement(repo, qualifier);
       const resultEntities: Element[] = [];
       let resultNodes: EndevorNode[] = [];
       for (const element of elements) {
@@ -419,11 +414,7 @@ export class EnvironmentNode extends EndevorQualifiedNode {
     }
     this.setNeedReload(false);
     try {
-      const stages = await proxyListStage(
-        repo,
-        nodeQualEnv,
-        EndevorController.instance
-      );
+      const stages = await proxyListStage(repo, nodeQualEnv);
       const resultEntities: Stage[] = [];
       const resultNodes: EndevorQualifiedNode[] = [];
       stages.forEach((stage) => {
@@ -463,11 +454,7 @@ export class StageNode extends EndevorQualifiedNode {
     try {
       const resultEntities: System[] = [];
       const resultNodes: EndevorQualifiedNode[] = [];
-      const systems = await proxyListSystem(
-        repo,
-        nodeQualStage,
-        EndevorController.instance
-      );
+      const systems = await proxyListSystem(repo, nodeQualStage);
       systems.forEach((system) => {
         const systemEntity: System = new System(repo, system);
         resultEntities.push(systemEntity);
@@ -510,11 +497,7 @@ export class SystemNode extends EndevorQualifiedNode {
     try {
       const resultEntities: ISubsystem[] = [];
       const resultNodes: EndevorQualifiedNode[] = [];
-      const subsystems = await proxyListSubsystem(
-        repo,
-        nodeQualSystem,
-        EndevorController.instance
-      );
+      const subsystems = await proxyListSubsystem(repo, nodeQualSystem);
       subsystems.forEach((subsystem) => {
         const subsysEntity: ISubsystem = new Subsystem(repo, subsystem);
         resultEntities.push(subsysEntity);
@@ -552,11 +535,7 @@ export class SubsystemNode extends EndevorQualifiedNode {
     try {
       const resultEntities: IType[] = [];
       const resultNodes: EndevorQualifiedNode[] = [];
-      const types = await proxyListType(
-        repo,
-        nodeQualSubsys,
-        EndevorController.instance
-      );
+      const types = await proxyListType(repo, nodeQualSubsys);
       types.forEach((type) => {
         const typeEntity: Type = new Type(repo, type);
         resultEntities.push(typeEntity);
@@ -598,11 +577,7 @@ export class TypeNode extends EndevorQualifiedNode {
     this.setNeedReload(false);
     try {
       const resultNodes: EndevorNode[] = [];
-      const elements = await proxyListElement(
-        repo,
-        nodeQualType,
-        EndevorController.instance
-      );
+      const elements = await proxyListElement(repo, nodeQualType);
       elements.forEach((element) => {
         const eleEntity: Element = new Element(repo, element);
         resultNodes.push(

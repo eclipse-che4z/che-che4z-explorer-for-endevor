@@ -23,7 +23,6 @@ import { Repository } from '../../../entities/Repository';
 import { RetrieveElementService } from '../../../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
 import { IElementDependencies } from '../../../interface/IElementDependencies';
-import { EndevorController } from '../../../EndevorController';
 import { IElement } from '../../../interface/entities';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
@@ -155,16 +154,8 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
     type: 'COBOL',
   };
   const testEndevorElementNodes: EndevorNode[] = [
-    new EndevorElementNode(
-      testElements[0],
-      qualifier1,
-      EndevorController.instance
-    ),
-    new EndevorElementNode(
-      testElements[1],
-      qualifier2,
-      EndevorController.instance
-    ),
+    new EndevorElementNode(testElements[0], qualifier1),
+    new EndevorElementNode(testElements[1], qualifier2),
   ];
 
   // All spies are listed here

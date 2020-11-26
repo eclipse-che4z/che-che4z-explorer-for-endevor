@@ -17,12 +17,11 @@
 import { IElementBasicData } from '@broadcom/endevor-for-zowe-cli';
 import { ISession, Session } from '@zowe/imperative';
 import { IEndevorQualifier } from './interface/IEndevorQualifier';
-import { CredentialsInputBox } from './ui/tree/CredentialsInput';
 import { QuickPickItem, QuickPick } from 'vscode';
 import { logger } from './globals';
 import { IEndevorElementNode } from './interface/IEndevorElementNode';
-import { IEndevorController } from './interface/dataProvider_controller';
 import { IRepository } from './interface/entities';
+import { CredentialsInputBox } from './ui/tree/CredentialsInput';
 
 export async function resolveQuickPickHelper(
   quickpick: QuickPick<QuickPickItem>
@@ -122,10 +121,7 @@ function getBasePathFromRepo(repository: IRepository): string {
   );
 }
 
-export async function buildSession(
-  repository: IRepository,
-  controllerInstance: IEndevorController
-): Promise<Session> {
+export async function buildSession(repository: IRepository): Promise<Session> {
   // hacky solution to make ISession happy
   logger.trace('Building the session.');
   type PROTOCOL = 'http' | 'https';
@@ -141,10 +137,7 @@ export async function buildSession(
   const basePath = getBasePathFromRepo(repository);
   if (!repository.getPassword()) {
     logger.trace('Password not received. Prompting.');
-    const creds = await CredentialsInputBox.askforCredentials(
-      repository,
-      controllerInstance
-    );
+    const creds = await CredentialsInputBox.askforCredentials(repository);
     if (!creds) {
       logger.trace('Password not provided. Cancelling.');
       throw { cancelled: true };
