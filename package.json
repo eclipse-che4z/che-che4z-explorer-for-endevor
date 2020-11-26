@@ -303,7 +303,7 @@
     "test": "npm run test:no-vscode &&  npm run test:vscode",
     "test:no-vscode": "jest --config jest.config.js --coverage",
     "pretty": "prettier --write .",
-    "lint": "concurrently -n \"typescpt,_eslint_,prettier\" \"tsc --noemit \" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "lint": "concurrently -n \"typescpt,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
     "detect-cycles": "madge --circular --extensions ts ./"
   },
   "devDependencies": {
