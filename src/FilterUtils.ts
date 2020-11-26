@@ -45,13 +45,13 @@ export function filterStringValidator(
       if (invalidInputMessage) {
         return invalidInputMessage;
       }
-      return 'Valid System, type "/" to move to SubSystem';
+      return 'Valid System, type "/" to move to Subsystem';
     case 3:
       invalidInputMessage = checkForInvalidInput(splitString);
       if (invalidInputMessage) {
         return invalidInputMessage;
       }
-      return 'Valid SubSystem, type "/" to move to Type';
+      return 'Valid Subsystem, type "/" to move to Type';
     case 4:
       invalidInputMessage = checkForInvalidInput(splitString);
       if (invalidInputMessage) {
@@ -86,7 +86,7 @@ function checkForInvalidInput(arrayString: string[]): string | undefined {
         case 2:
           return 'Invalid System';
         case 3:
-          return 'Invalid SubSystem';
+          return 'Invalid Subsystem';
         case 4:
           return 'Invalid Type';
         case 5:

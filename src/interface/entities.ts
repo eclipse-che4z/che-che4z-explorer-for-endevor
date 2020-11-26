@@ -147,12 +147,12 @@ export interface ISubsystem {
 export interface ISystem {
   envName: string;
   sysName: string;
-  loadSubSystems: (newSubSystems: ISubsystem[], append: boolean) => void;
+  loadSubsystems: (newSubsystems: ISubsystem[], append: boolean) => void;
   loadTypes: (newTypes: IType[], append: boolean) => void;
   findType: (typeName: string) => IType | undefined;
   getTypes: () => IType[];
-  findSubSystem: (subsysName: string) => ISubsystem | undefined;
-  getSubSystems: () => ISubsystem[];
+  findSubsystem: (subsysName: string) => ISubsystem | undefined;
+  getSubsystems: () => ISubsystem[];
   getName: () => string;
   getDescription: () => string;
   getSysName: () => string;

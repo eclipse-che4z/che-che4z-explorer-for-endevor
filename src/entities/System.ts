@@ -30,11 +30,11 @@ export class System implements ISystem {
     this.repository = repo;
   }
 
-  public loadSubSystems(newSubSystems: ISubsystem[], append: boolean) {
+  public loadSubsystems(newSubsystems: ISubsystem[], append: boolean) {
     if (!append) {
       this.subsystems = new Map();
     }
-    newSubSystems.forEach((subsys) => {
+    newSubsystems.forEach((subsys) => {
       this.subsystems.set(subsys.sbsName, subsys);
     });
   }
@@ -56,11 +56,11 @@ export class System implements ISystem {
     return Array.from(this.types.values());
   }
 
-  public findSubSystem(subsysName: string): ISubsystem | undefined {
+  public findSubsystem(subsysName: string): ISubsystem | undefined {
     return this.subsystems.get(subsysName);
   }
 
-  public getSubSystems(): ISubsystem[] {
+  public getSubsystems(): ISubsystem[] {
     return Array.from(this.subsystems.values());
   }
 

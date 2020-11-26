@@ -31,7 +31,7 @@ import { Stage } from '../../entities/Stage';
 import { System } from '../../entities/System';
 import { Type } from '../../entities/Type';
 import { Connection } from '../../entities/Connection';
-import { Subsystem } from '../../entities/SubSystem';
+import { Subsystem } from '../../entities/Subsystem';
 import { IEndevorQualifier } from '../../interface/IEndevorQualifier';
 import { Element } from '../../entities/Element';
 import { IFilter } from '../../interface/IFilter';
@@ -508,7 +508,7 @@ export class SystemNode extends EndevorQualifiedNode {
           })
         );
       });
-      systemEntity.loadSubSystems(resultEntities, true);
+      systemEntity.loadSubsystems(resultEntities, true);
       this.setChildren(resultNodes);
       return resultNodes;
     } catch (error) {
