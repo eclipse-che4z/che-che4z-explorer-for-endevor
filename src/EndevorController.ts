@@ -22,6 +22,7 @@ import {
 import { Connection } from './model/Connection';
 import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
 import { Host } from './model/IEndevorInstance';
+import { logger } from './globals';
 
 export class EndevorController {
   /**
@@ -211,8 +212,17 @@ export class EndevorController {
         });
         this.updateIDs(connName);
       } else {
-        const endevorDataProvider = new EndevorDataProvider();
-        endevorDataProvider.addSession(connName);
+        try {
+          const endevorDataProvider = new EndevorDataProvider();
+          endevorDataProvider.addSession(connName);
+        } catch (error) {
+          logger.info(error.message);
+          logger.trace(
+            'You have an Endevor connection that refer to a non-existent profile named ' +
+              connName +
+              '. To resolve this, you can remove the connection with this profile name in your user settings.'
+          );
+        }
       }
     });
   }
