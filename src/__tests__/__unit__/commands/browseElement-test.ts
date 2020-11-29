@@ -13,105 +13,66 @@
  */
 
 import * as vscode from 'vscode';
-
-import { PrintElementComponents } from '@broadcom/endevor-for-zowe-cli';
 import { browseElement } from '../../../commands/BrowseElement';
 import { logger } from '../../../globals';
-import { Element } from '../../../model/Element';
-import { EndevorQualifier } from '../../../model/IEndevorQualifier';
-import { Repository } from '../../../model/Repository';
-import { EndevorElementNode } from '../../../ui/tree/EndevorNodes';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
 
-describe('Test function browseElement', () => {
-  // Mock vscode's progress function
-  const mockWithProgress = jest.fn();
-  Object.defineProperty(vscode, 'ProgressLocation', {
-    value: { Notification: 15 },
-  });
-  Object.defineProperty(vscode.window, 'withProgress', {
-    value: mockWithProgress,
-  });
-
-  // Mock the elements, nodes, and repo
-  const mockSetupPrintRequest = jest.fn();
-  const mockPrintElementComponents = jest.fn();
-  Object.defineProperty(PrintElementComponents, 'setupPrintRequest', {
-    value: mockSetupPrintRequest,
-  });
-  Object.defineProperty(PrintElementComponents, 'printElementComponents', {
-    value: mockPrintElementComponents,
-  });
-  const testRepo = new Repository(
-    'testRepo',
-    'https://example.com:1234',
-    'testUser',
-    'testPass',
-    'testRepo',
-    'testConnLabel'
-  );
-  const testIElement = {
-    elmName: 'elmTest1',
-    fullElmName: 'elmTest1',
-    elmVVLL: '1100',
-    envName: 'envTest',
-    sysName: 'sysTest',
-    sbsName: 'sbsTest',
-    stgNum: '1',
-    typeName: 'COBOL',
+describe('browse command submission workflow', () => {
+  // input stubs
+  const mockUri: vscode.Uri = {
+    scheme: '',
+    authority: '',
+    fsPath: '',
+    path: '',
+    query: '',
+    fragment: '',
+    with: jest.fn(),
+    toJSON: jest.fn()
   };
-  const testElement = new Element(testRepo, testIElement);
-  const testQualifier: EndevorQualifier = {
-    element: testElement.elmName,
-    env: 'envTest',
-    stage: '1',
-    subsystem: 'sbsTest',
-    system: 'sysTest',
-    type: 'COBOL',
-  };
-  const testEndevorElementNode = new EndevorElementNode(
-    testElement,
-    testQualifier
-  );
 
-  // All spies are listed here
-  const openDocumentSpy = jest.spyOn(vscode.workspace, 'openTextDocument');
-  const loggerErrorSpy = jest.spyOn(logger, 'error');
-
-  beforeEach(() => {
-    // Redefine mocks, because we clear them after each run
-    mockWithProgress.mockImplementation(async (progLocation, callback) => {
-      const ProgressLocation = {
-        Notification: 15,
-        report: jest.fn(),
-      };
-      return await callback(ProgressLocation);
+  it('should submit browse element command to content provider', async () => {
+    // given
+    const anyValue: any = undefined;
+    const mockEditor: vscode.TextEditor = {
+        document: anyValue,
+        selection: anyValue,
+        selections: anyValue,
+        visibleRanges: anyValue,
+        options: anyValue,
+        edit: anyValue,
+        insertSnippet: anyValue,
+        show: anyValue,
+        hide: anyValue,
+        revealRange: anyValue,
+        setDecorations: anyValue
+    };
+    const showWindowFunction = jest.fn()
+        .mockImplementation((_uri: vscode.Uri, _options?: vscode.TextDocumentShowOptions | undefined) => {
+          return Promise.resolve(mockEditor);
     });
+    vscode.window.showTextDocument = showWindowFunction;
+    // when
+    await browseElement(mockUri);
+    // then
+    const keepExistingEditorTabs = { preview: false };
+    expect(vscode.window.showTextDocument).toHaveBeenCalledWith(mockUri, keepExistingEditorTabs);
   });
 
-  afterEach(() => {
-    // This is here to clear the spies
-    jest.clearAllMocks();
-  });
-
-  test("Should show an element's components in the text editor", async () => {
-    mockPrintElementComponents.mockReturnValueOnce({ data: 'test file data' });
-
-    await browseElement(testEndevorElementNode);
-
-    expect(openDocumentSpy).toBeCalledWith({ content: 'test file data' });
-  });
-
-  test("Should throw an error, if element's components cannot be retrieved from Endevor", async () => {
-    mockPrintElementComponents.mockRejectedValueOnce({
-      cancelled: false,
-      error: 'Test error!',
+  it('should show error message, if something went wrong with submission', async () => {
+    const browseRejectReason = "something went really wrong, dude!";
+    const showWindowFunction = jest.fn()
+        .mockImplementation((_uri: vscode.Uri, _options?: vscode.TextDocumentShowOptions | undefined) => {
+          return Promise.reject(browseRejectReason);
     });
-
-    await browseElement(testEndevorElementNode);
-
-    expect(loggerErrorSpy).toBeCalledWith('Test error!');
+    vscode.window.showTextDocument = showWindowFunction;
+    jest.spyOn(logger, "error").mockImplementation((_message: string) => {
+        // do nothing
+    }) 
+    // when
+    await browseElement(mockUri);
+    // then
+    expect(logger.error).toHaveBeenCalledTimes(1);
   });
 });

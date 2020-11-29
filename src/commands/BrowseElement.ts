@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright (c) 2020 Broadcom.
  * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -14,35 +13,18 @@
  */
 
 import * as vscode from 'vscode';
-import { EndevorQualifier } from '../model/IEndevorQualifier';
-import { Repository } from '../model/Repository';
-import { proxyBrowseElement } from '../service/EndevorCliProxy';
 import { logger } from '../globals';
 
-export async function browseElement(arg: any) {
-  const repo: Repository = arg.getRepository();
-  const elementName: string = arg.label;
-  const eq: EndevorQualifier = arg.getQualifier();
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Loading: ${elementName}...`,
-    },
-    async (progress) => {
-      progress.report({ increment: 10 });
-      try {
-        const data = await proxyBrowseElement(repo, eq);
-        progress.report({ increment: 50 });
-        const doc = await vscode.workspace.openTextDocument({
-          content: data,
-        });
-        progress.report({ increment: 100 });
-        return vscode.window.showTextDocument(doc, { preview: false });
-      } catch (error) {
-        if (!error.cancelled) {
-          logger.error(error.error);
-        }
-      }
-    }
-  );
+export async function browseElement(uri: vscode.Uri) {
+  const keepExistingTabsInEditor = { preview: false };
+  vscode.window.showTextDocument(uri, keepExistingTabsInEditor)
+        .then(
+          (_onSuccess: vscode.TextEditor) => {
+              logger.info(`Browse command was submitted to content provider with uri: ${JSON.stringify(uri)}`);
+          },
+          (failureReason: string) => {
+              logger.error(`Browse command was not submitted for reason: ${failureReason},
+                please, see the output for uri: ${JSON.stringify(uri)}`);
+            }
+          );
 }
