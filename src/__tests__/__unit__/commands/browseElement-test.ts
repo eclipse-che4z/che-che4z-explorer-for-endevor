@@ -52,12 +52,16 @@ describe('browse command submission workflow', () => {
         .mockImplementation((_uri: vscode.Uri, _options?: vscode.TextDocumentShowOptions | undefined) => {
           return Promise.resolve(mockEditor);
     });
+    jest.spyOn(logger, "info").mockImplementation((_message: string) => {
+      // do nothing
+    });
     vscode.window.showTextDocument = showWindowFunction;
     // when
     await browseElement(mockUri);
     // then
     const keepExistingEditorTabs = { preview: false };
     expect(vscode.window.showTextDocument).toHaveBeenCalledWith(mockUri, keepExistingEditorTabs);
+    expect(logger.info).toHaveBeenCalledTimes(1);
   });
 
   it('should show error message, if something went wrong with submission', async () => {
@@ -69,7 +73,7 @@ describe('browse command submission workflow', () => {
     vscode.window.showTextDocument = showWindowFunction;
     jest.spyOn(logger, "error").mockImplementation((_message: string) => {
         // do nothing
-    }) 
+    });
     // when
     await browseElement(mockUri);
     // then
