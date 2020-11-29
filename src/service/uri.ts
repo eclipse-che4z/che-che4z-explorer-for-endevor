@@ -35,7 +35,7 @@ export function buildUri<T>(uriParams: UriParts<T>, querySerializer: (queryObjec
             query: querySerializer(uriParams.query.getValue()),
         }
         );
-    logger.trace(`Uri was built: ${resultUri}`);
+    logger.trace(`Uri was built: ${JSON.stringify(resultUri)}`);
     return resultUri;
 }
 
