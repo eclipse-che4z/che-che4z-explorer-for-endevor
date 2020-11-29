@@ -73,7 +73,7 @@ function checkUri(uri: vscode.Uri): void {
                                             && uri.scheme 
                                             && uri.path;
     if (!uriContainsAllRequiredValues) {
-        throw new InvalidUriError(`Uri is invalid, actual value: ${uri.toString()}`);
+        throw new InvalidUriError(`Uri is invalid, actual value: ${JSON.stringify(uri)}`);
     }
 }
 
