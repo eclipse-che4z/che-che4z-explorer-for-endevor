@@ -39,6 +39,8 @@ import {
 import { Session } from '@zowe/imperative';
 import { logger } from '../../globals';
 import { Commands } from '../../commands/Common';
+import { buildUri } from '../../service/uri';
+import { endevorElementQuerySerializer, EndevorElementUriParts } from './EndevorElementUriAdapter';
 
 export class EndevorNode extends vscode.TreeItem {
   private entity?: EndevorEntity;
@@ -376,7 +378,20 @@ export class EndevorElementNode extends EndevorNode {
     this.command = {
       title: 'Browse element',
       command: Commands.BrowseElement,
-      arguments: [this]
+      arguments: [this.buildUri()]
+    }
+  }
+
+  private buildUri(): vscode.Uri | undefined {
+    try {
+    return buildUri(
+      new EndevorElementUriParts(this.getRepository(), this.getQualifier()),
+      endevorElementQuerySerializer
+    );
+    } catch(e) {
+      logger.error("You cannot browse this element, the uri was not built correctly, please, see the output");
+      logger.trace(e.message);
+      return undefined;
     }
   }
 

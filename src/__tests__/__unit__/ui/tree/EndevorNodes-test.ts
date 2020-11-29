@@ -19,6 +19,8 @@ import { EndevorEntity } from '../../../../model/EndevorEntity';
 import { EndevorQualifier } from '../../../../model/IEndevorQualifier';
 import { Repository } from '../../../../model/Repository';
 import { EndevorElementNode } from '../../../../ui/tree/EndevorNodes';
+import * as uri from '../../../../service/uri';
+import { logger } from '../../../../globals';
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
 
@@ -53,6 +55,20 @@ describe('Endevor element nodes use cases', () => {
 
   it('will be created with on-click browse command', () => {
     // given
+    const mockUri: vscode.Uri = {
+      scheme: '',
+      authority: '',
+      fsPath: '',
+      path: '',
+      query: '',
+      fragment: '',
+      with: jest.fn(),
+      toJSON: jest.fn()
+    };
+    jest.spyOn(uri, 'buildUri')
+        .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
+          return mockUri;
+    });
     const elementNode = new EndevorElementNode(endevorEntity, endevorQualifier);
     // when
     const actualOnClickCommand = elementNode.command;
@@ -60,6 +76,33 @@ describe('Endevor element nodes use cases', () => {
     assert.isDefined(actualOnClickCommand);
     assert.equal(actualOnClickCommand?.title, 'Browse element');
     assert.equal(actualOnClickCommand?.command, Commands.BrowseElement);
-    assert.equal(actualOnClickCommand?.arguments?.pop(), elementNode);
+    assert.equal(actualOnClickCommand?.arguments?.pop(), mockUri);
+  });
+
+  it('will be created without browse ability but with error message', () => {
+    // given
+    const expectedErrorReason = "important reason";
+    jest.spyOn(uri, 'buildUri')
+        .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
+          throw new Error(expectedErrorReason);
+    });
+    jest.spyOn(logger, 'error').mockImplementation((_message: string) => {
+      // do nothing
+    });
+    jest.spyOn(logger, 'trace').mockImplementation((_message: string) => {
+      // do nothing
+    });
+    const elementNode = new EndevorElementNode(endevorEntity, endevorQualifier);
+    // when
+    const actualOnClickCommand = elementNode.command;
+    // then
+    assert.isDefined(actualOnClickCommand);
+    assert.equal(actualOnClickCommand?.title, 'Browse element');
+    assert.equal(actualOnClickCommand?.command, Commands.BrowseElement);
+    assert.isUndefined(actualOnClickCommand?.arguments?.pop());
+
+    const expectedUserMessage = "You cannot browse this element, the uri was not built correctly, please, see the output";
+    expect(logger.error).toHaveBeenCalledWith(expectedUserMessage);
+    expect(logger.trace).toHaveBeenLastCalledWith(expectedErrorReason);
   });
 });
