@@ -177,12 +177,13 @@ describe('uri parsing cases', () => {
         const actualQueryValue: UriParts<expectedType> = parseUri(mockUri, queryDeserializer);
         // then
         assert.isDefined(actualQueryValue);
-        assert.equal(actualQueryValue.query.getValue!(), mockUri.query);
+        assert.equal(actualQueryValue.query.getValue(), mockUri.query);
     });
 
     it('should throw an error, if some of uri parts is empty', () => {
         // given
         const emptyValue = '';
+        const expectedJsonValue = 'some_value';
         const uriWithEmptyValues: vscode.Uri = {
             scheme: '',
             authority: '',
@@ -191,7 +192,9 @@ describe('uri parsing cases', () => {
             query: emptyValue,
             fragment: '',
             with: jest.fn(),
-            toJSON: jest.fn()
+            toJSON: jest.fn().mockImplementation(() => {
+                return expectedJsonValue;
+            })
         };
         const queryDeserializer = (rawValue: string) => {
             return rawValue;
@@ -200,7 +203,20 @@ describe('uri parsing cases', () => {
         assert.throws(function() {
             parseUri(uriWithEmptyValues, queryDeserializer)
         },
-        InvalidUriError, `Uri is invalid, actual value: ${uriWithEmptyValues.toString()}`);
+        InvalidUriError, `Uri is invalid, actual value: "${expectedJsonValue}"`);
+    });
+
+    it('should throw an error, if uri is undefined', () => {
+        // given
+        const undefinedUri: any = undefined;
+        const queryDeserializer = (rawValue: string) => {
+            return rawValue;
+        };
+        // when && then
+        assert.throws(function() {
+            parseUri(undefinedUri, queryDeserializer)
+        },
+        InvalidUriError, `Uri is invalid, actual value: undefined`);
     });
 
     it('should throw an error from deserializer, if it happened', () => {

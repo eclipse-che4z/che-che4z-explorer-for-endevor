@@ -13,6 +13,7 @@
  */
 
 import * as vscode from 'vscode';
+import { logger } from '../globals';
 
 export interface UriParts<T> {
     readonly schemaName: string;
@@ -27,13 +28,15 @@ export interface UriQuery<T> {
 
 export function buildUri<T>(uriParams: UriParts<T>, querySerializer: (queryObject: T) => string): vscode.Uri {
     checkUriParams(uriParams);
-    return vscode.Uri
-            .parse(uriParams.schemaName + "://" + uriParams.authorityName)
-            .with({
-                    path: "/" + uriParams.path,
-                    query: querySerializer(uriParams.query.getValue()),
-                }
-            );
+    const resultUri = vscode.Uri
+        .parse(uriParams.schemaName + "://" + uriParams.authorityName)
+        .with({
+            path: "/" + uriParams.path,
+            query: querySerializer(uriParams.query.getValue()),
+        }
+        );
+    logger.trace(`Uri was built: ${JSON.stringify(resultUri)}`);
+    return resultUri;
 }
 
 function checkUriParams<T>(uriParams: UriParts<T>): void {
@@ -49,7 +52,7 @@ function checkUriParams<T>(uriParams: UriParts<T>): void {
 export function parseUri<T>(uri: vscode.Uri, queryDeserializer: (rawQuery: string) => T): UriParts<T> {
     checkUri(uri);
     const parsedQuery = queryDeserializer(uri.query);
-    return {
+    const parsedUri: UriParts<T> = {
         schemaName: uri.scheme,
         path: uri.path,
         authorityName: uri.authority,
@@ -58,7 +61,9 @@ export function parseUri<T>(uri: vscode.Uri, queryDeserializer: (rawQuery: strin
                 return parsedQuery;
             }
         }
-    }
+    };
+    logger.trace(`Uri was parsed into: ${parsedUri}`);
+    return parsedUri;
 }
 
 function checkUri(uri: vscode.Uri): void {
@@ -68,7 +73,7 @@ function checkUri(uri: vscode.Uri): void {
                                             && uri.scheme 
                                             && uri.path;
     if (!uriContainsAllRequiredValues) {
-        throw new InvalidUriError(`Uri is invalid, actual value: ${uri.toString()}`);
+        throw new InvalidUriError(`Uri is invalid, actual value: ${JSON.stringify(uri)}`);
     }
 }
 
