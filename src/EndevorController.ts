@@ -220,7 +220,7 @@ export class EndevorController {
             'You have an Endevor connection that refer to a non-existent profile named ' +
             connName +
             '. To resolve this, you can remove the connection with this profile name in your user settings.';
-          logger.warn(errMsg, error.message);
+          logger.warn(error.message, errMsg);
         }
       }
     });
