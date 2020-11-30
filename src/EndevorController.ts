@@ -212,16 +212,15 @@ export class EndevorController {
         });
         this.updateIDs(connName);
       } else {
+        const endevorDataProvider = new EndevorDataProvider();
         try {
-          const endevorDataProvider = new EndevorDataProvider();
           endevorDataProvider.addSession(connName);
         } catch (error) {
-          logger.info(error.message);
-          logger.trace(
+          const errMsg =
             'You have an Endevor connection that refer to a non-existent profile named ' +
-              connName +
-              '. To resolve this, you can remove the connection with this profile name in your user settings.'
-          );
+            connName +
+            '. To resolve this, you can remove the connection with this profile name in your user settings.';
+          logger.warn(errMsg, error.message);
         }
       }
     });
