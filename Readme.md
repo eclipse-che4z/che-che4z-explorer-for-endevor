@@ -165,6 +165,8 @@ The Browse Element action displays the entire contents of the Element, including
 
 1. Click on the element in either the Map or Filters view.
 
+![Browse command visualization](./gif/Browse-element.gif)
+
 #### Retrieve element
 
 The Retrieve Element action retrieves an existing element from Endevor into a local file system (with dependecies, if specified). This allows to you to work with local copy of element without upload ability, for now (basically it is View Element action).
@@ -172,6 +174,8 @@ The Retrieve Element action retrieves an existing element from Endevor into a lo
 1. Right-click on the element in either the Map or Filters view.
 
    The options to Retrieve or Retrieve with dependencies the Element appear, you can choose it.
+
+![Retrieve command visualization](./gif/Retrieve-element.gif)
 
 ## Configuration and Usage Tips
 
