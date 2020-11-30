@@ -20,11 +20,14 @@ export async function browseElement(uri: vscode.Uri) {
   vscode.window.showTextDocument(uri, keepExistingTabsInEditor)
         .then(
           (_onSuccess: vscode.TextEditor) => {
-              logger.info(`Browse command was submitted to content provider with uri: ${JSON.stringify(uri)}`);
+              logger.info(
+                'Browse command was submitted to content provider',
+                `Browse command was submitted to content provider with uri: ${JSON.stringify(uri)}`
+              );
           },
           (failureReason: string) => {
-              logger.error(`Browse command was not submitted for reason: ${failureReason},
-                please, see the output for uri: ${JSON.stringify(uri)}`);
+              logger.error(`Browse command was not submitted,
+                please, see the output for reason for uri: ${JSON.stringify(uri)}`, failureReason);
             }
           );
 }

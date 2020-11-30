@@ -25,7 +25,10 @@ export class EndevorElementContentProvider implements TextDocumentContentProvide
             const parsedQuery = parseUri(uri, endevorElementQueryDeserializer).query.getValue();
             return this.browseElementViaEndevor(parsedQuery);
         } catch(e) {
-            logger.error(e.message);
+            logger.error(
+                "Something went wrong with element uri conversion, please, see the output for reasons",
+                e.message
+            );
             return Promise.resolve(undefined);
         }
     }
@@ -42,7 +45,10 @@ export class EndevorElementContentProvider implements TextDocumentContentProvide
             ),
             parsedQuery.qualifier
         ).catch((reason: string) => {
-            logger.error(reason);
+            logger.error(
+                "Something went wrong with Endevor call, please, see the output for reasons",
+                reason
+            );
             return Promise.resolve(undefined);
         });
     }

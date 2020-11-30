@@ -93,7 +93,8 @@ describe('the endevor element content provider workflow', () => {
                     .provideTextDocumentContent(mockUri, cancellationToken)
         );
         // then;
-        expect(logger.error).toHaveBeenCalledWith(expectedErrorMessage);
+        const expectedUserMessage = "Something went wrong with element uri conversion, please, see the output for reasons";
+        expect(logger.error).toHaveBeenCalledWith(expectedUserMessage, expectedErrorMessage);
     });
 
     it('should show an error message, if something went wrong with Envevor call', async () => {
@@ -113,6 +114,7 @@ describe('the endevor element content provider workflow', () => {
                     .provideTextDocumentContent(mockUri, cancellationToken)
         );
         // then;
-        expect(logger.error).toHaveBeenLastCalledWith(expectedRejectReason);
+        const expectedUserMessage = "Something went wrong with Endevor call, please, see the output for reasons";
+        expect(logger.error).toHaveBeenLastCalledWith(expectedUserMessage, expectedRejectReason);
     });
 });

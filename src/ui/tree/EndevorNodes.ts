@@ -389,8 +389,10 @@ export class EndevorElementNode extends EndevorNode {
       endevorElementQuerySerializer
     );
     } catch(e) {
-      logger.error("You cannot browse this element, the uri was not built correctly, please, see the output");
-      logger.trace(e.message);
+      logger.error(
+        "You cannot browse this element, the uri was not built correctly, please, see the output",
+        e.message
+      );
       return undefined;
     }
   }
