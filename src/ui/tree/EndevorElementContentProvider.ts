@@ -21,9 +21,9 @@ import { endevorElementQueryDeserializer, EndevorElementUriQuery } from "./Endev
 
 export class EndevorElementContentProvider implements TextDocumentContentProvider {
     public provideTextDocumentContent(uri: Uri, _token: CancellationToken): ProviderResult<string> {
+        let parsedQuery: EndevorElementUriQuery;
         try {
-            const parsedQuery = parseUri(uri, endevorElementQueryDeserializer).query.getValue();
-            return this.browseElementViaEndevor(parsedQuery);
+            parsedQuery = parseUri(uri, endevorElementQueryDeserializer).query.getValue();
         } catch(e) {
             logger.error(
                 "Something went wrong with element uri conversion, please, see the output for reasons",
@@ -31,6 +31,7 @@ export class EndevorElementContentProvider implements TextDocumentContentProvide
             );
             return Promise.resolve(undefined);
         }
+        return this.browseElementViaEndevor(parsedQuery);
     }
 
     private browseElementViaEndevor(parsedQuery: EndevorElementUriQuery): ProviderResult<string> {
