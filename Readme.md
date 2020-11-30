@@ -159,21 +159,19 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 
 ### Browse or Retrieve an Element
 
-The Browse Element action displays the entire contents of the Element, including related metadata. This allows you to determine if you want to retrieve and work with the Element
+#### Browse element
 
-**Follow these steps:**
+The Browse Element action displays the entire contents of the Element, including related metadata. This allows you to determine if you want to retrieve and work with the Element.
+
+1. Click on the element in either the Map or Filters view.
+
+#### Retrieve element
+
+The Retrieve Element action retrieves an existing element from Endevor into a local file system (with dependecies, if specified). This allows to you to work with local copy of element without upload ability, for now (basically it is View Element action).
 
 1. Right-click on the element in either the Map or Filters view.
 
-   The options to Browse or Retrieve the Element appear.
-
-2. Select the Browse Element option.
-
-   The Element is displayed in the panel, including related information, as shown below:
-
-3. Review the displayed information to determine if it is relevant or useful to you.
-
-   You have successfully opened an element for inspection. If you wish, you can now Retrieve the Element, with or without Dependencies.
+   The options to Retrieve or Retrieve with dependencies the Element appear, you can choose it.
 
 ## Configuration and Usage Tips
 
