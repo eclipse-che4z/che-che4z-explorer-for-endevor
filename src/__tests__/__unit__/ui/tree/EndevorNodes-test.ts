@@ -86,7 +86,7 @@ describe('Endevor element nodes use cases', () => {
         .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
           throw new Error(expectedErrorReason);
     });
-    jest.spyOn(logger, 'error').mockImplementation((_userMessage: string, _logMessage?: string) => {
+    jest.spyOn(logger, 'warn').mockImplementation((_userMessage: string, _logMessage?: string) => {
       // do nothing
     });
     const elementNode = new EndevorElementNode(endevorEntity, endevorQualifier);
@@ -99,6 +99,6 @@ describe('Endevor element nodes use cases', () => {
     assert.isUndefined(actualOnClickCommand?.arguments?.pop());
 
     const expectedUserMessage = "You cannot browse this element, the uri was not built correctly, please, see the output";
-    expect(logger.error).toHaveBeenCalledWith(expectedUserMessage, expectedErrorReason);
+    expect(logger.warn).toHaveBeenCalledWith(expectedUserMessage, expectedErrorReason);
   });
 });

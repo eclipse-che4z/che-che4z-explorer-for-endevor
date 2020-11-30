@@ -389,7 +389,7 @@ export class EndevorElementNode extends EndevorNode {
       endevorElementQuerySerializer
     );
     } catch(e) {
-      logger.error(
+      logger.warn(
         "You cannot browse this element, the uri was not built correctly, please, see the output",
         e.message
       );
