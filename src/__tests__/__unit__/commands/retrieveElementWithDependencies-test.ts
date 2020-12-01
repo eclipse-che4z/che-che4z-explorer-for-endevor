@@ -59,7 +59,7 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
     toJSON: jest.fn()
   };
   jest.spyOn(uri, 'buildUri')
-      .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
+      .mockImplementation((_uriParams: uri.UriParts<unknown>, _querySerializer: (queryObject: unknown) => string) => {
         return mockUri;
   });
 

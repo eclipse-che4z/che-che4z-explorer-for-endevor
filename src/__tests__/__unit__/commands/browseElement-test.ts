@@ -61,7 +61,10 @@ describe('browse command submission workflow', () => {
     // then
     const keepExistingEditorTabs = { preview: false };
     expect(vscode.window.showTextDocument).toHaveBeenCalledWith(mockUri, keepExistingEditorTabs);
-    expect(logger.info).toHaveBeenCalledTimes(1);
+    const expectedUserMessage = 'Browse command was submitted to content provider';
+    const expectedLogMessage = 
+      `Browse command was submitted to content provider with uri: ${JSON.stringify(mockUri)}`;
+    expect(logger.info).toHaveBeenCalledWith(expectedUserMessage, expectedLogMessage);
   });
 
   it('should show error message, if something went wrong with submission', async () => {
@@ -77,6 +80,8 @@ describe('browse command submission workflow', () => {
     // when
     await browseElement(mockUri);
     // then
-    expect(logger.error).toHaveBeenCalledTimes(1);
+    const expectedUserMessage = 
+        'Browse command was not submitted, please, see the output for reason';
+    expect(logger.error).toHaveBeenCalledWith(expectedUserMessage, browseRejectReason);
   });
 });

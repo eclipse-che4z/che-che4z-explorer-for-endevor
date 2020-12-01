@@ -26,8 +26,10 @@ export async function browseElement(uri: vscode.Uri) {
               );
           },
           (failureReason: string) => {
-              logger.error(`Browse command was not submitted,
-                please, see the output for reason for uri: ${JSON.stringify(uri)}`, failureReason);
+              logger.error(
+                'Browse command was not submitted, please, see the output for reason',
+                failureReason
+              );
             }
           );
 }

@@ -66,7 +66,7 @@ describe('Endevor element nodes use cases', () => {
       toJSON: jest.fn()
     };
     jest.spyOn(uri, 'buildUri')
-        .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
+        .mockImplementation((_uriParams: uri.UriParts<unknown>, _querySerializer: (queryObject: unknown) => string) => {
           return mockUri;
     });
     const elementNode = new EndevorElementNode(endevorEntity, endevorQualifier);
@@ -83,7 +83,7 @@ describe('Endevor element nodes use cases', () => {
     // given
     const expectedErrorReason = "important reason";
     jest.spyOn(uri, 'buildUri')
-        .mockImplementation((_uriParams: uri.UriParts<any>, _querySerializer: (queryObject: any) => string) => {
+        .mockImplementation((_uriParams: uri.UriParts<unknown>, _querySerializer: (queryObject: unknown) => string) => {
           throw new Error(expectedErrorReason);
     });
     jest.spyOn(logger, 'warn').mockImplementation((_userMessage: string, _logMessage?: string) => {

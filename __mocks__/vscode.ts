@@ -117,7 +117,7 @@ export namespace window {
     return undefined;
   }
 
-  export function showTextDocument(uri: Uri, options?: {preview: boolean}): Thenable<any> {
+  export function showTextDocument(uri: Uri, options?: any): Thenable<any> {
     return Promise.resolve();
   }
 

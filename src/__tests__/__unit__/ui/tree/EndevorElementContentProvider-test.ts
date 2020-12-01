@@ -48,7 +48,7 @@ describe('the endevor element content provider workflow', () => {
             profileLabel: ''
         }
     };
-    const parsedUriParams: uri.UriParts<unknown> = {
+    const parsedUriParams: uri.UriParts<EndevorElementUriQuery> = {
         schemaName: '',
         authorityName: '',
         path: '',
@@ -62,7 +62,7 @@ describe('the endevor element content provider workflow', () => {
     it('should browse the element after successful uri parsing', async () => {
         // given
         jest.spyOn(uri, 'parseUri')
-            .mockImplementation((_uri: vscode.Uri, _queryDeserializer: (rawQuery: string) => any) => {
+            .mockImplementation((_uri: vscode.Uri, _queryDeserializer: (rawQuery: string) => unknown) => {
                 return parsedUriParams;
         });
         const expectedElementContent = 'some_value';
