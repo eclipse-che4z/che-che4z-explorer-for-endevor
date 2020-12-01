@@ -13,16 +13,21 @@
  */
 
 import { ISystem, ISubsystem, IRepository, IType } from '../interface/entities';
-import { Type } from './Type';
 
 export class System implements ISystem {
-  envName: string;
-  sysName: string;
-  subsystems: Map<string, ISubsystem>;
-  types: Map<string, Type>;
-  repository: IRepository;
+  public subsystems: Map<string, ISubsystem>;
+  public types: Map<string, IType>;
+  private envName: string;
+  private sysName: string;
+  private repository: IRepository;
 
-  constructor(repo: IRepository, system: ISystem) {
+  constructor(
+    repo: IRepository,
+    system: {
+      envName: string;
+      sysName: string;
+    }
+  ) {
     this.envName = system.envName;
     this.sysName = system.sysName;
     this.subsystems = new Map();
@@ -44,7 +49,7 @@ export class System implements ISystem {
       this.types = new Map();
     }
     newTypes.forEach((type) => {
-      this.types.set(type.typeName, type);
+      this.types.set(type.getTypeName(), type);
     });
   }
 
@@ -52,7 +57,7 @@ export class System implements ISystem {
     return this.types.get(typeName);
   }
 
-  public getTypes(): Type[] {
+  public getTypes(): IType[] {
     return Array.from(this.types.values());
   }
 
@@ -67,15 +72,32 @@ export class System implements ISystem {
   public getName(): string {
     return this.sysName;
   }
+
   public getDescription(): string {
     return '';
+  }
+
+  public getEnvName(): string {
+    return this.envName;
+  }
+
+  public setEnvName(name: string) {
+    this.envName = name;
   }
 
   public getSysName(): string {
     return this.sysName;
   }
 
+  public setSysName(name: string) {
+    this.sysName = name;
+  }
+
   public getRepository(): IRepository {
     return this.repository;
+  }
+
+  public setRepository(repo: IRepository) {
+    this.repository = repo;
   }
 }

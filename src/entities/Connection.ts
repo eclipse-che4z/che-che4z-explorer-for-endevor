@@ -16,14 +16,14 @@ import { IProfileLoaded, IProfile } from '@zowe/imperative';
 import { IConnection, IRepository } from '../interface/entities';
 
 export class Connection implements IConnection {
-  message: string;
-  type: string;
-  failNotFound: boolean;
-  name?: string;
-  referencedBy?: string;
-  profile?: IProfile;
-  dependenciesLoaded?: boolean;
-  dependencyLoadResponses?: IProfileLoaded[];
+  public message: string;
+  public type: string;
+  public failNotFound: boolean;
+  public name?: string;
+  public referencedBy?: string;
+  public profile?: IProfile;
+  public dependenciesLoaded?: boolean;
+  public dependencyLoadResponses?: IProfileLoaded[];
   private _repositories: Map<string, IRepository>;
 
   constructor(profile: IProfileLoaded) {
@@ -49,19 +49,11 @@ export class Connection implements IConnection {
     return this._repositories.get(repoName);
   }
 
-  public getRepository(): IRepository {
-    throw new Error('Method not implemented.');
-  }
-
-  public getRepositoryMap(): Map<string, IRepository> {
-    return this._repositories;
-  }
-
-  public getRepositoryList(): IRepository[] {
+  public getRepositoryArray(): IRepository[] {
     return Array.from(this._repositories.values());
   }
 
-  public setRepositoryList(repos: IRepository[]) {
+  public setRepositoryArray(repos: IRepository[]) {
     repos.forEach((repo) => {
       const repoName = repo.getName();
       if (repoName) {
@@ -69,26 +61,36 @@ export class Connection implements IConnection {
       }
     });
   }
-  public get repositories(): Map<string, IRepository> {
-    return this._repositories;
+
+  public getName(): string {
+    return this.name ? this.name : '';
   }
 
-  public set repositories(repoMap: Map<string, IRepository>) {
-    this._repositories = repoMap;
-  }
-
-  public getConnection(): Connection {
-    return this;
-  }
-
-  public getName(): string | undefined {
-    return this.name;
-  }
   public getDescription(): string {
     return '';
   }
 
+  public getRepository(): IRepository {
+    throw new Error('Method not implemented.');
+  }
+
+  public getRepositories(): Map<string, IRepository> {
+    return this._repositories;
+  }
+
+  public setRepositories(repoMap: Map<string, IRepository>) {
+    this._repositories = repoMap;
+  }
+
+  public getConnection(): IConnection {
+    return this;
+  }
+
   public getProfile(): IProfile | undefined {
     return this.profile;
+  }
+
+  public setProfile(profile: IProfile) {
+    this.profile = profile;
   }
 }

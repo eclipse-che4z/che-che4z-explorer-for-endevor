@@ -55,6 +55,7 @@ export class EndevorFilter implements IEndevorFilter {
     }
     return this.getUri();
   }
+
   public getUri(): string {
     return (
       this._envFilter +
@@ -70,9 +71,11 @@ export class EndevorFilter implements IEndevorFilter {
       this._elementFilter
     );
   }
+
   public getDescription(): string {
     return '';
   }
+
   public getRepository(): IRepository {
     return this.repository;
   }
@@ -83,6 +86,10 @@ export class EndevorFilter implements IEndevorFilter {
 
   public getElements(): IElement[] {
     return this.elements;
+  }
+
+  public setElements(elements: IElement[]) {
+    this.elements = elements;
   }
 
   public getQualifier(): IEndevorQualifier {
@@ -151,40 +158,51 @@ export class EndevorFilter implements IEndevorFilter {
     }
   }
 
-  public get envFilter(): string {
+  public getEnvFilter(): string {
     return this._envFilter;
   }
-  public set envFilter(value: string) {
+
+  public setEnvFilter(value: string) {
     this._envFilter = value;
   }
-  public get stageFilter(): string {
+
+  public getStageFilter(): string {
     return this._stageFilter;
   }
-  public set stageFilter(value: string) {
+
+  public setStageFilter(value: string) {
     this._stageFilter = value;
   }
-  public get systemFilter(): string {
+
+  public getSystemFilter(): string {
     return this._systemFilter;
   }
-  public set systemFilter(value: string) {
+
+  public setSystemFilter(value: string) {
     this._systemFilter = value;
   }
-  public get subsysFilter(): string {
+
+  public getSubsysFilter(): string {
     return this._subsysFilter;
   }
-  public set subsysFilter(value: string) {
+
+  public setSubsysFilter(value: string) {
     this._subsysFilter = value;
   }
-  public get typeFilter(): string {
+
+  public getTypeFilter(): string {
     return this._typeFilter;
   }
-  public set typeFilter(value: string) {
+
+  public setTypeFilter(value: string) {
     this._typeFilter = value;
   }
-  public get elementFilter(): string {
+
+  public getElementFilter(): string {
     return this._elementFilter;
   }
-  public set elementFilter(value: string) {
+
+  public setElementFilter(value: string) {
     this._elementFilter = value;
   }
 }

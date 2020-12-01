@@ -21,7 +21,6 @@ import { IEndevorQualifier } from '../../../interface/IEndevorQualifier';
 import { Repository } from '../../../entities/Repository';
 import { RetrieveElementService } from '../../../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
-import { IElement } from '../../../interface/entities';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -56,72 +55,8 @@ describe('Test function retrieveElement', () => {
     'testRepo',
     'testConnLabel'
   );
-  const testIElements: IElement[] = [
-    {
-      elmName: 'elmTest1',
-      fullElmName: 'elmTest1',
-      elmVVLL: '1100',
-      envName: 'envTest',
-      sysName: 'sysTest',
-      sbsName: 'sbsTest',
-      stgNum: '1',
-      typeName: 'COBOL',
-      repository: testRepo,
-      getName: () => {
-        return 'elmTest1';
-      },
-      getDescription: () => {
-        return 'testDescription';
-      },
-      getElmName: () => {
-        return 'elmTest1';
-      },
-      getElmVVLL: () => {
-        return '1100';
-      },
-      getRepository: () => {
-        return testRepo;
-      },
-      getQualifier: () => {
-        return qualifier1;
-      },
-    },
-    {
-      elmName: 'elmTest2',
-      fullElmName: 'elmTest2',
-      elmVVLL: '1100',
-      envName: 'envTest',
-      sysName: 'sysTest',
-      sbsName: 'sbsTest',
-      stgNum: '1',
-      typeName: 'COBOL',
-      repository: testRepo,
-      getName: () => {
-        return 'elmTest1';
-      },
-      getDescription: () => {
-        return 'testDescription';
-      },
-      getElmName: () => {
-        return 'elmTest1';
-      },
-      getElmVVLL: () => {
-        return '1100';
-      },
-      getRepository: () => {
-        return testRepo;
-      },
-      getQualifier: () => {
-        return qualifier2;
-      },
-    },
-  ];
-  const testElements: Element[] = [
-    new Element(testRepo, testIElements[0]),
-    new Element(testRepo, testIElements[1]),
-  ];
   const qualifier1: IEndevorQualifier = {
-    element: testElements[0].elmName,
+    element: 'elmTest1',
     env: 'envTest',
     stage: '1',
     subsystem: 'sbsTest',
@@ -129,13 +64,17 @@ describe('Test function retrieveElement', () => {
     type: 'COBOL',
   };
   const qualifier2: IEndevorQualifier = {
-    element: testElements[1].elmName,
+    element: 'elmTest2',
     env: 'envTest',
     stage: '1',
     subsystem: 'sbsTest',
     system: 'sysTest',
     type: 'COBOL',
   };
+  const testElements: Element[] = [
+    new Element(testRepo, qualifier1),
+    new Element(testRepo, qualifier2),
+  ];
   const testEndevorElementNodes: EndevorNode[] = [
     new EndevorElementNode(testElements[0], qualifier1),
     new EndevorElementNode(testElements[1], qualifier2),

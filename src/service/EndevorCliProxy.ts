@@ -14,15 +14,7 @@ import {
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 import { buildSession, endevorQualifierToElement, toArray } from '../utils';
 import { logger } from '../globals';
-import {
-  IElement,
-  IEnvironment,
-  IRepository,
-  IStage,
-  ISubsystem,
-  ISystem,
-  IType,
-} from '../interface/entities';
+import { IRepository } from '../interface/entities';
 
 export async function proxyBrowseElement(
   repository: IRepository,
@@ -73,7 +65,8 @@ export async function proxyRetrieveElement(
 export async function proxyRetrieveAcmComponents(
   repository: IRepository,
   endevorQualifier: IEndevorQualifier
-): Promise<IElement[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -92,13 +85,14 @@ export async function proxyRetrieveAcmComponents(
     endevorElement,
     requestBody
   );
-  return queryacmCompResponse.data as IElement[];
+  return toArray(queryacmCompResponse.data);
 }
 
 export async function proxyListType(
   repository: IRepository,
   endevorQualifier: IEndevorQualifier
-): Promise<IType[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -124,7 +118,8 @@ export async function proxyListType(
 export async function proxyListElement(
   repository: IRepository,
   endevorQualifier: IEndevorQualifier
-): Promise<IElement[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -149,11 +144,22 @@ export async function proxyListElement(
 
 export async function proxyListEnvironment(
   repository: IRepository
-): Promise<IEnvironment[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
-  const environment = endevorQualifierToElement({}, instance);
+  const environment = endevorQualifierToElement(
+    {
+      env: '',
+      stage: '',
+      system: '',
+      subsystem: '',
+      type: '',
+      element: '',
+    },
+    instance
+  );
   const requestBody = ListEnvironment.setupListEnvironmentRequest({});
   const envResponse = await ListEnvironment.listEnvironment(
     session,
@@ -175,7 +181,8 @@ export async function proxyListEnvironment(
 export async function proxyListStage(
   repository: IRepository,
   endevorQualifier: IEndevorQualifier
-): Promise<IStage[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -201,7 +208,8 @@ export async function proxyListStage(
 export async function proxyListSubsystem(
   repository: IRepository,
   IEndevorQualifier: IEndevorQualifier
-): Promise<ISubsystem[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';
@@ -230,7 +238,8 @@ export async function proxyListSubsystem(
 export async function proxyListSystem(
   repository: IRepository,
   endevorQualifier: IEndevorQualifier
-): Promise<ISystem[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   const session = await buildSession(repository);
   const dataSource = repository.getDatasource();
   const instance = dataSource ? dataSource : '';

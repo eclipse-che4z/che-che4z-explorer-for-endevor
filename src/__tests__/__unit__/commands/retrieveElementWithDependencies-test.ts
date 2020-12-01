@@ -23,7 +23,6 @@ import { Repository } from '../../../entities/Repository';
 import { RetrieveElementService } from '../../../service/RetrieveElementService';
 import { EndevorElementNode, EndevorNode } from '../../../ui/tree/EndevorNodes';
 import { IElementDependencies } from '../../../interface/IElementDependencies';
-import { IElement } from '../../../interface/entities';
 
 // Explicitly show NodeJS how to find VSCode (required for Jest)
 process.vscode = vscode;
@@ -62,65 +61,29 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
     'testRepo',
     'testConnLabel'
   );
-  const testIElements: IElement[] = [
-    {
-      elmName: 'elmTest1',
-      fullElmName: 'elmTest1',
-      elmVVLL: '1100',
-      envName: 'envTest',
-      sysName: 'sysTest',
-      sbsName: 'sbsTest',
-      stgNum: '1',
-      typeName: 'COBOL',
-      repository: testRepo,
-      getName: () => {
-        return 'elmTest1';
-      },
-      getDescription: () => {
-        return 'testDescription';
-      },
-      getElmName: () => {
-        return 'elmTest1';
-      },
-      getElmVVLL: () => {
-        return '1100';
-      },
-      getRepository: () => {
-        return testRepo;
-      },
-      getQualifier: () => {
-        return qualifier1;
-      },
-    },
-    {
-      elmName: 'elmTest2',
-      fullElmName: 'elmTest2',
-      elmVVLL: '1100',
-      envName: 'envTest',
-      sysName: 'sysTest',
-      sbsName: 'sbsTest',
-      stgNum: '1',
-      typeName: 'COBOL',
-      repository: testRepo,
-      getName: () => {
-        return 'elmTest1';
-      },
-      getDescription: () => {
-        return 'testDescription';
-      },
-      getElmName: () => {
-        return 'elmTest1';
-      },
-      getElmVVLL: () => {
-        return '1100';
-      },
-      getRepository: () => {
-        return testRepo;
-      },
-      getQualifier: () => {
-        return qualifier2;
-      },
-    },
+  const qualifier1: IEndevorQualifier = {
+    element: 'elmTest1',
+    env: 'envTest',
+    stage: '1',
+    subsystem: 'sbsTest',
+    system: 'sysTest',
+    type: 'COBOL',
+  };
+  const qualifier2: IEndevorQualifier = {
+    element: 'elmTest2',
+    env: 'envTest',
+    stage: '1',
+    subsystem: 'sbsTest',
+    system: 'sysTest',
+    type: 'COBOL',
+  };
+  const testElements: Element[] = [
+    new Element(testRepo, qualifier1),
+    new Element(testRepo, qualifier2),
+  ];
+  const testEndevorElementNodes: EndevorNode[] = [
+    new EndevorElementNode(testElements[0], qualifier1),
+    new EndevorElementNode(testElements[1], qualifier2),
   ];
   const testDependencies: IElementDependencies[] = [
     {
@@ -130,32 +93,8 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
       sbsName: 'sbsTest',
       stgNumber: '1',
       typeName: 'COBOL',
-      components: [testIElements[0]],
+      components: [testElements[0]],
     },
-  ];
-  const testElements: Element[] = [
-    new Element(testRepo, testIElements[0]),
-    new Element(testRepo, testIElements[1]),
-  ];
-  const qualifier1: IEndevorQualifier = {
-    element: testElements[0].elmName,
-    env: 'envTest',
-    stage: '1',
-    subsystem: 'sbsTest',
-    system: 'sysTest',
-    type: 'COBOL',
-  };
-  const qualifier2: IEndevorQualifier = {
-    element: testElements[1].elmName,
-    env: 'envTest',
-    stage: '1',
-    subsystem: 'sbsTest',
-    system: 'sysTest',
-    type: 'COBOL',
-  };
-  const testEndevorElementNodes: EndevorNode[] = [
-    new EndevorElementNode(testElements[0], qualifier1),
-    new EndevorElementNode(testElements[1], qualifier2),
   ];
 
   // All spies are listed here
@@ -176,7 +115,7 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
       return await callback(ProgressLocation);
     });
 
-    testDependencies[0].components = [testIElements[0]];
+    testDependencies[0].components = [testElements[0]];
     mockRetrieveElement.mockReturnValue('test/elt/path');
     mockQueryACMComponents.mockReturnValue({ data: testDependencies });
   });
@@ -198,7 +137,7 @@ describe('Test function retrieveWithDependencies (retrieve element with dependen
   test('Should cancel dependency download, when there are many dependencies and user decides to cancel', async () => {
     // Create a giant array of dependencies
     for (let i = 0; i < 21; ++i) {
-      testDependencies[0].components.push(testIElements[0]);
+      testDependencies[0].components.push(testElements[0]);
     }
 
     // Mock vscode's warning function

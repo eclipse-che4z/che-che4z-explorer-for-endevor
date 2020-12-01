@@ -15,13 +15,21 @@
 import { IStage, IRepository } from '../interface/entities';
 
 export class Stage implements IStage {
-  envName: string;
-  stgName: string;
-  stgId: string;
-  stgNum: string;
-  repository: IRepository;
+  private envName: string;
+  private stgName: string;
+  private stgId: string;
+  private stgNum: string;
+  private repository: IRepository;
 
-  constructor(repo: IRepository, stage: IStage) {
+  constructor(
+    repo: IRepository,
+    stage: {
+      envName: string;
+      stgName: string;
+      stgId: string;
+      stgNum: string;
+    }
+  ) {
     this.envName = stage.envName;
     this.stgName = stage.stgName;
     this.stgId = stage.stgId;
@@ -29,8 +37,24 @@ export class Stage implements IStage {
     this.repository = repo;
   }
 
+  public getEnvName(): string {
+    return this.envName;
+  }
+
+  public setEnvName(name: string) {
+    this.envName = name;
+  }
+
   public getName(): string {
     return this.stgNum.toString();
+  }
+
+  public getStgNum(): string {
+    return this.stgNum.toString();
+  }
+
+  public setStgNum(num: string) {
+    this.stgNum = num;
   }
 
   public getDescription(): string {
@@ -41,15 +65,23 @@ export class Stage implements IStage {
     return this.repository;
   }
 
+  public setRepository(repo: IRepository) {
+    this.repository = repo;
+  }
+
   public getStgName(): string {
     return this.stgName;
+  }
+
+  public setStgName(name: string) {
+    this.stgName = name;
   }
 
   public getStgId(): string {
     return this.stgId;
   }
 
-  public getStgNum(): string {
-    return this.stgNum;
+  public setStgId(id: string) {
+    this.stgId = id;
   }
 }

@@ -13,22 +13,21 @@
  */
 
 import {
-  IEndevorEntity,
   IEnvironment,
   IRepository,
   IStage,
   ISystem,
 } from '../interface/entities';
 
-export class Environment implements IEndevorEntity {
-  envName: string;
-  repository: IRepository;
-  systems: Map<string, ISystem>;
-  stages: IStage[];
+export class Environment implements IEnvironment {
+  public systems: Map<string, ISystem>;
+  private envName: string;
+  private repository: IRepository;
+  private stages: IStage[];
 
-  constructor(repository: IRepository, env: IEnvironment) {
+  constructor(repository: IRepository, envName) {
     this.repository = repository;
-    this.envName = env.envName;
+    this.envName = envName;
     this.systems = new Map();
     this.stages = new Array(2);
   }
@@ -38,7 +37,7 @@ export class Environment implements IEndevorEntity {
       this.systems = new Map();
     }
     newSystems.forEach((sys) => {
-      this.systems.set(sys.sysName, sys);
+      this.systems.set(sys.getSysName(), sys);
     });
   }
 
@@ -53,6 +52,7 @@ export class Environment implements IEndevorEntity {
   public getName(): string {
     return this.envName;
   }
+
   public getDescription(): string {
     return '';
   }
@@ -61,15 +61,23 @@ export class Environment implements IEndevorEntity {
     return this.envName;
   }
 
+  public setEnvName(name: string) {
+    this.envName = name;
+  }
+
   public getRepository(): IRepository {
     return this.repository;
+  }
+
+  public setRepository(repo: IRepository) {
+    this.repository = repo;
   }
 
   public findSystem(sysName: string): ISystem | undefined {
     return this.systems.get(sysName);
   }
 
-  public getSystems(): ISystem[] {
+  public getSystemsAsArray(): ISystem[] {
     return Array.from(this.systems.values());
   }
 
@@ -79,5 +87,9 @@ export class Environment implements IEndevorEntity {
 
   public getStages(): IStage[] {
     return this.stages;
+  }
+
+  public setStages(stages: IStage[]) {
+    this.stages = stages;
   }
 }

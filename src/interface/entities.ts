@@ -12,35 +12,48 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IProfile } from '@zowe/imperative';
+import { IProfile, IProfileLoaded } from '@zowe/imperative';
 import { IEndevorQualifier } from './IEndevorQualifier';
 import { IFilter } from './IFilter';
 
 export interface IConnection extends IProfile {
-  name?: string | undefined;
-  host?: string | undefined;
-  port?: number | undefined;
-  user?: string | undefined;
-  password?: string | undefined;
-  rejectUnauthorized?: boolean | undefined;
-  protocol?: string | undefined;
+  name?: string;
+  message: string;
+  type: string;
+  failNotFound: boolean;
+  referencedBy?: string;
+  profile?: IProfile;
+  dependenciesLoaded?: boolean;
+  dependencyLoadResponses?: IProfileLoaded[];
+  loadRepository: (repo: IRepository) => void;
+  findRepository: (repoName: string) => IRepository | undefined;
+  getName: () => string;
+  getDescription: () => string;
+  getRepository: () => IRepository;
+  getRepositoryArray: () => IRepository[];
+  setRepositoryArray: (repos: IRepository[]) => void;
+  getRepositories: () => Map<string, IRepository>;
+  setRepositories: (repoMap: Map<string, IRepository>) => void;
+  getConnection: () => IConnection;
+  getProfile?: () => IProfile | undefined;
+  setProfile?: (profile: IProfile) => void;
 }
 
 export interface IElement extends IEndevorEntity {
-  elmName: string;
   fullElmName: string;
-  elmVVLL: string;
   envName: string;
   sysName: string;
   sbsName: string;
   stgNum: string;
   typeName: string;
-  repository: IRepository;
   getName: () => string;
   getDescription: () => string;
   getElmName: () => string;
+  setElmName: (name: string) => void;
   getElmVVLL: () => string;
+  setElmVVLL: (VVLL: string) => void;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
   getQualifier: () => IEndevorQualifier;
 }
 
@@ -56,30 +69,43 @@ export interface IEndevorFilter {
   getName: () => string;
   getUri: () => string;
   getDescription: () => string;
-  getRepository: () => IRepository;
-  setRepository: (value: IRepository) => void;
-  getElements: () => IElement[];
   getQualifier: () => IEndevorQualifier;
   updateFilterString: (filterString: string) => void;
   editFilter: (name: string) => void;
   deleteFilter: () => void;
+  getRepository: () => IRepository;
+  setRepository: (value: IRepository) => void;
+  getElements: () => IElement[];
+  setElements: (elements: IElement[]) => void;
+  getEnvFilter: () => string;
+  setEnvFilter: (value: string) => void;
+  getStageFilter: () => string;
+  setStageFilter: (value: string) => void;
+  getSystemFilter: () => string;
+  setSystemFilter: (value: string) => void;
+  getSubsysFilter: () => string;
+  setSubsysFilter: (value: string) => void;
+  getTypeFilter: () => string;
+  setTypeFilter: (value: string) => void;
+  getElementFilter: () => string;
+  setElementFilter: (value: string) => void;
 }
 
 export interface IEnvironment {
-  envName: string;
-  repository: IRepository;
   systems: Map<string, ISystem>;
-  stages: IStage[];
   loadSystems: (newSystems: ISystem[], append: boolean) => void;
   loadStages: (newStages: IStage[]) => void;
   getName: () => string;
   getDescription: () => string;
   getEnvName: () => string;
+  setEnvName: (name: string) => void;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
   findSystem: (sysName: string) => ISystem | undefined;
-  getSystems: () => ISystem[];
+  getSystemsAsArray: () => ISystem[];
   getStage: (num: number) => IStage | undefined;
   getStages: () => IStage[];
+  setStages: (stages: IStage[]) => void;
 }
 
 export interface IRepository {
@@ -121,32 +147,32 @@ export interface IRepository {
 }
 
 export interface IStage {
-  envName: string;
-  stgName: string;
-  stgId: string;
-  stgNum: string;
-  repository: IRepository;
-  getName: () => string;
   getDescription: () => string;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
   getStgName: () => string;
+  setStgName: (name: string) => void;
+  getEnvName: () => string;
+  setEnvName: (name: string) => void;
   getStgId: () => string;
+  setStgId: (id: string) => void;
   getStgNum: () => string;
+  setStgNum: (num: string) => void;
 }
 
 export interface ISubsystem {
   envName: string;
   sysName: string;
   sbsName: string;
-  repository: IRepository;
   getName: () => string;
   getDescription: () => string;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
 }
 
 export interface ISystem {
-  envName: string;
-  sysName: string;
+  subsystems: Map<string, ISubsystem>;
+  types: Map<string, IType>;
   loadSubsystems: (newSubsystems: ISubsystem[], append: boolean) => void;
   loadTypes: (newTypes: IType[], append: boolean) => void;
   findType: (typeName: string) => IType | undefined;
@@ -156,18 +182,26 @@ export interface ISystem {
   getName: () => string;
   getDescription: () => string;
   getSysName: () => string;
+  setSysName: (name: string) => void;
+  getEnvName: () => string;
+  setEnvName: (name: string) => void;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
 }
 
 export interface IType {
-  envName: string;
-  sysName: string;
-  stgNum: string;
-  typeName: string;
-  fileExt: string;
-  repository: IRepository;
   getName: () => string;
   getDescription: () => string;
+  getFileExt: () => string;
+  setFileExt: (ext: string) => void;
   getTypeName: () => string;
+  setTypeName: (name: string) => void;
+  getStgNum: () => string;
+  setStgNum: (num: string) => void;
+  getSysName: () => string;
+  setSysName: (name: string) => void;
+  getEnvName: () => string;
+  setEnvName: (name: string) => void;
   getRepository: () => IRepository;
+  setRepository: (repo: IRepository) => void;
 }

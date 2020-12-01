@@ -55,7 +55,7 @@ export async function retrieveWithDependencies(
       const eq: IEndevorQualifier = arg.getQualifier();
 
       progress.report({ increment: 0, message: 'Dependencies List' });
-      const elementsToRetrieve: Element[] = await retrieveElementService.retrieveDependenciesList(
+      const elementsToRetrieve: IElement[] = await retrieveElementService.retrieveDependenciesList(
         repo,
         eq
       );
@@ -72,7 +72,7 @@ export async function retrieveWithDependencies(
         if (token && token.isCancellationRequested) {
           return;
         }
-        const elName: string = elementsToRetrieve[i].elmName;
+        const elName: string = elementsToRetrieve[i].getElmName();
         try {
           progress.report({
             message:
@@ -110,9 +110,9 @@ export async function retrieveWithDependencies(
  * Creates the Element Qualifier for the dependencies.
  * @param element
  */
-function createElementQualifier(element: Element): IEndevorQualifier {
+function createElementQualifier(element: IElement): IEndevorQualifier {
   const eQualifier: IEndevorQualifier = {
-    element: element.elmName,
+    element: element.getElmName(),
     env: element.envName,
     stage: element.stgNum,
     subsystem: element.sbsName,
@@ -132,40 +132,24 @@ function createElementFromQualifier(
   repo: Repository,
   eq: IEndevorQualifier
 ): Element {
-  const iElement: IElement = {
-    elmName: eq.element!,
-    envName: eq.env!,
-    sysName: eq.system!,
-    sbsName: eq.subsystem!,
-    stgNum: eq.stage!,
-    typeName: eq.type!,
-    fullElmName: eq.element!,
-    elmVVLL: '',
-    repository: repo,
-    getName: () => {
-      return '';
-    },
-    getDescription: () => {
-      return '';
-    },
-    getRepository: () => {
-      return repo;
-    },
-    getElmName: () => {
-      return '';
-    },
-    getElmVVLL: () => {
-      return '';
-    },
-    getQualifier: () => {
-      return eq;
-    },
+  return new Element(repo, eq);
+}
+
+export function createQualifierFromElement(
+  element: IElement
+): IEndevorQualifier {
+  return {
+    env: element.envName,
+    stage: element.stgNum,
+    system: element.sysName,
+    subsystem: element.sbsName,
+    type: element.typeName,
+    element: element.getElmName(),
   };
-  return new Element(repo, iElement);
 }
 
 async function hitLimit(
-  elementsToRetrieve: Element[],
+  elementsToRetrieve: IElement[],
   eq: IEndevorQualifier
 ): Promise<boolean> {
   if (elementsToRetrieve.length <= RETRIEVE_ELEMENTS_LIMIT) {

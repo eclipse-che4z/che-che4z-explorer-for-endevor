@@ -72,9 +72,9 @@ export class Repository implements IRepository {
       this._environments = new Map();
     }
     envs.forEach((env) => {
-      env.repository = this;
+      env.setRepository(this);
       if (this._environments) {
-        this._environments.set(env.envName, env);
+        this._environments.set(env.getEnvName(), env);
       }
     });
   }

@@ -12,35 +12,36 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { IEndevorEntity, IElement, IRepository } from '../interface/entities';
+import { IEndevorEntity, IRepository } from '../interface/entities';
 import { IEndevorQualifier } from '../interface/IEndevorQualifier';
 
 export class Element implements IEndevorEntity {
-  envName: string;
-  sysName: string;
-  sbsName: string;
-  stgNum: string;
-  typeName: string;
-  elmName: string;
-  fullElmName: string;
-  elmVVLL: string;
-  repository: IRepository;
+  public envName: string;
+  public sysName: string;
+  public sbsName: string;
+  public stgNum: string;
+  public typeName: string;
+  public fullElmName: string;
+  private elmVVLL: string;
+  private repository: IRepository;
+  private elmName: string;
 
-  constructor(repo: IRepository, element: IElement) {
-    this.elmName = element.elmName;
-    this.fullElmName = element.fullElmName;
-    this.elmVVLL = element.elmVVLL;
-    this.envName = element.envName;
-    this.sysName = element.sysName;
-    this.sbsName = element.sbsName;
-    this.stgNum = element.stgNum;
-    this.typeName = element.typeName;
+  constructor(repo: IRepository, qualifier: IEndevorQualifier) {
+    this.elmName = qualifier.element;
+    this.fullElmName = qualifier.element;
+    this.elmVVLL = qualifier.element;
+    this.envName = qualifier.env;
+    this.sysName = qualifier.system;
+    this.sbsName = qualifier.subsystem;
+    this.stgNum = qualifier.stage;
+    this.typeName = qualifier.type;
     this.repository = repo;
   }
 
   getName(): string {
     return this.elmName;
   }
+
   getDescription(): string {
     return '';
   }
@@ -49,12 +50,24 @@ export class Element implements IEndevorEntity {
     return this.elmName;
   }
 
+  public setElmName(name: string) {
+    this.elmName = name;
+  }
+
   public getElmVVLL(): string {
     return this.elmVVLL;
   }
 
+  public setElmVVLL(VVLL: string) {
+    this.elmVVLL = VVLL;
+  }
+
   public getRepository(): IRepository {
     return this.repository;
+  }
+
+  public setRepository(repo: IRepository) {
+    this.repository = repo;
   }
 
   public getQualifier(): IEndevorQualifier {

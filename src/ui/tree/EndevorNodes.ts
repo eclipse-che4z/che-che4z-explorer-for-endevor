@@ -48,6 +48,7 @@ import {
   ISystem,
   IType,
 } from '../../interface/entities';
+import { createQualifierFromElement } from '../../commands/RetrieveElementWithDependencies';
 
 export class EndevorNode extends vscode.TreeItem implements IEndevorNode {
   private entity?: IEndevorEntity;
@@ -228,9 +229,18 @@ export class EndevorBrowsingNode extends EndevorNode {
       const resultEntities: IEnvironment[] = [];
       const envs = await proxyListEnvironment(repo);
       envs.forEach((env) => {
-        const envEntity: IEnvironment = new Environment(repo, env);
+        const envEntity: IEnvironment = new Environment(repo, env.envName);
         resultEntities.push(envEntity);
-        resultNodes.push(new EnvironmentNode(envEntity, { env: env.envName }));
+        resultNodes.push(
+          new EnvironmentNode(envEntity, {
+            env: env.envName,
+            stage: '',
+            system: '',
+            subsystem: '',
+            type: '',
+            element: '',
+          })
+        );
       });
       repo.loadEnvironments(resultEntities, true);
       this.setChildren(resultNodes);
@@ -245,12 +255,12 @@ export class EndevorBrowsingNode extends EndevorNode {
 }
 
 export class EndevorFilterPathNode extends EndevorNode {
-  private elements: Element[];
+  private elements: IElement[];
   private repository?: IRepository;
   constructor(
     name: string,
     repo: IRepository | undefined,
-    elements: Element[]
+    elements: IElement[]
   ) {
     super();
     this.elements = elements;
@@ -342,7 +352,10 @@ export class FilterNode extends EndevorNode {
       const resultEntities: Element[] = [];
       let resultNodes: EndevorNode[] = [];
       for (const element of elements) {
-        const eleEntity: Element = new Element(repo, element);
+        const eleEntity: Element = new Element(
+          repo,
+          createQualifierFromElement(element)
+        );
         resultEntities.push(eleEntity);
         resultNodes.push(
           new EndevorElementNode(eleEntity, eleEntity.getQualifier())
@@ -466,7 +479,7 @@ export class StageNode extends EndevorQualifiedNode {
         );
       });
       const env: IEnvironment | undefined = repo.findEnvironment(
-        stageEntity.envName
+        stageEntity.getEnvName()
       );
       if (env) {
         env.loadSystems(resultEntities, true);
@@ -579,11 +592,19 @@ export class TypeNode extends EndevorQualifiedNode {
       const resultNodes: EndevorNode[] = [];
       const elements = await proxyListElement(repo, nodeQualType);
       elements.forEach((element) => {
-        const eleEntity: Element = new Element(repo, element);
+        const eltAsQualifier = {
+          env: element.envName,
+          stage: element.stgNum,
+          system: element.sysName,
+          subsystem: element.sbsName,
+          type: element.typeName,
+          element: element.elmName,
+        };
+        const eleEntity: Element = new Element(repo, eltAsQualifier);
         resultNodes.push(
           new EndevorElementNode(eleEntity, {
             ...nodeQualType,
-            element: element.fullElmName,
+            element: element.elmName,
           })
         );
       });

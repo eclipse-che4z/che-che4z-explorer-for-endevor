@@ -97,7 +97,7 @@ export class EndevorController {
   public removeRepository(repoName: string, connectionLabel: string) {
     const conn = this.connections.get(connectionLabel);
     if (conn) {
-      conn.getRepositoryMap().delete(repoName);
+      conn.getRepositories().delete(repoName);
     }
     this._rootNode.getChildren().forEach((connection, index) => {
       if (connection.label === connectionLabel) {
@@ -118,7 +118,7 @@ export class EndevorController {
     const newMap = new Map();
     const conn = this.connections.get(connectionLabel);
     if (conn) {
-      conn.getRepositoryMap().forEach((repo, name) => {
+      conn.getRepositories().forEach((repo, name) => {
         if (name === oldRepoName) {
           repo.setName(newRepoName);
           newMap.set(newRepoName, repo);
@@ -232,7 +232,7 @@ export class EndevorController {
   ): boolean {
     const conn = this.connections.get(connectionLabel);
     if (conn) {
-      const repoMap = conn.getRepositoryMap();
+      const repoMap = conn.getRepositories();
       return repoMap.get(repoName) ? true : false;
     }
     return false;
@@ -275,7 +275,7 @@ export class EndevorController {
   public findNextId(connectionLabel: string): number {
     const conn = this.connections.get(connectionLabel);
     if (conn) {
-      const repoMap = conn.getRepositoryMap();
+      const repoMap = conn.getRepositories();
       const iDArray: boolean[] = new Array(repoMap.size);
       iDArray.fill(true);
       repoMap.forEach((repo) => {
@@ -300,7 +300,7 @@ export class EndevorController {
   private updateIDs(connectionLabel: string) {
     const conn = this.connections.get(connectionLabel);
     if (conn) {
-      const repoMap = conn.getRepositoryMap();
+      const repoMap = conn.getRepositories();
       let saveRepos = false;
       repoMap.forEach((repo) => {
         if (repo.id === undefined) {

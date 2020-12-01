@@ -81,10 +81,10 @@ export class SettingsFacade {
         name: connection.getName(),
         hosts: hostsArray,
       };
-      connection.getRepositoryList().forEach((repo) => {
+      connection.getRepositoryArray().forEach((repo) => {
         toPush.hosts.push({
           datasource: repo.getDatasource(),
-          filters: repo.getIFilters(),
+          filters: repo.getFilters(),
           id: repo.id,
           name: repo.getName(),
           profileLabel: repo.getProfileLabel(),

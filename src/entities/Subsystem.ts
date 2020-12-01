@@ -15,10 +15,10 @@
 import { ISubsystem, IRepository } from '../interface/entities';
 
 export class Subsystem implements ISubsystem {
-  envName: string;
-  sysName: string;
-  sbsName: string;
-  repository: IRepository;
+  public envName: string;
+  public sysName: string;
+  public sbsName: string;
+  private repository: IRepository;
 
   constructor(repo: IRepository, subsys: ISubsystem) {
     this.envName = subsys.envName;
@@ -30,10 +30,16 @@ export class Subsystem implements ISubsystem {
   public getName(): string {
     return this.sbsName;
   }
+
   public getDescription(): string {
     return '';
   }
+
   public getRepository(): IRepository {
     return this.repository;
+  }
+
+  public setRepository(repo: IRepository) {
+    this.repository = repo;
   }
 }

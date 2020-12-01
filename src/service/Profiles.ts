@@ -13,6 +13,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { URL } from 'url';
 import * as vscode from 'vscode';
+import { Connection } from '../entities/Connection';
 import { logger } from '../globals';
 import { IConnection } from '../interface/entities';
 
@@ -221,15 +222,22 @@ export class Profiles {
       return undefined;
     }
 
-    const connection: IConnection = {
-      host: endevorUrlParsed.host,
+    const profileLoaded: IProfileLoaded = {
+      message: '',
+      type: 'endevor',
+      failNotFound: false,
       name: profileName,
-      password: passWord,
-      port: endevorUrlParsed.port,
-      protocol: endevorUrlParsed.protocol,
-      rejectUnauthorized: rejectUnauthorize,
-      user: userName,
+      profile: {
+        host: endevorUrlParsed.host,
+        name: profileName,
+        password: passWord,
+        port: endevorUrlParsed.port,
+        protocol: endevorUrlParsed.protocol,
+        rejectUnauthorized: rejectUnauthorize,
+        user: userName,
+      },
     };
+    const connection: IConnection = new Connection(profileLoaded);
 
     let newProfile: IProfile | undefined;
 

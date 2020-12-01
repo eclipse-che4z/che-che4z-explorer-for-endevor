@@ -73,7 +73,7 @@ export class RetrieveElementService {
       return [];
     }
     const el = elements[0];
-    result.push(new Element(repo, el));
+    result.push(new Element(repo, eq));
     if (Object.getOwnPropertyDescriptor(el, 'components')) {
       for (const dep of el['components']) {
         if (dep.elmName.trim()) {

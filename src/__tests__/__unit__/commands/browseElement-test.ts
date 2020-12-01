@@ -52,44 +52,16 @@ describe('Test function browseElement', () => {
     'testRepo',
     'testConnLabel'
   );
-  const testIElement = {
-    elmName: 'elmTest1',
-    fullElmName: 'elmTest1',
-    elmVVLL: '1100',
-    envName: 'envTest',
-    sysName: 'sysTest',
-    sbsName: 'sbsTest',
-    stgNum: '1',
-    typeName: 'COBOL',
-    repository: testRepo,
-    getName: () => {
-      return 'elmTest1';
-    },
-    getDescription: () => {
-      return 'testDescription';
-    },
-    getElmName: () => {
-      return 'elmTest1';
-    },
-    getElmVVLL: () => {
-      return '1100';
-    },
-    getRepository: () => {
-      return testRepo;
-    },
-    getQualifier: () => {
-      return testQualifier;
-    },
-  };
-  const testElement = new Element(testRepo, testIElement);
   const testQualifier: IEndevorQualifier = {
-    element: testElement.elmName,
+    element: 'elmTest1',
     env: 'envTest',
     stage: '1',
     subsystem: 'sbsTest',
     system: 'sysTest',
     type: 'COBOL',
   };
+  const testElement = new Element(testRepo, testQualifier);
+
   const testEndevorElementNode = new EndevorElementNode(
     testElement,
     testQualifier
