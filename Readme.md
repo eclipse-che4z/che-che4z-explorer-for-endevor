@@ -159,7 +159,7 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 
 ### Browse or Retrieve an Element
 
-#### Browse element
+#### Browse Element
 
 The Browse Element action displays the entire contents of the Element, including related metadata. This allows you to determine if you want to retrieve and work with the Element.
 
@@ -167,7 +167,7 @@ The Browse Element action displays the entire contents of the Element, including
 
 ![Browse command visualization](./gif/Browse-element.gif)
 
-#### Retrieve element
+#### Retrieve Element
 
 The Retrieve Element action retrieves an existing element from Endevor into a local file system (with dependecies, if specified). This allows to you to work with local copy of element without upload ability, for now (basically it is View Element action).
 
