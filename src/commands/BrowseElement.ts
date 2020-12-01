@@ -19,12 +19,7 @@ export async function browseElement(uri: vscode.Uri) {
   const keepExistingTabsInEditor = { preview: false };
   vscode.window.showTextDocument(uri, keepExistingTabsInEditor)
         .then(
-          (_onSuccess: vscode.TextEditor) => {
-              logger.info(
-                'Browse command was submitted to content provider',
-                `Browse command was submitted to content provider with uri: ${JSON.stringify(uri)}`
-              );
-          },
+          (_onSuccess: vscode.TextEditor) => {},
           (failureReason: string) => {
               logger.error(
                 'Browse command was not submitted, please, see the output for reason',
@@ -32,4 +27,8 @@ export async function browseElement(uri: vscode.Uri) {
               );
             }
           );
+  logger.info(
+    'Browse command was submitted to content provider',
+    `Browse command was submitted to content provider with uri: ${JSON.stringify(uri)}`
+  );
 }
