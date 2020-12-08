@@ -216,11 +216,8 @@ export class EndevorController {
         try {
           endevorDataProvider.addSession(connName);
         } catch (error) {
-          const errMsg =
-            'You have an Endevor connection that refer to a non-existent profile named ' +
-            connName +
-            '. To resolve this, you can remove the connection with this profile name in your user settings.';
-          logger.warn(error.message, errMsg);
+          const errMsg = `Error: Could not find profile named: ${connName}. Please check your configuration in settings.json`;
+          logger.warn(errMsg, error.message);
         }
       }
     });
