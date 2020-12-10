@@ -399,13 +399,6 @@ export namespace workspace {
    */
   export let rootPath: string | undefined;
 
-  export function getConfiguration(
-    section?: string | undefined,
-    scope?: any | null
-  ): undefined {
-    return undefined;
-  }
-
   export function openTextDocument(fileName: string) {}
 
   /**
