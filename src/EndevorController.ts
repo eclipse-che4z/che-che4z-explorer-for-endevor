@@ -217,7 +217,7 @@ export class EndevorController {
           endevorDataProvider.addSession(connName);
         } catch (error) {
           const errMsg = `Profile ${connName} defined in settings.json was not found. Make sure the profile is defined or remove it from settings.json. \n\n ${error.stack}`;
-          logger.warn(errMsg, error.message);
+          logger.warn(error.message, errMsg);
         }
       }
     });
