@@ -22,6 +22,7 @@ import {
 import { Connection } from './model/Connection';
 import { EndevorDataProvider } from './ui/tree/EndevorDataProvider';
 import { Host } from './model/IEndevorInstance';
+import { logger } from './globals';
 
 export class EndevorController {
   /**
@@ -212,7 +213,12 @@ export class EndevorController {
         this.updateIDs(connName);
       } else {
         const endevorDataProvider = new EndevorDataProvider();
-        endevorDataProvider.addSession(connName);
+        try {
+          endevorDataProvider.addSession(connName);
+        } catch (error) {
+          const errMsg = `Profile ${connName} defined in settings.json was not found. Make sure the profile is defined or remove it from settings.json. \n\n ${error.stack}`;
+          logger.warn(error.message, errMsg);
+        }
       }
     });
   }

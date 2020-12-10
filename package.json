@@ -300,7 +300,7 @@
     "compile": "tsc -p ./",
     "test:vscode": "ts-node ./test/runTest.ts",
     "watch": "tsc -watch -p ./",
-    "test": "npm run test:no-vscode &&  npm run test:vscode",
+    "test": "npm run test:no-vscode && npm run test:vscode",
     "test:no-vscode": "jest --config jest.config.js --coverage",
     "pretty": "prettier --write .",
     "lint": "concurrently -n \"typescpt,_eslint_,prettier\" \"tsc --noemit \" \"eslint --ext .ts .\" \"prettier --check .\"",
