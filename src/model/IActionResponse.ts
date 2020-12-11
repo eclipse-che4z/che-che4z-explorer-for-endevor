@@ -12,8 +12,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export interface ActionResponse{
-    returnCode : string;
-    reasonCode : string;
-    messages   : string;
+export interface ActionResponse {
+  returnCode: string;
+  reasonCode: string;
+  messages: string;
 }

@@ -11,12 +11,7 @@
  * Contributors:
  *   Broadcom, Inc. - initial API and implementation
  */
- 
- {
-    // See http://go.microsoft.com/fwlink/?LinkId=827846
-    // for the documentation about the extensions.json format
-    "recommendations": [
-        "ms-vscode.vscode-typescript-tslint-plugin",
-        "editorconfig.editorconfig"
-    ]
+
+{
+  "recommendations": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint"]
 }

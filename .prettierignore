@@ -1,0 +1,8 @@
+package-lock.json
+.vscode-test
+results
+out
+*.html
+node_modules
+*.vsix
+logs/

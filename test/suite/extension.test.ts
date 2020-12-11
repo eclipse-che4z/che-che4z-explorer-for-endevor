@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import * as assert from 'assert';
 
 import * as vscode from 'vscode';
@@ -11,7 +13,7 @@ suite('Basic Extension Test Suite (integration)', () => {
     extension.activate();
   });
 
-  test('Extension loads in VSCode and is active', async () => {    
+  test('Extension loads in VSCode and is active', async () => {
     await timeout(3000);
     assert.strictEqual(extension.isActive, true);
   });

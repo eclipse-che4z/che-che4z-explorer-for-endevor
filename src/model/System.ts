@@ -12,75 +12,74 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ISystem } from "./IEndevorEntities";
-import { EndevorEntity } from "./EndevorEntity";
-import { Repository } from "./Repository";
-import { SubSystem } from "./SubSystem";
-import { Type } from "./Type";
+import { ISystem } from './IEndevorEntities';
+import { EndevorEntity } from './EndevorEntity';
+import { Repository } from './Repository';
+import { SubSystem } from './SubSystem';
+import { Type } from './Type';
 
 export class System extends EndevorEntity implements ISystem {
-    envName: string;
-    sysName: string;
-    subsystems: Map<string, SubSystem>;
-    types: Map<string, Type>;
-    repository: Repository;
+  envName: string;
+  sysName: string;
+  subsystems: Map<string, SubSystem>;
+  types: Map<string, Type>;
+  repository: Repository;
 
-    constructor (repo: Repository, system: ISystem) {
-        super();
-        this.envName = system.envName;
-        this.sysName = system.sysName;
-        this.subsystems = new Map();
-        this.types = new Map();
-        this.repository = repo;
-    }
+  constructor(repo: Repository, system: ISystem) {
+    super();
+    this.envName = system.envName;
+    this.sysName = system.sysName;
+    this.subsystems = new Map();
+    this.types = new Map();
+    this.repository = repo;
+  }
 
-    public loadSubSystems(newSubSystems: SubSystem[], append: boolean) {
-        if (!append) {
-            this.subsystems = new Map();
-        }
-        newSubSystems.forEach(subsys => {
-            this.subsystems.set(subsys.sbsName, subsys);
-        });
+  public loadSubSystems(newSubSystems: SubSystem[], append: boolean) {
+    if (!append) {
+      this.subsystems = new Map();
     }
+    newSubSystems.forEach((subsys) => {
+      this.subsystems.set(subsys.sbsName, subsys);
+    });
+  }
 
-    public loadTypes(newTypes: Type[], append: boolean) {
-        if (!append) {
-            this.types = new Map();
-        }
-        newTypes.forEach(type => {
-            this.types.set(type.typeName, type);
-        });
+  public loadTypes(newTypes: Type[], append: boolean) {
+    if (!append) {
+      this.types = new Map();
     }
+    newTypes.forEach((type) => {
+      this.types.set(type.typeName, type);
+    });
+  }
 
-    public findType(typeName: string): Type | undefined {
-        return this.types.get(typeName);
-    }
+  public findType(typeName: string): Type | undefined {
+    return this.types.get(typeName);
+  }
 
-    public getTypes(): Type[] {
-        return Array.from(this.types.values());
-    }
+  public getTypes(): Type[] {
+    return Array.from(this.types.values());
+  }
 
-    public findSubSystem(subsysName: string): SubSystem | undefined {
-        return this.subsystems.get(subsysName);
-    }
+  public findSubSystem(subsysName: string): SubSystem | undefined {
+    return this.subsystems.get(subsysName);
+  }
 
-    public getSubSystems(): SubSystem[] {
-        return Array.from(this.subsystems.values());
-    }
+  public getSubSystems(): SubSystem[] {
+    return Array.from(this.subsystems.values());
+  }
 
-    public getName(): string {
-        return this.sysName;
-    }
-    public getDescription(): string {
-        return "";
-    }
+  public getName(): string {
+    return this.sysName;
+  }
+  public getDescription(): string {
+    return '';
+  }
 
-    public getSysName(): string {
-        return this.sysName;
-    }
+  public getSysName(): string {
+    return this.sysName;
+  }
 
-    public getRepository(): Repository {
-        return this.repository;
-    }
-
+  public getRepository(): Repository {
+    return this.repository;
+  }
 }
