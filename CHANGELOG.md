@@ -2,6 +2,12 @@
 
 All notable changes to Explorer for Endevor will be documented in this file.
 
+## [0.11.1] 2020-12-11
+
+### Changed
+
+- Fix for activation when user has deleted a profile from Zowe CLI
+
 ## [0.11.0] 2020-11-13
 
 ### Added
