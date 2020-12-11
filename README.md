@@ -95,7 +95,6 @@ Now that you have created your profile, assign the configurations that you want 
    Your configuration appears in the panel below the profile entry.
    This step can be repeated as many times as you need to add multiple configurations.
 
-
 You have successfully connected a profile to a configuration, and the profile is listed under Explorer for Endevor in the interface.
 
 To change the name of a configuration, click the pencil icon next to the configuration in the tree.
@@ -113,7 +112,6 @@ Explorer for Endevor filters can be created in two ways:
 - Create a filter manually by entering all the required parameters.
 
 - Search in Map View, and save a filter from the path followed.
-
 
 #### Create a Manual Filter:
 
@@ -134,13 +132,11 @@ Creating a manual filter is a quick way to narrow down your search to only relev
 
 2.  Click the plus icon next to **Filter** on the **Explorer for Endevor** tab.
 
-
     A prompt appears for you to enter the required parameters as follows:
 
         - env/stgnum/sys/subsys/type/element
 
     If the parameters (with a maximum of two parameters as \* wildcards) are correctly entered, the filter appears under the expanded Filter section in the Explorer for Endevor tab.
-
 
 #### Create a Filter in Map View:
 
@@ -153,13 +149,11 @@ Map View allows you to create custom filters, without necessarily knowing the pa
 
 3.  Select an entry at the **Type** level, and click the plus icon.
 
-
     The path that you followed appears highlighted at the top of your screen, displaying the following dialog:
 
         "Create a new Endevor filter (Press 'Enter' to confirm or 'Escape' to cancel)"
 
 4.  If the created filter matches your requirements, Press Enter.
-
 
     The newly created filter is automatically saved and now shows as an option under the Filters View
 
@@ -181,7 +175,6 @@ The Browse Element action displays the entire contents of the Element, including
 
    You have successfully opened an element for inspection. If you wish, you can now Retrieve the Element, with or without Dependencies.
 
-
 ## Configuration and Usage Tips
 
 - Delete any filters when no longer required. Filters are saved automatically and so the list might become hard to manage.
@@ -190,18 +183,15 @@ The Browse Element action displays the entire contents of the Element, including
 
 ---
 
-
 ## Technical Assistance and Support for Explorer for Endevor
 
 The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
-
 
 If you are on active support for CA Endevor, technical assistance and support is provided to Broadcom’s CA Endevor customers in accordance with the terms, guidelines, details and parameters located within Broadcom’s “Working with Support” guide located at:
 
 https://techdocs.broadcom.com/us/product-content/admin-content/ca-support-policies.html?intcmp=footernav
 
 This support generally includes:
-
 
 - Telephone and online access to technical support
 - Ability to submit new incidents 24x7x365
@@ -214,6 +204,5 @@ Technical support cases must be submitted to Broadcom in accordance with guidanc
 Note: To receive technical assistance and support, you must remain compliant with “Working with Support”, be current on all applicable licensing and maintenance requirements, and maintain an environment in which all computer hardware, operating systems, and third party software associated with the affected Broadcom CA software are on the releases and version levels from the manufacturer that Broadcom designates as compatible with the software. Changes you elect to make to your operating environment could detrimentally affect the performance of Broadcom CA software and Broadcom shall not be responsible for these effects or any resulting degradation in performance of the Broadcom CA software. Severity 1 cases must be opened via telephone and elevations of lower severity incidents to Severity 1 status must be requested via telephone.
 
 ---
-
 
 Copyright © 2020 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
