@@ -27,6 +27,7 @@ import { logger } from '../globals';
 
 export class HostDialogs {
   public static async addConnection() {
+    await Profiles.getInstance().refresh();
     const allProfiles = Profiles.getInstance().allProfiles;
     const createNewProfile = 'Create a New Endevor Profile';
     let chosenProfile: string;
