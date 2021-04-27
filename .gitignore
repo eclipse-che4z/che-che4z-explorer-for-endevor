@@ -9,10 +9,16 @@
 #
 # Contributors:
 #   Broadcom, Inc. - initial API and implementation
+
+
+dist
 out
 node_modules
 .vscode-test/
 *.vsix
 results
-logs/
-
+.cov
+.vs
+*.log
+COBOL
+.e4e

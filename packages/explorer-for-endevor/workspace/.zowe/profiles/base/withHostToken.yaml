@@ -1,0 +1,17 @@
+# Copyright (c) 2020 Broadcom.
+# The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+#
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# Contributors:
+#   Broadcom, Inc. - initial API and implementation
+
+host: hostname
+port: 12345
+rejectUnauthorized: true
+tokenType: apimlAuthenticationToken
+tokenValue: GbU4xbVZCZVMtV3RDdXBZMXItSzdld2JlbjwiYWxnIjoiUlMyNTYifQ.eyJ0bl90eXBlIjoiQmVhcmVyIiwic3ViIjoiZHVtYWwwMSIsInVwbiI6ImR1bWFsMDEiLCJncm91cHMiOlsiT01WU1VTUkciLCJPTVZTREZHIiwiTkVXSERHUlAiLCJNU01EREdSUCIsIklaVVVTUkdQIiwiSVpVVU5HUlAiLCJJWlVTRUNBRCIsIklaVVVHUlAiXSwicmVhbG0iOiJTQUZSZWFsbSIsImlzcyI6InpPU01GIiwiZXhwIjoxNTk2MTI5OTQ5LCJpYXQiOjE1OTYxMDA1NDl9.tIM68lEgDdFG9ylc8jLULaf8Xs0hfIwEsTBYitZxXU0ALY_uV_6VMsYJNxxr4-Z3vwyATpkLviLwdS9C2NfmXmz4z3mCZoJL1OtlWmYhiAHp0ULZVvMhUy8p3HFAVSyxPCPCB99vH3AFPY3xegHclj2xo1XwAyTxU5-fm6KNB4I2AZ6ygb2ToQttGmTN2iYvi6ELzekbePTctllBDEx8qRP4L0hqZxFri5xCc5EXICz299ES7-BWAOHFH0Xz1q9q0gM8ctimmMMuxZM7cDO6xkHdT8EshephfMKanphHuH7Wp7fFpcsjcWgZ4pRgs7_CbHSSpyhI61lYSGoUlSL8HA

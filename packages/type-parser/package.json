@@ -1,0 +1,13 @@
+{
+  "name": "@local/type-parser",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo No Build for 'type-parser' Package",
+    "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "pretty": "prettier --write .",
+    "test": "jest --config jest.config.js --coverage",
+    "tsc:watch": "tsc --noemit --watch",
+    "clean": "rimraf results node_modules"
+  },
+  "license": "UNLICENSED"
+}
