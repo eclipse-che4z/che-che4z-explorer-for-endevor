@@ -74,7 +74,6 @@
     "webpack": "^4.44.2",
     "webpack-cli": "^4.1.0",
     "@types/selenium-webdriver": "^3.0.4",
-    "selenium-webdriver": "^3.6.0",
-    "testcontainers": "^7.4.0"
+    "selenium-webdriver": "^3.6.0"
   }
 }
