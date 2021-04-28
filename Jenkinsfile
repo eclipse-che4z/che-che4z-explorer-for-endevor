@@ -87,31 +87,31 @@ pipeline {
         //       }
         //     }
         // }
-        stage('Deploy') {
-            environment {
-                sshChe4z = "genie.che4z@projects-storage.eclipse.org"
-                project = "download.eclipse.org/che4z/snapshots/$projectName"
-                url = "$project/$branchName"
-                deployPath = "/home/data/httpd/$url"
-            }
-            steps {
-                script {
-                    if (branchName == 'master' || branchName == 'development') {
-                        container('jnlp') {
-                            sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
-                                sh '''
-                                ssh $sshChe4z rm -rf $deployPath
-                                ssh $sshChe4z mkdir -p $deployPath
-                                scp -r $workspace/*.vsix $sshChe4z:$deployPath
-                                '''
-                                echo "Deployed to https://$url"
-                            }
-                        }
-                    } else {
-                        echo "Deployment skipped for branch: $branchName"
-                    }
-                }
-            }
-        }
+        // stage('Deploy') {
+        //     environment {
+        //         sshChe4z = "genie.che4z@projects-storage.eclipse.org"
+        //         project = "download.eclipse.org/che4z/snapshots/$projectName"
+        //         url = "$project/$branchName"
+        //         deployPath = "/home/data/httpd/$url"
+        //     }
+        //     steps {
+        //         script {
+        //             if (branchName == 'master' || branchName == 'development') {
+        //                 container('jnlp') {
+        //                     sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
+        //                         sh '''
+        //                         ssh $sshChe4z rm -rf $deployPath
+        //                         ssh $sshChe4z mkdir -p $deployPath
+        //                         scp -r $workspace/*.vsix $sshChe4z:$deployPath
+        //                         '''
+        //                         echo "Deployed to https://$url"
+        //                     }
+        //                 }
+        //             } else {
+        //                 echo "Deployment skipped for branch: $branchName"
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
