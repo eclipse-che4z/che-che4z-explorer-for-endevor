@@ -1,0 +1,281 @@
+{
+  "name": "explorer-for-endevor",
+  "displayName": "Explorer for Endevor",
+  "description": "Explorer for Endevor",
+  "author": "Broadcom",
+  "version": "0.12.0",
+  "publisher": "BroadcomMFD",
+  "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
+  },
+  "bugs": {
+    "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor/issues"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "icon": "resources/logo.png",
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "keywords": [
+    "zOS",
+    "mainframe",
+    "explorer",
+    "endevor"
+  ],
+  "activationEvents": [
+    "onView:e4e.elmTreeView"
+  ],
+  "main": "./dist/extension.bundle.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "e4eExplorerContainer",
+          "title": "Explorer for Endevor",
+          "icon": "./resources/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "e4eExplorerContainer": [
+        {
+          "id": "e4e.elmTreeView",
+          "name": "Explorer for Endevor"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "e4e.refreshTreeView",
+        "title": "Refresh Tree",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "e4e.addNewService",
+        "title": "Add a New Profile",
+        "icon": {
+          "light": "resources/light/add.svg",
+          "dark": "resources/dark/add.svg"
+        }
+      },
+      {
+        "command": "e4e.addNewElementLocation",
+        "title": "Add a New Location Profile",
+        "icon": {
+          "light": "resources/light/add.svg",
+          "dark": "resources/dark/add.svg"
+        }
+      },
+      {
+        "command": "e4e.hideElementLocation",
+        "title": "Remove Location Profile"
+      },
+      {
+        "command": "e4e.hideService",
+        "title": "Remove Profile"
+      },
+      {
+        "command": "e4e.viewElementDetails",
+        "title": "View Details"
+      },
+      {
+        "command": "e4e.retrieveElement",
+        "title": "Retrieve"
+      },
+      {
+        "command": "e4e.retrieveElementWithDependencies",
+        "title": "Retrieve with dependencies"
+      },
+      {
+        "command": "e4e.editElement",
+        "title": "Edit"
+      },
+      {
+        "command": "e4e.generateElement",
+        "title": "Generate"
+      },
+      {
+        "command": "e4e.printListing",
+        "title": "Print listing"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "e4e.refreshTreeView",
+          "when": "view == e4e.elmTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "e4e.addNewService",
+          "when": "view == e4e.elmTreeView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "e4e.viewElementDetails",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "1_e4e_view_element_actions"
+        },
+        {
+          "command": "e4e.editElement",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "2_e4e_edit_element_actions@0"
+        },
+        {
+          "command": "e4e.generateElement",
+          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "2_e4e_edit_element_actions@1"
+        },
+        {
+          "command": "e4e.printListing",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "2_e4e_edit_element_actions@2"
+        },
+        {
+          "command": "e4e.retrieveElement",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "3_e4e_retrieve_actions@0"
+        },
+        {
+          "command": "e4e.retrieveElementWithDependencies",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "3_e4e_retrieve_actions@1"
+        },
+        {
+          "command": "e4e.hideElementLocation",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_LOCATION",
+          "group": "e4e_element_location_actions"
+        },
+        {
+          "command": "e4e.hideService",
+          "when": "view == e4e.elmTreeView && viewItem == ENDEVOR_SERVICE",
+          "group": "e4e_service_actions"
+        },
+        {
+          "command": "e4e.addNewElementLocation",
+          "when": "view == e4e.elmTreeView && viewItem == ENDEVOR_SERVICE",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "e4e.addNewElementLocation",
+          "when": "false"
+        },
+        {
+          "command": "e4e.hideElementLocation",
+          "when": "false"
+        },
+        {
+          "command": "e4e.hideService",
+          "when": "false"
+        },
+        {
+          "command": "e4e.viewElementDetails",
+          "when": "false"
+        },
+        {
+          "command": "e4e.retrieveElement",
+          "when": "false"
+        },
+        {
+          "command": "e4e.retrieveElementWithDependencies",
+          "when": "false"
+        },
+        {
+          "command": "e4e.editElement",
+          "when": "false"
+        },
+        {
+          "command": "e4e.generateElement",
+          "when": "false"
+        },
+        {
+          "command": "e4e.printListing",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Explorer for Endevor",
+      "properties": {
+        "endevor.locations": {
+          "type": "array",
+          "title": "Endevor locations",
+          "description": "List of Endevor locations to work on extension startup",
+          "scope": "resource",
+          "items": {
+            "type": "object",
+            "properties": {
+              "service": {
+                "type": "string",
+                "description": "Endevor profile name"
+              },
+              "elementLocations": {
+                "type": "array",
+                "description": "Endevor location profile names",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "service",
+              "elementLocations"
+            ]
+          }
+        },
+        "endevor.editDownloadFolder": {
+          "type": "string",
+          "title": "Endevor edit temporary folder",
+          "description": "Workspace folder that stores elements downloaded with the (Endevor) Edit function",
+          "scope": "resource",
+          "default": ".e4e"
+        },
+        "endevor.maxParallelRequests": {
+          "type": "number",
+          "title": "Endevor HTTP WebServices parallel requests amount",
+          "description": "Number of parallel HTTP requests supported by Endevor",
+          "scope": "resource",
+          "default": 4
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && webpack --mode production",
+    "watch": "rimraf dist && webpack --mode development --watch",
+    "type": "tsc --watch --noEmit",
+    "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "eslint:watch": "eslint --ext .ts . --watch",
+    "detect-cycles": "madge --circular --extensions ts ./",
+    "pretty": "prettier --write .",
+    "test": "yarn run test:no-vscode && yarn run test:vscode",
+    "test:no-vscode": "jest --config jest.config.js --coverage",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:vscode": "ts-node ./vscode-test.run.ts",
+    "tsc:watch": "tsc --noemit --watch",
+    "package": "mkdirp vsce && vsce package --yarn -o vsce/explorer-for-endevor.vsix",
+    "clean": "rimraf dist results vsce node_modules .vscode-test dependencies.txt dependencies.json"
+  },
+  "dependencies": {
+    "@local/endevor": "1.0.0",
+    "@local/extension": "1.0.0",
+    "@local/vscode-wrapper": "1.0.0",
+    "@local/profiles": "1.0.0",
+    "@zowe/imperative": "4.7.4"
+  },
+  "devDependencies": {
+    "dotenv": "^8.2.0"
+  }
+}

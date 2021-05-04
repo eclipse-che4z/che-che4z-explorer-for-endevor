@@ -1,0 +1,12 @@
+{
+  "name": "@local/extension",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo No Build for 'extension' Package",
+    "lint": "echo No Lint for 'extension' Package",
+    "pretty": "prettier --write .",
+    "test": "echo No Tests for 'extension' Package",
+    "clean": "rimraf node_modules"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@local/vscode-wrapper",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo No Build for 'vscode-wrapper' Package",
+    "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "pretty": "prettier --write .",
+    "test": "echo No Tests for 'vscode-wrapper' Package",
+    "tsc:watch": "tsc --noemit --watch",
+    "clean": "rimraf node_modules"
+  },
+  "dependencies": {
+    "@local/extension": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.50.0"
+  },
+  "license": "UNLICENSED"
+}
