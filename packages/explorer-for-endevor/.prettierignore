@@ -14,4 +14,6 @@ package-lock.json
 .vscode-test
 results
 dist
+dependencies.json
+dependencies.txt
 

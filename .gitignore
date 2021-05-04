@@ -14,6 +14,8 @@
 dist
 out
 node_modules
+dependencies.txt
+dependencies.json
 .vscode-test/
 *.vsix
 results
@@ -22,3 +24,4 @@ results
 *.log
 COBOL
 .e4e
+.env

@@ -266,8 +266,7 @@
     "test:vscode": "ts-node ./vscode-test.run.ts",
     "tsc:watch": "tsc --noemit --watch",
     "package": "mkdirp vsce && vsce package --yarn -o vsce/explorer-for-endevor.vsix",
-    "clean": "rimraf dist results vsce node_modules",
-    "test:theia": "jest --config jest-theia.config.js --runInBand"
+    "clean": "rimraf dist results vsce node_modules .vscode-test dependencies.txt dependencies.json"
   },
   "dependencies": {
     "@local/endevor": "1.0.0",

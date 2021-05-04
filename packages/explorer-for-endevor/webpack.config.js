@@ -18,13 +18,21 @@
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
+const BundledDependenciesPlugin = require('./webpack-plugin.js');
 
 const distFolderPath = path.resolve(__dirname, 'dist');
-console.log(distFolderPath);
+
 /**@type {import('webpack').Configuration}*/
 const config = {
+  plugins: [
+    new BundledDependenciesPlugin({
+      depsListFile: 'dependencies.txt',
+      depsDetailsFile: 'dependencies.json',
+    }),
+  ],
   optimization: {
     minimize: false,
+    usedExports: true,
   },
   target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
   entry: './src/extension.ts', // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/

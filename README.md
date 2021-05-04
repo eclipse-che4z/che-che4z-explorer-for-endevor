@@ -186,7 +186,7 @@ You can view the contents of an element by clicking on the element in the tree. 
 
    The contents of the element appear in the editor area.
 
-![View an Element](images/E4E-view.gif?raw=true 'View an Element')
+![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true "View an Element")
 <br /><br />
 
 #### View Details
@@ -200,7 +200,7 @@ The details of an element you want to view appear in the editor area in a separa
 
    The details of the element appear in the editor area.
 
-![View Details](images/E4E-view-details.gif?raw=true 'View Details')
+![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true "View Details")
 <br /><br />
 
 #### Retrieve an Element
@@ -214,7 +214,7 @@ You can download an element to your workspace and work with the element locally.
 
    The extension downloads the element and places into to your workspace. The contents of the element appear in the editor area. You can edit the element immediately. You can find the element in the workspace folder.
 
-![Retrieve an Element](images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
+![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true "Retrieve an Element")
 <br /><br />
 
 #### Retrieve an Element with Dependencies
@@ -230,7 +230,7 @@ You can download an element with dependencies to your workspace and work with th
 
    The extension downloads the element with dependencies and places it to your workspace. The contents of the element appear in the editor area. You can edit the element immediately. You can find the element and dependencies in the workspace folder.
 
-![Retrieve with Dependencies](images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true "Retrieve with Dependencies")
 <br /><br />
 
 #### Edit
@@ -251,7 +251,7 @@ The **Edit** action lets you download an element, then edit and upload the eleme
 5. Enter a CCID.
 6. Enter a comment.
 
-![Retrieve with Dependencies](images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true "Retrieve with Dependencies")
 <br /><br />
 
 #### Generate
