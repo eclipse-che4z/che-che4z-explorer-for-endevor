@@ -32,7 +32,7 @@ import { Logger } from '@local/extension/_doc/Logger';
 
 const getProfileManagerFromDir = (logger: Logger) => (
   profileRootDirectory: string
-) => (profileType: ProfileTypes): CliProfileManager | Error => {
+) => (profileType: ProfileTypes | string): CliProfileManager | Error => {
   logger.trace(`Profiles will be read from: ${profileRootDirectory}`);
   try {
     const profileManager = new CliProfileManager({
@@ -150,7 +150,7 @@ export const getServiceProfileByName = (logger: Logger) => async (
 };
 
 export const getProfilesByType = (logger: Logger) => async (
-  type: ProfileTypes
+  type: ProfileTypes | string
 ): Promise<IProfileLoaded[] | Error> => {
   const profileManager = getProfileManager(logger)(type);
   if (isError(profileManager)) {

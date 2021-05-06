@@ -27,6 +27,10 @@
     "test": "yarn workspaces run test",
     "clean": "yarn workspaces run clean && rimraf node_modules"
   },
+  "resolutions": {
+    "**/lodash": "4.17.21",
+    "**/y18n": "4.0.3"
+  },
   "dependencies": {
     "fp-ts": "^2.8.5",
     "io-ts": "^2.2.12",
