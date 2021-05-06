@@ -1,0 +1,17 @@
+{
+  "name": "@local/prettier-config-local",
+  "version": "1.0.0",
+  "main": "./index.js",
+  "scripts": {
+    "build": "echo No Build for 'eslint-config-local' Package",
+    "lint": "echo No Lint for 'eslint-config-local' Package",
+    "pretty": "prettier --write .",
+    "test": "echo No Tests for 'eslint-config-local' Package",
+    "clean": "rimraf node_modules"
+  },
+  "keywords": [
+    "prettier",
+    "prettierconfig"
+  ],
+  "license": "UNLICENSED"
+}

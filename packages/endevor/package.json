@@ -1,0 +1,19 @@
+{
+  "name": "@local/endevor",
+  "version": "1.0.0",
+  "dependencies": {
+    "@broadcom/endevor-for-zowe-cli": "^6.1.5",
+    "@local/extension": "1.0.0",
+    "@local/type-parser": "1.0.0",
+    "string-to-file-stream": "1.3.0"
+  },
+  "scripts": {
+    "build": "echo No Build for 'endevor' Package",
+    "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "pretty": "prettier --write .",
+    "test": "jest --config jest.config.js --coverage",
+    "tsc:watch": "tsc --noemit --watch",
+    "clean": "rimraf results node_modules"
+  },
+  "license": "UNLICENSED"
+}

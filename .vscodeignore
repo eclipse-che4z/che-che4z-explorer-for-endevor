@@ -13,14 +13,3 @@
 # Ignore everything
 *
 **/*
-
-# Allow the following
-!out/**
-!resources/**
-!package.json
-!README.md
-!CHANGELOG.md
-!LICENSE
-!node_modules
-!log4jsconfig.json
-
