@@ -21,7 +21,9 @@
 # Add what we actually want
 !dist/**
 !resources/**
+!images/**
 !package.json
 !README.md
 !CHANGELOG.md
 !LICENSE
+!NOTICE.md
