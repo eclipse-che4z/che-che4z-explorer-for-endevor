@@ -219,10 +219,10 @@ const askForUnauthorizedConnections = async (): Promise<
   boolean | undefined
 > => {
   logger.trace('Prompt for Reject Unauthorized option.');
-  const rejectUnauthorizedOptions = [
-    'True - Reject connections with self-signed certificates',
-    'False - Accept connections with self-signed certificates',
-  ];
+  const trueOption = 'True - Reject connections with self-signed certificates';
+  const falseOption =
+    'False - Accept connections with self-signed certificates';
+  const rejectUnauthorizedOptions = [trueOption, falseOption];
   const choice = await showVscodeQuickPick(
     rejectUnauthorizedOptions.map(toQuickPickItem),
     {
@@ -234,5 +234,5 @@ const askForUnauthorizedConnections = async (): Promise<
   if (!choice) {
     return undefined;
   }
-  return Boolean(rejectUnauthorizedOptions.indexOf(choice.label));
+  return choice.label === trueOption;
 };
