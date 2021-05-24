@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.12.1] &ndash; 2021-04-20
+
+### Fixed
+
+- Fixed an issue with rejectUnauthorized when listing endevor instances
+
 ## [0.12.0] &ndash; 2021-05-10
 
 ### Added

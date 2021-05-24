@@ -64,7 +64,9 @@ export const addNewElementLocation = (
     allLocations,
   })(() =>
     withNotificationProgress('Fetching instances')((progressReporter) =>
-      getInstanceNames(progressReporter)(service.location)
+      getInstanceNames(progressReporter)(service.location)(
+        service.rejectUnauthorized
+      )
     )
   );
   if (dialogCancelled(dialogResult)) {

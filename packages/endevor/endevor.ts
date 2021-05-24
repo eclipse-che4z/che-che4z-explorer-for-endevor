@@ -76,10 +76,10 @@ import { PromisePool } from 'promise-pool-tool';
 
 export const getInstanceNames = (logger: Logger) => (
   progress: ProgressReporter
-) => async (
-  serviceLocation: ServiceLocation
+) => (serviceLocation: ServiceLocation) => async (
+  rejectUnauthorized: boolean
 ): Promise<ReadonlyArray<string>> => {
-  const session = toEndevorSession(serviceLocation);
+  const session = toEndevorSession(serviceLocation)(rejectUnauthorized);
   progress.report({ increment: 30 });
   let response;
   try {
@@ -138,12 +138,13 @@ const toEndevorSession = ({
   hostname,
   port,
   basePath,
-}: ServiceLocation): Session => {
+}: ServiceLocation) => (rejectUnauthorized: boolean): Session => {
   return new Session({
     protocol,
     hostname,
     port,
     basePath: toVersion2Api(basePath),
+    rejectUnauthorized,
   });
 };
 
@@ -244,7 +245,9 @@ const toSecuredEndevorSession = (logger: Logger) => ({
   credential,
   rejectUnauthorized,
 }: Service): Session => {
-  const commonSession: ClientConfig = toEndevorSession(location).ISession;
+  const commonSession: ClientConfig = toEndevorSession(location)(
+    rejectUnauthorized
+  ).ISession;
   let securedSession: ClientConfig;
   switch (credential.type) {
     case CredentialType.TOKEN:
@@ -253,7 +256,6 @@ const toSecuredEndevorSession = (logger: Logger) => ({
         type: SessConstants.AUTH_TYPE_TOKEN,
         tokenType: credential.tokenType,
         tokenValue: credential.tokenValue,
-        rejectUnauthorized,
       };
       break;
     case CredentialType.BASE:
@@ -262,7 +264,6 @@ const toSecuredEndevorSession = (logger: Logger) => ({
         type: SessConstants.AUTH_TYPE_BASIC,
         user: credential.user,
         password: credential.password,
-        rejectUnauthorized,
       };
       break;
     default:
