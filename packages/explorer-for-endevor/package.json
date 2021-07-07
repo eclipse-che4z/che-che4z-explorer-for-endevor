@@ -16,7 +16,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "icon": "resources/logo.png",
   "engines": {
-    "vscode": "^1.50.0"
+    "vscode": "^1.56.0"
   },
   "categories": [
     "SCM Providers"
