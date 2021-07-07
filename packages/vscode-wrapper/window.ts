@@ -20,6 +20,18 @@ import {
   PromptInputOptions,
 } from './_doc/window';
 
+export const getActiveTextEditor = (): vscode.TextEditor | undefined => {
+  return vscode.window.activeTextEditor;
+};
+
+export const getAllOpenedTextEditors = (): ReadonlyArray<vscode.TextEditor> => {
+  return vscode.window.visibleTextEditors;
+};
+
+export const closeActiveTextEditor = async () => {
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+};
+
 export const showMessageWithOptions = async ({
   message,
   options,
@@ -42,19 +54,18 @@ export const showVscodeQuickPick = (
   return vscode.window.showQuickPick(items, showOptions);
 };
 
-export const showWebView = (webViewType: string) => (
-  title: string,
-  body: string
-): void => {
-  const panelIdentificationType = webViewType;
-  const panelLocation = vscode.window.activeTextEditor?.viewColumn || 1;
-  const panel = vscode.window.createWebviewPanel(
-    panelIdentificationType,
-    title,
-    panelLocation
-  );
-  panel.webview.html = body;
-};
+export const showWebView =
+  (webViewType: string) =>
+  (title: string, body: string): void => {
+    const panelIdentificationType = webViewType;
+    const panelLocation = getActiveTextEditor()?.viewColumn || 1;
+    const panel = vscode.window.createWebviewPanel(
+      panelIdentificationType,
+      title,
+      panelLocation
+    );
+    panel.webview.html = body;
+  };
 
 // don't forget to validate promise.reject
 export const showFileContent = async (fileUri: vscode.Uri): Promise<void> => {
@@ -62,17 +73,35 @@ export const showFileContent = async (fileUri: vscode.Uri): Promise<void> => {
 };
 
 // don't forget to validate promise.reject
-export const withNotificationProgress = (title: string) => async <R>(
-  task: ProgressingFunction<R>
-): Promise<R> => {
-  return await vscode.window.withProgress(
-    {
-      title,
-      location: vscode.ProgressLocation.Notification,
-      cancellable: false,
-    },
-    async (progress) => {
-      return await task(progress);
-    }
-  );
+export const showDocument = async (
+  document: vscode.TextDocument
+): Promise<void> => {
+  await vscode.window.showTextDocument(document, { preview: false });
 };
+
+// don't forget to validate promise.reject
+export const withNotificationProgress =
+  (title: string) =>
+  async <R>(task: ProgressingFunction<R>): Promise<R> => {
+    return await vscode.window.withProgress(
+      {
+        title,
+        location: vscode.ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress) => {
+        return await task(progress);
+      }
+    );
+  };
+
+// don't forget to validate promise.reject
+export const showDiffEditor =
+  (resourceToCompareLeft: vscode.Uri) =>
+  async (resourceToUpdateRight: vscode.Uri) => {
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      resourceToCompareLeft,
+      resourceToUpdateRight
+    );
+  };

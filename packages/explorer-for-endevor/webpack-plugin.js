@@ -53,20 +53,23 @@ class BundledDependenciesPlugin {
 
       callback();
     });
-    compiler.hooks.done.tapPromise(pluginName, async (
-      stats /* stats is passed as an argument when done hook is tapped.  */
-    ) => {
-      const uniqueDeps = [
-        ...new Set(
-          deps.map((dep) => `${dep.package.name}@${dep.package.version}`)
-        ),
-      ];
-      console.log(`This compilation used ${uniqueDeps.length} dependencies.`);
-      await Promise.all([
-        writeFile(depsListFile, uniqueDeps.join(nl) + nl),
-        writeFile(depsDetailsFile, JSON.stringify(deps, null, 2)),
-      ]);
-    });
+    compiler.hooks.done.tapPromise(
+      pluginName,
+      async (
+        stats /* stats is passed as an argument when done hook is tapped.  */
+      ) => {
+        const uniqueDeps = [
+          ...new Set(
+            deps.map((dep) => `${dep.package.name}@${dep.package.version}`)
+          ),
+        ];
+        console.log(`This compilation used ${uniqueDeps.length} dependencies.`);
+        await Promise.all([
+          writeFile(depsListFile, uniqueDeps.join(nl) + nl),
+          writeFile(depsDetailsFile, JSON.stringify(deps, null, 2)),
+        ]);
+      }
+    );
   }
 }
 

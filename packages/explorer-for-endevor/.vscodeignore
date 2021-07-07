@@ -10,20 +10,28 @@
 # Contributors:
 #   Broadcom, Inc. - initial API and implementation
 
-# See https://github.com/Microsoft/vscode-vsce/issues/12
-# and https://github.com/Microsoft/vscode-mono-debug/blob/master/.vscodeignore
+# dirs
+/.vscode-test
+/results
+/src
+/vsce
+/workspace
+/node_modules
+/manual-tests
 
-# Ignore everything
-*
-**/*
-**/.DS_Store
-
-# Add what we actually want
-!dist/**
-!resources/**
-!images/**
-!package.json
-!README.md
-!CHANGELOG.md
-!LICENSE
-!NOTICE.md
+# root file extensions
+/*.env
+/*.json
+/*.ts
+/*.js
+/*.groovy
+ 
+# specific files
+.env_sample
+.gitignore
+.prettierignore
+.vscodeignore
+manual-tests.md
+CONTRIBUTING.md
+dependencies.txt
+dependencies.json

@@ -44,8 +44,6 @@ Ensure that you meet the following prerequisites before you can use Explorer for
 
 **Client-side prerequisites**:
 
-- Install [Zowe CLI v1-LTS](https://docs.zowe.org/stable/user-guide/cli-installcli.html#installing-zowe-cli-from-an-online-registry)
-- Install [CA Endevor plug-in for Zowe CLI version 6.0.0](https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-brightside/3-0/zowe-cli/install-zowe-cli/install-cli-plug-ins/install-plug-ins-from-an-online-registry.html)
 - Access to CA Endevor
 
 **Host-side prerequisites**:
@@ -131,7 +129,7 @@ You can view the contents, summary, and source level information of an element b
 
    The contents of the element appear in the editor area.
 
-![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true 'View an Element')
+![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true "View an Element")
 <br /><br />
 
 #### View Details
@@ -145,7 +143,7 @@ The details of an element you want to view appear in the editor area in a separa
 
    The details of the element appear in the editor area.
 
-![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true 'View Details')
+![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true "View Details")
 <br /><br />
 
 #### Retrieve an Element
@@ -161,7 +159,7 @@ You can download an element to your workspace and work with the element locally.
 
 You successfully retrieved the element.
 
-![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
+![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true "Retrieve an Element")
 <br /><br />
 
 #### Retrieve an Element with Dependencies
@@ -177,7 +175,7 @@ You can download an element with dependencies to your workspace and work with th
 
 You successfully retrieved the element with dependencies.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true "Retrieve with Dependencies")
 <br /><br />
 
 #### Edit
@@ -191,14 +189,21 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
    The contents of the element appear in the editor area. You can now edit the element.
 
-3. Press CTLR+S or Command+S when you want to save and upload the edited element back.
+3. Press **CTLR+S** or **Command+S** when you want to save and upload the edited element back.
 4. Specify any accessible Endevor path and a name for the element.
 5. Enter a CCID.
 6. Enter a comment.
+7. (Optional) Resolve conflicts between the element versions if necessary.
+
+   **Notes:**
+
+   - The behavior of the conflict resolution feature differs in Theia.
+
+   - (Theia only) When you resolve a conflict, open the Command Palette by pressing **CTRL+SHIFT+P** or **CMD+SHIFT+P**, and use of the two commands: `Accept changes` or `Discard changes`.
 
 You successfully edited, saved, uploaded the element.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true "Retrieve with Dependencies")
 <br /><br />
 
 #### Generate
@@ -226,7 +231,7 @@ You successfully performed the Generate action.
 
 If Generate is not successful, the listing is displayed automatically.
 
-![Generate](packages/explorer-for-endevor/images/E4E-Generate.gif?raw=true 'Generate')
+![Generate](packages/explorer-for-endevor/images/E4E-Generate.gif?raw=true "Generate")
 <br /><br />
 
 #### Print listing
@@ -242,7 +247,7 @@ The **Print listing** option enables you to display the most recently created li
 
 You successfully printed the listing.
 
-![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true 'Print Listing')
+![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true "Print Listing")
 <br /><br />
 
 ### Base Profiles
@@ -324,7 +329,7 @@ To permanently delete the profile from the tree, use the extension settings.
 **Follow these steps:**
 
 1.  Navigate to the VS Code settings.
-2.  Open Explorer for Endevor Settings and edit the settings.json file.
+2.  Open Explorer for Endevor Settings and edit the settings.json file.
 3.  Delete the `service` and `elementLocations` properties of the profile you want to delete from the tree.
 4.  Save the settings.json file.
 

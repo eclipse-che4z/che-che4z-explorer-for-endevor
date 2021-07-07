@@ -15,12 +15,14 @@
 import {
   createNewWorkspaceDirectory,
   deleteDirectoryWithContent,
+  getWorkspaceUri,
   saveFileIntoWorkspaceFolder,
 } from '@local/vscode-wrapper/workspace';
 import { Progress, ProgressLocation, Uri, window } from 'vscode';
 import * as path from 'path';
 import { getEditFolderUri } from './utils';
 import { showFileContent } from '@local/vscode-wrapper/window';
+import { getTempEditFolder } from './settings/settings';
 
 type ElementDescription = Readonly<{
   type: string;
@@ -28,24 +30,26 @@ type ElementDescription = Readonly<{
   extension?: string;
 }>;
 
-export const saveElementIntoWorkspace = (workspaceUri: Uri) => async (
-  element: ElementDescription,
-  elementContent: string
-): Promise<Uri | Error> => {
-  try {
-    const file = toFileDescription(element);
-    const elementDir = file.workspaceDirectoryPath;
-    const directoryToSave = await createNewWorkspaceDirectory(workspaceUri)(
-      elementDir
-    );
-    return await saveFileIntoWorkspaceFolder(directoryToSave)(
-      file,
-      elementContent
-    );
-  } catch (e) {
-    return e;
-  }
-};
+export const saveElementIntoWorkspace =
+  (workspaceUri: Uri) =>
+  async (
+    element: ElementDescription,
+    elementContent: string
+  ): Promise<Uri | Error> => {
+    try {
+      const file = toFileDescription(element);
+      const elementDir = file.workspaceDirectoryPath;
+      const directoryToSave = await createNewWorkspaceDirectory(workspaceUri)(
+        elementDir
+      );
+      return await saveFileIntoWorkspaceFolder(directoryToSave)(
+        file,
+        elementContent
+      );
+    } catch (e) {
+      return e;
+    }
+  };
 
 const toFileDescription = (element: ElementDescription) => {
   const elementDir = path.join(`/`, element.type);
@@ -66,17 +70,17 @@ export const showSavedElementContent = async (
   }
 };
 
-export const cleanTempEditDirectory = (workspaceUri: Uri) => async (
-  tempEditFolder: string
-): Promise<void | Error> => {
-  try {
-    await deleteDirectoryWithContent(
-      getEditFolderUri(workspaceUri)(tempEditFolder)
-    );
-  } catch (e) {
-    return e;
-  }
-};
+export const cleanTempEditDirectory =
+  (workspaceUri: Uri) =>
+  async (tempEditFolder: string): Promise<void | Error> => {
+    try {
+      await deleteDirectoryWithContent(
+        getEditFolderUri(workspaceUri)(tempEditFolder)
+      );
+    } catch (e) {
+      return e;
+    }
+  };
 
 export type ProgressReport = {
   message?: string;
@@ -122,4 +126,22 @@ export const withProgress = async <T>(
       }
     }
   );
+};
+
+export const getTempEditFolderUri = async (): Promise<Uri | Error> => {
+  const workspace = await getWorkspaceUri();
+  if (!workspace) {
+    return new Error(
+      `At least one workspace folder should be opened to work with elements.`
+    );
+  }
+  let tempFilesFolder;
+  try {
+    tempFilesFolder = getTempEditFolder();
+  } catch (error) {
+    return new Error(
+      `Error when reading edit folder name from settings because of ${error.message}.`
+    );
+  }
+  return getEditFolderUri(workspace)(tempFilesFolder);
 };

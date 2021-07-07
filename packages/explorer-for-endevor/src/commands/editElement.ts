@@ -16,7 +16,6 @@ import { logger } from '../globals';
 import { ElementNode, Node } from '../_doc/ElementTree';
 import {
   filterElementNodes,
-  toEditFileName,
   isError,
   getEditFolderUri,
   isDefined,
@@ -38,15 +37,13 @@ import {
   getTempEditFolder,
 } from '../settings/settings';
 import { showSavedElementContent } from '../workspace';
-import {
-  MAX_PARALLEL_REQUESTS_DEFAULT,
-  URI_SCHEME_ELEMENT,
-} from '../constants';
-import { fromVirtualDocUri, toVirtualDocUri } from '../uri';
+import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../constants';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import { PromisePool } from 'promise-pool-tool';
 import { toSeveralTasksProgress } from '@local/endevor/utils';
+import { toEditedElementUri } from '../uri/editedElementUri';
+import { fromVirtualDocUri } from '../uri';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];
@@ -94,8 +91,13 @@ const editSingleElement = async (
     logger.error(error.message);
     return;
   }
-  const savedElementUri = retrieveResult;
-  const uploadableElementUri = withUploadOptions(savedElementUri)(elementUri);
+  const uploadableElementUri = withUploadOptions(
+    retrieveResult.savedElementUri
+  )({
+    ...elementUri,
+    fingerprint: retrieveResult.fingerprint,
+  });
+  if (!uploadableElementUri) return;
   const showResult = await showElementToEdit(uploadableElementUri);
   if (isError(showResult)) {
     const error = showResult;
@@ -135,11 +137,15 @@ const editMultipleElements = async (
       elements.map((element) => {
         const elementUploadOptions = fromVirtualDocUri(element.uri);
         return async () => {
+          if (isError(elementUploadOptions)) return elementUploadOptions;
           const retrieveResult = await retrieveIntoWorkspace(
             toSeveralTasksProgress(progressReporter)(elementsNumber)
           )(workspaceUri)(elementUploadOptions);
           if (isError(retrieveResult)) return retrieveResult;
-          return withUploadOptions(retrieveResult)(elementUploadOptions);
+          return withUploadOptions(retrieveResult.savedElementUri)({
+            ...elementUploadOptions,
+            fingerprint: retrieveResult.fingerprint,
+          });
         };
       }),
       {
@@ -148,7 +154,7 @@ const editMultipleElements = async (
     ).start();
   });
   const showedElements = retrievedElements.map((result) => {
-    if (!isError(result)) {
+    if (!isError(result) && result) {
       const savedElementUri = result;
       return showElementToEdit(savedElementUri);
     }
@@ -175,8 +181,7 @@ type ElementConsumer = (
     name: string;
     extension?: string;
   },
-  elementContent: string,
-  fingerprint: string
+  elementContent: string
 ) => Promise<vscode.Uri | Error>;
 
 type RetrieveOptions = Readonly<{
@@ -184,80 +189,89 @@ type RetrieveOptions = Readonly<{
   element: Element;
 }>;
 
-const retrieveInto = (progress: ProgressReporter) => (
-  consumer: ElementConsumer
-) => async ({
-  service,
-  element,
-}: RetrieveOptions): Promise<vscode.Uri | Error> => {
-  const retrievedElement = await retrieveElementWithFingerprint(progress)(
-    service
-  )(element);
-  if (!retrievedElement) {
-    return new Error(
-      `Element ${element.name} was not retrieved successfully from Endevor`
-    );
-  }
-  return consumer(
+const retrieveInto =
+  (progress: ProgressReporter) =>
+  (consumer: ElementConsumer) =>
+  async ({
+    service,
     element,
-    retrievedElement.content,
-    retrievedElement.fingerprint
-  );
-};
+  }: RetrieveOptions): Promise<SaveIntoFolderResult | Error> => {
+    const retrievedElement = await retrieveElementWithFingerprint(progress)(
+      service
+    )(element);
+    if (!retrievedElement) {
+      return new Error(
+        `Element ${element.name} was not retrieved successfully from Endevor`
+      );
+    } else {
+      const consumerResult = await consumer(element, retrievedElement.content);
+      return isError(consumerResult)
+        ? consumerResult
+        : {
+            savedElementUri: consumerResult,
+            fingerprint: retrievedElement.fingerprint,
+          };
+    }
+  };
 
-const retrieveIntoWorkspace = (progressReporter: ProgressReporter) => (
-  workspaceUri: vscode.Uri
-) => async (retrieveOptions: RetrieveOptions): Promise<vscode.Uri | Error> => {
-  return await retrieveInto(progressReporter)(saveIntoEditFolder(workspaceUri))(
-    retrieveOptions
-  );
-};
+const retrieveIntoWorkspace =
+  (progressReporter: ProgressReporter) =>
+  (workspaceUri: vscode.Uri) =>
+  async (
+    retrieveOptions: RetrieveOptions
+  ): Promise<SaveIntoFolderResult | Error> => {
+    return await retrieveInto(progressReporter)(
+      saveIntoEditFolder(workspaceUri)
+    )(retrieveOptions);
+  };
 
-const saveIntoEditFolder = (workspaceUri: vscode.Uri) => async (
-  element: {
-    type: string;
-    name: string;
-    extension?: string;
-  },
-  elementContent: string,
-  fingerprint: string
-): Promise<vscode.Uri | Error> => {
-  let editFolder: string;
-  try {
-    editFolder = getTempEditFolder();
-  } catch (error) {
-    logger.trace(`Error when reading settings: ${error}`);
-    return new Error('Unable to get edit path from settings');
-  }
-  const editFolderUri = getEditFolderUri(workspaceUri)(editFolder);
-  let saveLocationUri;
-  try {
-    saveLocationUri = await createDirectory(editFolderUri);
-  } catch (e) {
-    logger.trace(`Error while creating a temp directory: ${e.message}`);
-    return new Error(
-      `Unable to create required temp directory: ${editFolderUri.fsPath} for editing elements`
-    );
-  }
-  const saveResult = await saveFileIntoWorkspaceFolder(saveLocationUri)(
-    {
-      fileName: toEditFileName({
-        elementName: element.name,
-        fingerprint,
-      }),
-      fileExtension: element.extension,
+type SaveIntoFolderResult = Readonly<{
+  savedElementUri: vscode.Uri;
+  fingerprint: string;
+}>;
+
+const saveIntoEditFolder =
+  (workspaceUri: vscode.Uri) =>
+  async (
+    element: {
+      type: string;
+      name: string;
+      extension?: string;
     },
-    elementContent
-  );
-  if (isError(saveResult)) {
-    const error = saveResult;
-    logger.trace(`Element: ${element.name} persisting error: ${error}`);
-    const userMessage = `Element: ${element.name} was not saved into file system`;
-    return new Error(userMessage);
-  }
-  const savedFileUri = saveResult;
-  return savedFileUri;
-};
+    elementContent: string
+  ): Promise<vscode.Uri | Error> => {
+    let editFolder: string;
+    try {
+      editFolder = getTempEditFolder();
+    } catch (error) {
+      logger.trace(`Error when reading settings: ${error}`);
+      return new Error('Unable to get edit path from settings');
+    }
+    const editFolderUri = getEditFolderUri(workspaceUri)(editFolder);
+    let saveLocationUri;
+    try {
+      saveLocationUri = await createDirectory(editFolderUri);
+    } catch (e) {
+      logger.trace(`Error while creating a temp directory: ${e.message}`);
+      return new Error(
+        `Unable to create required temp directory: ${editFolderUri.fsPath} for editing elements`
+      );
+    }
+    const saveResult = await saveFileIntoWorkspaceFolder(saveLocationUri)(
+      {
+        fileName: element.name,
+        fileExtension: element.extension,
+      },
+      elementContent
+    );
+    if (isError(saveResult)) {
+      const error = saveResult;
+      logger.trace(`Element: ${element.name} persisting error: ${error}`);
+      const userMessage = `Element: ${element.name} was not saved into file system`;
+      return new Error(userMessage);
+    }
+    return saveResult;
+  };
 
 const showElementToEdit = async (
   fileUri: vscode.Uri
@@ -274,17 +288,29 @@ const showElementToEdit = async (
 
 // TODO: needs to be refactored, we ruin our URI abstraction here,
 // because now, we know, where the location and etc stored
-const withUploadOptions = (fileUri: vscode.Uri) => (uploadOptions: {
-  service: Service;
-  element: Element;
-  endevorSearchLocation: ElementSearchLocation;
-}): vscode.Uri => {
-  const elementUri = toVirtualDocUri(URI_SCHEME_ELEMENT)({
-    service: uploadOptions.service,
-    element: uploadOptions.element,
-    endevorSearchLocation: uploadOptions.endevorSearchLocation,
-  });
-  return fileUri.with({
-    query: elementUri.query,
-  });
-};
+const withUploadOptions =
+  (fileUri: vscode.Uri) =>
+  (uploadOptions: {
+    service: Service;
+    element: Element;
+    endevorSearchLocation: ElementSearchLocation;
+    fingerprint: string;
+  }): vscode.Uri | undefined => {
+    const elementUri = toEditedElementUri(fileUri.fsPath)({
+      service: uploadOptions.service,
+      element: uploadOptions.element,
+      searchLocation: uploadOptions.endevorSearchLocation,
+      fingerprint: uploadOptions.fingerprint,
+    });
+    if (!isError(elementUri)) {
+      return fileUri.with({
+        query: elementUri.query,
+      });
+    } else {
+      logger.error(
+        `Element ${uploadOptions.element.name} cannot be opened for editing. See log for more details.`,
+        `Opening element ${uploadOptions.element.name} failed with error: ${elementUri.message}`
+      );
+      return;
+    }
+  };

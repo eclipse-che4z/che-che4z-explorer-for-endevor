@@ -162,50 +162,54 @@ type RetrieveOptions = Readonly<{
   element: Element;
 }>;
 
-const retrieveInto = (progress: ProgressReporter) => (
-  consumer: ElementConsumer
-) => async ({
-  service,
-  element,
-}: RetrieveOptions): Promise<vscode.Uri | Error> => {
-  const elementContent = await retrieveElement(progress)(service)(element);
-  if (!elementContent) {
-    return new Error(
-      `Element ${element.name} was not retrieved successfully from Endevor`
-    );
-  }
-  return consumer(element, elementContent);
-};
-
-const retrieveIntoWorkspace = (progress: ProgressReporter) => (
-  workspaceUri: vscode.Uri
-) => async (retrieveOptions: RetrieveOptions): Promise<vscode.Uri | Error> => {
-  return await retrieveInto(progress)(saveIntoWorkspace(workspaceUri))(
-    retrieveOptions
-  );
-};
-
-const saveIntoWorkspace = (workspaceUri: vscode.Uri) => async (
-  element: {
-    type: string;
-    name: string;
-    extension?: string;
-  },
-  elementContent: string
-): Promise<vscode.Uri | Error> => {
-  const saveResult = await saveElementIntoWorkspace(workspaceUri)(
+const retrieveInto =
+  (progress: ProgressReporter) =>
+  (consumer: ElementConsumer) =>
+  async ({
+    service,
     element,
-    elementContent
-  );
-  if (isError(saveResult)) {
-    const error = saveResult;
-    logger.trace(`Element: ${element.name} persisting error: ${error}`);
-    const userMessage = `Element: ${element.name} was not saved into file system`;
-    return new Error(userMessage);
-  }
-  const savedFileUri = saveResult;
-  return savedFileUri;
-};
+  }: RetrieveOptions): Promise<vscode.Uri | Error> => {
+    const elementContent = await retrieveElement(progress)(service)(element);
+    if (!elementContent) {
+      return new Error(
+        `Element ${element.name} was not retrieved successfully from Endevor`
+      );
+    }
+    return consumer(element, elementContent);
+  };
+
+const retrieveIntoWorkspace =
+  (progress: ProgressReporter) =>
+  (workspaceUri: vscode.Uri) =>
+  async (retrieveOptions: RetrieveOptions): Promise<vscode.Uri | Error> => {
+    return await retrieveInto(progress)(saveIntoWorkspace(workspaceUri))(
+      retrieveOptions
+    );
+  };
+
+const saveIntoWorkspace =
+  (workspaceUri: vscode.Uri) =>
+  async (
+    element: {
+      type: string;
+      name: string;
+      extension?: string;
+    },
+    elementContent: string
+  ): Promise<vscode.Uri | Error> => {
+    const saveResult = await saveElementIntoWorkspace(workspaceUri)(
+      element,
+      elementContent
+    );
+    if (isError(saveResult)) {
+      const error = saveResult;
+      logger.trace(`Element: ${element.name} persisting error: ${error}`);
+      const userMessage = `Element: ${element.name} was not saved into file system`;
+      return new Error(userMessage);
+    }
+    const savedFileUri = saveResult;
+    return savedFileUri;
+  };
 
 const showElementInEditor = async (
   fileUri: vscode.Uri

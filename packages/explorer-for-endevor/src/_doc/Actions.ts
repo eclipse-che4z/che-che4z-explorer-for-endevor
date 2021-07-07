@@ -22,6 +22,7 @@ export const enum Actions {
   LOCATION_CONFIG_CHANGED = 'LOCATIONS/CHANGED',
   ELEMENT_TREE_ADDED = 'ELEMENT_TREE_ADDED',
   REFRESH = 'REFRESH',
+  EDIT_FOLDER_CHANGED = 'EDIT_FOLDER/CHANGED',
 }
 
 interface DummyAction {
@@ -49,9 +50,15 @@ interface Refresh {
   payload: ReadonlyArray<LocationConfig>;
 }
 
+interface EditFolderChanged {
+  type: Actions.EDIT_FOLDER_CHANGED;
+  payload: string | undefined;
+}
+
 export type Action =
   | DummyAction
   | EndevorCredentialAdded
   | LocationConfigChanged
   | ElementTreeAdded
-  | Refresh;
+  | Refresh
+  | EditFolderChanged;

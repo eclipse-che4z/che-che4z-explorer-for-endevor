@@ -14,8 +14,6 @@
 
 export const COMMAND_PREFIX = 'e4e';
 export const OUTPUT_CHANNEL_NAME = 'Explorer for Endevor';
-export const URI_SCHEME_ELEMENT = 'e4eElement';
-export const URI_SCHEME_LISTING = 'e4eListing';
 
 export const ENDEVOR_CONFIGURATION = 'endevor';
 export const LOCATIONS_SETTING = 'locations';
@@ -28,3 +26,7 @@ export const MAX_PARALLEL_REQUESTS_DEFAULT = 4;
 export const ENDEVOR_V2_BASE_PATH = '/EndevorService/api/v2/';
 
 export const TREE_VIEW_ID = `${COMMAND_PREFIX}.elmTreeView`;
+
+export const ENCODING = 'UTF-8';
+
+export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;

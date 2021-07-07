@@ -18,7 +18,7 @@ import {
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
-import { URI_SCHEME_ELEMENT, URI_SCHEME_LISTING } from './constants';
+import { Schemas } from './_doc/Uri';
 
 interface UriQuery {
   service: Service;
@@ -26,35 +26,41 @@ interface UriQuery {
   endevorSearchLocation: ElementSearchLocation;
 }
 
-export const toVirtualDocUri = (scheme: string) => ({
-  service,
-  element,
-  endevorSearchLocation,
-}: UriQuery): Uri => {
-  if (scheme === URI_SCHEME_ELEMENT) {
-    return Uri.parse('').with({
-      scheme: `${URI_SCHEME_ELEMENT}`,
-      // `path` is used to show nice file label in text editor
-      path: `/${element.name}.${element.type.toLowerCase()}`,
-      query: JSON.stringify({
-        service,
-        element,
-        endevorSearchLocation,
-      }),
-    });
-  } else {
-    return Uri.parse('').with({
-      scheme: `${URI_SCHEME_LISTING}`,
-      // `path` is used to show nice file label in text editor
-      path: `/${element.name}.${element.type.toLowerCase()}`,
-      query: JSON.stringify({
-        service,
-        element,
-      }),
-    });
-  }
-};
+/**
+ * @deprecated
+ * please, use more specific uri functions from uri folder instead
+ */
+export const toVirtualDocUri =
+  (scheme: string) =>
+  ({ service, element, endevorSearchLocation }: UriQuery): Uri => {
+    if (scheme === Schemas.TREE_ELEMENT) {
+      return Uri.parse('').with({
+        scheme: `${Schemas.TREE_ELEMENT}`,
+        // `path` is used to show nice file label in text editor
+        path: `/${element.name}.${element.type.toLowerCase()}`,
+        query: JSON.stringify({
+          service,
+          element,
+          endevorSearchLocation,
+        }),
+      });
+    } else {
+      return Uri.parse('').with({
+        scheme: `${Schemas.ELEMENT_LISTING}`,
+        // `path` is used to show nice file label in text editor
+        path: `/${element.name}.${element.type.toLowerCase()}`,
+        query: JSON.stringify({
+          service,
+          element,
+        }),
+      });
+    }
+  };
 
+/**
+ * @deprecated
+ * please, use more specific uri functions from uri folder instead
+ */
 export const fromVirtualDocUri = (uri: Uri): UriQuery => {
   return JSON.parse(uri.query);
 };
