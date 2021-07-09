@@ -83,19 +83,19 @@ export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
 
-export const toSeveralTasksProgress = (progressReporter: ProgressReporter) => (
-  tasksNumber: number
-): ProgressReporter => {
-  return {
-    report: (progress: Progress) => {
-      if (progress.increment) {
-        const progressPerTask = progress.increment / tasksNumber;
-        progressReporter.report({
-          increment: progressPerTask,
-        });
-      } else {
-        progressReporter.report(progress);
-      }
-    },
+export const toSeveralTasksProgress =
+  (progressReporter: ProgressReporter) =>
+  (tasksNumber: number): ProgressReporter => {
+    return {
+      report: (progress: Progress) => {
+        if (progress.increment) {
+          const progressPerTask = progress.increment / tasksNumber;
+          progressReporter.report({
+            increment: progressPerTask,
+          });
+        } else {
+          progressReporter.report(progress);
+        }
+      },
+    };
   };
-};

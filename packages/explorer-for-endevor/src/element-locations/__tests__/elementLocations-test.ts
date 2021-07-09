@@ -90,7 +90,7 @@ describe('Create Endevor locations', () => {
       newLocationPath,
       'utf-8'
     );
-    const decodedElementLocation = yaml.safeLoad(elementLocationOnDisk);
+    const decodedElementLocation = yaml.load(elementLocationOnDisk);
     expect(decodedElementLocation).toEqual(newElementLocation);
   });
   it('should not fail to overwrite an existing element location', async () => {
@@ -128,18 +128,6 @@ describe('Endevor element locations fetching', () => {
     const actualLocations = await elementLocations.getElementLocationNames();
     // assert
     expect(actualLocations).toEqual([]);
-  });
-
-  it('should return empty list if something went wrong', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/missing-profiles-folder');
-    const elementLocations = await import('../elementLocations');
-    // act
-    const actualLocations = await elementLocations.getElementLocationNames();
-    // assert
-    expect(actualLocations).toEqual(
-      new Error('Failed to create Profile Manager - ENDEVOR-LOCATION')
-    );
   });
 
   it('should return undefined if no instance was specified', async () => {

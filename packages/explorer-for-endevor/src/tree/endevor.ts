@@ -24,8 +24,8 @@ import {
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
-import { URI_SCHEME_ELEMENT } from '../constants';
 import { toVirtualDocUri } from '../uri';
+import { Schemas } from '../_doc/Uri';
 
 /**
  * Converts list element result into a tree for tree view
@@ -81,7 +81,7 @@ export const buildTree = (
     const node: ElementNode = {
       type: 'ELEMENT',
       name,
-      uri: toVirtualDocUri(URI_SCHEME_ELEMENT)({
+      uri: toVirtualDocUri(Schemas.TREE_ELEMENT)({
         service,
         element: endevorElement,
         endevorSearchLocation: elementsSearchLocation,

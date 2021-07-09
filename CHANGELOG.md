@@ -2,7 +2,17 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
-## [0.12.1] &ndash; 2021-04-20
+## [0.13.0] &ndash; 2021-07-05
+
+### Added
+
+- Added the conflict resolution feature for uploaded elements.
+
+### Changed
+
+- Removed Zowe CLI and CA Endevor plug-in for Zowe CLI from the client installation prerequisites.
+
+## [0.12.1] &ndash; 2021-05-25
 
 ### Fixed
 

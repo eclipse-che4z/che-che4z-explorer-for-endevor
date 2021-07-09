@@ -79,18 +79,6 @@ describe('Endevor services fetching', () => {
     expect(actualServices).toEqual([]);
   });
 
-  it('should return empty list if something went wrong', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/missing-profiles-folder');
-    const services = await import('../services');
-    // act
-    const actualServices = await services.getEndevorServiceNames();
-    // assert
-    expect(actualServices).toEqual(
-      new Error('Failed to create Profile Manager - ENDEVOR')
-    );
-  });
-
   it('should return service', async () => {
     // arrange
     setupGlobals('./__fixtures__/base-profile-no-host');
@@ -244,7 +232,7 @@ describe('Create endevor service', () => {
     await services.createEndevorService(newServiceName, newService);
     // assert
     const serviceOnDisk = await fs.promises.readFile(newServicePath, 'utf-8');
-    const decodedService = yaml.safeLoad(serviceOnDisk);
+    const decodedService = yaml.load(serviceOnDisk);
     expect(decodedService).toEqual({
       user: 'new-endevor-user',
       password: 'new-endevor-password',
@@ -287,7 +275,7 @@ describe('Create endevor service', () => {
       existingServicePath,
       'utf-8'
     );
-    const decodedService = yaml.safeLoad(serviceOnDisk);
+    const decodedService = yaml.load(serviceOnDisk);
     const existingService: EndevorServiceProfile = {
       user: 'existing-endevor-user',
       password: 'existing-endevor-password',

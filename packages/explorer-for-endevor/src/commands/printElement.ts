@@ -13,7 +13,22 @@
  */
 
 import * as vscode from 'vscode';
+import { showDocument as showElementContent } from '@local/vscode-wrapper/window';
+import { getElementContent } from '../view/elementContentProvider';
+import { logger } from '../globals';
 
-export const printElement = async (resourceUri: vscode.Uri) => {
-  await vscode.window.showTextDocument(resourceUri);
+export const printElement = async (elementUri: vscode.Uri) => {
+  try {
+    const elementContent = await getElementContent(elementUri);
+    if (!elementContent.getText()) {
+      return;
+    }
+    await showElementContent(elementContent);
+  } catch (error) {
+    logger.error(
+      `Unable to print element ${elementUri.path} content`,
+      `Unable to print element ${elementUri.path} content because of ${error.message}`
+    );
+    return;
+  }
 };

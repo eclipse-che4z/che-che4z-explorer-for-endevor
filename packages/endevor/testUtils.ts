@@ -19,21 +19,20 @@ import { RequestRuleBuilder } from 'mockttp/dist/rules/requests/request-rule-bui
 
 // Test utilities
 
-export const mockEndpoint = <T, U>(
-  req: MockRequest<T>,
-  res: MockResponse<U>
-) => (mockServer: Mockttp): Promise<MockedEndpoint> => {
-  const mockRuleBuilder = createMockBuilder(mockServer, req.path, req.method);
-  if (req.query) mockRuleBuilder.withExactQuery(req.query);
-  return mockRuleBuilder
-    .withHeaders(req.headers)
-    .thenReply(
-      res.status,
-      res.statusMessage,
-      typeof res.data == 'string' ? res.data : JSON.stringify(res.data),
-      res.headers
-    );
-};
+export const mockEndpoint =
+  <T, U>(req: MockRequest<T>, res: MockResponse<U>) =>
+  (mockServer: Mockttp): Promise<MockedEndpoint> => {
+    const mockRuleBuilder = createMockBuilder(mockServer, req.path, req.method);
+    if (req.query) mockRuleBuilder.withExactQuery(req.query);
+    return mockRuleBuilder
+      .withHeaders(req.headers)
+      .thenReply(
+        res.status,
+        res.statusMessage,
+        typeof res.data == 'string' ? res.data : JSON.stringify(res.data),
+        res.headers
+      );
+  };
 
 const createMockBuilder = (
   mockServer: Mockttp,

@@ -12,37 +12,57 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { stringifyWithHiddenCredential } from '@local/endevor/utils';
+import { isError, stringifyWithHiddenCredential } from '@local/endevor/utils';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import type {
+import {
   Uri,
   CancellationToken,
   TextDocumentContentProvider,
+  workspace,
+  TextDocument,
 } from 'vscode';
 import { printElement } from '../endevor';
 import { logger } from '../globals';
-import { fromVirtualDocUri } from '../uri';
+import { fromTreeElementUri } from '../uri/treeElementUri';
 
 export const elementContentProvider: TextDocumentContentProvider = {
   async provideTextDocumentContent(
-    uri: Uri,
+    elementUri: Uri,
     _token: CancellationToken
   ): Promise<string | undefined> {
+    const uriParams = fromTreeElementUri(elementUri);
+    if (isError(uriParams)) {
+      const error = uriParams;
+      logger.error(
+        `Unable to print element content`,
+        `Unable to print element content because of ${error.message}`
+      );
+      return;
+    }
     logger.trace(
       `Print element uri: \n  ${stringifyWithHiddenCredential(
-        JSON.parse(uri.query)
+        JSON.parse(elementUri.query)
       )}`
     );
-    const { service, element } = fromVirtualDocUri(uri);
+    const { service, element } = uriParams;
     const elementContent = await withNotificationProgress(
       `Printing element: ${element.name} content`
     )((progress) => printElement(progress)(service)(element));
     if (!elementContent) {
       logger.error(
-        `Unable to print element: ${element.system}/${element.subSystem}/${element.type}/${element.name}`
+        `Unable to print element: ${element.system}/${element.subSystem}/${element.type}/${element.name} content`
       );
       return;
     }
     return elementContent;
   },
+};
+
+/**
+ * {@link elementContentProvider} will be called by VSCode
+ *
+ * @returns document with element or empty content
+ */
+export const getElementContent = async (uri: Uri): Promise<TextDocument> => {
+  return await workspace.openTextDocument(uri);
 };

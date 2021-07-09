@@ -13,3 +13,4 @@
  */
 
 export const ANY_VALUE = '*';
+export const FINGERPRINT_MISMATCH_ERROR = 'C1G0410E';

@@ -190,10 +190,9 @@ export const make = (
           return [];
         }
 
-        const elements = await withNotificationProgress(
-          'Fetching elements'
-        )((progress) =>
-          searchForElements(progress)(endevorService)(elementsSearchLocation)
+        const elements = await withNotificationProgress('Fetching elements')(
+          (progress) =>
+            searchForElements(progress)(endevorService)(elementsSearchLocation)
         );
         if (!elements.length) {
           logger.warn('Unable to fetch any valid element from Endevor');

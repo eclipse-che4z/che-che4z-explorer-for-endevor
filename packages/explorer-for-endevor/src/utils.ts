@@ -32,31 +32,11 @@ export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
 
-type EditFileName = Readonly<{
-  elementName: string;
-  fingerprint: string;
-}>;
-
-export const toEditFileName = ({ elementName, fingerprint }: EditFileName) => {
-  return `${elementName}-version-${fingerprint}`;
-};
-
-export const fromEditFileName = (
-  fileName: string
-): EditFileName | undefined => {
-  const [elementName, fingerprint] = fileName.split('-version-');
-  if (!elementName || !fingerprint) return undefined;
-  return {
-    elementName,
-    fingerprint,
+export const getEditFolderUri =
+  (workspaceUri: Uri) =>
+  (editFolderWorkspacePath: string): Uri => {
+    return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
   };
-};
-
-export const getEditFolderUri = (workspaceUri: Uri) => (
-  editFolderWorkspacePath: string
-): Uri => {
-  return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
-};
 
 export const splitIntoPathAndFileName = (
   filePath: string

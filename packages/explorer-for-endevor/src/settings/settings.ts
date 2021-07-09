@@ -148,19 +148,56 @@ export const removeElementLocation = (
   );
 };
 
-const watch = (settingsKey: string) => (dispatch: (action: Action) => void) => {
+export const watchForLocations = (dispatch: (action: Action) => void) => {
   return vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${settingsKey}`)) {
-      const locations = [...getLocations()];
-      logger.trace(
-        `Settings updated. Value: ${JSON.stringify(locations, null, 2)}`
-      );
+    if (
+      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${LOCATIONS_SETTING}`)
+    ) {
+      let updatedLocations;
+      try {
+        updatedLocations = getLocations();
+        logger.trace(
+          `Settings updated. Value: ${JSON.stringify(
+            updatedLocations,
+            null,
+            2
+          )}`
+        );
+      } catch (e) {
+        logger.trace(`Error when reading settings: ${e.message}`);
+        updatedLocations = [];
+      }
       dispatch({
         type: Actions.LOCATION_CONFIG_CHANGED,
-        payload: locations,
+        payload: updatedLocations,
       });
     }
   });
 };
 
-export const watchForLocations = watch(LOCATIONS_SETTING);
+export const watchForEditFolder = (dispatch: (action: Action) => void) => {
+  return vscode.workspace.onDidChangeConfiguration((e) => {
+    if (
+      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${EDIT_FOLDER_SETTING}`)
+    ) {
+      let updatedEditFolder;
+      try {
+        updatedEditFolder = getTempEditFolder();
+        logger.trace(
+          `Settings updated. Value: ${JSON.stringify(
+            updatedEditFolder,
+            null,
+            2
+          )}`
+        );
+      } catch (e) {
+        logger.trace(`Error when reading settings: ${e.message}`);
+        updatedEditFolder = undefined;
+      }
+      dispatch({
+        type: Actions.EDIT_FOLDER_CHANGED,
+        payload: updatedEditFolder,
+      });
+    }
+  });
+};

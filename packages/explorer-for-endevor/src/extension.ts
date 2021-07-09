@@ -14,11 +14,7 @@
 
 import { logger } from './globals'; // this import has to be first, it initializes global state
 import * as vscode from 'vscode';
-import {
-  TREE_VIEW_ID,
-  URI_SCHEME_ELEMENT,
-  URI_SCHEME_LISTING,
-} from './constants';
+import { DIFF_EDITOR_WHEN_CONTEXT_NAME, TREE_VIEW_ID } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
 import {
@@ -31,8 +27,12 @@ import {
   watchForLocations,
   getLocations,
   getTempEditFolder,
+  watchForEditFolder,
 } from './settings/settings';
-import { Extension } from '@local/extension/_doc/Extension';
+import {
+  Extension,
+  TextDocumentSavedHandler,
+} from '@local/extension/_doc/Extension';
 import { CommandId } from './commands/id';
 import { printElement } from './commands/printElement';
 import { printListingCommand } from './commands/printListing';
@@ -53,7 +53,7 @@ import { editElementCommand } from './commands/editElement';
 import { uploadElementCommand } from './commands/uploadElement';
 import { cleanTempEditDirectory } from './workspace';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import { isError } from './utils';
+import { getEditFolderUri, isError } from './utils';
 import { generateElementCommand } from './commands/generateElement';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './_doc/Actions';
@@ -63,6 +63,11 @@ import {
   EndevorServiceName,
   LocationConfig,
 } from './_doc/settings';
+import { Schemas } from './_doc/Uri';
+import { readOnlyFileContentProvider } from './view/readOnlyFileContentProvider';
+import { isEditedElementUri } from './uri/editedElementUri';
+import { discardEditedElementChanges } from './commands/discardEditedElementChanges';
+import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
 
 const cleanTempDirectory = async (): Promise<void> => {
   const workspace = await getWorkspaceUri();
@@ -71,8 +76,9 @@ const cleanTempDirectory = async (): Promise<void> => {
     try {
       tempEditFolder = getTempEditFolder();
     } catch (e) {
-      logger.trace(
-        `Unable to get edit folder path from settings: ${e.message}`
+      logger.warn(
+        `Unable to get edit folder path from settings.`,
+        `Error when reading settings: ${e.message}.`
       );
       return;
     }
@@ -80,7 +86,7 @@ const cleanTempDirectory = async (): Promise<void> => {
     if (isError(result)) {
       const error = result;
       logger.trace(
-        `Cleaning edit files local directory: ${tempEditFolder} error: ${error.message}`
+        `Cleaning edit files local directory: ${tempEditFolder} error: ${error.message}.`
       );
     }
   }
@@ -92,9 +98,42 @@ const getInitialLocations = () => {
     locations = [...getLocations()];
   } catch (error) {
     locations = [];
-    logger.error(error);
+    logger.warn(
+      `Unable to get valid Endevor locations from the settings.`,
+      `Error when reading settings: ${error.message}.`
+    );
   }
   return locations;
+};
+
+const getInitialTempDirPath = async (): Promise<string | undefined> => {
+  const workspaceUri = await getWorkspaceUri();
+  if (!workspaceUri) return;
+  let tempEditFolderName;
+  try {
+    tempEditFolderName = getTempEditFolder();
+  } catch (error) {
+    logger.warn(
+      `Unable to get valid edit folder name from the settings.`,
+      `Error when reading settings: ${error.message}.`
+    );
+    return;
+  }
+  return getEditFolderUri(workspaceUri)(tempEditFolderName).fsPath;
+};
+
+const updateEditFolderWhenContext = (tempDirPath: string) => {
+  vscode.commands.executeCommand('setContext', DIFF_EDITOR_WHEN_CONTEXT_NAME, [
+    tempDirPath,
+  ]);
+};
+
+const cleanEditFolderWhenContext = () => {
+  vscode.commands.executeCommand(
+    'setContext',
+    DIFF_EDITOR_WHEN_CONTEXT_NAME,
+    []
+  );
 };
 
 export const activate: Extension['activate'] = async (context) => {
@@ -128,19 +167,19 @@ export const activate: Extension['activate'] = async (context) => {
     dispatch
   );
 
-  const withErrorLogging = (commandId: string) => async <R>(
-    task: Promise<R>
-  ): Promise<R | void | undefined> => {
-    try {
-      return await task;
-    } catch (e) {
-      logger.error(
-        `Error when running command ${commandId}. See log for more details.`,
-        `Something went wrong with command: ${commandId} execution: ${e.message} with stack trace: ${e.stack}`
-      );
-      return;
-    }
-  };
+  const withErrorLogging =
+    (commandId: string) =>
+    async <R>(task: Promise<R>): Promise<R | void | undefined> => {
+      try {
+        return await task;
+      } catch (e) {
+        logger.error(
+          `Error when running command ${commandId}. See log for more details.`,
+          `Something went wrong with command: ${commandId} execution: ${e.message} with stack trace: ${e.stack}`
+        );
+        return;
+      }
+    };
 
   const refresh = () => {
     const locations = [...getLocations()];
@@ -246,28 +285,97 @@ export const activate: Extension['activate'] = async (context) => {
         );
       },
     ],
+    [
+      CommandId.DISCARD_COMPARED_ELEMENT,
+      (comparedElementUri?: vscode.Uri) => {
+        return withErrorLogging(CommandId.DISCARD_COMPARED_ELEMENT)(
+          discardEditedElementChanges(comparedElementUri)
+        );
+      },
+    ],
+    [
+      CommandId.UPLOAD_COMPARED_ELEMENT,
+      (comparedElementUri?: vscode.Uri) => {
+        return withErrorLogging(CommandId.UPLOAD_COMPARED_ELEMENT)(
+          applyDiffEditorChanges(comparedElementUri)
+        );
+      },
+    ],
   ] as const;
 
+  const textDocumentSavedHandlers: ReadonlyArray<TextDocumentSavedHandler> = [
+    {
+      apply: (document) => {
+        return withErrorLogging(CommandId.UPLOAD_ELEMENT)(
+          uploadElementCommand(document.uri)
+        );
+      },
+      isApplicable: (document) => {
+        const uriValidationResult = isEditedElementUri(document.uri);
+        if (uriValidationResult.valid) return true;
+        logger.trace(
+          `Element uri is not valid for uploading elements, because of: ${uriValidationResult.message}`
+        );
+        return false;
+      },
+    },
+  ];
+  const initialTempDirPath = await getInitialTempDirPath();
+  if (initialTempDirPath) {
+    updateEditFolderWhenContext(initialTempDirPath);
+  }
   context.subscriptions.push(
     vscode.window.createTreeView(TREE_VIEW_ID, {
       treeDataProvider: elmTreeProvider,
       canSelectMany: true,
     }),
     vscode.workspace.registerTextDocumentContentProvider(
-      URI_SCHEME_ELEMENT,
+      Schemas.TREE_ELEMENT,
       elementContentProvider
     ),
     vscode.workspace.registerTextDocumentContentProvider(
-      URI_SCHEME_LISTING,
+      Schemas.ELEMENT_LISTING,
       listingContentProvider
+    ),
+    vscode.workspace.registerTextDocumentContentProvider(
+      Schemas.READ_ONLY_FILE,
+      readOnlyFileContentProvider
     ),
 
     ...commands.map(([id, command]) =>
       vscode.commands.registerCommand(id, command)
     ),
     watchForLocations(dispatch),
+    watchForEditFolder(async (action) => {
+      if (action.type === Actions.EDIT_FOLDER_CHANGED) {
+        const workspaceUri = await getWorkspaceUri();
+        if (!workspaceUri) {
+          logger.warn(
+            'At least one workspace in this project should be opened to work with elements.',
+            'There is no valid workspace to update when context values.'
+          );
+          cleanEditFolderWhenContext();
+          return;
+        }
+        if (!action.payload) {
+          logger.warn(
+            'Unable to get a valid edit path from settings to work with elements.',
+            'There is no valid edit folder path in the settings to update when context values.'
+          );
+          cleanEditFolderWhenContext();
+          return;
+        }
+        updateEditFolderWhenContext(
+          getEditFolderUri(workspaceUri)(action.payload).fsPath
+        );
+      }
+    }),
     vscode.workspace.onDidSaveTextDocument((document) =>
-      uploadElementCommand(document.uri)(document.getText())
+      textDocumentSavedHandlers
+        .filter((handler) => handler.isApplicable(document))
+        .forEach(async (handler) => {
+          await handler.apply(document);
+        })
     )
   );
 };

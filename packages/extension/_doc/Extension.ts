@@ -12,7 +12,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import type { ExtensionContext } from 'vscode';
+import type { ExtensionContext, TextDocument } from 'vscode';
 export interface Command {
   title: string;
   command: string;
@@ -23,3 +23,8 @@ export interface Extension {
   activate: (context: ExtensionContext) => Promise<void>;
   deactivate: () => void;
 }
+
+export type TextDocumentSavedHandler = Readonly<{
+  isApplicable: (document: TextDocument) => boolean;
+  apply: (document: TextDocument) => Promise<void>;
+}>;

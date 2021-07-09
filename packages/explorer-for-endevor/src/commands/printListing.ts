@@ -17,14 +17,12 @@ import { filterElementNodes } from '../utils';
 import { ElementNode, Node } from '../_doc/ElementTree';
 import { window } from 'vscode';
 import { fromVirtualDocUri, toVirtualDocUri } from '../uri';
-import {
-  MAX_PARALLEL_REQUESTS_DEFAULT,
-  URI_SCHEME_LISTING,
-} from '../constants';
+import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../constants';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { PromisePool } from 'promise-pool-tool';
 import { getMaxParallelRequests } from '../settings/settings';
 import { isError } from '@local/endevor/utils';
+import { Schemas } from '../_doc/Uri';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];
@@ -60,7 +58,7 @@ export const printListingCommand = async (
       return new PromisePool(
         elementNodes
           .map((elementNode) =>
-            toVirtualDocUri(URI_SCHEME_LISTING)(
+            toVirtualDocUri(Schemas.ELEMENT_LISTING)(
               fromVirtualDocUri(elementNode.uri)
             )
           )
@@ -92,7 +90,7 @@ export const printListingCommand = async (
     const result = await withNotificationProgress(
       `Printing element: ${elementNode.name} listing content`
     )(async (progressReporter) => {
-      const listingUri = toVirtualDocUri(URI_SCHEME_LISTING)(
+      const listingUri = toVirtualDocUri(Schemas.ELEMENT_LISTING)(
         fromVirtualDocUri(elementNode.uri)
       );
       progressReporter.report({ increment: 50 });

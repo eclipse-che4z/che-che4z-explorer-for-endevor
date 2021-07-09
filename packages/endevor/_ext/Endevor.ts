@@ -53,7 +53,6 @@ export const Repository = t.type({
 });
 export const Repositories = t.array(Repository);
 
-// TODO: remove this class after investigation
 class StageNumberType extends t.Type<StageNumber> {
   constructor() {
     super(
@@ -83,12 +82,7 @@ export const Element = t.intersection([
 ]);
 export const Elements = t.array(Element);
 
-export const DependentElement = t.intersection([
-  Path,
-  t.partial({
-    fileExt: t.union([t.string, t.null]),
-  }),
-]);
+export const DependentElement = Element;
 export const DependentElements = t.array(DependentElement);
 
 export const ElementDependency = t.type({
