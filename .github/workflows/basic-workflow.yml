@@ -18,11 +18,13 @@ jobs:
 
     steps:
       - name: Install Dependencies
-        run: ls
-      - run: npm ci
+        uses: ./
+        run: npm ci
         env:
           NODE_OPTIONS: --max_old_space_size=4096
 
       - name: Package
+        uses: ./
         run: npx vsce package
-      - run: mv $PROJECT_NAME.vsix $PROJECT_NAME_latest.vsix
+      - uses: ./
+        run: mv $PROJECT_NAME.vsix $PROJECT_NAME_latest.vsix
