@@ -24,4 +24,4 @@ jobs:
 
       - name: Package
         run: npx vsce package
-        run: mv $PROJECT_NAME.vsix $PROJECT_NAME_latest.vsix
+      - run: mv $PROJECT_NAME.vsix $PROJECT_NAME_latest.vsix
