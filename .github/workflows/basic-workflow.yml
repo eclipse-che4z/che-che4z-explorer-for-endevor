@@ -18,7 +18,8 @@ jobs:
 
     steps:
       - name: Install Dependencies
-        run: npm ci
+        run: ls
+      - run: npm ci
         env:
           NODE_OPTIONS: --max_old_space_size=4096
 
