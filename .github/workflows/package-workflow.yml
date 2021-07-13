@@ -8,7 +8,7 @@ jobs:
 
     env:
       BLACKDUCK_API_TOKEN: ${{ secrets.E4E_BLACKDUCK_TOKEN }}
-      PROJECT_NAME: explorer-for-endevor-
+      PROJECT_NAME: explorer-for-endevor
 
     strategy:
       matrix:
@@ -20,9 +20,9 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: get-npm-version
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@master
+      - name: Get E4E package version
+        id: npm-version
+        uses: nyaa8/package-version@v1.0.3
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
@@ -34,6 +34,6 @@ jobs:
         env:
           NODE_OPTIONS: --max_old_space_size=4096
 
-      - name: Package
+      - name: Package VSIX
         run: npx vsce package
-      - run: mv $PROJECT_NAME${{ steps.package-version.outputs.current-version}}.vsix $PROJECT_NAME_latest.vsix
+      - run: mv ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix ${{ env.PROJECT_NAME }}_latest.vsix

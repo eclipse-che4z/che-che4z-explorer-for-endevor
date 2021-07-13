@@ -25,51 +25,51 @@ spec:
       name: known-hosts
 """
 
-def projectName = 'explorer-for-endevor'
-def kubeLabel = projectName + '_pod_'  + env.BUILD_NUMBER + '_' + env.BRANCH_NAME
-kubeLabel = kubeLabel.replaceAll(/[^a-zA-Z0-9._-]+/,"")
+// def projectName = 'explorer-for-endevor'
+// def kubeLabel = projectName + '_pod_'  + env.BUILD_NUMBER + '_' + env.BRANCH_NAME
+// kubeLabel = kubeLabel.replaceAll(/[^a-zA-Z0-9._-]+/,"")
 
-pipeline {
-    agent {
-        kubernetes {
-            label kubeLabel
-            yaml kubernetes_config
-        }
-    }
-    options {
-        timestamps()
-        timeout(time: 3, unit: 'HOURS')
-        skipDefaultCheckout(false)
-        disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '3'))
-    }
-    environment {
-       branchName = "$env.BRANCH_NAME"
-       workspace = "$env.WORKSPACE"
-    }
-    stages {
-        stage('Install Dependencies') {
-            environment {
-                npm_config_cache = "$env.WORKSPACE"
-            }
-            steps {
-                container('node') {
-                    sh "npm ci"
-                }
-            }
-        }
-        stage('Package') {
-            environment {
-                npm_config_cache = "$env.WORKSPACE"
-            }
-            steps {
-                container('node') {
-                    sh "npx vsce package"
-                    archiveArtifacts "*.vsix"
-                    sh "mv *$projectName*.vsix '$projectName'_latest.vsix"
-                }
-            }
-        }
+// pipeline {
+//     agent {
+//         kubernetes {
+//             label kubeLabel
+//             yaml kubernetes_config
+//         }
+//     }
+//     options {
+//         timestamps()
+//         timeout(time: 3, unit: 'HOURS')
+//         skipDefaultCheckout(false)
+//         disableConcurrentBuilds()
+//         buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '3'))
+//     }
+//     environment {
+//        branchName = "$env.BRANCH_NAME"
+//        workspace = "$env.WORKSPACE"
+//     }
+//     stages {
+        // stage('Install Dependencies') {
+        //     environment {
+        //         npm_config_cache = "$env.WORKSPACE"
+        //     }
+        //     steps {
+        //         container('node') {
+        //             sh "npm ci"
+        //         }
+        //     }
+        // }
+        // stage('Package') {
+        //     environment {
+        //         npm_config_cache = "$env.WORKSPACE"
+        //     }
+        //     steps {
+        //         container('node') {
+        //             sh "npx vsce package"
+        //             archiveArtifacts "*.vsix"
+        //             sh "mv *$projectName*.vsix '$projectName'_latest.vsix"
+        //         }
+        //     }
+        // }
         // stage("Test"){
         //     environment {
         //         DISPLAY = ':99.0'
