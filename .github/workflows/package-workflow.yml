@@ -1,4 +1,4 @@
-name: GitHub Actions Demo
+name: E4E Packaging Workflow
 
 on: [push, pull_request]
 
@@ -7,7 +7,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      BLACKDUCK_API_TOKEN: ${{ secrets.E4E_BLACKDUCK_TOKEN }}
       PROJECT_NAME: explorer-for-endevor
 
     strategy:

@@ -1,29 +1,29 @@
-#!groovy
+// #!groovy
 
-def kubernetes_config = """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: node
-    image: node:12.10.0-alpine
-    tty: true
-    resources:
-      limits:
-        memory: "2Gi"
-        cpu: "1"
-      requests:
-        memory: "2Gi"
-        cpu: "1"
-  - name: jnlp
-    volumeMounts:
-    - name: volume-known-hosts
-      mountPath: /home/jenkins/.ssh
-  volumes:
-  - name: volume-known-hosts
-    configMap:
-      name: known-hosts
-"""
+// def kubernetes_config = """
+// apiVersion: v1
+// kind: Pod
+// spec:
+//   containers:
+//   - name: node
+//     image: node:12.10.0-alpine
+//     tty: true
+//     resources:
+//       limits:
+//         memory: "2Gi"
+//         cpu: "1"
+//       requests:
+//         memory: "2Gi"
+//         cpu: "1"
+//   - name: jnlp
+//     volumeMounts:
+//     - name: volume-known-hosts
+//       mountPath: /home/jenkins/.ssh
+//   volumes:
+//   - name: volume-known-hosts
+//     configMap:
+//       name: known-hosts
+// """
 
 // def projectName = 'explorer-for-endevor'
 // def kubeLabel = projectName + '_pod_'  + env.BUILD_NUMBER + '_' + env.BRANCH_NAME
