@@ -1,4 +1,4 @@
-name: E4E Packaging Workflow
+name: E4E Pipeline
 
 on: [push, pull_request]
 
@@ -11,8 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x, 12.x, 14.x]
-        # order operating systems from best to worst
+        node-version: [12.x, 14.x, 16.x]
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
@@ -24,7 +23,7 @@ jobs:
         uses: nyaa8/package-version@v1.0.3
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -34,7 +33,7 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=4096
 
       - name: Package VSIX & Upload Artifact
-        run: npx vsce package
+        run: yarn package
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix
