@@ -18,22 +18,22 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Get E4E package version
-        id: npm-version
-        uses: nyaa8/package-version@v1.0.3
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install Dependencies
-        run: npm ci
-        env:
-          NODE_OPTIONS: --max_old_space_size=4096
+      - name: Lint
+        run: yarn workspace packages/explorer-for-endevor lint
+
+      - name: Build package
+        run: yarn workspace packages/explorer-for-endevor build
+
+      - name: Run tests
+        run: yarn workspace packages/explorer-for-endevor test
 
       - name: Package VSIX & Upload Artifact
-        run: yarn package
+        run: yarn workspace packages/explorer-for-endevor package
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix
