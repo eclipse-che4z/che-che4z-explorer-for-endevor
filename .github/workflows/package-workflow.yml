@@ -26,11 +26,11 @@ jobs:
       - name: Install Yarn
         run: npm install yarn
 
-      - name: Lint
-        run: yarn workspace explorer-for-endevor lint
-
       - name: Build package
         run: yarn workspace explorer-for-endevor build
+
+      - name: Lint
+        run: yarn workspace explorer-for-endevor lint
 
       - name: Run tests
         run: yarn workspace explorer-for-endevor test
