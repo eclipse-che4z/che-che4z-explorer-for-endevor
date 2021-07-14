@@ -24,16 +24,16 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Lint
-        run: yarn workspace packages/explorer-for-endevor lint
+        run: yarn workspace explorer-for-endevor lint
 
       - name: Build package
-        run: yarn workspace packages/explorer-for-endevor build
+        run: yarn workspace explorer-for-endevor build
 
       - name: Run tests
-        run: yarn workspace packages/explorer-for-endevor test
+        run: yarn workspace explorer-for-endevor test
 
       - name: Package VSIX & Upload Artifact
-        run: yarn workspace packages/explorer-for-endevor package
+        run: yarn workspace explorer-for-endevor package
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix
