@@ -23,14 +23,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install Yarn
-        run: npm install yarn
-
-      - name: Run Yarn
-        run: yarn
-
       - name: Build package
-        run: yarn workspace explorer-for-endevor build
+        run: yarn && yarn workspace explorer-for-endevor build
 
       - name: Lint
         run: yarn workspace explorer-for-endevor lint
