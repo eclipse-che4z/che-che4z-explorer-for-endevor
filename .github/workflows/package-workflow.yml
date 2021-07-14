@@ -24,7 +24,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
-        run: yarn workspace explorer-for-endevor install
+        run: yarn install
+
+      - name: Audit
+        run: yarn audit
 
       - name: Lint
         run: yarn workspace explorer-for-endevor lint
