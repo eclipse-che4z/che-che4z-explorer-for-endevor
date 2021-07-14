@@ -26,7 +26,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
       - name: Audit
         id: audit
@@ -34,20 +34,21 @@ jobs:
         run: yarn audit
 
       - name: Lint
-        run: yarn workspace explorer-for-endevor lint
+        run: yarn lint
 
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.0
         with:
-          run: yarn workspace explorer-for-endevor test
+          run: yarn test
 
       - name: Build package
         if: steps.audit.outputs.exit_code < 7
-        run: yarn workspace explorer-for-endevor build
+        run: yarn build
 
       - name: Package VSIX & Upload Artifact
         if: steps.audit.outputs.exit_code < 7
-        run: yarn workspace explorer-for-endevor package
+        run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
         with:
-          path: packages/explorer-for-endevor/vsce/*.vsix
+          name: ${{ env.PROJECT_NAME }}
+          path: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
