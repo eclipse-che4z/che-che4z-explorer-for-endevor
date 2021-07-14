@@ -48,8 +48,6 @@ jobs:
       - name: Package VSIX & Upload Artifact
         if: steps.audit.outputs.exit_code < 7
         run: yarn workspace explorer-for-endevor package
-      - run: ls packages/explorer-for-endevor
-      - run: ls packages/explorer-for-endevor/vsce
       - uses: actions/upload-artifact@v2
         with:
           path: packages/explorer-for-endevor/vsce/*.vsix
