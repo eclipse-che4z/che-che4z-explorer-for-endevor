@@ -23,14 +23,17 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Build package
-        run: yarn && yarn workspace explorer-for-endevor build
+      - name: Install dependencies
+        run: yarn workspace explorer-for-endevor install
 
       - name: Lint
         run: yarn workspace explorer-for-endevor lint
 
       - name: Run tests
         run: yarn workspace explorer-for-endevor test
+
+      - name: Build package
+        run: yarn workspace explorer-for-endevor build
 
       - name: Package VSIX & Upload Artifact
         run: yarn workspace explorer-for-endevor package
