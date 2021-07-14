@@ -27,7 +27,9 @@ jobs:
         run: yarn install
 
       - name: Audit
-        run: yarn audit --level 8
+        id: audit
+        continue-on-error: true
+        run: yarn audit
 
       - name: Lint
         run: yarn workspace explorer-for-endevor lint
@@ -36,9 +38,11 @@ jobs:
         run: yarn workspace explorer-for-endevor test
 
       - name: Build package
+        if: steps.audit.outputs.exit_code < 7
         run: yarn workspace explorer-for-endevor build
 
       - name: Package VSIX & Upload Artifact
+        if: steps.audit.outputs.exit_code < 7
         run: yarn workspace explorer-for-endevor package
       - uses: actions/upload-artifact@v2
         with:
