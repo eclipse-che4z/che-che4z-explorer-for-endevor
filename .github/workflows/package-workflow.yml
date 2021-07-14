@@ -35,7 +35,9 @@ jobs:
         run: yarn workspace explorer-for-endevor lint
 
       - name: Run tests
-        run: yarn workspace explorer-for-endevor test
+        uses: GabrielBB/xvfb-action@v1.0
+        with:
+          run: yarn workspace explorer-for-endevor test
 
       - name: Build package
         if: steps.audit.outputs.exit_code < 7
