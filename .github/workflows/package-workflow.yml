@@ -27,7 +27,7 @@ jobs:
         run: yarn install
 
       - name: Audit
-        run: yarn audit
+        run: yarn audit --level 8
 
       - name: Lint
         run: yarn workspace explorer-for-endevor lint
