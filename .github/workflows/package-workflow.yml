@@ -18,6 +18,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
+      - name: Get E4E package version
+        id: npm-version
+        uses: nyaa8/package-version@v1.0.3
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
@@ -50,4 +54,3 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix
           path: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix
-      - run: mv ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.vsix ${{ env.PROJECT_NAME }}_latest.vsix
