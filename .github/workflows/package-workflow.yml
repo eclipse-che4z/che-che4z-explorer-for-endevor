@@ -26,6 +26,9 @@ jobs:
       - name: Install Yarn
         run: npm install yarn
 
+      - name: Run Yarn
+        run: yarn
+
       - name: Build package
         run: yarn workspace explorer-for-endevor build
 
