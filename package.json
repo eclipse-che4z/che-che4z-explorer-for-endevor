@@ -1,15 +1,5 @@
 {
   "private": true,
-  "publisher": "BroadcomMFD",
-  "name": "explorer-for-endevor",
-  "version": "0.13.0",
-  "engines": {
-  "vscode": "^1.56.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/eclipse/che-che4z-explorer-for-endevor"
-  },
   "workspaces": [
     "packages/explorer-for-endevor",
     "packages/endevor",
