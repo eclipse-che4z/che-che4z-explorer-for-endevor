@@ -53,3 +53,26 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}
           path: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+
+      - name: Publish to ARtifactory
+        uses = "retgits/actions/jfrog-cli@master"
+        secrets = ["USER", "PASSWORD", "URL"]
+        args = ["upload ${{ env.PROJECT_NAME }}.vsix eclipse/explorer-for-endevor/ --build-name=${{ env.PROJECT_NAME }}"]
+        env = {
+          CRED = "username"
+        }
+
+      - name: Publish to Open VSX Registry
+        uses: HaaLeo/publish-vscode-extension@v0
+        id: publishToOpenVSX
+        with:
+          extensionFile: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+
+      - name: Publish to Visual Studio Marketplace
+        uses: HaaLeo/publish-vscode-extension@v0
+        with:
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+          packagePath: ''
