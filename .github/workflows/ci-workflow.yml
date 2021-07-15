@@ -46,10 +46,11 @@ jobs:
         if: steps.audit.outputs.exit_code < 7
         run: yarn build
 
-      - name: Package VSIX & Upload Artifact
+      - name: Package & Upload Artifact
         if: steps.audit.outputs.exit_code < 7
+        run: yarn copy-into-build-context
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PROJECT_NAME }}
+          name: ${{ env.PROJECT_NAME }}.vsix
           path: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
