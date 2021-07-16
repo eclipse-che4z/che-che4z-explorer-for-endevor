@@ -33,6 +33,7 @@ import {
 import { mockDeletingFileWith } from '../_mocks/workspace';
 import { toEditedElementUri } from '../uri/editedElementUri';
 import * as sinon from 'sinon';
+import { join } from 'path';
 
 describe('discarding local changes in compared element', () => {
   before(() => {
@@ -50,7 +51,12 @@ describe('discarding local changes in compared element', () => {
 
   it('should discard local changes and close edit & compare sessions', async () => {
     // arrange
-    const localElementVersionFsPath = '/temp/local/element';
+    const localElementVersionFsPath = join(
+      __dirname,
+      'temp',
+      'local',
+      'element'
+    );
     const service: Service = {
       location: {
         port: 1234,
@@ -79,8 +85,13 @@ describe('discarding local changes in compared element', () => {
       comment: 'some_comment',
     };
     const remoteElementVersionFingerprint = 'element_fingerprint';
-    const remoteElementVersionFsPath = '/temp/remote/element';
-    const editedElementFsPath = '/temp/element';
+    const remoteElementVersionFsPath = join(
+      __dirname,
+      'temp',
+      'remote',
+      'element'
+    );
+    const editedElementFsPath = join(__dirname, 'temp', 'element');
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       service,
       element,
