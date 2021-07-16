@@ -10,7 +10,4 @@
 # Contributors:
 #   Broadcom, Inc. - initial API and implementation
 
-package-lock.json
-.vscode-test
 results
-dist
