@@ -15,68 +15,67 @@
 // See https://go.microsoft.com/fwlink/?LinkId=733558
 // for the documentation about the tasks.json format
 {
-    "version": "2.0.0",
-    "tasks": [
-      {
-        "label": "type check e4e",
-        "type": "shell",
-        "command": "yarn",
-        "args": ["workspace", "explorer-for-endevor", "run", "type"],
-        "isBackground": true,
-        "problemMatcher": {
-          "base": "$tsc-watch",
-          "owner": "typescript-strict-null",
-          "fileLocation": [
-            "relative",
-            "${workspaceFolder}/packages/explorer-for-endevor"
-          ],
-          "applyTo": "allDocuments"
-        }
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "type check e4e",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["workspace", "explorer-for-endevor", "run", "type"],
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$tsc-watch",
+        "owner": "typescript-strict-null",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}/packages/explorer-for-endevor"
+        ],
+        "applyTo": "allDocuments"
+      }
+    },
+    {
+      "label": "build e4e",
+      "group": {
+        "kind": "build",
+        "isDefault": true
       },
-      {
-        "label": "build e4e",
-        "group": {
-          "kind": "build",
-          "isDefault": true
-        },
-        "options": {
-          "cwd": "packages/explorer-for-endevor"
-        },
-        "isBackground": true,
-        "type": "shell",
-        "command": "yarn",
-        "args": ["run", "build"],
-        "problemMatcher": [
-          {
-            "owner": "typescript",
-            "source": "ts",
-            "applyTo": "closedDocuments",
-            "fileLocation": "absolute",
-            "severity": "error",
-            "pattern": [
-              {
-                "regexp": "\\[tsl\\] ERROR in (.*)?\\((\\d+),(\\d+)\\)",
-                "file": 1,
-                "line": 2,
-                "column": 3
-              },
-              {
-                "regexp": "\\s*TS\\d+:\\s*(.*)",
-                "message": 1
-              }
-            ],
-            "background": {
-              "activeOnStart": true,
-              "beginsPattern": {
-                "regexp": "Compilation starting…"
-              },
-              "endsPattern": {
-                "regexp": "Compilation finished"
-              }
+      "options": {
+        "cwd": "packages/explorer-for-endevor"
+      },
+      "isBackground": true,
+      "type": "shell",
+      "command": "yarn",
+      "args": ["run", "build"],
+      "problemMatcher": [
+        {
+          "owner": "typescript",
+          "source": "ts",
+          "applyTo": "closedDocuments",
+          "fileLocation": "absolute",
+          "severity": "error",
+          "pattern": [
+            {
+              "regexp": "\\[tsl\\] ERROR in (.*)?\\((\\d+),(\\d+)\\)",
+              "file": 1,
+              "line": 2,
+              "column": 3
+            },
+            {
+              "regexp": "\\s*TS\\d+:\\s*(.*)",
+              "message": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": {
+              "regexp": "Compilation starting…"
+            },
+            "endsPattern": {
+              "regexp": "Compilation finished"
             }
           }
-        ]
-      }
-    ]
-  }
-  
+        }
+      ]
+    }
+  ]
+}

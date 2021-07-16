@@ -12,8 +12,8 @@
   ],
   "scripts": {
     "build": "yarn workspaces run build",
-    "lint": "yarn workspaces run lint",
-    "pretty": "yarn workspaces run pretty",
+    "lint": "yarn workspaces run lint && prettier --check .",
+    "pretty": "yarn workspaces run pretty && prettier --write .",
     "test": "yarn workspaces run test",
     "clean": "yarn workspaces run clean && rimraf node_modules",
     "copy-into-build-context": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md packages/explorer-for-endevor"

@@ -17,56 +17,55 @@
 // Hover to view descriptions of existing attributes.
 // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Run E4E Extension",
-        "type": "extensionHost",
-        "request": "launch",
-        "runtimeExecutable": "${execPath}",
-        "args": [
-          "--disable-extensions",
-          "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor"
-        ],
-        "preLaunchTask": "build e4e"
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run E4E Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor"
+      ],
+      "preLaunchTask": "build e4e"
+    },
+    {
+      "name": "Run E4E Integration Test",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
+        "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
+        "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"
+      ],
+      "env": {
+        "MOCHA_grep": "${input:TestName}"
       },
-      {
-        "name": "Run E4E Integration Test",
-        "type": "extensionHost",
-        "request": "launch",
-        "runtimeExecutable": "${execPath}",
-        "args": [
-          "--disable-extensions",
-          "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
-          "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
-          "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"
-        ],
-        "env": {
-          "MOCHA_grep": "${input:TestName}"
-        },
-        "preLaunchTask": "build e4e"
-      },
-      {
-        "name": "Run E4E Integration Tests",
-        "type": "extensionHost",
-        "request": "launch",
-        "runtimeExecutable": "${execPath}",
-        "args": [
-          "--disable-extensions",
-          "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
-          "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
-          "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"
-        ],
-        "preLaunchTask": "build e4e"
-      },
-    ],
-    "inputs": [
-      {
-        "id": "TestName",
-        "type": "promptString",
-        "description": "Name of the test you want to run. Can be a substring.",
-        "default": "in progress"
-      }
-    ]
-  }
-  
+      "preLaunchTask": "build e4e"
+    },
+    {
+      "name": "Run E4E Integration Tests",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
+        "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
+        "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"
+      ],
+      "preLaunchTask": "build e4e"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "TestName",
+      "type": "promptString",
+      "description": "Name of the test you want to run. Can be a substring.",
+      "default": "in progress"
+    }
+  ]
+}
