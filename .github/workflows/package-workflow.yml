@@ -54,14 +54,6 @@ jobs:
           name: ${{ env.PROJECT_NAME }}
           path: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
 
-      - name: Publish to ARtifactory
-        uses = "retgits/actions/jfrog-cli@master"
-        secrets = ["USER", "PASSWORD", "URL"]
-        args = ["upload ${{ env.PROJECT_NAME }}.vsix eclipse/explorer-for-endevor/ --build-name=${{ env.PROJECT_NAME }}"]
-        env = {
-          CRED = "username"
-        }
-
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
