@@ -85,7 +85,6 @@ describe('accepting local changes in compared element', () => {
     };
     const localElementVersionFsPath = join(
       __dirname,
-      '/',
       'temp',
       'local',
       'element'
@@ -93,12 +92,11 @@ describe('accepting local changes in compared element', () => {
     const remoteElementVersionFingerprint = 'element_fingerprint';
     const remoteElementVersionFsPath = join(
       __dirname,
-      '/',
       'temp',
       'remote',
       'element'
     );
-    const editedElementFsPath = join(__dirname, '/', 'temp', 'element');
+    const editedElementFsPath = join(__dirname, 'temp', 'element');
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       service,
       element,

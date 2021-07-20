@@ -10,10 +10,10 @@
 # Contributors:
 #   Broadcom, Inc. - initial API and implementation
 
-resources
-images
 .vscode-test
 results
 dist
 dependencies.json
 dependencies.txt
+images
+resources
