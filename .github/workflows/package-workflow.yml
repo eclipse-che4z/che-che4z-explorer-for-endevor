@@ -1,6 +1,6 @@
 name: E4E Pipeline
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
@@ -8,6 +8,8 @@ jobs:
 
     env:
       PROJECT_NAME: explorer-for-endevor
+      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+      ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
 
     strategy:
       # Continue to run tests on the other systems if one fails
@@ -20,6 +22,12 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+
+      - name: Get E4E package version
+        id: npm-version
+        uses: nyaa8/package-version@v1.0.3
+        with:
+          path: ${{ env.ENDEVOR_VERSION_PATH }}
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
@@ -51,14 +59,21 @@ jobs:
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PROJECT_NAME }}
-          path: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+          name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
+          path: ${{ env.VSIX_PATH }}
+
+      - name: Create GitHub release
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
+          tag: "${{ env.PACKAGE_VERSION }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
         with:
-          extensionFile: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+          extensionFile: ${{ env.VSIX_PATH }}
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
 
       - name: Publish to Visual Studio Marketplace
