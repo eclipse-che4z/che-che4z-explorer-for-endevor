@@ -41,12 +41,16 @@ jobs:
         run: yarn lint
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.0
+        id: tests
         with:
           run: yarn test
+      - name: Check exit status code
+        if: steps.tests.outputs.exit_status < 7 | steps.audit.outputs.exit_status < 7
+        run: exit 0
 
   create-artifact:
     runs-on: ${{ matrix.os }}
-    if: job.build-and-test.steps.audit.outputs.exit_code < 7
+    needs: build-and-test
     steps:
       - name: Build E4E
         run: yarn build
