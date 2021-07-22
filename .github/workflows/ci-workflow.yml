@@ -21,10 +21,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Get E4E package version
+        uses: nyaa8/package-version@v1.0.3
         env:
           ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
         id: npm-version
-        uses: nyaa8/package-version@v1.0.3
         with:
           path: ${{ env.ENDEVOR_VERSION_PATH }}
       - name: Use Node.js ${{ matrix.node-version }}
@@ -34,9 +34,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Audit
+        run: yarn audit
         id: audit
         continue-on-error: true
-        run: yarn audit
       - name: Lint
         run: yarn lint
       - name: Run tests
