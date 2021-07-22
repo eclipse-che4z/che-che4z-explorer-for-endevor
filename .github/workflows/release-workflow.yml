@@ -1,0 +1,53 @@
+name: E4E Release & Publish Workflow
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+  workflow_dispatch
+if: github.event.pull_request.merged
+env:
+  PROJECT_NAME: explorer-for-endevor
+jobs:
+  setup:
+    runs-on: windows-latest
+    env:
+      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+      ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Get E4E package version
+        id: npm-version
+        uses: nyaa8/package-version@v1.0.3
+        with:
+          path: ${{ env.ENDEVOR_VERSION_PATH }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+  release-and-publish:
+    runs-on: windows-latest
+    env:
+      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+    steps:
+      - name: Create GitHub release
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
+          tag: "${{ env.PACKAGE_VERSION }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to Open VSX Registry
+        uses: HaaLeo/publish-vscode-extension@v0
+        id: publishToOpenVSX
+        with:
+          extensionFile: ${{ env.VSIX_PATH }}
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+      - name: Publish to Visual Studio Marketplace
+        uses: HaaLeo/publish-vscode-extension@v0
+        with:
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+          packagePath: ''

@@ -1,11 +1,11 @@
-name: E4E Pipeline
+name: E4E CI Workflow
 on: 
   push:
     branches:
-      - master
+      - '*'
   pull_request:
     branches:
-      - master
+      - '*'
   workflow_dispatch
 env:
   PROJECT_NAME: explorer-for-endevor
@@ -21,7 +21,6 @@ jobs:
       matrix:
         node-version: [12.x, 14.x, 16.x]
         os: [windows-latest, ubuntu-latest, macos-latest]
-
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -61,29 +60,3 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
           path: ${{ env.VSIX_PATH }}
-
-  release-and-publish:
-    runs-on: ${{ matrix.os }}
-    if: jobs.build-and-test.steps.audit.outputs.exit_code < 7 && ${{ github.event_name == 'push' }}
-    env:
-      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-    steps:
-      - name: Create GitHub release
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
-          tag: "${{ env.PACKAGE_VERSION }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish to Open VSX Registry
-        uses: HaaLeo/publish-vscode-extension@v0
-        id: publishToOpenVSX
-        with:
-          extensionFile: ${{ env.VSIX_PATH }}
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-      - name: Publish to Visual Studio Marketplace
-        uses: HaaLeo/publish-vscode-extension@v0
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-          packagePath: ''
