@@ -1,12 +1,11 @@
 name: E4E CI Workflow
-on: 
+on:
   push:
     branches:
       - '*'
   pull_request:
     branches:
       - '*'
-  workflow_dispatch
 env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
