@@ -52,6 +52,10 @@ jobs:
     runs-on: windows-latest
     needs: build-and-test
     steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
       - name: Build E4E
         run: yarn build
       - name: Package VSIX & Upload Artifact
