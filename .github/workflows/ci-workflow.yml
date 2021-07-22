@@ -11,9 +11,6 @@ env:
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
-    env:
-      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-      ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
     strategy:
       # Continue to run tests on the other systems if one fails
       fail-fast: false
@@ -24,6 +21,8 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Get E4E package version
+        env:
+          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
         id: npm-version
         uses: nyaa8/package-version@v1.0.3
         with:
@@ -48,14 +47,14 @@ jobs:
   create-artifact:
     runs-on: ${{ matrix.os }}
     if: jobs.build-and-test.steps.audit.outputs.exit_code < 7
-    env:
-      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
     steps:
       - name: Build E4E
         run: yarn build
       - name: Package VSIX & Upload Artifact
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
+        env:
+          VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
           path: ${{ env.VSIX_PATH }}
