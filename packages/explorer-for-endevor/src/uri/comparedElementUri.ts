@@ -19,36 +19,34 @@ type SerializedValue = ComparedElementUriQuery & {
   type: QueryTypes;
 };
 
-export const toComparedElementUri =
-  (elementFileSystemPath: string) =>
-  ({
-    element,
-    service,
-    fingerprint,
-    remoteVersionTempFilePath,
-    initialElementTempFilePath,
-    uploadChangeControlValue,
-  }: ComparedElementUriQuery): Uri | Error => {
-    try {
-      const emptyUri = Uri.parse('');
-      const query: SerializedValue = {
-        type: QueryTypes.COMPARED_ELEMENT,
-        service,
-        element,
-        fingerprint,
-        remoteVersionTempFilePath,
-        initialElementTempFilePath,
-        uploadChangeControlValue,
-      };
-      return emptyUri.with({
-        scheme: Schemas.FILE,
-        path: elementFileSystemPath,
-        query: JSON.stringify(query),
-      });
-    } catch (e) {
-      return e;
-    }
-  };
+export const toComparedElementUri = (elementFileSystemPath: string) => ({
+  element,
+  service,
+  fingerprint,
+  remoteVersionTempFilePath,
+  initialElementTempFilePath,
+  uploadChangeControlValue,
+}: ComparedElementUriQuery): Uri | Error => {
+  try {
+    const emptyUri = Uri.parse('');
+    const query: SerializedValue = {
+      type: QueryTypes.COMPARED_ELEMENT,
+      service,
+      element,
+      fingerprint,
+      remoteVersionTempFilePath,
+      initialElementTempFilePath,
+      uploadChangeControlValue,
+    };
+    return emptyUri.with({
+      scheme: Schemas.FILE,
+      path: elementFileSystemPath,
+      query: JSON.stringify(query),
+    });
+  } catch (e) {
+    return e;
+  }
+};
 
 export const isComparedElementUri = (
   uri: Uri

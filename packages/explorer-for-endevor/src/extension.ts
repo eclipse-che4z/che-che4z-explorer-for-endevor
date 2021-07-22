@@ -167,19 +167,19 @@ export const activate: Extension['activate'] = async (context) => {
     dispatch
   );
 
-  const withErrorLogging =
-    (commandId: string) =>
-    async <R>(task: Promise<R>): Promise<R | void | undefined> => {
-      try {
-        return await task;
-      } catch (e) {
-        logger.error(
-          `Error when running command ${commandId}. See log for more details.`,
-          `Something went wrong with command: ${commandId} execution: ${e.message} with stack trace: ${e.stack}`
-        );
-        return;
-      }
-    };
+  const withErrorLogging = (commandId: string) => async <R>(
+    task: Promise<R>
+  ): Promise<R | void | undefined> => {
+    try {
+      return await task;
+    } catch (e) {
+      logger.error(
+        `Error when running command ${commandId}. See log for more details.`,
+        `Something went wrong with command: ${commandId} execution: ${e.message} with stack trace: ${e.stack}`
+      );
+      return;
+    }
+  };
 
   const refresh = () => {
     const locations = [...getLocations()];

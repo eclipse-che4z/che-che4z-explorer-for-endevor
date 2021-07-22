@@ -16,26 +16,24 @@ import { Credential } from '@local/endevor/_doc/Credential';
 import { askForCredentialWithDefaultPasswordPolicy } from '../dialogs/credentials/endevorCredentialDialogs';
 import { Action, Actions } from '../_doc/Actions';
 
-export const resolveCredential =
-  (
-    serviceName: string,
-    getCredentialFromStore: (name: string) => Credential | undefined,
-    dispatch: (action: Action) => void
-  ) =>
-  async (
-    credentialFromProfile: Credential | undefined
-  ): Promise<Credential | undefined> => {
-    let credential: Credential | undefined =
-      getCredentialFromStore(serviceName) ?? credentialFromProfile;
-    if (!credential) {
-      credential = await askForCredentialWithDefaultPasswordPolicy();
-      if (credential) {
-        dispatch({
-          type: Actions.ENDEVOR_CREDENTIAL_ADDED,
-          serviceName,
-          credential,
-        });
-      }
+export const resolveCredential = (
+  serviceName: string,
+  getCredentialFromStore: (name: string) => Credential | undefined,
+  dispatch: (action: Action) => void
+) => async (
+  credentialFromProfile: Credential | undefined
+): Promise<Credential | undefined> => {
+  let credential: Credential | undefined =
+    getCredentialFromStore(serviceName) ?? credentialFromProfile;
+  if (!credential) {
+    credential = await askForCredentialWithDefaultPasswordPolicy();
+    if (credential) {
+      dispatch({
+        type: Actions.ENDEVOR_CREDENTIAL_ADDED,
+        serviceName,
+        credential,
+      });
     }
-    return credential;
-  };
+  }
+  return credential;
+};

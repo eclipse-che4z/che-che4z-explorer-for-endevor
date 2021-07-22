@@ -46,13 +46,14 @@ describe('accepting local changes in compared element', () => {
     sinon.restore();
   });
 
-  const mockDiscardCommandWith =
-    (comparedUriArg: vscode.Uri) => (mockResult: Promise<void>) => {
-      return sinon
-        .stub(discardCommand, 'discardEditedElementChanges')
-        .withArgs(comparedUriArg)
-        .returns(mockResult);
-    };
+  const mockDiscardCommandWith = (comparedUriArg: vscode.Uri) => (
+    mockResult: Promise<void>
+  ) => {
+    return sinon
+      .stub(discardCommand, 'discardEditedElementChanges')
+      .withArgs(comparedUriArg)
+      .returns(mockResult);
+  };
 
   it('should upload local changes and close edit & compare sessions', async () => {
     // arrange
@@ -115,15 +116,16 @@ describe('accepting local changes in compared element', () => {
     const dirty = true;
     const successSaving = Promise.resolve(true);
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const activeDiffEditor: vscode.TextEditor = {
+    const activeDiffEditor: vscode.TextEditor = ({
       document: {
         uri: comparedElementUri,
         isDirty: dirty,
         save: () => successSaving,
       },
-    } as unknown as vscode.TextEditor;
-    const getActiveDiffEditorStub =
-      mockGettingActiveEditorWith(activeDiffEditor);
+    } as unknown) as vscode.TextEditor;
+    const getActiveDiffEditorStub = mockGettingActiveEditorWith(
+      activeDiffEditor
+    );
     const localElementVersionFileUri = vscode.Uri.file(
       localElementVersionFsPath
     );
@@ -142,8 +144,9 @@ describe('accepting local changes in compared element', () => {
     )();
 
     const successDiscarding = Promise.resolve();
-    const callDiscardCommandStub =
-      mockDiscardCommandWith(comparedElementUri)(successDiscarding);
+    const callDiscardCommandStub = mockDiscardCommandWith(comparedElementUri)(
+      successDiscarding
+    );
     // act
     try {
       await vscode.commands.executeCommand(

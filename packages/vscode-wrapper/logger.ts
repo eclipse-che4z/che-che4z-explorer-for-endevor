@@ -23,29 +23,29 @@ const format = (userMsg: string, logMsg?: string) =>
 const prependTimestamp = (message: string): string =>
   `${new Date().toISOString()} - ${message}`;
 
-const logAndDisplay =
-  (outputChannel: IChannel) =>
-  (lvl: LOGEVEL) =>
-  (userMsg: string, logMsg?: string) => {
-    outputChannel.appendLine(prependTimestamp(userMsg));
-    if (logMsg) outputChannel.appendLine(prependTimestamp(logMsg));
+const logAndDisplay = (outputChannel: IChannel) => (lvl: LOGEVEL) => (
+  userMsg: string,
+  logMsg?: string
+) => {
+  outputChannel.appendLine(prependTimestamp(userMsg));
+  if (logMsg) outputChannel.appendLine(prependTimestamp(logMsg));
 
-    switch (lvl) {
-      case LOGEVEL.TRACE:
-        break;
-      case LOGEVEL.INFO:
-        vscode.window.showInformationMessage(format(userMsg, logMsg));
-        break;
-      case LOGEVEL.WARN:
-        vscode.window.showWarningMessage(format(userMsg, logMsg));
-        break;
-      case LOGEVEL.ERROR:
-        vscode.window.showErrorMessage(format(userMsg, logMsg));
-        break;
-      default:
-        throw new UnreachableCaseError(lvl);
-    }
-  };
+  switch (lvl) {
+    case LOGEVEL.TRACE:
+      break;
+    case LOGEVEL.INFO:
+      vscode.window.showInformationMessage(format(userMsg, logMsg));
+      break;
+    case LOGEVEL.WARN:
+      vscode.window.showWarningMessage(format(userMsg, logMsg));
+      break;
+    case LOGEVEL.ERROR:
+      vscode.window.showErrorMessage(format(userMsg, logMsg));
+      break;
+    default:
+      throw new UnreachableCaseError(lvl);
+  }
+};
 
 const make = (outputChannel: vscode.OutputChannel): Logger => {
   const log = logAndDisplay(outputChannel);

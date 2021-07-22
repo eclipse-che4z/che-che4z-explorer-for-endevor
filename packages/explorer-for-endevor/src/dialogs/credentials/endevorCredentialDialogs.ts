@@ -27,27 +27,27 @@ export const dialogCancelled = (
   return dialogResult === undefined;
 };
 
-export const askForCredential =
-  (passwordLengthPolicy: PasswordLengthPolicy) =>
-  async (): Promise<DialogResult> => {
-    const user = await askForUsername();
-    if (operationIsCancelled(user)) {
-      logger.trace('No username was provided.');
-      logger.trace('Operation cancelled.');
-      return undefined;
-    }
-    const password = await askForPassword(passwordLengthPolicy);
-    if (operationIsCancelled(password)) {
-      logger.trace('No password was provided.');
-      logger.trace('Operation cancelled.');
-      return undefined;
-    }
-    return {
-      type: CredentialType.BASE,
-      user,
-      password,
-    };
+export const askForCredential = (
+  passwordLengthPolicy: PasswordLengthPolicy
+) => async (): Promise<DialogResult> => {
+  const user = await askForUsername();
+  if (operationIsCancelled(user)) {
+    logger.trace('No username was provided.');
+    logger.trace('Operation cancelled.');
+    return undefined;
+  }
+  const password = await askForPassword(passwordLengthPolicy);
+  if (operationIsCancelled(password)) {
+    logger.trace('No password was provided.');
+    logger.trace('Operation cancelled.');
+    return undefined;
+  }
+  return {
+    type: CredentialType.BASE,
+    user,
+    password,
   };
+};
 
 export const askForCredentialWithDefaultPasswordPolicy = askForCredential({
   minLength: 6,

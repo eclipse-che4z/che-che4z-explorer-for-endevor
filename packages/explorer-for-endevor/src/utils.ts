@@ -32,11 +32,11 @@ export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
 
-export const getEditFolderUri =
-  (workspaceUri: Uri) =>
-  (editFolderWorkspacePath: string): Uri => {
-    return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
-  };
+export const getEditFolderUri = (workspaceUri: Uri) => (
+  editFolderWorkspacePath: string
+): Uri => {
+  return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
+};
 
 export const splitIntoPathAndFileName = (
   filePath: string

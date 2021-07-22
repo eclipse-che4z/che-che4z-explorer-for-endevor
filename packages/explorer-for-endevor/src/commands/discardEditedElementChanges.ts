@@ -77,15 +77,15 @@ const editorContainsUnsavedChanges = (editor: TextEditor) => {
   return editor.document.isDirty;
 };
 
-const findEditorWithOpenedEditedFile =
-  (editors: ReadonlyArray<TextEditor>) =>
-  (initialElementTempFilePath: string) => {
-    return editors
-      .filter((editor) => isEditedElementUri(editor.document.uri))
-      .find(
-        (editor) => editor.document.uri.fsPath === initialElementTempFilePath
-      );
-  };
+const findEditorWithOpenedEditedFile = (editors: ReadonlyArray<TextEditor>) => (
+  initialElementTempFilePath: string
+) => {
+  return editors
+    .filter((editor) => isEditedElementUri(editor.document.uri))
+    .find(
+      (editor) => editor.document.uri.fsPath === initialElementTempFilePath
+    );
+};
 
 const focusOnEditor = async (editor: TextEditor) => {
   await showFileContent(editor.document.uri);

@@ -30,32 +30,34 @@ interface UriQuery {
  * @deprecated
  * please, use more specific uri functions from uri folder instead
  */
-export const toVirtualDocUri =
-  (scheme: string) =>
-  ({ service, element, endevorSearchLocation }: UriQuery): Uri => {
-    if (scheme === Schemas.TREE_ELEMENT) {
-      return Uri.parse('').with({
-        scheme: `${Schemas.TREE_ELEMENT}`,
-        // `path` is used to show nice file label in text editor
-        path: `/${element.name}.${element.type.toLowerCase()}`,
-        query: JSON.stringify({
-          service,
-          element,
-          endevorSearchLocation,
-        }),
-      });
-    } else {
-      return Uri.parse('').with({
-        scheme: `${Schemas.ELEMENT_LISTING}`,
-        // `path` is used to show nice file label in text editor
-        path: `/${element.name}.${element.type.toLowerCase()}`,
-        query: JSON.stringify({
-          service,
-          element,
-        }),
-      });
-    }
-  };
+export const toVirtualDocUri = (scheme: string) => ({
+  service,
+  element,
+  endevorSearchLocation,
+}: UriQuery): Uri => {
+  if (scheme === Schemas.TREE_ELEMENT) {
+    return Uri.parse('').with({
+      scheme: `${Schemas.TREE_ELEMENT}`,
+      // `path` is used to show nice file label in text editor
+      path: `/${element.name}.${element.type.toLowerCase()}`,
+      query: JSON.stringify({
+        service,
+        element,
+        endevorSearchLocation,
+      }),
+    });
+  } else {
+    return Uri.parse('').with({
+      scheme: `${Schemas.ELEMENT_LISTING}`,
+      // `path` is used to show nice file label in text editor
+      path: `/${element.name}.${element.type.toLowerCase()}`,
+      query: JSON.stringify({
+        service,
+        element,
+      }),
+    });
+  }
+};
 
 /**
  * @deprecated

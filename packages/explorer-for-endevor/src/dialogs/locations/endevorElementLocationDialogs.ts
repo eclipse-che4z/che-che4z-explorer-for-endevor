@@ -44,52 +44,47 @@ export const locationChosen = (
   return typeof value === 'string';
 };
 
-export const askForElementLocationOrCreateNew =
-  (dialogRestrictions: {
-    unusedLocations: ReadonlyArray<string>;
-    allLocations: ReadonlyArray<string>;
-  }) =>
-  async (
-    getInstanceNames: () => Promise<ReadonlyArray<string>>
-  ): Promise<DialogResult> => {
-    const createNewLocationItem: QuickPickItem = {
-      label: '+ Create a New Endevor location Profile',
-    };
-    const choice = await showLocationsInQuickPick([
-      createNewLocationItem,
-      ...dialogRestrictions.unusedLocations.map(toQuickPickItem),
-    ]);
-    if (operationCancelled(choice) || valueNotProvided(choice)) {
-      logger.trace('No location profile name was provided.');
+export const askForElementLocationOrCreateNew = (dialogRestrictions: {
+  unusedLocations: ReadonlyArray<string>;
+  allLocations: ReadonlyArray<string>;
+}) => async (
+  getInstanceNames: () => Promise<ReadonlyArray<string>>
+): Promise<DialogResult> => {
+  const createNewLocationItem: QuickPickItem = {
+    label: '+ Create a New Endevor location Profile',
+  };
+  const choice = await showLocationsInQuickPick([
+    createNewLocationItem,
+    ...dialogRestrictions.unusedLocations.map(toQuickPickItem),
+  ]);
+  if (operationCancelled(choice) || valueNotProvided(choice)) {
+    logger.trace('No location profile name was provided.');
+    logger.trace('Operation cancelled.');
+    return undefined;
+  }
+  if (choice.label === createNewLocationItem.label) {
+    const locationName = await askForLocationName(
+      dialogRestrictions.allLocations
+    );
+    if (operationCancelled(locationName) || valueNotProvided(locationName)) {
+      logger.trace('No new location profile name was provided.');
       logger.trace('Operation cancelled.');
       return undefined;
     }
-    if (choice.label === createNewLocationItem.label) {
-      const locationName = await askForLocationName(
-        dialogRestrictions.allLocations
-      );
-      if (operationCancelled(locationName) || valueNotProvided(locationName)) {
-        logger.trace('No new location profile name was provided.');
-        logger.trace('Operation cancelled.');
-        return undefined;
-      }
-      const existingInstances = await getInstanceNames();
-      const locationValue = await askForLocationValue(existingInstances);
-      if (
-        operationCancelled(locationValue) ||
-        valueNotProvided(locationValue)
-      ) {
-        logger.trace('No location profile value was provided.');
-        logger.trace('Operation cancelled.');
-        return undefined;
-      }
-      return {
-        name: locationName,
-        value: locationValue,
-      };
+    const existingInstances = await getInstanceNames();
+    const locationValue = await askForLocationValue(existingInstances);
+    if (operationCancelled(locationValue) || valueNotProvided(locationValue)) {
+      logger.trace('No location profile value was provided.');
+      logger.trace('Operation cancelled.');
+      return undefined;
     }
-    return choice.label;
-  };
+    return {
+      name: locationName,
+      value: locationValue,
+    };
+  }
+  return choice.label;
+};
 
 const toQuickPickItem = (input: string): QuickPickItem => {
   return {

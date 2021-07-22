@@ -20,10 +20,12 @@ export const searchForElements = endevor.searchForElements(logger);
 export const viewElement = endevor.viewElement(logger);
 export const retrieveElement = endevor.retrieveElement(logger);
 export const generateElement = endevor.generateElement(logger);
-export const retrieveElementWithDependencies =
-  endevor.retrieveElementWithDependencies(logger);
-export const retrieveElementWithFingerprint =
-  endevor.retrieveElementWithFingerprint(logger);
+export const retrieveElementWithDependencies = endevor.retrieveElementWithDependencies(
+  logger
+);
+export const retrieveElementWithFingerprint = endevor.retrieveElementWithFingerprint(
+  logger
+);
 export const printElement = endevor.printElement(logger);
 export const printListing = endevor.printListing(logger);
 export const updateElement = endevor.updateElement(logger);

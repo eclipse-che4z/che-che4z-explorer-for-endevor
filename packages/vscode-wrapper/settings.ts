@@ -14,21 +14,22 @@
 
 import * as vscode from 'vscode';
 
-export const updateGlobalEndevorConfiguration =
-  (configurationKey: string) =>
-  async <T>(
-    settingsKey: string,
-    newSettingsValue: Readonly<T>
-  ): Promise<void> => {
-    await vscode.workspace
-      .getConfiguration(configurationKey)
-      .update(settingsKey, newSettingsValue, vscode.ConfigurationTarget.Global);
-  };
+export const updateGlobalEndevorConfiguration = (
+  configurationKey: string
+) => async <T>(
+  settingsKey: string,
+  newSettingsValue: Readonly<T>
+): Promise<void> => {
+  await vscode.workspace
+    .getConfiguration(configurationKey)
+    .update(settingsKey, newSettingsValue, vscode.ConfigurationTarget.Global);
+};
 
-export const getEndevorConfigurationValue =
-  (configurationKey: string) =>
-  <T>(settingsKey: string, defaultValue: Readonly<T>): Readonly<T> => {
-    return vscode.workspace
-      .getConfiguration(configurationKey)
-      .get(settingsKey, defaultValue);
-  };
+export const getEndevorConfigurationValue = (configurationKey: string) => <T>(
+  settingsKey: string,
+  defaultValue: Readonly<T>
+): Readonly<T> => {
+  return vscode.workspace
+    .getConfiguration(configurationKey)
+    .get(settingsKey, defaultValue);
+};

@@ -189,86 +189,82 @@ type RetrieveOptions = Readonly<{
   element: Element;
 }>;
 
-const retrieveInto =
-  (progressReporter: ProgressReporter) =>
-  (consumer: ElementConsumer) =>
-  async ({
-    serviceInstance,
+const retrieveInto = (progressReporter: ProgressReporter) => (
+  consumer: ElementConsumer
+) => async ({
+  serviceInstance,
+  element,
+}: RetrieveOptions): Promise<vscode.Uri | Error> => {
+  const elementWithDeps = await retrieveElementWithDependencies(
+    progressReporter
+  )(serviceInstance)(element);
+  if (!elementWithDeps) {
+    return new Error(
+      `Element ${element.name} was not retrieved successfully from Endevor`
+    );
+  }
+  const consumerResult = await consumer(element, elementWithDeps.content);
+  if (isError(consumerResult)) {
+    const error = consumerResult;
+    return error;
+  }
+  type NotValidElement = undefined;
+  const dependenciesConsumerResult = await Promise.all(
+    elementWithDeps.dependencies.map((dependentElement) => {
+      const [element, content] = dependentElement;
+      if (content) {
+        return consumer(element, content);
+      }
+      const result: NotValidElement = undefined;
+      return result;
+    })
+  );
+  const errors = dependenciesConsumerResult
+    .map((value) => {
+      if (isError(value)) return value;
+      return undefined;
+    })
+    .filter(isDefined);
+  if (errors.length) {
+    logger.error(
+      `There were some issues during retrieving element dependencies: ${elementWithDeps.dependencies
+        .map((element) => element[0].name)
+        .join(', ')}: ${JSON.stringify(errors.map((error) => error.message))}`
+    );
+  }
+  const savedMainElementUri = consumerResult;
+  return savedMainElementUri;
+};
+
+const retrieveIntoWorkspace = (progressReporter: ProgressReporter) => (
+  workspaceUri: vscode.Uri
+) => async (retrieveOptions: RetrieveOptions): Promise<vscode.Uri | Error> => {
+  return await retrieveInto(progressReporter)(saveIntoWorkspace(workspaceUri))(
+    retrieveOptions
+  );
+};
+
+const saveIntoWorkspace = (workspaceUri: vscode.Uri) => async (
+  element: {
+    type: string;
+    name: string;
+    extension?: string;
+  },
+  elementContent: string
+): Promise<vscode.Uri | Error> => {
+  const saveResult = await saveElementIntoWorkspace(workspaceUri)(
     element,
-  }: RetrieveOptions): Promise<vscode.Uri | Error> => {
-    const elementWithDeps = await retrieveElementWithDependencies(
-      progressReporter
-    )(serviceInstance)(element);
-    if (!elementWithDeps) {
-      return new Error(
-        `Element ${element.name} was not retrieved successfully from Endevor`
-      );
-    }
-    const consumerResult = await consumer(element, elementWithDeps.content);
-    if (isError(consumerResult)) {
-      const error = consumerResult;
-      return error;
-    }
-    type NotValidElement = undefined;
-    const dependenciesConsumerResult = await Promise.all(
-      elementWithDeps.dependencies.map((dependentElement) => {
-        const [element, content] = dependentElement;
-        if (content) {
-          return consumer(element, content);
-        }
-        const result: NotValidElement = undefined;
-        return result;
-      })
-    );
-    const errors = dependenciesConsumerResult
-      .map((value) => {
-        if (isError(value)) return value;
-        return undefined;
-      })
-      .filter(isDefined);
-    if (errors.length) {
-      logger.error(
-        `There were some issues during retrieving element dependencies: ${elementWithDeps.dependencies
-          .map((element) => element[0].name)
-          .join(', ')}: ${JSON.stringify(errors.map((error) => error.message))}`
-      );
-    }
-    const savedMainElementUri = consumerResult;
-    return savedMainElementUri;
-  };
-
-const retrieveIntoWorkspace =
-  (progressReporter: ProgressReporter) =>
-  (workspaceUri: vscode.Uri) =>
-  async (retrieveOptions: RetrieveOptions): Promise<vscode.Uri | Error> => {
-    return await retrieveInto(progressReporter)(
-      saveIntoWorkspace(workspaceUri)
-    )(retrieveOptions);
-  };
-
-const saveIntoWorkspace =
-  (workspaceUri: vscode.Uri) =>
-  async (
-    element: {
-      type: string;
-      name: string;
-      extension?: string;
-    },
-    elementContent: string
-  ): Promise<vscode.Uri | Error> => {
-    const saveResult = await saveElementIntoWorkspace(workspaceUri)(
-      element,
-      elementContent
-    );
-    if (isError(saveResult)) {
-      const error = saveResult;
-      logger.trace(`Element: ${element.name} persisting error: ${error}`);
-      const userMessage = `Element: ${element.name} was not saved into file system`;
-      return new Error(userMessage);
-    }
-    const savedFileUri = saveResult;
-    return savedFileUri;
-  };
+    elementContent
+  );
+  if (isError(saveResult)) {
+    const error = saveResult;
+    logger.trace(`Element: ${element.name} persisting error: ${error}`);
+    const userMessage = `Element: ${element.name} was not saved into file system`;
+    return new Error(userMessage);
+  }
+  const savedFileUri = saveResult;
+  return savedFileUri;
+};
 
 const showElementInEditor = async (
   fileUri: vscode.Uri
