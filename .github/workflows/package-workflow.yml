@@ -1,5 +1,4 @@
 name: E4E Pipeline
-
 on: 
   push:
     branches:
@@ -8,115 +7,53 @@ on:
     branches:
       - master
   workflow_dispatch
-
 env:
   PROJECT_NAME: explorer-for-endevor
-
 jobs:
-  build:
+  build-and-test:
     runs-on: ${{ matrix.os }}
-
     env:
+      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
       ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
-
     strategy:
       # Continue to run tests on the other systems if one fails
       fail-fast: false
       matrix:
         node-version: [12.x, 14.x, 16.x]
         os: [ubuntu-latest, macos-latest, windows-latest]
-
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-
       - name: Get E4E package version
         id: npm-version
         uses: nyaa8/package-version@v1.0.3
         with:
           path: ${{ env.ENDEVOR_VERSION_PATH }}
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-
-  test:
-    runs-on: ${{ matrix.os }}
-
-    env:
-      VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-      ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
-
-    strategy:
-      # Continue to run tests on the other systems if one fails
-      fail-fast: false
-      matrix:
-        node-version: [12.x, 14.x, 16.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
-    steps:
       - name: Audit
         id: audit
         continue-on-error: true
         run: yarn audit
-
       - name: Lint
         run: yarn lint
-
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.0
         with:
           run: yarn test
 
-      - name: Build package
-        if: steps.audit.outputs.exit_code < 7
-        run: yarn build
-
-      - name: Package VSIX & Upload Artifact
-        if: steps.audit.outputs.exit_code < 7
-        run: yarn workspace ${{ env.PROJECT_NAME }} package
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
-          path: ${{ env.VSIX_PATH }}
-
-      - name: Create GitHub release
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
-          tag: "${{ env.PACKAGE_VERSION }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to Open VSX Registry
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
-        uses: HaaLeo/publish-vscode-extension@v0
-        id: publishToOpenVSX
-        with:
-          extensionFile: ${{ env.VSIX_PATH }}
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-
-      - name: Publish to Visual Studio Marketplace
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
-        uses: HaaLeo/publish-vscode-extension@v0
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-          packagePath: ''
-
   create-artifact:
     runs-on: ${{ matrix.os }}
-    if: jobs.test.steps.audit.outputs.exit_code < 7
-
+    if: jobs.build-and-test.steps.audit.outputs.exit_code < 7
     env:
       VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-
     steps:
+      - name: Build E4E
+        run: yarn build
       - name: Package VSIX & Upload Artifact
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
@@ -124,33 +61,25 @@ jobs:
           name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
           path: ${{ env.VSIX_PATH }}
 
-  release:
+  release-and-publish:
     runs-on: ${{ matrix.os }}
-    if: jobs.test.steps.audit.outputs.exit_code < 7 && ${{ github.event_name == 'push' }}
-
+    if: jobs.build-and-test.steps.audit.outputs.exit_code < 7 && ${{ github.event_name == 'push' }}
     env:
       VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-      ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
-
     steps:
       - name: Create GitHub release
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
           tag: "${{ env.PACKAGE_VERSION }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish to Open VSX Registry
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
         with:
           extensionFile: ${{ env.VSIX_PATH }}
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
-
       - name: Publish to Visual Studio Marketplace
-        if: ${{ github.event_name == 'push' }} && steps.audit.outputs.exit_code < 7
         uses: HaaLeo/publish-vscode-extension@v0
         with:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
