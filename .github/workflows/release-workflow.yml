@@ -28,12 +28,6 @@ jobs:
   release-and-publish:
     runs-on: windows-latest
     steps:
-      - name: Create GitHub release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}"
-          tag: "${{ env.PACKAGE_VERSION }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
