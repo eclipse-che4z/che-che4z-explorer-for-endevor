@@ -49,7 +49,7 @@ jobs:
         run: exit 0
 
   create-artifact:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     needs: build-and-test
     steps:
       - name: Build E4E
