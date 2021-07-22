@@ -20,15 +20,15 @@ export type ShowingDocumentStub = sinon.SinonStub<
   [document: TextDocument],
   Promise<void>
 >;
-export const mockShowingDocumentWith = (documentArg?: TextDocument) => (
-  mockResult: Promise<void>
-): ShowingDocumentStub => {
-  const anyDocument = sinon.match.any;
-  return sinon
-    .stub(window, 'showDocument')
-    .withArgs(documentArg ?? anyDocument)
-    .returns(mockResult);
-};
+export const mockShowingDocumentWith =
+  (documentArg?: TextDocument) =>
+  (mockResult: Promise<void>): ShowingDocumentStub => {
+    const anyDocument = sinon.match.any;
+    return sinon
+      .stub(window, 'showDocument')
+      .withArgs(documentArg ?? anyDocument)
+      .returns(mockResult);
+  };
 
 export type GettingActiveEditorStub = sinon.SinonStub<
   [],
@@ -59,12 +59,12 @@ export type ShowingFileContentStub = sinon.SinonStub<
   [fileUri: Uri],
   Promise<void>
 >;
-export const mockShowingFileContentWith = (fileUriArg?: Uri) => (
-  mockResult: Promise<void>
-): ShowingFileContentStub => {
-  const anyUri = sinon.match.any;
-  return sinon
-    .stub(window, 'showFileContent')
-    .withArgs(fileUriArg ?? anyUri)
-    .returns(mockResult);
-};
+export const mockShowingFileContentWith =
+  (fileUriArg?: Uri) =>
+  (mockResult: Promise<void>): ShowingFileContentStub => {
+    const anyUri = sinon.match.any;
+    return sinon
+      .stub(window, 'showFileContent')
+      .withArgs(fileUriArg ?? anyUri)
+      .returns(mockResult);
+  };

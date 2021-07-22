@@ -38,28 +38,27 @@ export type PrintingElementStub = [
   sinon.SinonStub<[Element], Promise<ElementContent | undefined>>
 ];
 
-export const mockPrintingElementWith = (
-  serviceArg: Service,
-  elementArg: Element
-) => (mockResult: ElementContent | undefined): PrintingElementStub => {
-  const anyProgressReporter = sinon.match.any;
-  const withContentStub = sinon
-    .stub<[element: Element], Promise<ElementContent | undefined>>()
-    .withArgs(elementArg)
-    .returns(Promise.resolve(mockResult));
-  const withServiceStub = sinon
-    .stub<
-      [Service],
-      (element: Element) => Promise<ElementContent | undefined>
-    >()
-    .withArgs(serviceArg)
-    .returns(withContentStub);
-  const generalFunctionStub = sinon
-    .stub(endevor, 'printElement')
-    .withArgs(anyProgressReporter)
-    .returns(withServiceStub);
-  return [generalFunctionStub, withServiceStub, withContentStub];
-};
+export const mockPrintingElementWith =
+  (serviceArg: Service, elementArg: Element) =>
+  (mockResult: ElementContent | undefined): PrintingElementStub => {
+    const anyProgressReporter = sinon.match.any;
+    const withContentStub = sinon
+      .stub<[element: Element], Promise<ElementContent | undefined>>()
+      .withArgs(elementArg)
+      .returns(Promise.resolve(mockResult));
+    const withServiceStub = sinon
+      .stub<
+        [Service],
+        (element: Element) => Promise<ElementContent | undefined>
+      >()
+      .withArgs(serviceArg)
+      .returns(withContentStub);
+    const generalFunctionStub = sinon
+      .stub(endevor, 'printElement')
+      .withArgs(anyProgressReporter)
+      .returns(withServiceStub);
+    return [generalFunctionStub, withServiceStub, withContentStub];
+  };
 
 export type UploadingElementStub = [
   sinon.SinonStub<
@@ -93,53 +92,55 @@ export type UploadingElementStub = [
   sinon.SinonStub<[ElementWithFingerprint], Promise<Error | void>>
 ];
 
-export const mockUploadingElementWith = (
-  serviceArg: Service,
-  elementArg: ElementMapPath,
-  actionCcidArg: ChangeControlValue,
-  elementContentArg: ElementWithFingerprint
-) => (mockResult?: Error): UploadingElementStub => {
-  const anyProgressReporter = sinon.match.any;
-  const withContentStub = sinon
-    .stub<[ElementWithFingerprint], Promise<Error | void>>()
-    .withArgs(elementContentArg)
-    .returns(Promise.resolve(mockResult));
-  const withActionCcidStub = sinon
-    .stub<
-      [ChangeControlValue],
-      (elementContent: ElementWithFingerprint) => Promise<Error | void>
-    >()
-    .withArgs(actionCcidArg)
-    .returns(withContentStub);
-  const withElementStub = sinon
-    .stub<
-      [ElementMapPath],
-      (
-        actionCcid: ChangeControlValue
-      ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
-    >()
-    .withArgs(elementArg)
-    .returns(withActionCcidStub);
-  const withServiceStub = sinon
-    .stub<
-      [Service],
-      (
-        element: ElementMapPath
-      ) => (
-        actionCcid: ChangeControlValue
-      ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
-    >()
-    .withArgs(serviceArg)
-    .returns(withElementStub);
-  const generalFunctionStub = sinon
-    .stub(endevor, 'updateElement')
-    .withArgs(anyProgressReporter)
-    .returns(withServiceStub);
-  return [
-    generalFunctionStub,
-    withServiceStub,
-    withElementStub,
-    withActionCcidStub,
-    withContentStub,
-  ];
-};
+export const mockUploadingElementWith =
+  (
+    serviceArg: Service,
+    elementArg: ElementMapPath,
+    actionCcidArg: ChangeControlValue,
+    elementContentArg: ElementWithFingerprint
+  ) =>
+  (mockResult?: Error): UploadingElementStub => {
+    const anyProgressReporter = sinon.match.any;
+    const withContentStub = sinon
+      .stub<[ElementWithFingerprint], Promise<Error | void>>()
+      .withArgs(elementContentArg)
+      .returns(Promise.resolve(mockResult));
+    const withActionCcidStub = sinon
+      .stub<
+        [ChangeControlValue],
+        (elementContent: ElementWithFingerprint) => Promise<Error | void>
+      >()
+      .withArgs(actionCcidArg)
+      .returns(withContentStub);
+    const withElementStub = sinon
+      .stub<
+        [ElementMapPath],
+        (
+          actionCcid: ChangeControlValue
+        ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+      >()
+      .withArgs(elementArg)
+      .returns(withActionCcidStub);
+    const withServiceStub = sinon
+      .stub<
+        [Service],
+        (
+          element: ElementMapPath
+        ) => (
+          actionCcid: ChangeControlValue
+        ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+      >()
+      .withArgs(serviceArg)
+      .returns(withElementStub);
+    const generalFunctionStub = sinon
+      .stub(endevor, 'updateElement')
+      .withArgs(anyProgressReporter)
+      .returns(withServiceStub);
+    return [
+      generalFunctionStub,
+      withServiceStub,
+      withElementStub,
+      withActionCcidStub,
+      withContentStub,
+    ];
+  };

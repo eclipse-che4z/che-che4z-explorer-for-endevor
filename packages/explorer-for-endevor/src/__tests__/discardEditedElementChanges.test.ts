@@ -115,16 +115,15 @@ describe('discarding local changes in compared element', () => {
     const dirty = true;
     const successSaving = Promise.resolve(true);
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const activeDiffEditor: vscode.TextEditor = ({
+    const activeDiffEditor: vscode.TextEditor = {
       document: {
         uri: comparedElementUri,
         isDirty: dirty,
         save: () => successSaving,
       },
-    } as unknown) as vscode.TextEditor;
-    const getActiveDiffEditorStub = mockGettingActiveEditorWith(
-      activeDiffEditor
-    );
+    } as unknown as vscode.TextEditor;
+    const getActiveDiffEditorStub =
+      mockGettingActiveEditorWith(activeDiffEditor);
     const localElementVersionFingerprint = 'something';
     const editedElementUri = toEditedElementUri(editedElementFsPath)({
       element,
@@ -142,17 +141,16 @@ describe('discarding local changes in compared element', () => {
     }
     const nonDirty = false;
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const editedElementEditor: vscode.TextEditor = ({
+    const editedElementEditor: vscode.TextEditor = {
       document: {
         isDirty: nonDirty,
         uri: editedElementUri,
       },
-    } as unknown) as vscode.TextEditor;
+    } as unknown as vscode.TextEditor;
     mockGettingAllOpenedEditorsWith([editedElementEditor]);
     const successResult = Promise.resolve();
-    const focusOnEditedElementEditorStub = mockFocusingOnEditorWith(
-      editedElementUri
-    )(successResult);
+    const focusOnEditedElementEditorStub =
+      mockFocusingOnEditorWith(editedElementUri)(successResult);
     const closeActiveEditorsStub = mockClosingActiveEditorWith(successResult);
     const deleteTempFilesStub = mockDeletingFileWith([
       [editedElementUri, successResult],

@@ -36,11 +36,11 @@ export type GettingFileContentStub = sinon.SinonStub<
   [fileUri: vscode.Uri],
   Promise<Uint8Array>
 >;
-export const mockGettingFileContentWith = (fileUriArg: vscode.Uri) => (
-  mockResult: Promise<Uint8Array>
-): GettingFileContentStub => {
-  return sinon
-    .stub(workspace, 'getFileContent')
-    .withArgs(fileUriArg)
-    .returns(mockResult);
-};
+export const mockGettingFileContentWith =
+  (fileUriArg: vscode.Uri) =>
+  (mockResult: Promise<Uint8Array>): GettingFileContentStub => {
+    return sinon
+      .stub(workspace, 'getFileContent')
+      .withArgs(fileUriArg)
+      .returns(mockResult);
+  };

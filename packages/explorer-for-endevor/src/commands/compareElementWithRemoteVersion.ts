@@ -30,111 +30,110 @@ import { isError } from '../utils';
 import { getTempEditFolderUri } from '../workspace';
 import { Schemas } from '../_doc/Uri';
 
-export const compareElementWithRemoteVersion = (service: Service) => (
-  uploadChangeControlValue: ChangeControlValue
-) => (element: Element, editedElementTempFilePath: string) => async (
-  localVersionElementTempFilePath: string
-): Promise<void | Error> => {
-  const tempFolderUri = await getTempEditFolderUri();
-  if (isError(tempFolderUri)) {
-    const error = tempFolderUri;
-    logger.trace(error.message);
-    return new Error(
-      'Unable to get a valid edit folder name from settings to compare elements.'
-    );
-  }
-  const savedRemoteElementVersion = await retrieveRemoteVersionIntoFolder(
-    service
-  )(element)(tempFolderUri);
-  if (isError(savedRemoteElementVersion)) {
-    const error = savedRemoteElementVersion;
-    return error;
-  }
-  const {
-    savedRemoteVersionUri,
-    fingerprint: remoteVersionFingerprint,
-  } = savedRemoteElementVersion;
-  const remoteVersionTempFilePath = savedRemoteVersionUri.fsPath;
-  const localElementVersionUploadableUri = toUploadableDiffEditorUri(service)(
-    uploadChangeControlValue
-  )(element, editedElementTempFilePath)(
-    remoteVersionTempFilePath,
-    remoteVersionFingerprint
-  )(localVersionElementTempFilePath);
-  if (isError(localElementVersionUploadableUri)) {
-    const error = localElementVersionUploadableUri;
-    logger.trace(
-      `Unable to construct local element ${element.name} version URI because of ${error.message}.`
-    );
-    return new Error(
-      `Unable to open a local version of the element ${element.name} to compare elements.`
-    );
-  }
-  const remoteElementVersionReadonlyUri = savedRemoteVersionUri.with({
-    scheme: Schemas.READ_ONLY_FILE,
-  });
-  try {
-    return await showDiffEditor(remoteElementVersionReadonlyUri)(
-      localElementVersionUploadableUri
-    );
-  } catch (error) {
-    logger.trace(`Unable to open a diff editor because of ${error.message}.`);
-    return new Error(`Unable to open a diff editor to compare elements.`);
-  }
-};
+export const compareElementWithRemoteVersion =
+  (service: Service) =>
+  (uploadChangeControlValue: ChangeControlValue) =>
+  (element: Element, editedElementTempFilePath: string) =>
+  async (localVersionElementTempFilePath: string): Promise<void | Error> => {
+    const tempFolderUri = await getTempEditFolderUri();
+    if (isError(tempFolderUri)) {
+      const error = tempFolderUri;
+      logger.trace(error.message);
+      return new Error(
+        'Unable to get a valid edit folder name from settings to compare elements.'
+      );
+    }
+    const savedRemoteElementVersion = await retrieveRemoteVersionIntoFolder(
+      service
+    )(element)(tempFolderUri);
+    if (isError(savedRemoteElementVersion)) {
+      const error = savedRemoteElementVersion;
+      return error;
+    }
+    const { savedRemoteVersionUri, fingerprint: remoteVersionFingerprint } =
+      savedRemoteElementVersion;
+    const remoteVersionTempFilePath = savedRemoteVersionUri.fsPath;
+    const localElementVersionUploadableUri = toUploadableDiffEditorUri(service)(
+      uploadChangeControlValue
+    )(element, editedElementTempFilePath)(
+      remoteVersionTempFilePath,
+      remoteVersionFingerprint
+    )(localVersionElementTempFilePath);
+    if (isError(localElementVersionUploadableUri)) {
+      const error = localElementVersionUploadableUri;
+      logger.trace(
+        `Unable to construct local element ${element.name} version URI because of ${error.message}.`
+      );
+      return new Error(
+        `Unable to open a local version of the element ${element.name} to compare elements.`
+      );
+    }
+    const remoteElementVersionReadonlyUri = savedRemoteVersionUri.with({
+      scheme: Schemas.READ_ONLY_FILE,
+    });
+    try {
+      return await showDiffEditor(remoteElementVersionReadonlyUri)(
+        localElementVersionUploadableUri
+      );
+    } catch (error) {
+      logger.trace(`Unable to open a diff editor because of ${error.message}.`);
+      return new Error(`Unable to open a diff editor to compare elements.`);
+    }
+  };
 
 type RetrieveResult = {
   savedRemoteVersionUri: Uri;
   fingerprint: string;
 };
 
-const retrieveRemoteVersionIntoFolder = (service: Service) => (
-  element: Element
-) => async (folder: Uri): Promise<RetrieveResult | Error> => {
-  const remoteElementVersion = await withNotificationProgress(
-    `Retrieving remote element ${element.name} version`
-  )((progressReporter) => {
-    return retrieveElementWithFingerprint(progressReporter)(service)(element);
-  });
-  if (!remoteElementVersion) {
-    return new Error(
-      `Unable to retrieve remote version of the element ${element.name} to compare.`
-    );
-  }
-  try {
-    const savedFileUri = await saveFileIntoWorkspaceFolder(folder)(
-      {
-        fileName: `${element.name}-remote-version`,
-        fileExtension: `${element.extension}`,
-      },
-      remoteElementVersion.content
-    );
-    return {
-      savedRemoteVersionUri: savedFileUri,
-      fingerprint: remoteElementVersion.fingerprint,
-    };
-  } catch (error) {
-    logger.trace(
-      `Unable to save remote element ${element.name} version because of ${error.message}.`
-    );
-    return new Error(
-      `Unable to save a remote version of the element ${element.name} to compare elements.`
-    );
-  }
-};
+const retrieveRemoteVersionIntoFolder =
+  (service: Service) =>
+  (element: Element) =>
+  async (folder: Uri): Promise<RetrieveResult | Error> => {
+    const remoteElementVersion = await withNotificationProgress(
+      `Retrieving remote element ${element.name} version`
+    )((progressReporter) => {
+      return retrieveElementWithFingerprint(progressReporter)(service)(element);
+    });
+    if (!remoteElementVersion) {
+      return new Error(
+        `Unable to retrieve remote version of the element ${element.name} to compare.`
+      );
+    }
+    try {
+      const savedFileUri = await saveFileIntoWorkspaceFolder(folder)(
+        {
+          fileName: `${element.name}-remote-version`,
+          fileExtension: `${element.extension}`,
+        },
+        remoteElementVersion.content
+      );
+      return {
+        savedRemoteVersionUri: savedFileUri,
+        fingerprint: remoteElementVersion.fingerprint,
+      };
+    } catch (error) {
+      logger.trace(
+        `Unable to save remote element ${element.name} version because of ${error.message}.`
+      );
+      return new Error(
+        `Unable to save a remote version of the element ${element.name} to compare elements.`
+      );
+    }
+  };
 
-const toUploadableDiffEditorUri = (service: Service) => (
-  uploadChangeControlValue: ChangeControlValue
-) => (element: Element, editedElementTempFilePath: string) => (
-  remoteVersionTempFilePath: string,
-  remoteVersionFingerprint: string
-) => (localVersionTempFilePath: string) => {
-  return toComparedElementUri(localVersionTempFilePath)({
-    service,
-    element,
-    fingerprint: remoteVersionFingerprint,
-    uploadChangeControlValue,
-    initialElementTempFilePath: editedElementTempFilePath,
-    remoteVersionTempFilePath,
-  });
-};
+const toUploadableDiffEditorUri =
+  (service: Service) =>
+  (uploadChangeControlValue: ChangeControlValue) =>
+  (element: Element, editedElementTempFilePath: string) =>
+  (remoteVersionTempFilePath: string, remoteVersionFingerprint: string) =>
+  (localVersionTempFilePath: string) => {
+    return toComparedElementUri(localVersionTempFilePath)({
+      service,
+      element,
+      fingerprint: remoteVersionFingerprint,
+      uploadChangeControlValue,
+      initialElementTempFilePath: editedElementTempFilePath,
+      remoteVersionTempFilePath,
+    });
+  };

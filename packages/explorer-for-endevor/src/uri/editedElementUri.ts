@@ -19,30 +19,32 @@ type SerializedValue = EditedElementUriQuery & {
   type: QueryTypes;
 };
 
-export const toEditedElementUri = (elementFileSystemPath: string) => ({
-  element,
-  service,
-  searchLocation,
-  fingerprint,
-}: EditedElementUriQuery): Uri | Error => {
-  try {
-    const emptyUri = Uri.parse('');
-    const query: SerializedValue = {
-      service,
-      element,
-      searchLocation,
-      type: QueryTypes.EDITED_ELEMENT,
-      fingerprint,
-    };
-    return emptyUri.with({
-      scheme: Schemas.FILE,
-      path: elementFileSystemPath,
-      query: JSON.stringify(query),
-    });
-  } catch (e) {
-    return e;
-  }
-};
+export const toEditedElementUri =
+  (elementFileSystemPath: string) =>
+  ({
+    element,
+    service,
+    searchLocation,
+    fingerprint,
+  }: EditedElementUriQuery): Uri | Error => {
+    try {
+      const emptyUri = Uri.parse('');
+      const query: SerializedValue = {
+        service,
+        element,
+        searchLocation,
+        type: QueryTypes.EDITED_ELEMENT,
+        fingerprint,
+      };
+      return emptyUri.with({
+        scheme: Schemas.FILE,
+        path: elementFileSystemPath,
+        query: JSON.stringify(query),
+      });
+    } catch (e) {
+      return e;
+    }
+  };
 
 export const isEditedElementUri = (
   uri: Uri

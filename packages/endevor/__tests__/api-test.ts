@@ -231,32 +231,34 @@ describe('endevor public API', () => {
   });
 
   describe('searching elements', () => {
-    const toRequestPath = (basePath: string) => ({
-      instance,
-      environment,
-      stageNumber,
-      system,
-      subsystem,
-      type,
-      element,
-    }: ElementSearchLocation): string => {
-      return join(
-        basePath,
+    const toRequestPath =
+      (basePath: string) =>
+      ({
         instance,
-        'env',
-        environment ?? ANY_VALUE,
-        'stgnum',
-        stageNumber ?? ANY_VALUE,
-        'sys',
-        system ?? ANY_VALUE,
-        'subsys',
-        subsystem ?? ANY_VALUE,
-        'type',
-        type ?? ANY_VALUE,
-        'ele',
-        element ?? ANY_VALUE
-      );
-    };
+        environment,
+        stageNumber,
+        system,
+        subsystem,
+        type,
+        element,
+      }: ElementSearchLocation): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          environment ?? ANY_VALUE,
+          'stgnum',
+          stageNumber ?? ANY_VALUE,
+          'sys',
+          system ?? ANY_VALUE,
+          'subsys',
+          subsystem ?? ANY_VALUE,
+          'type',
+          type ?? ANY_VALUE,
+          'ele',
+          element ?? ANY_VALUE
+        );
+      };
 
     it('should return filtered elements', async () => {
       // arrange
@@ -841,32 +843,34 @@ describe('endevor public API', () => {
   });
 
   describe('printing elements', () => {
-    const toRequestPath = (basePath: string) => ({
-      instance,
-      environment,
-      stageNumber,
-      system,
-      subSystem,
-      type,
-      name,
-    }: Element): string => {
-      return join(
-        basePath,
+    const toRequestPath =
+      (basePath: string) =>
+      ({
         instance,
-        'env',
         environment,
-        'stgnum',
         stageNumber,
-        'sys',
         system,
-        'subsys',
         subSystem,
-        'type',
         type,
-        'ele',
-        name
-      );
-    };
+        name,
+      }: Element): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'subsys',
+          subSystem,
+          'type',
+          type,
+          'ele',
+          name
+        );
+      };
 
     it('should return element content with history', async () => {
       // arrange
@@ -1288,32 +1292,34 @@ describe('endevor public API', () => {
   });
 
   describe('printing element listings', () => {
-    const toRequestPath = (basePath: string) => ({
-      instance,
-      environment,
-      stageNumber,
-      system,
-      subSystem,
-      type,
-      name,
-    }: Element): string => {
-      return join(
-        basePath,
+    const toRequestPath =
+      (basePath: string) =>
+      ({
         instance,
-        'env',
         environment,
-        'stgnum',
         stageNumber,
-        'sys',
         system,
-        'subsys',
         subSystem,
-        'type',
         type,
-        'ele',
-        name
-      );
-    };
+        name,
+      }: Element): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'subsys',
+          subSystem,
+          'type',
+          type,
+          'ele',
+          name
+        );
+      };
 
     it('should return element listing', async () => {
       // arrange

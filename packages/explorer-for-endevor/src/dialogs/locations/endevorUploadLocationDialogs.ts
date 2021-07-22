@@ -136,24 +136,24 @@ export const askForUploadLocation = async (
     return new Error('Stage number is incorrect, should be only "1" or "2".');
   };
 
-  const buildPrefilledValue = (value: ElementSearchLocation) => (
-    delimiter: string
-  ): string => {
-    const env = value.environment;
-    const stage = value.stageNumber;
-    const sys = value.system;
-    const subsys = value.subsystem;
-    const type = value.type;
-    const name = value.element;
-    return [
-      env ? (env !== ANY_VALUE ? env : '*ENV*') : '*ENV*',
-      stage ?? '*STGNUM*',
-      sys ? (sys !== ANY_VALUE ? sys : '*SYS*') : '*SYS*',
-      subsys ? (subsys !== ANY_VALUE ? subsys : '*SUBSYS*') : '*SUBSYS*',
-      type ? (type !== ANY_VALUE ? type : '*TYPE*') : '*TYPE*',
-      name ?? '*NAME*',
-    ].join(delimiter);
-  };
+  const buildPrefilledValue =
+    (value: ElementSearchLocation) =>
+    (delimiter: string): string => {
+      const env = value.environment;
+      const stage = value.stageNumber;
+      const sys = value.system;
+      const subsys = value.subsystem;
+      const type = value.type;
+      const name = value.element;
+      return [
+        env ? (env !== ANY_VALUE ? env : '*ENV*') : '*ENV*',
+        stage ?? '*STGNUM*',
+        sys ? (sys !== ANY_VALUE ? sys : '*SYS*') : '*SYS*',
+        subsys ? (subsys !== ANY_VALUE ? subsys : '*SUBSYS*') : '*SUBSYS*',
+        type ? (type !== ANY_VALUE ? type : '*TYPE*') : '*TYPE*',
+        name ?? '*NAME*',
+      ].join(delimiter);
+    };
   const prefilledValue = buildPrefilledValue(defaultValue)(pathDelimiter);
 
   const rawEndevorPath = await showInputBox({

@@ -85,150 +85,147 @@ type UploadOptions = Readonly<{
   fingerprint: string;
 }>;
 
-const uploadElement = ({
-  service,
-  element,
-  searchLocation,
-  fingerprint,
-}: UploadOptions) => async (
-  elementTempFilePath: string
-): Promise<void | Error> => {
-  let content: string;
-  try {
-    content = new TextDecoder(ENCODING).decode(
-      await getFileContent(Uri.file(elementTempFilePath))
-    );
-  } catch (error) {
-    logger.trace(
-      `Element ${element.name} content cannot be read because of ${error.message}`
-    );
-    return new Error(`Element ${element.name} content cannot be read`);
-  }
-  const uploadType =
-    searchLocation.type && searchLocation.type !== ANY_VALUE
-      ? searchLocation.type
-      : element.type;
-  const uploadLocation = await askForUploadLocation({
-    environment: searchLocation.environment,
-    stageNumber: searchLocation.stageNumber,
-    system: searchLocation.system,
-    subsystem: searchLocation.subsystem,
-    type: uploadType,
-    element: element.name,
-    instance: element.instance,
-  });
-  if (uploadLocationDialogCancelled(uploadLocation)) {
-    return new Error('Upload location must be specified to upload element.');
-  }
-  const changeControlValue = await askForChangeControlValue({
-    ccid: searchLocation.ccid,
-    comment: searchLocation.comment,
-  });
-  if (changeControlDialogCancelled(changeControlValue)) {
-    return new Error('CCID and Comment must be specified to upload element.');
-  }
-  const updateResult = await withNotificationProgress(
-    `Uploading element: ${element.name}`
-  )((progressReporter) => {
-    return updateElement(progressReporter)(service)({
+const uploadElement =
+  ({ service, element, searchLocation, fingerprint }: UploadOptions) =>
+  async (elementTempFilePath: string): Promise<void | Error> => {
+    let content: string;
+    try {
+      content = new TextDecoder(ENCODING).decode(
+        await getFileContent(Uri.file(elementTempFilePath))
+      );
+    } catch (error) {
+      logger.trace(
+        `Element ${element.name} content cannot be read because of ${error.message}`
+      );
+      return new Error(`Element ${element.name} content cannot be read`);
+    }
+    const uploadType =
+      searchLocation.type && searchLocation.type !== ANY_VALUE
+        ? searchLocation.type
+        : element.type;
+    const uploadLocation = await askForUploadLocation({
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
+      type: uploadType,
+      element: element.name,
       instance: element.instance,
-      environment: uploadLocation.environment,
-      stageNumber: uploadLocation.stageNumber,
-      system: uploadLocation.system,
-      subSystem: uploadLocation.subSystem,
-      type: uploadLocation.type,
-      name: uploadLocation.name,
-    })({
-      comment: changeControlValue.comment,
-      ccid: changeControlValue.ccid,
-    })({
-      fingerprint,
-      content,
     });
-  });
-  if (
-    updateResult instanceof UpdateError &&
-    updateResult.causeError instanceof FingerprintMismatchError
-  ) {
-    const versionComparisonResult = await compareVersions(service)(
-      changeControlValue
-    )(
+    if (uploadLocationDialogCancelled(uploadLocation)) {
+      return new Error('Upload location must be specified to upload element.');
+    }
+    const changeControlValue = await askForChangeControlValue({
+      ccid: searchLocation.ccid,
+      comment: searchLocation.comment,
+    });
+    if (changeControlDialogCancelled(changeControlValue)) {
+      return new Error('CCID and Comment must be specified to upload element.');
+    }
+    const updateResult = await withNotificationProgress(
+      `Uploading element: ${element.name}`
+    )((progressReporter) => {
+      return updateElement(progressReporter)(service)({
+        instance: element.instance,
+        environment: uploadLocation.environment,
+        stageNumber: uploadLocation.stageNumber,
+        system: uploadLocation.system,
+        subSystem: uploadLocation.subSystem,
+        type: uploadLocation.type,
+        name: uploadLocation.name,
+      })({
+        comment: changeControlValue.comment,
+        ccid: changeControlValue.ccid,
+      })({
+        fingerprint,
+        content,
+      });
+    });
+    if (
+      updateResult instanceof UpdateError &&
+      updateResult.causeError instanceof FingerprintMismatchError
+    ) {
+      const versionComparisonResult = await compareVersions(service)(
+        changeControlValue
+      )(
+        element,
+        elementTempFilePath
+      )(content);
+      if (isError(versionComparisonResult)) {
+        const error = versionComparisonResult;
+        return error;
+      }
+      return new Error(
+        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
+      );
+    }
+    return updateResult;
+  };
+
+const compareVersions =
+  (service: Service) =>
+  (uploadChangeControlValue: ChangeControlValue) =>
+  (element: Element, updatedElementTempFilePath: string) =>
+  async (updatedContent: string): Promise<void | Error> => {
+    const tempEditFolder = await getTempEditFolderUri();
+    if (isError(tempEditFolder)) {
+      const error = tempEditFolder;
+      logger.trace(error.message);
+      return new Error(
+        'Unable to get a valid edit folder name from settings to compare elements.'
+      );
+    }
+    const elementName = element.name;
+    const savedLocalElementVersionUri = await saveLocalElementVersionIntoFolder(
+      {
+        name: elementName,
+        extension: element.extension,
+      },
+      updatedContent
+    )(tempEditFolder);
+    if (isError(savedLocalElementVersionUri)) {
+      const error = savedLocalElementVersionUri;
+      logger.trace(error.message);
+      return new Error(
+        `Unable to save a local version of the element ${element.name} to compare elements.`
+      );
+    }
+    const showCompareDialogResult = await compareElementWithRemoteVersion(
+      service
+    )(uploadChangeControlValue)(
       element,
-      elementTempFilePath
-    )(content);
-    if (isError(versionComparisonResult)) {
-      const error = versionComparisonResult;
+      updatedElementTempFilePath
+    )(savedLocalElementVersionUri.fsPath);
+    if (isError(showCompareDialogResult)) {
+      const error = showCompareDialogResult;
       return error;
     }
-    return new Error(
-      `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
-    );
-  }
-  return updateResult;
-};
+  };
 
-const compareVersions = (service: Service) => (
-  uploadChangeControlValue: ChangeControlValue
-) => (element: Element, updatedElementTempFilePath: string) => async (
-  updatedContent: string
-): Promise<void | Error> => {
-  const tempEditFolder = await getTempEditFolderUri();
-  if (isError(tempEditFolder)) {
-    const error = tempEditFolder;
-    logger.trace(error.message);
-    return new Error(
-      'Unable to get a valid edit folder name from settings to compare elements.'
-    );
-  }
-  const elementName = element.name;
-  const savedLocalElementVersionUri = await saveLocalElementVersionIntoFolder(
-    {
-      name: elementName,
-      extension: element.extension,
+const saveLocalElementVersionIntoFolder =
+  (
+    element: {
+      name: string;
+      extension?: string;
     },
-    updatedContent
-  )(tempEditFolder);
-  if (isError(savedLocalElementVersionUri)) {
-    const error = savedLocalElementVersionUri;
-    logger.trace(error.message);
-    return new Error(
-      `Unable to save a local version of the element ${element.name} to compare elements.`
+    elementContent: string
+  ) =>
+  async (folder: Uri): Promise<Uri | Error> => {
+    const saveResult = await saveFileIntoWorkspaceFolder(folder)(
+      {
+        fileName: `${element.name}-local-version`,
+        fileExtension: element.extension,
+      },
+      elementContent
     );
-  }
-  const showCompareDialogResult = await compareElementWithRemoteVersion(
-    service
-  )(uploadChangeControlValue)(
-    element,
-    updatedElementTempFilePath
-  )(savedLocalElementVersionUri.fsPath);
-  if (isError(showCompareDialogResult)) {
-    const error = showCompareDialogResult;
-    return error;
-  }
-};
-
-const saveLocalElementVersionIntoFolder = (
-  element: {
-    name: string;
-    extension?: string;
-  },
-  elementContent: string
-) => async (folder: Uri): Promise<Uri | Error> => {
-  const saveResult = await saveFileIntoWorkspaceFolder(folder)(
-    {
-      fileName: `${element.name}-local-version`,
-      fileExtension: element.extension,
-    },
-    elementContent
-  );
-  if (isError(saveResult)) {
-    const error = saveResult;
-    return new Error(
-      `Unable to save local element ${element.name} version because of ${error.message}.`
-    );
-  }
-  return saveResult;
-};
+    if (isError(saveResult)) {
+      const error = saveResult;
+      return new Error(
+        `Unable to save local element ${element.name} version because of ${error.message}.`
+      );
+    }
+    return saveResult;
+  };
 
 const closeEditSession = async (elementUri: Uri) => {
   await closeActiveTextEditor();
