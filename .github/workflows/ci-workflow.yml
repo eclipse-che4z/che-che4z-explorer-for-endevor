@@ -20,13 +20,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-      - name: Get E4E package version
-        uses: nyaa8/package-version@v1.0.3
-        env:
-          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
-        id: npm-version
-        with:
-          path: ${{ env.ENDEVOR_VERSION_PATH }}
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
@@ -54,6 +47,13 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+      - name: Get E4E package version
+        uses: nyaa8/package-version@v1.0.3
+        env:
+          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
+        id: npm-version
+        with:
+          path: ${{ env.ENDEVOR_VERSION_PATH }}
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build E4E
