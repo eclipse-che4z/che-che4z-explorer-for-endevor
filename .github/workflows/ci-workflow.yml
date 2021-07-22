@@ -45,7 +45,7 @@ jobs:
         with:
           run: yarn test
       - name: Check exit status code
-        if: steps.tests.outputs.exit_status < 7 | steps.audit.outputs.exit_status < 7
+        if: steps.tests.outputs.exit_status < 7 && steps.audit.outputs.exit_status < 7
         run: exit 0
 
   create-artifact:
