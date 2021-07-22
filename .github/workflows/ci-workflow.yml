@@ -46,7 +46,7 @@ jobs:
 
   create-artifact:
     runs-on: ${{ matrix.os }}
-    if: jobs.build-and-test.steps.audit.outputs.exit_code < 7
+    if: job.build-and-test.steps.audit.outputs.exit_code < 7
     steps:
       - name: Build E4E
         run: yarn build
