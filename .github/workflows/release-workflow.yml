@@ -8,25 +8,36 @@ if: github.event.pull_request.merged
 env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
-  setup:
+  build-and-package:
     runs-on: windows-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Get E4E package version
         uses: nyaa8/package-version@v1.0.3
-        id: npm-version
         env:
-          ENDEVOR_VERSION_PATH: packages/${{ env.PROJECT_NAME }}/package.json
+          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
+        id: npm-version
         with:
           path: ${{ env.ENDEVOR_VERSION_PATH }}
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Build E4E
+        run: yarn build
+      - name: Copy documentation into build context
+        run: yarn copy-into-build-context
+      - name: Package VSIX & Upload Artifact
+        run: yarn workspace ${{ env.PROJECT_NAME }} package
+      - uses: actions/upload-artifact@v2
+        env:
+          VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
         with:
-          node-version: ${{ matrix.node-version }}
+          name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
+          path: ${{ env.VSIX_PATH }}
 
   release-and-publish:
     runs-on: windows-latest
+    needs: build-and-package
     steps:
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v0

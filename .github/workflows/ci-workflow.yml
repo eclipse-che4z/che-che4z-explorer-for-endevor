@@ -2,14 +2,15 @@ name: E4E CI Workflow
 on:
   push:
     branches:
-      - "*"
+      - master
   pull_request:
     branches:
       - "*"
 env:
   PROJECT_NAME: explorer-for-endevor
+  AUDIT_SEVERITY_HIGH: 7
 jobs:
-  build-and-test:
+  build-test-artifact:
     runs-on: ${{ matrix.os }}
     strategy:
       # Continue to run tests on the other systems if one fails
@@ -31,33 +32,13 @@ jobs:
         id: audit
         continue-on-error: true
       - name: Lint
+        if: steps.audit.outputs.exit_status < ${{ env.AUDIT_SEVERITY_HIGH }}
         run: yarn lint
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.0
         id: tests
         with:
           run: yarn test
-      - name: Check exit status code
-        if: steps.tests.outputs.exit_status < 7 && steps.audit.outputs.exit_status < 7
-        run: exit 0
-
-  create-artifact:
-    runs-on: windows-latest
-    needs: build-and-test
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-      - name: Get E4E package version
-        uses: nyaa8/package-version@v1.0.3
-        env:
-          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
-        id: npm-version
-        with:
-          path: ${{ env.ENDEVOR_VERSION_PATH }}
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-      - name: Build E4E
-        run: yarn build
       - name: Package VSIX & Upload Artifact
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - uses: actions/upload-artifact@v2
