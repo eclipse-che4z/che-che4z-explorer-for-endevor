@@ -1,6 +1,6 @@
 name: E4E Release & Publish Workflow
 on:
-  pull_request:
+  push:
     types: [closed]
     branches:
       - master
@@ -8,7 +8,7 @@ if: github.event.pull_request.merged
 env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
-  build-and-package:
+  build-package-publish:
     runs-on: windows-latest
     steps:
       - name: Check out code
@@ -26,19 +26,8 @@ jobs:
         run: yarn build
       - name: Copy documentation into build context
         run: yarn copy-into-build-context
-      - name: Package VSIX & Upload Artifact
+      - name: Package VSIX
         run: yarn workspace ${{ env.PROJECT_NAME }} package
-      - uses: actions/upload-artifact@v2
-        env:
-          VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
-        with:
-          name: ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}
-          path: ${{ env.VSIX_PATH }}
-
-  release-and-publish:
-    runs-on: windows-latest
-    needs: build-and-package
-    steps:
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
