@@ -16,7 +16,8 @@
     "pretty": "yarn workspaces run pretty && prettier --ignore-path .prettierignore-ci --write .",
     "test": "yarn workspaces run test",
     "clean": "yarn workspaces run clean && rimraf node_modules",
-    "copy-into-build-context": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md packages/explorer-for-endevor"
+    "copy-into-build-context": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md packages/explorer-for-endevor",
+    "copyright-headers": "node copyrightHeaders.js"
   },
   "resolutions": {
     "**/lodash": "4.17.21"
