@@ -23,7 +23,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build E4E
-        run: yarn build
+        run: yarn workspace ${{ env.PROJECT_NAME }} build:prod
+        run: yarn workspace ${{ env.PROJECT_NAME }} copy-into-repo-root
       - name: Copy documentation into build context
         run: yarn copy-into-build-context
       - name: Package VSIX

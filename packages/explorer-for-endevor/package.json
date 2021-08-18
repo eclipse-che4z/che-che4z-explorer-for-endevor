@@ -283,8 +283,9 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && webpack --mode production",
-    "watch": "rimraf dist && webpack --mode development --watch",
+    "build:prod": "rimraf dist && webpack --config webpack.prod.js",
+    "build:dev": "rimraf dist && webpack --config webpack.dev.js",
+    "build:watch": "rimraf dist && webpack --config webpack.dev.js --watch",
     "type": "tsc --watch --noEmit",
     "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
     "eslint:watch": "eslint --ext .ts . --watch",
@@ -296,7 +297,8 @@
     "test:vscode": "ts-node ./vscode-test.run.ts",
     "tsc:watch": "tsc --noemit --watch",
     "package": "mkdirp vsce && vsce package --yarn -o vsce/explorer-for-endevor-$npm_package_version.vsix",
-    "clean": "rimraf dist results vsce node_modules .vscode-test dependencies.txt dependencies.json"
+    "clean": "rimraf dist results vsce node_modules .vscode-test LICENSE NOTICE.md",
+    "copy-into-repo-root": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md CONTRIBUTING.md ../../"
   },
   "dependencies": {
     "@local/endevor": "1.0.0",

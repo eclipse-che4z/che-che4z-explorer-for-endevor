@@ -2,6 +2,7 @@
   "private": true,
   "workspaces": [
     "packages/explorer-for-endevor",
+    "packages/bundled-licenses-webpack-plugin",
     "packages/endevor",
     "packages/extension",
     "packages/vscode-wrapper",
@@ -11,7 +12,6 @@
     "packages/prettier-config-local"
   ],
   "scripts": {
-    "build": "yarn workspaces run build",
     "lint": "yarn workspaces run lint && prettier --ignore-path .prettierignore-ci --check .",
     "pretty": "yarn workspaces run pretty && prettier --ignore-path .prettierignore-ci --write .",
     "test": "yarn workspaces run test",
@@ -19,13 +19,13 @@
     "copy-into-build-context": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md packages/explorer-for-endevor",
     "copyright-headers": "node copyrightHeaders.js"
   },
-  "resolutions": {
-    "**/lodash": "4.17.21"
-  },
   "dependencies": {
     "fp-ts": "^2.10.5",
     "io-ts": "^2.2.16",
     "promise-pool-tool": "^1.3.3"
+  },
+  "resolutions": {
+    "**/lodash": "4.17.21"
   },
   "devDependencies": {
     "@types/chai": "^4.2.18",
@@ -73,6 +73,8 @@
     "webpack": "^4.46.0",
     "webpack-bundle-analyzer": "^4.4.2",
     "webpack-cli": "^4.7.2",
+    "ignore": "^5.1.8",
+    "glob-promise": "^4.2.0",
     "copyfiles": "^2.4.1"
   }
 }
