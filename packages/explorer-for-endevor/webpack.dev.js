@@ -18,18 +18,12 @@
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
-const BundledDependenciesPlugin = require('./webpack-plugin.js');
 
 const distFolderPath = path.resolve(__dirname, 'dist');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
-  plugins: [
-    new BundledDependenciesPlugin({
-      depsListFile: 'dependencies.txt',
-      depsDetailsFile: 'dependencies.json',
-    }),
-  ],
+  mode: 'development',
   optimization: {
     minimize: false,
     usedExports: true,
@@ -37,7 +31,7 @@ const config = {
   target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
   entry: './src/extension.ts', // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
   output: {
-    // the bundle is stored in the 'out/src' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
+    // the bundle is stored in the 'dist' folder, 📖 -> https://webpack.js.org/configuration/output/
     path: distFolderPath,
     filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
@@ -64,10 +58,6 @@ const config = {
   resolve: {
     // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
     extensions: ['.ts', '.js'],
-  },
-  stats: {
-    // Ignore warnings
-    warnings: false,
   },
   module: {
     rules: [

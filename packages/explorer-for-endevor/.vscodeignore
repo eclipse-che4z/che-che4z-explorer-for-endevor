@@ -21,6 +21,5 @@
 .vscodeignore
 manual-tests.md
 CONTRIBUTING.md
-dependencies.txt
-dependencies.json
+license-template.txt
 copyright-header.js
