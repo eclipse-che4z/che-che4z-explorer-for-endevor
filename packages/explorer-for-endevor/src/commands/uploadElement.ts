@@ -14,12 +14,6 @@
 
 import { stringifyWithHiddenCredential } from '@local/endevor/utils';
 import {
-  ChangeControlValue,
-  Element,
-  ElementSearchLocation,
-  Service,
-} from '@local/endevor/_doc/Endevor';
-import {
   deleteFile,
   getFileContent,
   saveFileIntoWorkspaceFolder,
@@ -42,6 +36,12 @@ import {
   withNotificationProgress,
 } from '@local/vscode-wrapper/window';
 import { fromEditedElementUri } from '../uri/editedElementUri';
+import {
+  ChangeControlValue,
+  Element,
+  ElementSearchLocation,
+  Service,
+} from '@local/endevor/_doc/Endevor';
 import {
   FingerprintMismatchError,
   UpdateError,
