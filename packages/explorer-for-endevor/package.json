@@ -303,8 +303,8 @@
   "dependencies": {
     "@local/endevor": "1.0.0",
     "@local/extension": "1.0.0",
-    "@local/vscode-wrapper": "1.0.0",
     "@local/profiles": "1.0.0",
+    "@local/vscode-wrapper": "1.0.0",
     "@zowe/imperative": "4.13.1"
   },
   "devDependencies": {
