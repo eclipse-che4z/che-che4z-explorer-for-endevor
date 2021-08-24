@@ -162,7 +162,9 @@ export const make = (
         return Array.from(node.children.values());
       }
       if (node.type === 'SUB') {
-        return Array.from(node.children.values());
+        return Array.from(node.children.values()).sort((l, r) =>
+          l.name.localeCompare(r.name)
+        );
       }
       if (node.type === 'SYS') {
         return Array.from(node.children.values());

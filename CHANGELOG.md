@@ -2,6 +2,16 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.13.1] &ndash; 2021-27-08
+
+### Added
+
+- Added the alphabetical sorting into the Endevor type nodes of the tree view.
+
+### Changed
+
+- Updated the documentation.
+
 ## [0.13.0] &ndash; 2021-07-05
 
 ### Added
