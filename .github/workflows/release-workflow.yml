@@ -2,10 +2,8 @@ name: E4E Release & Publish Workflow
 on:
   workflow_dispatch
   push:
-    types: [closed]
     branches:
       - master
-if: github.event.pull_request.merged
 env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
