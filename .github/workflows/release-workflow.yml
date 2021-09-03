@@ -1,6 +1,6 @@
 name: E4E Release & Publish Workflow
 on:
-  workflow_dispatch
+  workflow_dispatch:
   push:
     branches:
       - master
