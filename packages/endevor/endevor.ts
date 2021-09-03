@@ -774,7 +774,7 @@ export const updateElement =
       const error = requestParms;
       logger.info(error.message);
       return new Error(
-        `Unable to update element ${system}/${subSystem}/${type}/${name}`
+        `Unable to update element ${system}/${subSystem}/${type}/${name}: ${error.message}`
       );
     }
     progress.report({ increment: 30 });
