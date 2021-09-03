@@ -29,7 +29,7 @@ import {
 } from '@local/endevor/_doc/Error';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
 import { updateElement } from '../endevor';
-import { getFileContent } from '../../../vscode-wrapper/workspace';
+import { getFileContent } from '@local/vscode-wrapper/workspace';
 import { TextDecoder } from 'util';
 import { ENCODING } from '../constants';
 

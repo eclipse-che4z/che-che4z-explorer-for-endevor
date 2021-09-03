@@ -19,7 +19,7 @@ The Explorer for Endevor VS Code extension modernizes the way you interact with 
 - Perform a Generate action
 - Print a listing
 
-Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including the [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe), and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
+Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including the [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe), [COBOL Control Flow](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.ccf) and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
 
 ## Table of Contents
 
@@ -40,7 +40,7 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
 
 ## Prerequisites
 
-Ensure that you meet the following prerequisites before you can use Explorer for Endevor:
+Ensure that you meet the following prerequisites before you use Explorer for Endevor:
 
 **Client-side prerequisites**:
 
@@ -51,7 +51,7 @@ Ensure that you meet the following prerequisites before you can use Explorer for
 - CA Endevor version 18.0.12 or higher with the following PTFs applied:
   - (v18.0.x only) PTFs SO09580, SO09581, SO10013, and SO11268
   - (v18.1.x only) PTF SO11272
-  - (Optional)(Web Services with STC Pooling only) PTFs SO03928 and SO03929
+  - (Optional, Web Services with STC Pooling only) PTFs SO03928 and SO03929
 - CA Endevor Web Services v2 installed and configured.
 
 ## Getting Started
@@ -288,7 +288,7 @@ You can configure the following settings of the extension:
 
 - The location where the Edit command stores elements locally
 
-- Endevor locations that will be loaded at startup
+- Endevor locations that are loaded at startup
 
 - The number of parallel HTTP requests supported by Endevor
 
@@ -296,7 +296,7 @@ To access the Explorer for Endevor settings, click **Manage** (the cog icon on t
 
 ## List of Limitations
 
-See the list of limitations that the current version of Explorer for Endevor has to familiarize yourself with possible limitations or behavior of the extension. The list includes the following points:
+This section lists notable limitations in the current version of Explorer for Endevor.
 
 - Searching elements by comment and CCID is not supported.
 
@@ -328,10 +328,10 @@ To permanently delete the profile from the tree, use the extension settings.
 
 **Follow these steps:**
 
-1.  Navigate to the VS Code settings.
-2.  Open Explorer for Endevor Settings and edit the settings.json file.
-3.  Delete the `service` and `elementLocations` properties of the profile you want to delete from the tree.
-4.  Save the settings.json file.
+1. Navigate to the VS Code settings.
+2. Open Explorer for Endevor Settings and edit the settings.json file.
+3. Delete the `service` and `elementLocations` properties of the profile you want to delete from the tree.
+4. Save the settings.json file.
 
 You successfully deleted your profile from the extension.
 

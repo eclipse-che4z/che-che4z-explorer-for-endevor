@@ -1,0 +1,16 @@
+{
+  "name": "@local/bundled-licenses-webpack-plugin",
+  "version": "1.0.0",
+  "dependencies": {},
+  "devDependencies": {
+    "license-checker-webpack-plugin": "^0.2.1"
+  },
+  "scripts": {
+    "lint": "echo No Lint for 'bundled-licenses-webpack-plugin' Package",
+    "pretty": "prettier --write .",
+    "test": "echo No Test for 'bundled-licenses-webpack-plugin' Package",
+    "clean": "rimraf node_modules"
+  },
+  "main": "plugin.js",
+  "license": "UNLICENSED"
+}

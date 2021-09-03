@@ -1,0 +1,57 @@
+name: E4E CI Workflow
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+env:
+  PROJECT_NAME: explorer-for-endevor
+  AUDIT_SEVERITY_HIGH: 7
+jobs:
+  build-test-artifact:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Continue to run tests on the other systems if one fails
+      fail-fast: false
+      matrix:
+        node-version: [12.x, 14.x, 16.x]
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Audit
+        run: yarn audit
+        id: audit
+        continue-on-error: true
+      - name: Lint
+        if: steps.audit.outputs.exit_status < ${{ env.AUDIT_SEVERITY_HIGH }}
+        run: yarn lint
+      - name: Build E4E
+        if: steps.audit.outputs.exit_status < ${{ env.AUDIT_SEVERITY_HIGH }}
+        run: |
+          yarn workspace ${{ env.PROJECT_NAME }} build:prod
+          yarn workspace ${{ env.PROJECT_NAME }} copy-into-repo-root
+      - name: Run tests
+        uses: GabrielBB/xvfb-action@v1.0
+        id: tests
+        with:
+          run: yarn test
+      - name: Package VSIX & Upload Artifact
+        if: steps.audit.outputs.exit_status < ${{ env.AUDIT_SEVERITY_HIGH }}
+        run: |
+          yarn copy-into-build-context
+          yarn workspace ${{ env.PROJECT_NAME }} package
+      - uses: actions/upload-artifact@v2
+        env:
+          VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
+        with:
+          name: ${{ env.PROJECT_NAME }}
+          path: ${{ env.VSIX_PATH }}

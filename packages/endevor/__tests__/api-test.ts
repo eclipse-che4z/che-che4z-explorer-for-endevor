@@ -11,6 +11,7 @@
  * Contributors:
  *   Broadcom, Inc. - initial API and implementation
  */
+
 /* eslint-disable jest/no-commented-out-tests */
 import { Logger } from '@local/extension/_doc/Logger';
 import { getLocal } from 'mockttp';

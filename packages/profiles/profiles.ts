@@ -28,7 +28,6 @@ import {
 import { parseToType } from '@local/type-parser/parser';
 import { getProfilesDir } from './globals';
 import { Logger } from '@local/extension/_doc/Logger';
-
 import { EndevorProfilesConfig } from '@broadcom/endevor-for-zowe-cli/lib/cli/profiles/EndevorProfilesConfig';
 
 const initAndGetProfileManager =

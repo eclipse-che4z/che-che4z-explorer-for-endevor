@@ -30,6 +30,7 @@ import * as discardCommand from '../commands/discardEditedElementChanges';
 import { mockGettingFileContentWith } from '../_mocks/workspace';
 import { mockUploadingElementWith } from '../_mocks/endevor';
 import { TextEncoder } from 'util';
+import { join } from 'path';
 
 describe('accepting local changes in compared element', () => {
   before(() => {
@@ -82,10 +83,20 @@ describe('accepting local changes in compared element', () => {
       ccid: 'some_ccid',
       comment: 'some_comment',
     };
-    const localElementVersionFsPath = '/temp/local/element';
+    const localElementVersionFsPath = join(
+      __dirname,
+      'temp',
+      'local',
+      'element'
+    );
     const remoteElementVersionFingerprint = 'element_fingerprint';
-    const remoteElementVersionFsPath = '/temp/remote/element';
-    const editedElementFsPath = '/temp/element';
+    const remoteElementVersionFsPath = join(
+      __dirname,
+      'temp',
+      'remote',
+      'element'
+    );
+    const editedElementFsPath = join(__dirname, 'temp', 'element');
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       service,
       element,
