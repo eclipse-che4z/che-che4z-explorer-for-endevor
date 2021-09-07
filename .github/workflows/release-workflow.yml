@@ -1,10 +1,9 @@
 name: E4E Release & Publish Workflow
 on:
+  workflow_dispatch:
   push:
-    types: [closed]
     branches:
       - master
-if: github.event.pull_request.merged
 env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
@@ -13,13 +12,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-      - name: Get E4E package version
-        uses: nyaa8/package-version@v1.0.3
-        env:
-          ENDEVOR_VERSION_PATH: packages/${{env.PROJECT_NAME}}/package.json
-        id: npm-version
-        with:
-          path: ${{ env.ENDEVOR_VERSION_PATH }}
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build E4E
@@ -31,17 +23,19 @@ jobs:
       - name: Package VSIX
         run: yarn workspace ${{ env.PROJECT_NAME }} package
       - name: Publish to Open VSX Registry
+        if: success()
         uses: HaaLeo/publish-vscode-extension@v0
         id: publishToOpenVSX
-        env:
-          VSIX_PATH: packages/${{ env.PROJECT_NAME }}/vsce/*.vsix
         with:
-          extensionFile: ${{ env.VSIX_PATH }}
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          pat: ${{ secrets.OPENVSX_TOKEN }}
+          registryUrl: https://open-vsx.org
+          extensionFile: ${{ github.workspace }}/packages/${{ env.PROJECT_NAME }}/vsce/explorer-for-endevor.vsix
+          packagePath: ''
       - name: Publish to Visual Studio Marketplace
+        if: success()
         uses: HaaLeo/publish-vscode-extension@v0
         with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          pat: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-          packagePath: ""
+          extensionFile: ${{ github.workspace }}/packages/${{ env.PROJECT_NAME }}/vsce/explorer-for-endevor.vsix
+          packagePath: ''
