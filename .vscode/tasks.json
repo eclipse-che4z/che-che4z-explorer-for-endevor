@@ -5,9 +5,12 @@
   "tasks": [
     {
       "label": "type check e4e",
-      "type": "shell",
-      "command": "yarn",
-      "args": ["workspace", "explorer-for-endevor", "run", "type"],
+      "type": "npm",
+      "script": "type",
+      "path": "./packages/explorer-for-endevor",
+      "options": {
+        "cwd": "packages/explorer-for-endevor"
+      },
       "isBackground": true,
       "problemMatcher": {
         "base": "$tsc-watch",
@@ -21,17 +24,14 @@
     },
     {
       "label": "build e4e",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
+      "group": "build",
+      "isBackground": true,
+      "type": "npm",
+      "script": "build:dev",
+      "path": "./packages/explorer-for-endevor",
       "options": {
         "cwd": "packages/explorer-for-endevor"
       },
-      "isBackground": true,
-      "type": "shell",
-      "command": "yarn",
-      "args": ["run", "build"],
       "problemMatcher": [
         {
           "owner": "typescript",

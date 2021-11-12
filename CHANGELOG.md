@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.13.2] &ndash; 2021-11-12
+
+### Added
+
+- Added the compatibility for the latest Endevor WebServices charset response headers
+
 ## [0.13.1] &ndash; 2021-27-08
 
 ### Added
