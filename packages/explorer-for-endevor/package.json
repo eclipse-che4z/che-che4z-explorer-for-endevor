@@ -306,7 +306,7 @@
     "@local/extension": "1.0.0",
     "@local/profiles": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
-    "@zowe/imperative": "4.13.1"
+    "@zowe/imperative": "^4.15.1"
   },
   "devDependencies": {
     "dotenv": "^10.0.0"

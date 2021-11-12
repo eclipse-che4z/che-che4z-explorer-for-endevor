@@ -281,7 +281,7 @@ version(s), and exceptions or additional permissions here}."
 ---
 
 Broadcom Internal
-(@broadcom/endevor-for-zowe-cli 6.2.0)
+(@broadcom/endevor-for-zowe-cli 6.4.0)
 
 Copyright (c) 2019 Broadcom.  All Rights Reserved.  The term
 "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
@@ -307,7 +307,7 @@ EXPRESSLY ADVISED OF SUCH LOSS OR DAMAGE.
 ---
 
 EPL-2.0
-(@zowe/imperative 4.13.1)
+(@zowe/imperative 4.15.1)
 
 Eclipse Public License - v 2.0
 
@@ -873,7 +873,7 @@ You may add additional accurate notices of copyright ownership.
 ---
 
 MIT
-(ansi-regex 3.0.0)
+(ansi-regex 5.0.1)
 
 MIT License
 
@@ -1677,6 +1677,33 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---
 
 MIT
+(fastest-levenshtein 1.0.12)
+
+MIT License
+
+Copyright (c) 2020 Kasper Unn Weihe
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+MIT
 (find-up 2.1.0)
 
 The MIT License (MIT)
@@ -2112,7 +2139,7 @@ THE SOFTWARE.
 ---
 
 MIT
-(js-yaml 3.13.1)
+(js-yaml 3.14.1)
 
 (The MIT License)
 
@@ -2221,13 +2248,6 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
----
-
-Public Domain
-(levenshtein 1.0.5)
-
-Public domain code is not subject to any license.
 
 ---
 
