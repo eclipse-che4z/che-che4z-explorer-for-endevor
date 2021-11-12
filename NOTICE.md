@@ -32,12 +32,12 @@ The project maintains the following source code repositories:
 
 This project leverages the following third party content.
 
-@broadcom/endevor-for-zowe-cli (6.2.0)
+@broadcom/endevor-for-zowe-cli (6.4.0)
 
 - License: Broadcom Internal
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
-@zowe/imperative (4.13.1)
+@zowe/imperative (4.15.1)
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/imperative
@@ -47,7 +47,7 @@ This project leverages the following third party content.
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/perf-timing
 
-ansi-regex (3.0.0)
+ansi-regex (5.0.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/ansi-regex
@@ -192,6 +192,11 @@ esprima (4.0.1)
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/esprima
 
+fastest-levenshtein (1.0.12)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/fastest-levenshtein
+
 find-up (2.1.0)
 
 - License: MIT
@@ -272,7 +277,7 @@ is-plain-object (5.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/is-plain-object
 
-js-yaml (3.13.1)
+js-yaml (3.14.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/js-yaml
@@ -291,11 +296,6 @@ klona (2.0.4)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/klona
-
-levenshtein (1.0.5)
-
-- License: Public Domain
-- Project: https://www.npmjs.com/package/levenshtein
 
 linkify-it (3.0.2)
 

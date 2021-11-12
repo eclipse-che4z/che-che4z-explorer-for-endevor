@@ -39,11 +39,6 @@ jobs:
         run: |
           yarn workspace ${{ env.PROJECT_NAME }} build:prod
           yarn workspace ${{ env.PROJECT_NAME }} copy-into-repo-root
-      - name: Run tests
-        uses: GabrielBB/xvfb-action@v1.0
-        id: tests
-        with:
-          run: yarn test
       - name: Package VSIX & Upload Artifact
         if: steps.audit.outputs.exit_status < ${{ env.AUDIT_SEVERITY_HIGH }}
         run: |
@@ -55,3 +50,8 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}
           path: ${{ env.VSIX_PATH }}
+      - name: Run tests
+        uses: GabrielBB/xvfb-action@v1.0
+        id: tests
+        with:
+          run: yarn test
