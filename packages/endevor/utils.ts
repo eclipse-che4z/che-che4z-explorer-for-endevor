@@ -13,6 +13,11 @@
 
 import { URL } from 'url';
 import { ServiceLocation, ServiceProtocol, StageNumber } from './_doc/Endevor';
+import {
+  FingerprintMismatchError,
+  ChangeRegressionError,
+  SignoutError,
+} from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
 export const toVersion2Api = (basePath: string) =>
@@ -82,6 +87,24 @@ export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
 
+export const isSignoutError = <T>(
+  value: T | SignoutError
+): value is SignoutError => {
+  return value instanceof SignoutError;
+};
+
+export const isFingerprintMismatchError = <T>(
+  value: T | FingerprintMismatchError
+): value is FingerprintMismatchError => {
+  return value instanceof FingerprintMismatchError;
+};
+
+export const isChangeRegressionError = <T>(
+  value: T | ChangeRegressionError
+): value is ChangeRegressionError => {
+  return value instanceof ChangeRegressionError;
+};
+
 export const toSeveralTasksProgress =
   (progressReporter: ProgressReporter) =>
   (tasksNumber: number): ProgressReporter => {
@@ -98,3 +121,11 @@ export const toSeveralTasksProgress =
       },
     };
   };
+
+export const getElementExtension = (element: {
+  typeName: string;
+  fileExt?: string | null;
+}): string =>
+  element.fileExt
+    ? element.fileExt.toLowerCase()
+    : element.typeName.toLowerCase();
