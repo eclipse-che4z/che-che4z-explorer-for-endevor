@@ -19,7 +19,7 @@ export const resolveCredential =
   (
     serviceName: string,
     getCredentialFromStore: (name: string) => Credential | undefined,
-    dispatch: (action: Action) => void
+    dispatch: (action: Action) => Promise<void>
   ) =>
   async (
     credentialFromProfile: Credential | undefined
@@ -29,7 +29,7 @@ export const resolveCredential =
     if (!credential) {
       credential = await askForCredentialWithDefaultPasswordPolicy();
       if (credential) {
-        dispatch({
+        await dispatch({
           type: Actions.ENDEVOR_CREDENTIAL_ADDED,
           serviceName,
           credential,

@@ -27,6 +27,19 @@ export const getWorkspaceUri = async (): Promise<vscode.Uri | undefined> => {
   return openedWorkspace?.uri;
 };
 
+export const chooseFileUriFromFs = async (): Promise<
+  vscode.Uri | undefined
+> => {
+  const fileContents = await vscode.window.showOpenDialog({
+    canSelectMany: false,
+  });
+  if (fileContents && fileContents[0]) {
+    return fileContents[0];
+  } else {
+    return undefined;
+  }
+};
+
 // don't forget to validate promise.reject
 export const createNewWorkspaceDirectory =
   (workspaceUri: vscode.Uri) =>

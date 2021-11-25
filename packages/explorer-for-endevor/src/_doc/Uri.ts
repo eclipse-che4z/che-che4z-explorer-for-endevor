@@ -18,6 +18,7 @@ import {
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
+import { ElementLocationName, EndevorServiceName } from './settings';
 
 export const enum Schemas {
   TREE_ELEMENT = 'e4eElement',
@@ -31,13 +32,22 @@ export const enum QueryTypes {
   COMPARED_ELEMENT = 'compared-element',
 }
 
+export const enum Extensions {
+  TREE_ELEMENT = 'prnt',
+  ELEMENT_LISTING = 'lst',
+}
+
 export type TreeElementUriQuery = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
   service: Service;
   element: Element;
   searchLocation: ElementSearchLocation;
 }>;
 
 export type EditedElementUriQuery = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
   service: Service;
   element: Element;
   searchLocation: ElementSearchLocation;
@@ -45,7 +55,10 @@ export type EditedElementUriQuery = Readonly<{
 }>;
 
 export type ComparedElementUriQuery = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
   service: Service;
+  searchLocation: ElementSearchLocation;
   element: Element;
   fingerprint: string;
   uploadChangeControlValue: ChangeControlValue;

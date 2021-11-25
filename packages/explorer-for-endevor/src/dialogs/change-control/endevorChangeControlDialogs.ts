@@ -16,7 +16,7 @@ import { showInputBox } from '@local/vscode-wrapper/window';
 import { logger } from '../../globals';
 
 type OperationCancelled = undefined;
-type DialogResult = ChangeControlValue | OperationCancelled;
+export type DialogResult = ChangeControlValue | OperationCancelled;
 
 export const dialogCancelled = (
   dialogResult: DialogResult

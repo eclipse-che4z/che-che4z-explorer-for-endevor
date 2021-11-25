@@ -11,112 +11,38 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  retrieveElementWithoutSignout,
-  retrieveElementWithSignout,
-  retrieveElementWithOverrideSignout,
-} from '../endevor';
-import { logger } from '../globals';
-import {
-  filterElementNodes,
-  isDefined,
-  isError,
-  groupBySearchLocationId,
-} from '../utils';
-import { ElementNode } from '../_doc/ElementTree';
-import * as vscode from 'vscode';
-import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import {
-  saveElementIntoWorkspace,
-  showSavedElementContent,
-} from '../workspace';
-import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { PromisePool } from 'promise-pool-tool';
-import {
-  getMaxParallelRequests,
-  isAutomaticSignOut,
-} from '../settings/settings';
 import { isSignoutError, toSeveralTasksProgress } from '@local/endevor/utils';
 import {
-  MAX_PARALLEL_REQUESTS_DEFAULT,
-  AUTOMATIC_SIGN_OUT_DEFAULT,
-} from '../constants';
+  Service,
+  ActionChangeControlValue,
+  ElementWithFingerprint,
+  Element,
+  ElementSearchLocation,
+} from '@local/endevor/_doc/Endevor';
+import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
   askForChangeControlValue,
   dialogCancelled,
-} from '../dialogs/change-control/endevorChangeControlDialogs';
-import { fromTreeElementUri } from '../uri/treeElementUri';
-import { askToOverrideSignOutForElements } from '../dialogs/change-control/signOutDialogs';
+} from '../../dialogs/change-control/endevorChangeControlDialogs';
+import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
+import { logger } from '../../globals';
+import { fromTreeElementUri } from '../../uri/treeElementUri';
+import * as vscode from 'vscode';
+import { isDefined, isError } from '../../utils';
 import {
-  Service,
-  Element,
-  ElementSearchLocation,
-  ActionChangeControlValue,
-  ElementContent,
-} from '@local/endevor/_doc/Endevor';
-import { Action, Actions, SignedOutElementsPayload } from '../_doc/Actions';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+  saveIntoEditFolder,
+  showElementToEdit,
+  withUploadOptions,
+} from './common';
+import { getMaxParallelRequests } from '../../settings/settings';
+import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../../constants';
+import { withNotificationProgress } from '@local/vscode-wrapper/window';
+import { PromisePool } from 'promise-pool-tool';
+import { retrieveElementWithFingerprint } from '../../endevor';
+import { Action, Actions, SignedOutElementsPayload } from '../../_doc/Actions';
+import { ElementLocationName, EndevorServiceName } from '../../_doc/settings';
 
-type SelectedElementNode = ElementNode;
-type SelectedMultipleNodes = ElementNode[];
-
-export const retrieveElementCommand = async (
-  dispatch: (action: Action) => Promise<void>,
-  elementNode?: SelectedElementNode,
-  nodes?: SelectedMultipleNodes
-) => {
-  if (nodes && nodes.length) {
-    const elementNodes = filterElementNodes(nodes);
-    logger.trace(
-      `Retrieve element command was called for ${elementNodes
-        .map((node) => node.name)
-        .join(',')}`
-    );
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
-      );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
-      const groupedElementNodes = groupBySearchLocationId(elementNodes);
-      for (const elementNodesGroup of Object.values(groupedElementNodes)) {
-        await retrieveMultipleElementsWithSignoutOption(dispatch)(
-          elementNodesGroup
-        );
-      }
-      return;
-    }
-    await retrieveMultipleElements(elementNodes);
-    return;
-  } else if (elementNode) {
-    logger.trace(`Retrieve element command was called for ${elementNode.name}`);
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
-      );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
-      await retrieveSingleElementWithSignoutOption(dispatch)(elementNode);
-      return;
-    }
-    await retrieveSingleElement(elementNode);
-    return;
-  } else {
-    return;
-  }
-};
-
-const retrieveSingleElementWithSignoutOption =
+export const editSingleElementWithSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (
     element: Readonly<{
@@ -127,7 +53,7 @@ const retrieveSingleElementWithSignoutOption =
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       logger.error(
-        'At least one workspace in this project should be opened to retrieve elements'
+        'At least one workspace in this project should be opened to edit elements'
       );
       return;
     }
@@ -135,8 +61,8 @@ const retrieveSingleElementWithSignoutOption =
     if (isError(elementUri)) {
       const error = elementUri;
       logger.error(
-        `Unable to retrieve element: ${element.name}`,
-        `Unable to retrieve element: ${element.name}, because of ${error.message}`
+        `Unable to edit element ${element.name}`,
+        `Unable to edit element ${element.name}, because of ${error.message}`
       );
       return;
     }
@@ -150,24 +76,30 @@ const retrieveSingleElementWithSignoutOption =
       );
       return;
     }
-    const retrievedContent = await complexRetrieve(dispatch)(
-      elementUri.serviceName,
+    const retrieveResult = await complexRetrieve(dispatch)(
       elementUri.service,
-      elementUri.searchLocationName,
       elementUri.searchLocation
-    )(elementUri.element)(signoutChangeControlValue);
-    if (!retrievedContent) return;
-    const saveResult = await saveIntoWorkspace(workspaceUri)(
+    )(
+      elementUri.serviceName,
+      elementUri.searchLocationName,
+      elementUri.element
+    )(signoutChangeControlValue);
+    if (!retrieveResult) return;
+    const saveResult = await saveIntoEditFolder(workspaceUri)(
       elementUri.serviceName,
       elementUri.searchLocationName
-    )(elementUri.element, retrievedContent);
+    )(elementUri.element, retrieveResult.content);
     if (isError(saveResult)) {
       const error = saveResult;
       logger.error(error.message);
       return;
     }
-    const savedElementUri = saveResult;
-    const showResult = await showElementInEditor(savedElementUri);
+    const uploadableElementUri = withUploadOptions(saveResult)({
+      ...elementUri,
+      fingerprint: retrieveResult.fingerprint,
+    });
+    if (!uploadableElementUri) return;
+    const showResult = await showElementToEdit(uploadableElementUri);
     if (isError(showResult)) {
       const error = showResult;
       logger.error(error.message);
@@ -177,20 +109,19 @@ const retrieveSingleElementWithSignoutOption =
 
 const complexRetrieve =
   (dispatch: (action: Action) => Promise<void>) =>
+  (service: Service, searchLocation: ElementSearchLocation) =>
   (
-    serviceName: string,
-    service: Service,
-    searchLocationName: string,
-    searchLocation: ElementSearchLocation
+    serviceName: EndevorServiceName,
+    searchLocationName: ElementLocationName,
+    element: Element
   ) =>
-  (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
-  ): Promise<ElementContent | undefined> => {
+  ): Promise<ElementWithFingerprint | undefined> => {
     const retrieveWithSignoutResult = await retrieveSingleElementWithSignout(
       service
     )(element)(signoutChangeControlValue);
-    if (!isError(retrieveWithSignoutResult)) {
+    if (!isError(signoutChangeControlValue)) {
       await updateTreeAfterSuccessfulSignout(dispatch)({
         serviceName,
         service,
@@ -210,9 +141,7 @@ const complexRetrieve =
         logger.trace(
           `Override signout option was not chosen, ${element.name} copy will be retrieved.`
         );
-        const retrieveCopyResult = await retrieveSingleElementCopy(service)(
-          element
-        );
+        const retrieveCopyResult = await retrieveSingleCopy(service)(element);
         if (isError(retrieveCopyResult)) {
           const error = retrieveCopyResult;
           logger.error(error.message);
@@ -224,16 +153,14 @@ const complexRetrieve =
         `Override signout option was chosen, ${element.name} will be retrieved with override signout.`
       );
       const retrieveWithOverrideResult =
-        await retrieveSingleElementWithOverrideSignout(service)(element)(
+        await retrieveSingleElementWithSignoutOverride(service)(element)(
           signoutChangeControlValue
         );
       if (isError(retrieveWithOverrideResult)) {
         logger.warn(
           `Override signout retrieve was not succesful, ${element.name} copy will be retrieved.`
         );
-        const retrieveCopyResult = await retrieveSingleElementCopy(service)(
-          element
-        );
+        const retrieveCopyResult = await retrieveSingleCopy(service)(element);
         if (isError(retrieveCopyResult)) {
           const error = retrieveCopyResult;
           logger.error(error.message);
@@ -261,279 +188,47 @@ const complexRetrieve =
 const retrieveSingleElementWithSignout =
   (service: Service) =>
   (element: Element) =>
-  async (signoutChangeControlValue: ActionChangeControlValue) => {
+  (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<ElementWithFingerprint | Error> => {
     return withNotificationProgress(
-      `Retrieving element with signout : ${element.name}`
+      `Retrieving element with signout: ${element.name}`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(element)(
-        signoutChangeControlValue
-      );
-    });
-  };
-
-const retrieveSingleElementWithOverrideSignout =
-  (service: Service) =>
-  (element: Element) =>
-  async (signoutChangeControlValue: ActionChangeControlValue) => {
-    return withNotificationProgress(
-      `Retrieving element with override signout : ${element.name}`
-    )(async (progressReporter) => {
-      return retrieveElementWithOverrideSignout(progressReporter)(service)(
+      return await retrieveElementWithFingerprint(progressReporter)(service)(
         element
       )(signoutChangeControlValue);
     });
   };
 
-const retrieveSingleElementCopy =
-  (service: Service) => async (element: Element) => {
+const retrieveSingleElementWithSignoutOverride =
+  (service: Service) =>
+  (element: Element) =>
+  (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<ElementWithFingerprint | Error> => {
     return withNotificationProgress(
-      `Retrieving element copy : ${element.name}`
+      `Retrieving element with override signout: ${element.name}`
     )(async (progressReporter) => {
-      return retrieveElementWithoutSignout(progressReporter)(service)(element);
-    });
-  };
-
-const updateTreeAfterSuccessfulSignout =
-  (dispatch: (action: Action) => Promise<void>) =>
-  async (actionPayload: SignedOutElementsPayload): Promise<void> => {
-    await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
-      ...actionPayload,
-    });
-  };
-
-const saveIntoWorkspace =
-  (workspaceUri: vscode.Uri) =>
-  (serviceName: string, locationName: string) =>
-  async (
-    element: Element,
-    elementContent: string
-  ): Promise<vscode.Uri | Error> => {
-    const saveResult = await saveElementIntoWorkspace(workspaceUri)(
-      serviceName,
-      locationName
-    )(element, elementContent);
-    if (isError(saveResult)) {
-      const error = saveResult;
-      logger.trace(`Element: ${element.name} persisting error: ${error}`);
-      const userMessage = `Element: ${element.name} was not saved into file system`;
-      return new Error(userMessage);
-    }
-    const savedFileUri = saveResult;
-    return savedFileUri;
-  };
-
-const showElementInEditor = async (
-  fileUri: vscode.Uri
-): Promise<void | Error> => {
-  const showResult = await showSavedElementContent(fileUri);
-  if (isError(showResult)) {
-    const error = showResult;
-    logger.trace(
-      `Element ${fileUri.fsPath} cannot be opened because of: ${error}.`
-    );
-    return new Error(`Element ${fileUri.fsPath} cannot be opened.`);
-  }
-};
-
-const retrieveSingleElement = async (
-  element: Readonly<{
-    name: string;
-    uri: vscode.Uri;
-  }>
-): Promise<void> => {
-  const workspaceUri = await getWorkspaceUri();
-  if (!workspaceUri) {
-    logger.error(
-      'At least one workspace in this project should be opened to retrieve elements'
-    );
-    return;
-  }
-  const elementUri = fromTreeElementUri(element.uri);
-  if (isError(elementUri)) {
-    const error = elementUri;
-    logger.error(
-      `Unable to retrieve element: ${element.name}`,
-      `Unable to retrieve element: ${element.name}, because of ${error.message}`
-    );
-    return;
-  }
-  const retrieveResult = await retrieveSingleElementCopy(elementUri.service)(
-    elementUri.element
-  );
-  if (isError(retrieveResult)) {
-    const error = retrieveResult;
-    logger.error(error.message);
-    return;
-  }
-  const saveResult = await saveIntoWorkspace(workspaceUri)(
-    elementUri.serviceName,
-    elementUri.searchLocationName
-  )(elementUri.element, retrieveResult);
-  if (isError(saveResult)) {
-    const error = saveResult;
-    logger.error(error.message);
-    return;
-  }
-  const savedElementUri = saveResult;
-  const showResult = await showElementInEditor(savedElementUri);
-  if (isError(showResult)) {
-    const error = showResult;
-    logger.error(error.message);
-    return;
-  }
-};
-
-export const retrieveMultipleElements = async (
-  elements: ReadonlyArray<{
-    name: string;
-    uri: vscode.Uri;
-  }>
-): Promise<void> => {
-  const workspaceUri = await getWorkspaceUri();
-  if (!workspaceUri) {
-    logger.error(
-      'At least one workspace in this project should be opened to edit elements'
-    );
-    return;
-  }
-  let endevorMaxRequestsNumber: number;
-  try {
-    endevorMaxRequestsNumber = getMaxParallelRequests();
-  } catch (e) {
-    logger.warn(
-      `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
-      `Reading settings error: ${e.message}`
-    );
-    endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
-  }
-  const elementUris = elements.map((element) => {
-    const elementsUploadOptions = fromTreeElementUri(element.uri);
-    if (isError(elementsUploadOptions)) {
-      const error = elementsUploadOptions;
-      logger.trace(
-        `Unable to edit element ${element.name}, because of ${error.message}`
+      return retrieveElementWithFingerprint(progressReporter)(service)(element)(
+        signoutChangeControlValue,
+        true
       );
-      return new Error(`Unable to edit element ${element.name}`);
-    }
-    return elementsUploadOptions;
-  });
-  const validUris = elementUris
-    .map((uri) => {
-      if (isError(uri)) return undefined;
-      return uri;
-    })
-    .filter(isDefined);
-  const retrievedContents = await retrieveMultipleElementCopies(
-    endevorMaxRequestsNumber
-  )(validUris);
-  const invalidUris = elementUris
-    .map((uri) => {
-      if (!isError(uri)) return undefined;
-      const error = uri;
-      return error;
-    })
-    .filter(isDefined);
-  const retrieveResults = [...retrievedContents, ...invalidUris].map(
-    (result) => {
-      if (isError(result)) {
-        const error = result;
-        return error;
-      }
-      const retrieveResult = result[1];
-      if (isError(retrieveResult)) {
-        const error = retrieveResult;
-        return error;
-      }
-      return {
-        element: result[0],
-        content: retrieveResult,
-      };
-    }
-  );
-  const saveResults = await Promise.all(
-    retrieveResults.map(async (result) => {
-      if (isError(result)) {
-        const error = result;
-        return error;
-      }
-      const saveResult = await saveIntoWorkspace(workspaceUri)(
-        result.element.serviceName,
-        result.element.searchLocationName
-      )(result.element.element, result.content);
-      if (isError(saveResult)) {
-        const error = saveResult;
-        return error;
-      }
-      return saveResult;
-    })
-  );
-  const showResults = await Promise.all(
-    saveResults.map((saveResult) => {
-      if (!isError(saveResult) && saveResult) {
-        const savedElementUri = saveResult;
-        return showElementInEditor(savedElementUri);
-      }
-      const error = saveResult;
-      return error;
-    })
-  );
-  const overallErrors = showResults
-    .map((value) => {
-      if (isError(value)) return value;
-      return undefined;
-    })
-    .filter(isDefined);
-  if (overallErrors.length) {
-    logger.error(
-      `There were some issues during editing elements: ${elements
-        .map((element) => element.name)
-        .join(', ')}: ${JSON.stringify(
-        overallErrors.map((error) => error.message)
-      )}`
-    );
-  }
-};
-
-type ElementDetails = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
-  service: Service;
-  element: Element;
-  searchLocation: ElementSearchLocation;
-}>;
-
-const retrieveMultipleElementCopies =
-  (endevorMaxRequestsNumber: number) =>
-  async (
-    elements: ReadonlyArray<ElementDetails>
-  ): Promise<ReadonlyArray<[ElementDetails, Error | ElementContent]>> => {
-    return (
-      await withNotificationProgress(
-        `Retrieving element copies: ${elements
-          .map((element) => element.element.name)
-          .join(', ')}`
-      )((progressReporter) => {
-        return new PromisePool(
-          elements.map((element) => {
-            return async () => {
-              return retrieveElementWithoutSignout(
-                toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.element);
-            };
-          }),
-          {
-            concurrency: endevorMaxRequestsNumber,
-          }
-        ).start();
-      })
-    ).map((retrievedContent, index) => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return [elements[index]!, retrievedContent];
     });
   };
 
-const retrieveMultipleElementsWithSignoutOption =
+const retrieveSingleCopy =
+  (service: Service) =>
+  (element: Element): Promise<ElementWithFingerprint | Error> => {
+    return withNotificationProgress(`Retrieving element: ${element.name}`)(
+      async (progressReporter) => {
+        return retrieveElementWithFingerprint(progressReporter)(service)(
+          element
+        )();
+      }
+    );
+  };
+
+export const editMultipleElementsWithSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (
     elements: ReadonlyArray<{
@@ -612,25 +307,28 @@ const retrieveMultipleElementsWithSignoutOption =
           const error = result;
           return error;
         }
-        const retrievedContent = result[1];
-        if (isError(retrievedContent)) {
-          const error = retrievedContent;
+        const retrievedItem = result[1];
+        if (isError(retrievedItem)) {
+          const error = retrievedItem;
           return error;
         }
         const elementDetails = result[0];
-        const saveResult = await saveElementIntoWorkspace(workspaceUri)(
+        const saveResult = await saveIntoEditFolder(workspaceUri)(
           elementDetails.serviceName,
           elementDetails.searchLocationName
-        )(elementDetails.element, retrievedContent);
+        )(elementDetails.element, retrievedItem.content);
         if (isError(saveResult)) return saveResult;
-        return saveResult;
+        return withUploadOptions(saveResult)({
+          ...elementDetails,
+          fingerprint: retrievedItem.fingerprint,
+        });
       })
     );
     const showedElements = await Promise.all(
       savedElements.map((result) => {
         if (!isError(result) && result) {
           const savedElementUri = result;
-          return showElementInEditor(savedElementUri);
+          return showElementToEdit(savedElementUri);
         }
         return result;
       })
@@ -650,6 +348,14 @@ const retrieveMultipleElementsWithSignoutOption =
     }
   };
 
+type ElementDetails = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  service: Service;
+  element: Element;
+  searchLocation: ElementSearchLocation;
+}>;
+
 const complexRetrieveMultipleElements =
   (dispatch: (action: Action) => Promise<void>) =>
   (endevorMaxRequestsNumber: number) =>
@@ -664,7 +370,9 @@ const complexRetrieveMultipleElements =
   ) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
-  ): Promise<ReadonlyArray<[ElementDetails, Error | ElementContent]>> => {
+  ): Promise<
+    ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+  > => {
     const retrieveWithSignoutResult = await retrieveMultipleElementsWithSignout(
       endevorMaxRequestsNumber
     )(elements)(signoutChangeControlValue);
@@ -691,17 +399,17 @@ const complexRetrieveMultipleElements =
       genericErrorsAfterSignoutRetrieve.length ===
       notRetrievedElementsWithSignout.length;
     if (allErrorsAreGeneric) {
-      logger.trace(
-        `Unable to retrieve the ${notRetrievedElementsWithSignout.map(
-          (elementDetails) => elementDetails.element.name
-        )} with signout.`
-      );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
           (signedOutElement) => signedOutElement[0]
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
+      logger.trace(
+        `Unable to retrieve the ${notRetrievedElementsWithSignout.map(
+          (elementDetails) => elementDetails.element.name
+        )} with signout.`
+      );
       return retrieveWithSignoutResult;
     }
     const signoutErrorsAfterSignoutRetrieve = signoutErrors(
@@ -723,15 +431,15 @@ const complexRetrieveMultipleElements =
           (elementDetails) => elementDetails.element.name
         )} copies will be retrieved.`
       );
-      const retrieveCopiesResult = await retrieveMultipleElementCopies(
-        endevorMaxRequestsNumber
-      )(signoutErrorsAfterSignoutRetrieve);
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
           (signedOutElement) => signedOutElement[0]
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
+      const retrieveCopiesResult = await retrieveMultipleElementCopies(
+        endevorMaxRequestsNumber
+      )(signoutErrorsAfterSignoutRetrieve);
       return [
         ...successRetrievedElementsWithSignout,
         ...genericErrorsAfterSignoutRetrieve,
@@ -756,12 +464,12 @@ const complexRetrieveMultipleElements =
     const secondAttemptWasSuccessful =
       !notRetrievedElementsWithOverrideSignout.length;
     if (secondAttemptWasSuccessful) {
-      const signedOutElements = toSignedOutElementsPayload([
-        ...[
+      const signedOutElements = toSignedOutElementsPayload(
+        [
           ...successRetrievedElementsWithSignout,
           ...successRetrievedElementsWithOverrideSignout,
-        ].map((signedOutElement) => signedOutElement[0]),
-      ]);
+        ].map((signedOutElement) => signedOutElement[0])
+      );
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
       return [
         ...successRetrievedElementsWithSignout,
@@ -774,12 +482,12 @@ const complexRetrieveMultipleElements =
         (elementDetails) => elementDetails.element.name
       )} copies will be retrieved.`
     );
-    const signedOutElements = toSignedOutElementsPayload([
-      ...[
+    const signedOutElements = toSignedOutElementsPayload(
+      [
         ...successRetrievedElementsWithSignout,
         ...successRetrievedElementsWithOverrideSignout,
-      ].map((signedOutElement) => signedOutElement[0]),
-    ]);
+      ].map((signedOutElement) => signedOutElement[0])
+    );
     await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
     const retrieveCopiesResult = await retrieveMultipleElementCopies(
       endevorMaxRequestsNumber
@@ -791,6 +499,72 @@ const complexRetrieveMultipleElements =
       ...retrieveCopiesResult,
     ];
   };
+
+const signoutErrors = (
+  input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+): ReadonlyArray<ElementDetails> => {
+  return input
+    .map((result) => {
+      const retrieveResult = result[1];
+      if (isSignoutError(retrieveResult)) {
+        const elementDetails = result[0];
+        return elementDetails;
+      }
+      return undefined;
+    })
+    .filter(isDefined);
+};
+
+const genericErrors = (
+  input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+): ReadonlyArray<[ElementDetails, Error]> => {
+  return input
+    .map((result) => {
+      const retrieveResult = result[1];
+      if (isError(retrieveResult) && !isSignoutError(retrieveResult)) {
+        const mappedValue: [ElementDetails, Error] = [
+          result[0],
+          retrieveResult,
+        ];
+        return mappedValue;
+      }
+      return undefined;
+    })
+    .filter(isDefined);
+};
+
+const allErrors = (
+  input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+): ReadonlyArray<ElementDetails> => {
+  return input
+    .map((result) => {
+      const retrieveResult = result[1];
+      if (isError(retrieveResult)) {
+        const elementDetails = result[0];
+        return elementDetails;
+      }
+      return undefined;
+    })
+    .filter(isDefined);
+};
+
+const withoutErrors = (
+  input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+): ReadonlyArray<[ElementDetails, ElementWithFingerprint]> => {
+  return input
+    .map((result) => {
+      const retrieveResult = result[1];
+      if (isError(retrieveResult)) {
+        return undefined;
+      }
+      const mappedValue: [ElementDetails, ElementWithFingerprint] = [
+        result[0],
+        retrieveResult,
+      ];
+      return mappedValue;
+    })
+    .filter(isDefined);
+};
 
 const retrieveMultipleElementsWithSignout =
   (endevorMaxRequestsNumber: number) =>
@@ -805,7 +579,9 @@ const retrieveMultipleElementsWithSignout =
   ) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
-  ): Promise<ReadonlyArray<[ElementDetails, Error | ElementContent]>> => {
+  ): Promise<
+    ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+  > => {
     return (
       await withNotificationProgress(
         `Retrieving elements: ${elements
@@ -815,7 +591,7 @@ const retrieveMultipleElementsWithSignout =
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElementWithSignout(
+              return retrieveElementWithFingerprint(
                 toSeveralTasksProgress(progressReporter)(elements.length)
               )(element.service)(element.element)(signoutChangeControlValue);
             };
@@ -844,7 +620,9 @@ const retrieveMultipleElementsWithOverrideSignout =
   ) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
-  ): Promise<ReadonlyArray<[ElementDetails, Error | ElementContent]>> => {
+  ): Promise<
+    ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+  > => {
     return (
       await withNotificationProgress(
         `Retrieving elements: ${elements
@@ -854,9 +632,12 @@ const retrieveMultipleElementsWithOverrideSignout =
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElementWithOverrideSignout(
+              return retrieveElementWithFingerprint(
                 toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.element)(signoutChangeControlValue);
+              )(element.service)(element.element)(
+                signoutChangeControlValue,
+                true
+              );
             };
           }),
           {
@@ -870,71 +651,37 @@ const retrieveMultipleElementsWithOverrideSignout =
     });
   };
 
-const signoutErrors = (
-  input: ReadonlyArray<[ElementDetails, Error | ElementContent]>
-): ReadonlyArray<ElementDetails> => {
-  return input
-    .map((result) => {
-      const retrieveResult = result[1];
-      if (isSignoutError(retrieveResult)) {
-        const elementDetails = result[0];
-        return elementDetails;
-      }
-      return undefined;
-    })
-    .filter(isDefined);
-};
-
-const genericErrors = (
-  input: ReadonlyArray<[ElementDetails, Error | ElementContent]>
-): ReadonlyArray<[ElementDetails, Error]> => {
-  return input
-    .map((result) => {
-      const retrieveResult = result[1];
-      if (isError(retrieveResult) && !isSignoutError(retrieveResult)) {
-        const mappedValue: [ElementDetails, Error] = [
-          result[0],
-          retrieveResult,
-        ];
-        return mappedValue;
-      }
-      return undefined;
-    })
-    .filter(isDefined);
-};
-
-const allErrors = (
-  input: ReadonlyArray<[ElementDetails, Error | ElementContent]>
-): ReadonlyArray<ElementDetails> => {
-  return input
-    .map((result) => {
-      const retrieveResult = result[1];
-      if (isError(retrieveResult)) {
-        const elementDetails = result[0];
-        return elementDetails;
-      }
-      return undefined;
-    })
-    .filter(isDefined);
-};
-
-const withoutErrors = (
-  input: ReadonlyArray<[ElementDetails, Error | ElementContent]>
-): ReadonlyArray<[ElementDetails, ElementContent]> => {
-  return input
-    .map((result) => {
-      const retrieveResult = result[1];
-      if (isError(retrieveResult)) {
-        return undefined;
-      }
-      const mappedValue: [ElementDetails, ElementContent] = [
-        result[0],
-        retrieveResult,
-      ];
-      return mappedValue;
-    })
-    .filter(isDefined);
-};
+const retrieveMultipleElementCopies =
+  (endevorMaxRequestsNumber: number) =>
+  async (
+    elements: ReadonlyArray<ElementDetails>
+  ): Promise<
+    ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
+  > => {
+    return (
+      await withNotificationProgress(
+        `Retrieving elements: ${elements
+          .map((element) => element.element.name)
+          .join(', ')} with override signout`
+      )((progressReporter) => {
+        return new PromisePool(
+          elements.map((element) => {
+            return async () => {
+              return retrieveElementWithFingerprint(
+                toSeveralTasksProgress(progressReporter)(elements.length)
+              )(element.service)(element.element)();
+            };
+          }),
+          {
+            concurrency: endevorMaxRequestsNumber,
+          }
+        ).start();
+      })
+    ).map((retrievedContent, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      return [elements[index]!, retrievedContent];
+    });
+  };
 
 const toSignedOutElementsPayload = (
   signedOutElements: ReadonlyArray<ElementDetails>
@@ -955,3 +702,12 @@ const toSignedOutElementsPayload = (
     };
   }, accumulator);
 };
+
+const updateTreeAfterSuccessfulSignout =
+  (dispatch: (action: Action) => Promise<void>) =>
+  async (actionPayload: SignedOutElementsPayload): Promise<void> => {
+    await dispatch({
+      type: Actions.ELEMENT_SIGNEDOUT,
+      ...actionPayload,
+    });
+  };

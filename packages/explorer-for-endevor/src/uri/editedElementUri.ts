@@ -21,17 +21,21 @@ type SerializedValue = EditedElementUriQuery & {
 export const toEditedElementUri =
   (elementFileSystemPath: string) =>
   ({
+    serviceName,
     element,
     service,
     searchLocation,
+    searchLocationName,
     fingerprint,
   }: EditedElementUriQuery): Uri | Error => {
     try {
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
+        serviceName,
         service,
         element,
         searchLocation,
+        searchLocationName,
         type: QueryTypes.EDITED_ELEMENT,
         fingerprint,
       };

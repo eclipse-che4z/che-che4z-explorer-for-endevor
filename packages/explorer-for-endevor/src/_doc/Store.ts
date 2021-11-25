@@ -11,12 +11,28 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorAuth } from '../_doc/Credential';
-import { ElementTree } from '../_doc/ElementTree';
-import { LocationConfig } from './settings';
+import { BaseCredential } from '@local/endevor/_doc/Credential';
+import { Element } from '@local/endevor/_doc/Endevor';
+import { ElementLocationName, EndevorServiceName } from './settings';
 
-export interface State {
-  credentials: EndevorAuth;
-  locations: ReadonlyArray<LocationConfig>;
-  elementTrees: ElementTree[];
-}
+export type CachedElement = {
+  element: Element;
+  lastRefreshTimestamp: number;
+};
+
+export type CachedElements = Readonly<{
+  [id: string]: CachedElement;
+}>;
+
+export type EndevorCacheItem = Readonly<{
+  searchLocation: ElementLocationName;
+  elements: CachedElements;
+}>;
+
+export type StateItem = {
+  serviceName: EndevorServiceName;
+  credential?: BaseCredential;
+  cachedElements: ReadonlyArray<EndevorCacheItem>;
+};
+
+export type State = ReadonlyArray<StateItem>;

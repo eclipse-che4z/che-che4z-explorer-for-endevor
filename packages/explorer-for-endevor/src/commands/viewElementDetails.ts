@@ -15,9 +15,9 @@ import { logger } from '../globals';
 import { ElementNode, Node } from '../_doc/ElementTree';
 import { renderElementAttributes } from '../view/elementAttributes';
 import { showWebView } from '@local/vscode-wrapper/window';
-import { filterElementNodes } from '../utils';
+import { filterElementNodes, isError } from '../utils';
 import { COMMAND_PREFIX } from '../constants';
-import { fromVirtualDocUri } from '../uri';
+import { fromTreeElementUri } from '../uri/treeElementUri';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];
@@ -43,16 +43,16 @@ export const viewElementDetails = (
 };
 
 const showElementAttributes = (elementNode: ElementNode): void => {
-  let element;
-  try {
-    element = fromVirtualDocUri(elementNode.uri).element;
-  } catch (error) {
+  const uriParams = fromTreeElementUri(elementNode.uri);
+  if (isError(uriParams)) {
+    const error = uriParams;
     logger.error(
-      `Element: ${elementNode.name} details cannot be shown`,
-      `View element details command error with vscode uri parsing: ${error}`
+      `Unable to show element ${elementNode.name} details`,
+      `Unable to show element ${elementNode.name} details, because of ${error.message}`
     );
     return;
   }
+  const element = uriParams.element;
   const panelTitle = element.name + ' - Details';
   const panelBody = renderElementAttributes(element);
   showWebView(COMMAND_PREFIX)(panelTitle, panelBody);
