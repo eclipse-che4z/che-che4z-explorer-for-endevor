@@ -19,6 +19,7 @@ import {
   ChangeControlValue,
   Service,
   Element,
+  ElementSearchLocation,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toComparedElementUri } from '../uri/comparedElementUri';
@@ -30,6 +31,7 @@ import { mockGettingFileContentWith } from '../_mocks/workspace';
 import { mockUploadingElementWith } from '../_mocks/endevor';
 import { TextEncoder } from 'util';
 import { join } from 'path';
+import { Actions } from '../_doc/Actions';
 
 describe('accepting local changes in compared element', () => {
   before(() => {
@@ -55,6 +57,7 @@ describe('accepting local changes in compared element', () => {
 
   it('should upload local changes and close edit & compare sessions', async () => {
     // arrange
+    const serviceName = 'serviceName';
     const service: Service = {
       location: {
         port: 1234,
@@ -77,6 +80,7 @@ describe('accepting local changes in compared element', () => {
       stageNumber: '1',
       type: 'TYP',
       name: 'ELM',
+      extension: 'ext',
     };
     const uploadChangeControlValue: ChangeControlValue = {
       ccid: 'some_ccid',
@@ -95,14 +99,21 @@ describe('accepting local changes in compared element', () => {
       'remote',
       'element'
     );
-    const editedElementFsPath = join(__dirname, 'temp', 'element');
+    const searchLocationName = 'searchLocationName';
+    const searchLocation: ElementSearchLocation = {
+      instance: 'ANY-INSTANCE',
+    };
+    const initiallyEditedElementFsPath = join(__dirname, 'temp', 'element');
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       service,
+      serviceName,
       element,
       uploadChangeControlValue,
+      searchLocation,
+      searchLocationName,
       fingerprint: remoteElementVersionFingerprint,
       remoteVersionTempFilePath: remoteElementVersionFsPath,
-      initialElementTempFilePath: editedElementFsPath,
+      initialElementTempFilePath: initiallyEditedElementFsPath,
     });
     if (isError(comparedElementUri)) {
       const error = comparedElementUri;
@@ -110,7 +121,6 @@ describe('accepting local changes in compared element', () => {
         `Uri was not built correctly for tests because of: ${error.message}`
       );
     }
-    const comparedElementContent = 'something';
     const dirty = true;
     const successSaving = Promise.resolve(true);
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -126,10 +136,10 @@ describe('accepting local changes in compared element', () => {
     const localElementVersionFileUri = vscode.Uri.file(
       localElementVersionFsPath
     );
+    const comparedElementContent = 'something';
     const getElementContentFromFileStub = mockGettingFileContentWith(
       localElementVersionFileUri
     )(Promise.resolve(new TextEncoder().encode(comparedElementContent)));
-
     const uploadElementContentStub = mockUploadingElementWith(
       service,
       element,
@@ -138,15 +148,16 @@ describe('accepting local changes in compared element', () => {
         content: comparedElementContent,
         fingerprint: remoteElementVersionFingerprint,
       }
-    )();
-
+    )([undefined]);
     const successDiscarding = Promise.resolve();
     const callDiscardCommandStub =
       mockDiscardCommandWith(comparedElementUri)(successDiscarding);
+    const dispatchUpdateActions = sinon.spy();
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.UPLOAD_COMPARED_ELEMENT,
+        dispatchUpdateActions,
         comparedElementUri
       );
     } catch (e) {
@@ -218,6 +229,28 @@ describe('accepting local changes in compared element', () => {
       actualComparedUri,
       comparedElementUri,
       `Discard command was not called with expected ${comparedElementUri}, it was called with ${actualComparedUri}`
+    );
+    assert.deepStrictEqual(
+      dispatchUpdateActions.called,
+      true,
+      'Dispatch for update element was not called'
+    );
+    const expectedUpdateAction = {
+      type: Actions.ELEMENT_UPDATED,
+      serviceName,
+      service,
+      searchLocationName,
+      searchLocation,
+      elements: [element],
+    };
+    assert.deepStrictEqual(
+      expectedUpdateAction,
+      dispatchUpdateActions.args[0]?.[0],
+      `Expexted dispatch for aplly diff editor to have been called with ${JSON.stringify(
+        expectedUpdateAction
+      )}, but it was called with ${JSON.stringify(
+        dispatchUpdateActions.args[0]?.[0]
+      )}`
     );
   });
 });

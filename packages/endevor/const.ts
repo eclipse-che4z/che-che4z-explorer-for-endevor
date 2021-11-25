@@ -14,3 +14,10 @@
 export const ANY_VALUE = '*';
 
 export const FINGERPRINT_MISMATCH_ERROR = 'C1G0410E';
+export const FINGERPRINT_SIGNOUT_ERROR = 'C1G0167E';
+export const NOT_SIGNOUT_ERROR = 'C1G0168E';
+export const DUPLICATE_ELEMENT_ERROR = 'C1G0024E';
+
+// it is an informational message according to:
+// https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-scm-messages/1-0/smgr-messages/smgr123c.html
+export const CHANGE_REGRESSION_INFO = 'SMGR123C';

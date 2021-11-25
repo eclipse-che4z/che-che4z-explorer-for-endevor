@@ -29,6 +29,7 @@ import { elementContentProvider } from '../view/elementContentProvider';
 import { mockPrintingElementWith } from '../_mocks/endevor';
 import { mockShowingDocumentWith } from '../_mocks/window';
 import * as sinon from 'sinon';
+import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
 
 describe('printing element content', () => {
   before(() => {
@@ -47,6 +48,7 @@ describe('printing element content', () => {
 
   it('should show fetched element content', async () => {
     // arrange
+    const serviceName = 'serviceName';
     const service: Service = {
       location: {
         port: 1234,
@@ -69,15 +71,19 @@ describe('printing element content', () => {
       stageNumber: '1',
       type: 'TYP',
       name: 'ELM',
+      extension: 'ext',
     };
+    const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
       instance: 'ANY-INSTANCE',
     };
     const elementUri = toTreeElementUri({
+      serviceName,
+      searchLocationName,
       element,
       service,
       searchLocation,
-    });
+    })(UNIQUE_ELEMENT_FRAGMENT);
     if (isError(elementUri)) {
       const error = elementUri;
       assert.fail(

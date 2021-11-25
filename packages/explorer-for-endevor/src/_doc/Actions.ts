@@ -11,53 +11,107 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Credential } from '@local/endevor/_doc/Credential';
-import { ElementTree } from './ElementTree';
-import { LocationConfig } from './settings';
+import { BaseCredential } from '@local/endevor/_doc/Credential';
+import {
+  Element,
+  ElementSearchLocation,
+  Service,
+} from '@local/endevor/_doc/Endevor';
+import {
+  ElementLocationName,
+  EndevorServiceName,
+  LocationConfig,
+} from './settings';
 
 export const enum Actions {
-  DUMMY_NOOP = 'DUMMY/NOOP',
   ENDEVOR_CREDENTIAL_ADDED = 'CREDENTIAL/ADDED',
   LOCATION_CONFIG_CHANGED = 'LOCATIONS/CHANGED',
-  ELEMENT_TREE_ADDED = 'ELEMENT_TREE_ADDED',
+  ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
   REFRESH = 'REFRESH',
-  EDIT_FOLDER_CHANGED = 'EDIT_FOLDER/CHANGED',
+  ELEMENT_ADDED = 'ELEMENT_ADDED',
+  ELEMENT_UPDATED = 'ELEMENT_UPDATED',
+  ELEMENT_GENERATED = 'ELEMENT_GENERATED',
+  ELEMENT_SIGNEDOUT = 'ELEMENT_SIGNEDOUT',
+  ELEMENT_SIGNEDIN = 'ELEMENT_SIGNEDIN',
 }
 
-interface DummyAction {
-  type: Actions.DUMMY_NOOP;
+export interface EndevorCredentialAdded {
+  type: Actions.ENDEVOR_CREDENTIAL_ADDED;
+  serviceName: EndevorServiceName;
+  credential: BaseCredential;
 }
 
-interface LocationConfigChanged {
+export interface LocationConfigChanged {
   type: Actions.LOCATION_CONFIG_CHANGED;
   payload: ReadonlyArray<LocationConfig>;
 }
 
-interface EndevorCredentialAdded {
-  type: Actions.ENDEVOR_CREDENTIAL_ADDED;
-  serviceName: string;
-  credential: Credential;
+export interface ElementsUpdated {
+  type: Actions.ELEMENTS_FETCHED;
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  elements: ReadonlyArray<Element>;
 }
 
-interface ElementTreeAdded {
-  type: Actions.ELEMENT_TREE_ADDED;
-  tree: ElementTree;
-}
-
-interface Refresh {
+export interface Refresh {
   type: Actions.REFRESH;
-  payload: ReadonlyArray<LocationConfig>;
 }
 
-interface EditFolderChanged {
-  type: Actions.EDIT_FOLDER_CHANGED;
-  payload: string | undefined;
+export interface ElementAdded {
+  type: Actions.ELEMENT_ADDED;
+  serviceName: EndevorServiceName;
+  service: Service;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
+  element: Element;
+}
+
+export interface ElementUpdated {
+  type: Actions.ELEMENT_UPDATED;
+  serviceName: EndevorServiceName;
+  service: Service;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
+  elements: ReadonlyArray<Element>;
+}
+
+export interface ElementGenerated {
+  type: Actions.ELEMENT_GENERATED;
+  serviceName: EndevorServiceName;
+  service: Service;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
+  elements: ReadonlyArray<Element>;
+}
+
+export type SignedOutElementsPayload = {
+  serviceName: EndevorServiceName;
+  service: Service;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
+  elements: ReadonlyArray<Element>;
+};
+
+export type ElementSignedout = {
+  type: Actions.ELEMENT_SIGNEDOUT;
+} & SignedOutElementsPayload;
+
+export interface ElementSignedin {
+  type: Actions.ELEMENT_SIGNEDIN;
+  serviceName: EndevorServiceName;
+  service: Service;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
+  elements: ReadonlyArray<Element>;
 }
 
 export type Action =
-  | DummyAction
   | EndevorCredentialAdded
   | LocationConfigChanged
-  | ElementTreeAdded
+  | ElementsUpdated
   | Refresh
-  | EditFolderChanged;
+  | ElementUpdated
+  | ElementAdded
+  | ElementGenerated
+  | ElementSignedout
+  | ElementSignedin;

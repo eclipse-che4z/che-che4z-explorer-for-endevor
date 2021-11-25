@@ -23,7 +23,10 @@ export const toComparedElementUri =
   ({
     element,
     service,
+    serviceName,
     fingerprint,
+    searchLocation,
+    searchLocationName,
     remoteVersionTempFilePath,
     initialElementTempFilePath,
     uploadChangeControlValue,
@@ -33,8 +36,11 @@ export const toComparedElementUri =
       const query: SerializedValue = {
         type: QueryTypes.COMPARED_ELEMENT,
         service,
+        serviceName,
         element,
         fingerprint,
+        searchLocation,
+        searchLocationName,
         remoteVersionTempFilePath,
         initialElementTempFilePath,
         uploadChangeControlValue,

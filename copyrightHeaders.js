@@ -1,22 +1,22 @@
-const glob = require("glob-promise");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+const glob = require('glob-promise');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // file system constants
 const repoRoot = __dirname;
 const headerFile = path.join(
-  "packages",
-  "explorer-for-endevor",
-  "copyright-header.js"
+  'packages',
+  'explorer-for-endevor',
+  'copyright-header.js'
 );
 // glob patterns
-const sourceCodeFiles = "**/*(*.js|*.ts)";
-const codeDumpLocation = "packages/";
+const sourceCodeFiles = '**/*(*.js|*.ts)';
+const codeDumpLocation = 'packages/';
 const globSearchLocation = `${codeDumpLocation}${sourceCodeFiles}`;
 // os specifics
 const lineSeparator = os.EOL;
-const ENCODING = "utf-8";
+const ENCODING = 'utf-8';
 
 const insertCopyrightHeaders = async () => {
   const sourceCodeFiles = await glob.promise(globSearchLocation, { dot: true });

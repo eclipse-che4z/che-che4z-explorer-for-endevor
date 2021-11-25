@@ -1,26 +1,14 @@
-# dirs
-/.vscode-test
-/results
-/src
-/vsce
-/workspace
-/node_modules
-/manual-tests
+# Ignore everything
+*
+**/*
+**/.DS_Store
 
-# root file extensions
-/*.env
-/*.json
-/*.ts
-/*.js
-/*.groovy
-
-# specific files
-.env_sample
-.gitignore
-.prettierignore
-.vscodeignore
-manual-tests.md
-CONTRIBUTING.md
-license-template.txt
-THEIA.md
-copyright-header.js
+# Add what we actually want
+!dist/**
+!images/**
+!resources/**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE
+!NOTICE.md

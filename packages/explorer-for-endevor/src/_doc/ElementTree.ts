@@ -32,11 +32,13 @@ export type AddNewProfileNode = Readonly<{
 }>;
 
 export type ServiceNode = Readonly<{
+  id: string;
   type: 'SERVICE';
   name: string;
   children: Locations;
 }>;
 export type LocationNode = Readonly<{
+  id: string;
   type: 'LOCATION';
   name: string;
   serviceName: string;
@@ -59,6 +61,8 @@ export type TypeNode = Readonly<{
   children: Elements;
 }>;
 export type ElementNode = Readonly<{
+  id: string;
+  searchLocationId: string;
   type: 'ELEMENT';
   name: string;
   uri: Uri;

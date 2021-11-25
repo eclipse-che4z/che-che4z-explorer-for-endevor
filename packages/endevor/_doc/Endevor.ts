@@ -13,6 +13,7 @@
 
 import { Credential } from './Credential';
 import * as fs from 'fs';
+import { SignoutError } from './Error';
 
 export type ServiceProtocol = 'http' | 'https';
 export type ServiceLocation = Readonly<{
@@ -77,24 +78,25 @@ export type ElementMapPath = Readonly<{
 }>;
 
 export type Element = ElementMapPath &
-  Readonly<
-    Partial<{
-      extension: Value;
-    }>
-  >;
+  Readonly<{
+    extension: Value;
+  }>;
 export type ElementContent = string;
 
-export type Dependency = ElementMapPath &
-  Readonly<
-    Partial<{
-      extension: Value;
-    }>
-  >;
+export type Dependency = Element;
 
 export type ElementWithDependencies = Readonly<{
   content: ElementContent;
-  dependencies: ReadonlyArray<[Dependency, ElementContent | undefined]>;
+  dependencies: ReadonlyArray<[Dependency, ElementContent | Error]>;
 }>;
+
+export type ElementWithDependenciesWithSignout = Readonly<{
+  content: ElementContent;
+  dependencies: ReadonlyArray<
+    [Dependency, ElementContent | SignoutError | Error]
+  >;
+}>;
+
 export type ElementWithFingerprint = Readonly<{
   content: ElementContent;
   fingerprint: Value;
@@ -115,3 +117,5 @@ export type SdkUpdateParams = Readonly<{
   ccid?: string;
   comment?: string;
 }>;
+
+export type OverrideSignOut = boolean;

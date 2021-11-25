@@ -20,6 +20,7 @@ import {
   SuccessPrintResponse,
   SuccessRetrieveResponse,
   UpdateResponse,
+  SignInResponse,
 } from '../_ext/Endevor';
 
 describe('Endevor responses type parsing', () => {
@@ -685,6 +686,85 @@ describe('Endevor responses type parsing', () => {
       // act && assert
       expect(() => parseToType(ErrorResponse, response)).toThrowError(
         'Invalid value {"value":"Oops, I did it again!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>/0: string'
+      );
+    });
+  });
+  describe('Endevor sign in response type parsing', () => {
+    it('should parse a proper response', () => {
+      // arrange
+      const returnCode = 0;
+      const messages = ['Relax, everything will be fine!'];
+      const response = {
+        body: {
+          returnCode,
+          messages,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(SignInResponse, response);
+      // assert
+      const expectedResponse: SignInResponse = {
+        body: {
+          returnCode,
+          messages,
+        },
+      };
+      expect(parsedResponse).toStrictEqual(expectedResponse);
+    });
+    it('should throw an error for a response without return code', () => {
+      // arrange
+      const messages = ['Relax, everything will be fine!'];
+      const response = {
+        body: {
+          messages,
+        },
+      };
+      // act && assert
+      expect(() => parseToType(SignInResponse, response)).toThrowError(
+        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+      );
+    });
+    it('should throw an error for a response with incorrect return code', () => {
+      // arrange
+      const returnCode = '8';
+      const messages = ['Relax, everything will be fine!'];
+      const response = {
+        body: {
+          returnCode,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() => parseToType(SignInResponse, response)).toThrowError(
+        'Invalid value "8" supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+      );
+    });
+    it('should throw an error for a response without messages', () => {
+      // arrange
+      const returnCode = 0;
+      const response = {
+        body: {
+          returnCode,
+        },
+      };
+      // act && assert
+      expect(() => parseToType(SignInResponse, response)).toThrowError(
+        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+      );
+    });
+    it('should throw an error for a response with incorrect messages', () => {
+      // arrange
+      const returnCode = 8;
+      const messages = { messageValue: 'Relax, everything will be fine!' };
+      const response = {
+        body: {
+          returnCode,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() => parseToType(SignInResponse, response)).toThrowError(
+        'Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
       );
     });
   });

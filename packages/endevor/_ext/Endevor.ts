@@ -45,6 +45,10 @@ export type SuccessListDependenciesResponse = t.TypeOf<
 export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
 export type GenerateResponse = t.TypeOf<typeof GenerateResponse>;
 
+export type SignInResponse = t.TypeOf<typeof SignInResponse>;
+
+export type AddResponse = t.TypeOf<typeof AddResponse>;
+
 export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
 
 export const Repository = t.type({
@@ -154,6 +158,20 @@ export const UpdateResponse = t.type({
 export const GenerateResponse = UpdateResponse;
 
 export const ErrorResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});
+
+export const SignInResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});
+
+export const AddResponse = t.type({
   body: t.type({
     returnCode: t.number,
     messages: t.array(t.string),

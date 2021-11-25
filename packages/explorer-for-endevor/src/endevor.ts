@@ -17,12 +17,26 @@ import * as endevor from '@local/endevor/endevor';
 export const getInstanceNames = endevor.getInstanceNames(logger);
 export const searchForElements = endevor.searchForElements(logger);
 export const viewElement = endevor.viewElement(logger);
-export const retrieveElement = endevor.retrieveElement(logger);
+export const retrieveElement = endevor.retrieveElementWithoutSignout(logger);
 export const generateElement = endevor.generateElement(logger);
-export const retrieveElementWithDependencies =
-  endevor.retrieveElementWithDependencies(logger);
+export const retrieveElementWithDependenciesWithoutSignout =
+  endevor.retrieveElementWithDependenciesWithoutSignout(logger);
+export const retrieveElementWithDependenciesWithSignout =
+  endevor.retrieveElementWithDependenciesWithSignout(logger);
+export const retrieveElementWithDependenciesOverrideSignout =
+  endevor.retrieveElementWithDependenciesOverrideSignout(logger);
 export const retrieveElementWithFingerprint =
   endevor.retrieveElementWithFingerprint(logger);
 export const printElement = endevor.printElement(logger);
 export const printListing = endevor.printListing(logger);
 export const updateElement = endevor.updateElement(logger);
+export const retrieveElementWithoutSignout =
+  endevor.retrieveElementWithoutSignout(logger);
+export const retrieveElementWithSignout =
+  endevor.retrieveElementWithSignout(logger);
+export const retrieveElementWithOverrideSignout =
+  endevor.retrieveElementWithOverrideSignout(logger);
+export const signOutElement = endevor.signOutElement(logger);
+export const overrideSignOutElement = endevor.overrideSignOutElement(logger);
+export const signInElement = endevor.signInElement(logger);
+export const addElement = endevor.addElement(logger);

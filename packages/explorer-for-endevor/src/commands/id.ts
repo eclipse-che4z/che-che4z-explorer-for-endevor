@@ -22,6 +22,7 @@ export const CommandId = {
   HIDE_ELEMENT_LOCATION: `${COMMAND_PREFIX}.hideElementLocation`,
   HIDE_SERVICE: `${COMMAND_PREFIX}.hideService`,
   VIEW_ELEMENT_DETAILS: `${COMMAND_PREFIX}.viewElementDetails`,
+  ADD_ELEMENT_FROM_FILE_SYSTEM: `${COMMAND_PREFIX}.addElementFromFileSystem`,
   RETRIEVE_ELEMENT: `${COMMAND_PREFIX}.retrieveElement`,
   RETRIEVE_WITH_DEPENDENCIES: `${COMMAND_PREFIX}.retrieveElementWithDependencies`,
   QUICK_EDIT_ELEMENT: `${COMMAND_PREFIX}.editElement`,
@@ -29,4 +30,6 @@ export const CommandId = {
   UPLOAD_ELEMENT: `${COMMAND_PREFIX}.uploadElement`,
   DISCARD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.discardChanges`,
   UPLOAD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.acceptChanges`,
+  SIGN_OUT_ELEMENT: `${COMMAND_PREFIX}.signOutElement`,
+  SIGN_IN_ELEMENT: `${COMMAND_PREFIX}.signInElement`,
 };

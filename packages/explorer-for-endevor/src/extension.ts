@@ -16,17 +16,11 @@ import * as vscode from 'vscode';
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME, TREE_VIEW_ID } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
-import {
-  make as makeStore,
-  getLocations as getStateLocations,
-  getSystems as getStateSystems,
-  getCredential,
-} from './store/store';
+import { make as makeStore, getCredential, toState } from './store/store';
 import {
   watchForLocations,
   getLocations,
   getTempEditFolder,
-  watchForEditFolder,
 } from './settings/settings';
 import {
   Extension,
@@ -48,25 +42,24 @@ import { hideService } from './commands/hideService';
 import { viewElementDetails } from './commands/viewElementDetails';
 import { retrieveElementCommand } from './commands/retrieveElement';
 import { retrieveWithDependencies } from './commands/retrieveWithDependencies';
-import { editElementCommand } from './commands/editElement';
+import { editElementCommand } from './commands/edit/editElementCommand';
 import { uploadElementCommand } from './commands/uploadElement';
+import { signOutElementCommand } from './commands/signOutElement';
+import { signInElementCommand } from './commands/signInElement';
 import { cleanTempEditDirectory } from './workspace';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import { getEditFolderUri, isError } from './utils';
+import { getEditRootFolderUri, isError } from './utils';
 import { generateElementCommand } from './commands/generateElement';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './_doc/Actions';
 import { State } from './_doc/Store';
-import {
-  ElementLocationName,
-  EndevorServiceName,
-  LocationConfig,
-} from './_doc/settings';
+import { LocationConfig } from './_doc/settings';
 import { Schemas } from './_doc/Uri';
 import { readOnlyFileContentProvider } from './view/readOnlyFileContentProvider';
 import { isEditedElementUri } from './uri/editedElementUri';
 import { discardEditedElementChanges } from './commands/discardEditedElementChanges';
 import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
+import { addElementFromFileSystem } from './commands/addElementFromFileSystem';
 
 const cleanTempDirectory = async (): Promise<void> => {
   const workspace = await getWorkspaceUri();
@@ -118,7 +111,7 @@ const getInitialTempDirPath = async (): Promise<string | undefined> => {
     );
     return;
   }
-  return getEditFolderUri(workspaceUri)(tempEditFolderName).fsPath;
+  return getEditRootFolderUri(workspaceUri)(tempEditFolderName).fsPath;
 };
 
 const updateEditFolderWhenContext = (tempDirPath: string) => {
@@ -127,42 +120,22 @@ const updateEditFolderWhenContext = (tempDirPath: string) => {
   ]);
 };
 
-const cleanEditFolderWhenContext = () => {
-  vscode.commands.executeCommand(
-    'setContext',
-    DIFF_EDITOR_WHEN_CONTEXT_NAME,
-    []
-  );
-};
-
 export const activate: Extension['activate'] = async (context) => {
   logger.trace('Activation requested');
   await cleanTempDirectory();
   const treeChangeEmitter = new vscode.EventEmitter<Node | null>();
-  let stateForTree: State = {
-    credentials: {},
-    locations: getInitialLocations(),
-    elementTrees: [],
-  };
-  const refreshTree = (state: State) => {
+  let stateForTree: State = [];
+  const refreshTree = (state: State, node?: Node) => {
     stateForTree = state;
-    treeChangeEmitter.fire(null);
+    treeChangeEmitter.fire(node ?? null);
   };
-  const selectLocations = () => getStateLocations(stateForTree);
-  const selectSystems = (
-    serviceName: EndevorServiceName,
-    locationName: ElementLocationName
-  ) => getStateSystems(stateForTree, serviceName, locationName);
-  const selectCredential = (name: string) => getCredential(stateForTree, name);
+  const getState = () => stateForTree;
+  const selectCredential = (name: string) => getCredential(stateForTree)(name);
 
-  const dispatch = makeStore(stateForTree, refreshTree);
+  const dispatch = makeStore(toState(getInitialLocations()), refreshTree);
   const elmTreeProvider = makeElmTreeProvider(
     treeChangeEmitter,
-    {
-      selectLocations,
-      selectSystems,
-      selectCredential,
-    },
+    { getState },
     dispatch
   );
 
@@ -180,11 +153,9 @@ export const activate: Extension['activate'] = async (context) => {
       }
     };
 
-  const refresh = () => {
-    const locations = [...getLocations()];
-    dispatch({
+  const refresh = async () => {
+    await dispatch({
       type: Actions.REFRESH,
-      payload: locations,
     });
   };
 
@@ -209,9 +180,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.REFRESH_TREE_VIEW,
       refresh,
       () => {
-        return withErrorLogging(CommandId.REFRESH_TREE_VIEW)(
-          Promise.resolve(refresh())
-        );
+        return withErrorLogging(CommandId.REFRESH_TREE_VIEW)(refresh());
       },
     ],
     [
@@ -245,10 +214,18 @@ export const activate: Extension['activate'] = async (context) => {
       },
     ],
     [
+      CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
+      (parentNode: LocationNode) => {
+        return withErrorLogging(CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM)(
+          addElementFromFileSystem(selectCredential, dispatch, parentNode)
+        );
+      },
+    ],
+    [
       CommandId.GENERATE_ELEMENT,
       (elementNode?: ElementNode, nodes?: Node[]) => {
         return withErrorLogging(CommandId.GENERATE_ELEMENT)(
-          generateElementCommand(elementNode, nodes)
+          generateElementCommand(dispatch)(elementNode, nodes)
         );
       },
     ],
@@ -264,7 +241,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.RETRIEVE_ELEMENT,
       (elementNode?: ElementNode, nodes?: ElementNode[]) => {
         return withErrorLogging(CommandId.RETRIEVE_ELEMENT)(
-          retrieveElementCommand(elementNode, nodes)
+          retrieveElementCommand(dispatch, elementNode, nodes)
         );
       },
     ],
@@ -272,7 +249,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.RETRIEVE_WITH_DEPENDENCIES,
       (elementNode?: ElementNode, nodes?: ElementNode[]) => {
         return withErrorLogging(CommandId.RETRIEVE_WITH_DEPENDENCIES)(
-          retrieveWithDependencies(elementNode, nodes)
+          retrieveWithDependencies(dispatch, elementNode, nodes)
         );
       },
     ],
@@ -280,7 +257,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.QUICK_EDIT_ELEMENT,
       (elementNode?: ElementNode, nodes?: Node[]) => {
         return withErrorLogging(CommandId.QUICK_EDIT_ELEMENT)(
-          editElementCommand(elementNode, nodes)
+          editElementCommand(dispatch, elementNode, nodes)
         );
       },
     ],
@@ -296,7 +273,23 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.UPLOAD_COMPARED_ELEMENT,
       (comparedElementUri?: vscode.Uri) => {
         return withErrorLogging(CommandId.UPLOAD_COMPARED_ELEMENT)(
-          applyDiffEditorChanges(comparedElementUri)
+          applyDiffEditorChanges(dispatch, comparedElementUri)
+        );
+      },
+    ],
+    [
+      CommandId.SIGN_OUT_ELEMENT,
+      (elementNode: ElementNode) => {
+        return withErrorLogging(CommandId.SIGN_OUT_ELEMENT)(
+          signOutElementCommand(dispatch, elementNode)
+        );
+      },
+    ],
+    [
+      CommandId.SIGN_IN_ELEMENT,
+      (elementNode: ElementNode) => {
+        return withErrorLogging(CommandId.SIGN_IN_ELEMENT)(
+          signInElementCommand(dispatch, elementNode)
         );
       },
     ],
@@ -306,7 +299,7 @@ export const activate: Extension['activate'] = async (context) => {
     {
       apply: (document) => {
         return withErrorLogging(CommandId.UPLOAD_ELEMENT)(
-          uploadElementCommand(document.uri)
+          uploadElementCommand(dispatch, document.uri)
         );
       },
       isApplicable: (document) => {
@@ -345,30 +338,6 @@ export const activate: Extension['activate'] = async (context) => {
       vscode.commands.registerCommand(id, command)
     ),
     watchForLocations(dispatch),
-    watchForEditFolder(async (action) => {
-      if (action.type === Actions.EDIT_FOLDER_CHANGED) {
-        const workspaceUri = await getWorkspaceUri();
-        if (!workspaceUri) {
-          logger.warn(
-            'At least one workspace in this project should be opened to work with elements.',
-            'There is no valid workspace to update when context values.'
-          );
-          cleanEditFolderWhenContext();
-          return;
-        }
-        if (!action.payload) {
-          logger.warn(
-            'Unable to get a valid edit path from settings to work with elements.',
-            'There is no valid edit folder path in the settings to update when context values.'
-          );
-          cleanEditFolderWhenContext();
-          return;
-        }
-        updateEditFolderWhenContext(
-          getEditFolderUri(workspaceUri)(action.payload).fsPath
-        );
-      }
-    }),
     vscode.workspace.onDidSaveTextDocument((document) =>
       textDocumentSavedHandlers
         .filter((handler) => handler.isApplicable(document))

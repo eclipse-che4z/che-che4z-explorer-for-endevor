@@ -30,9 +30,6 @@ const config = {
         '@broadcom/endevor-for-zowe-cli@6.4.0': {
           licenseName: 'Broadcom Internal',
         },
-        'levenshtein@1.0.5': {
-          licenseText: 'Public domain code is not subject to any license.',
-        },
         'promise-pool-tool@1.3.3': {
           licenseText: `
 Copyright (c) 4-digit year, Company or Person's Name

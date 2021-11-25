@@ -14,6 +14,8 @@
 import { ElementNode, Node } from './_doc/ElementTree';
 import * as path from 'path';
 import { Uri } from 'vscode';
+import { TimeoutError } from './_doc/Error';
+import { Element } from '@local/endevor/_doc/Endevor';
 
 const isElementNode = (node: Node): node is ElementNode => {
   return node.type === 'ELEMENT';
@@ -33,19 +35,94 @@ export const isError = <T>(value: T | Error): value is Error => {
 
 export const getEditFolderUri =
   (workspaceUri: Uri) =>
+  (editFolderWorkspacePath: string) =>
+  (serviceName: string, locationName: string) =>
+  (element: Element): Uri => {
+    return Uri.file(
+      path.join(
+        workspaceUri.fsPath,
+        editFolderWorkspacePath,
+        serviceName,
+        locationName,
+        element.system,
+        element.subSystem,
+        element.type
+      )
+    );
+  };
+
+export const getEditRootFolderUri =
+  (workspaceUri: Uri) =>
   (editFolderWorkspacePath: string): Uri => {
     return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
   };
 
-export const splitIntoPathAndFileName = (
+export const parseFilePath = (
   filePath: string
 ): {
   path: string;
   fileName: string;
+  fileExtension?: string;
 } => {
   const parsedPath = path.parse(filePath);
   return {
     fileName: parsedPath.name,
     path: parsedPath.dir,
+    fileExtension: parsedPath.ext || undefined,
   };
+};
+
+export const isTimeoutError = <T>(
+  value: T | TimeoutError
+): value is TimeoutError => {
+  return value instanceof TimeoutError;
+};
+
+export const toPromiseWithTimeout =
+  (timeout: number) =>
+  async <T>(inputPromise: Promise<T>): Promise<T | TimeoutError> => {
+    return Promise.race([
+      inputPromise,
+      new Promise<TimeoutError>((resolve) =>
+        setTimeout(() => resolve(new TimeoutError()), timeout)
+      ),
+    ]);
+  };
+
+export const replaceWith =
+  <T>(initialSouce: ReadonlyArray<T>) =>
+  (
+    isReplacement: (t1: T, t2: T) => boolean,
+    replacement: T
+  ): ReadonlyArray<T> => {
+    const accumulator: ReadonlyArray<T> = [];
+    return initialSouce.reduce((accum, existingItem) => {
+      if (isReplacement(existingItem, replacement)) {
+        return [...accum, replacement];
+      }
+      return [...accum, existingItem];
+    }, accumulator);
+  };
+
+type GroupedElementNodes = Readonly<{
+  [searchLocationId: string]: ReadonlyArray<ElementNode>;
+}>;
+
+export const groupBySearchLocationId = (
+  elementNodes: ReadonlyArray<ElementNode>
+): GroupedElementNodes => {
+  const accumulator: GroupedElementNodes = {};
+  return elementNodes.reduce((accum, currentNode) => {
+    const exisitingGroup = accum[currentNode.searchLocationId];
+    if (!exisitingGroup) {
+      return {
+        ...accum,
+        searchLocationId: [currentNode],
+      };
+    }
+    return {
+      ...accum,
+      searchLocationId: [...exisitingGroup, currentNode],
+    };
+  }, accumulator);
 };

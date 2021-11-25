@@ -12,26 +12,28 @@
  */
 
 import { Uri } from 'vscode';
-import { ElementListingUriQuery, Schemas } from '../_doc/Uri';
+import { ElementListingUriQuery, Schemas, Extensions } from '../_doc/Uri';
 
-export const toElementListingUri = ({
-  element,
-  service,
-}: ElementListingUriQuery): Uri | Error => {
-  try {
-    const emptyUri = Uri.parse('');
-    return emptyUri.with({
-      scheme: Schemas.ELEMENT_LISTING,
-      path: `${element.name}-LISTING`,
-      query: JSON.stringify({
-        service,
-        element,
-      }),
-    });
-  } catch (e) {
-    return e;
-  }
-};
+export const toElementListingUri =
+  ({ element, service }: ElementListingUriQuery) =>
+  (uniqueFragment: string): Uri | Error => {
+    try {
+      const elementFragment = { fragment: uniqueFragment };
+      const elementExtension = `${element.extension}.${Extensions.ELEMENT_LISTING}`;
+      const emptyUri = Uri.parse('');
+      return emptyUri.with({
+        scheme: Schemas.ELEMENT_LISTING,
+        path: `${element.name}.${elementExtension}`,
+        query: JSON.stringify({
+          service,
+          element,
+          elementFragment,
+        }),
+      });
+    } catch (e) {
+      return e;
+    }
+  };
 
 export const fromElementListingUri = (
   uri: Uri

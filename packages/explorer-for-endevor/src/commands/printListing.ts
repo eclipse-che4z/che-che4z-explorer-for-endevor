@@ -15,13 +15,13 @@ import { logger } from '../globals';
 import { filterElementNodes } from '../utils';
 import { ElementNode, Node } from '../_doc/ElementTree';
 import { window } from 'vscode';
-import { fromVirtualDocUri, toVirtualDocUri } from '../uri';
 import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../constants';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { PromisePool } from 'promise-pool-tool';
 import { getMaxParallelRequests } from '../settings/settings';
 import { isError } from '@local/endevor/utils';
-import { Schemas } from '../_doc/Uri';
+import { toElementListingUri } from '../uri/elementListingUri';
+import { fromTreeElementUri } from '../uri/treeElementUri';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];
@@ -56,12 +56,34 @@ export const printListingCommand = async (
     )((progressReporter) => {
       return new PromisePool(
         elementNodes
-          .map((elementNode) =>
-            toVirtualDocUri(Schemas.ELEMENT_LISTING)(
-              fromVirtualDocUri(elementNode.uri)
-            )
-          )
+          .map((elementNode) => fromTreeElementUri(elementNode.uri))
+          .map((uriParams) => {
+            if (isError(uriParams)) {
+              const error = uriParams;
+              logger.trace(
+                `Unable to print element listing, because of: ${error.message}`
+              );
+              return new Error(`Unable to print element listing`);
+            }
+            const lastRefreshTimestamp = uriParams.fragment;
+            const listingUri =
+              toElementListingUri(uriParams)(lastRefreshTimestamp);
+            if (isError(listingUri)) {
+              const error = listingUri;
+              logger.trace(
+                `Unable to print element: ${uriParams.element.name} listing, because of ${error.message}`
+              );
+              return new Error(
+                `Unable to print element: ${uriParams.element.name} listing`
+              );
+            }
+            return listingUri;
+          })
           .map((listingUri) => async () => {
+            if (isError(listingUri)) {
+              const error = listingUri;
+              return error;
+            }
             try {
               await window.showTextDocument(listingUri);
               progressReporter.report({
@@ -89,9 +111,24 @@ export const printListingCommand = async (
     const result = await withNotificationProgress(
       `Printing element: ${elementNode.name} listing content`
     )(async (progressReporter) => {
-      const listingUri = toVirtualDocUri(Schemas.ELEMENT_LISTING)(
-        fromVirtualDocUri(elementNode.uri)
-      );
+      const uriParams = fromTreeElementUri(elementNode.uri);
+      if (isError(uriParams)) {
+        const error = uriParams;
+        logger.error(
+          `Unable to print element: ${elementNode.name} listing`,
+          `Unable to print element: ${elementNode.name} listing, because of ${error.message}`
+        );
+        return;
+      }
+      const listingUri = toElementListingUri(uriParams)(uriParams.fragment);
+      if (isError(listingUri)) {
+        const error = listingUri;
+        logger.error(
+          `Unable to print element: ${elementNode.name} listing`,
+          `Unable to print element: ${elementNode.name} listing, because of ${error.message}`
+        );
+        return;
+      }
       progressReporter.report({ increment: 50 });
       try {
         await window.showTextDocument(listingUri);

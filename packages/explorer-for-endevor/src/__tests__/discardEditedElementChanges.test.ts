@@ -19,6 +19,7 @@ import {
   ChangeControlValue,
   Element,
   Service,
+  ElementSearchLocation,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toComparedElementUri } from '../uri/comparedElementUri';
@@ -50,12 +51,18 @@ describe('discarding local changes in compared element', () => {
 
   it('should discard local changes and close edit & compare sessions', async () => {
     // arrange
+    const initiallyEditedElementFsPath = join(__dirname, 'temp', 'element');
     const localElementVersionFsPath = join(
       __dirname,
       'temp',
       'local',
       'element'
     );
+    const localElementVersionFileUri = vscode.Uri.file(
+      localElementVersionFsPath
+    );
+    const localElementVersionFingerprint = 'something';
+    const serviceName = 'serviceName';
     const service: Service = {
       location: {
         port: 1234,
@@ -78,26 +85,36 @@ describe('discarding local changes in compared element', () => {
       stageNumber: '1',
       type: 'TYP',
       name: 'ELM',
+      extension: 'ext',
     };
     const uploadChangeControlValue: ChangeControlValue = {
       ccid: 'some_ccid',
       comment: 'some_comment',
     };
-    const remoteElementVersionFingerprint = 'element_fingerprint';
     const remoteElementVersionFsPath = join(
       __dirname,
       'temp',
       'remote',
       'element'
     );
-    const editedElementFsPath = join(__dirname, 'temp', 'element');
+    const remoteElementVersionFileUri = vscode.Uri.file(
+      remoteElementVersionFsPath
+    );
+    const remoteElementVersionFingerprint = 'element_fingerprint';
+    const searchLocationName = 'searchLocationName';
+    const searchLocation: ElementSearchLocation = {
+      instance: 'ANY-INSTANCE',
+    };
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       service,
+      serviceName,
       element,
       uploadChangeControlValue,
+      searchLocation,
+      searchLocationName,
       fingerprint: remoteElementVersionFingerprint,
       remoteVersionTempFilePath: remoteElementVersionFsPath,
-      initialElementTempFilePath: editedElementFsPath,
+      initialElementTempFilePath: initiallyEditedElementFsPath,
     });
     if (isError(comparedElementUri)) {
       const error = comparedElementUri;
@@ -105,12 +122,6 @@ describe('discarding local changes in compared element', () => {
         `Uri was not built correctly for tests because of: ${error.message}`
       );
     }
-    const localElementVersionFileUri = vscode.Uri.file(
-      localElementVersionFsPath
-    );
-    const remoteElementVersionFileUri = vscode.Uri.file(
-      remoteElementVersionFsPath
-    );
     const dirty = true;
     const successSaving = Promise.resolve(true);
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -123,17 +134,18 @@ describe('discarding local changes in compared element', () => {
     } as unknown as vscode.TextEditor;
     const getActiveDiffEditorStub =
       mockGettingActiveEditorWith(activeDiffEditor);
-    const localElementVersionFingerprint = 'something';
-    const editedElementUri = toEditedElementUri(editedElementFsPath)({
+    const initiallyEditedElementUri = toEditedElementUri(
+      initiallyEditedElementFsPath
+    )({
+      serviceName,
+      searchLocationName,
       element,
       service,
       fingerprint: localElementVersionFingerprint,
-      searchLocation: {
-        instance: 'ANY',
-      },
+      searchLocation,
     });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
+    if (isError(initiallyEditedElementUri)) {
+      const error = initiallyEditedElementUri;
       assert.fail(
         `Uri was not built correctly for tests because of: ${error.message}`
       );
@@ -143,16 +155,17 @@ describe('discarding local changes in compared element', () => {
     const editedElementEditor: vscode.TextEditor = {
       document: {
         isDirty: nonDirty,
-        uri: editedElementUri,
+        uri: initiallyEditedElementUri,
       },
     } as unknown as vscode.TextEditor;
     mockGettingAllOpenedEditorsWith([editedElementEditor]);
     const successResult = Promise.resolve();
-    const focusOnEditedElementEditorStub =
-      mockFocusingOnEditorWith(editedElementUri)(successResult);
+    const focusOnEditedElementEditorStub = mockFocusingOnEditorWith(
+      initiallyEditedElementUri
+    )(successResult);
     const closeActiveEditorsStub = mockClosingActiveEditorWith(successResult);
     const deleteTempFilesStub = mockDeletingFileWith([
-      [editedElementUri, successResult],
+      [initiallyEditedElementUri, successResult],
       [localElementVersionFileUri, successResult],
       [remoteElementVersionFileUri, successResult],
     ]);
@@ -181,8 +194,8 @@ describe('discarding local changes in compared element', () => {
     const actualEditedElementUri = focusOnEditedElementEditorStub.args[0]?.[0];
     assert.strictEqual(
       actualEditedElementUri?.fsPath,
-      editedElementFsPath,
-      `Edited element editor was not made active because of diff in expected ${editedElementFsPath} and actual ${actualEditedElementUri?.fsPath}`
+      initiallyEditedElementFsPath,
+      `Edited element editor was not made active because of diff in expected ${initiallyEditedElementFsPath} and actual ${actualEditedElementUri?.fsPath}`
     );
     assert.ok(
       closeActiveEditorsStub.calledTwice,
@@ -203,8 +216,8 @@ describe('discarding local changes in compared element', () => {
     const actualEditedFileUri = actualEditedElementDeleteCall?.[0];
     assert.strictEqual(
       actualEditedFileUri?.fsPath,
-      editedElementFsPath,
-      `Delete temp file was not called with expected ${editedElementFsPath}, it was called with ${actualEditedFileUri?.fsPath}`
+      initiallyEditedElementFsPath,
+      `Delete temp file was not called with expected ${initiallyEditedElementFsPath}, it was called with ${actualEditedFileUri?.fsPath}`
     );
     const actualRemoteVersionElementFileUri =
       remoteElementVersionDeleteCall?.[0];

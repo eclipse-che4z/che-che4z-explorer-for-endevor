@@ -22,7 +22,9 @@ import {
   printElement,
   printListing,
   searchForElements,
+  signInElement,
   updateElement,
+  addElement,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import { isError, toEndevorProtocol, toVersion2Api } from '../utils';
@@ -294,7 +296,7 @@ describe('endevor public API', () => {
           name: 'TEST-EL1',
           type: 'TEST-TYPE',
           stageNumber: '1',
-          extension: 'EXT',
+          extension: 'ext',
           instance: 'TEST-INST',
         },
       ];
@@ -306,7 +308,7 @@ describe('endevor public API', () => {
           name: 'TEST-EL2',
           type: 'TEST-TYPE',
           stageNumber: '1',
-          extension: 'EXT',
+          extension: 'ext',
           instance: 'TEST-INST',
         },
       ];
@@ -410,7 +412,7 @@ describe('endevor public API', () => {
           name: 'TEST-EL1',
           type: 'TEST-TYPE',
           stageNumber: '1',
-          extension: 'EXT',
+          extension: 'ext',
           instance: 'TEST-INST',
         },
       ];
@@ -422,7 +424,7 @@ describe('endevor public API', () => {
           name: 'TEST-EL2',
           type: 'TEST-TYPE',
           stageNumber: '1',
-          extension: 'EXT',
+          extension: 'ext',
           instance: 'TEST-INST',
         },
       ];
@@ -490,6 +492,143 @@ describe('endevor public API', () => {
       expect(calledOnce).toBe(true);
 
       expect(actualElements).toEqual(validElements);
+    });
+
+    it('should return elements with proper extensions', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const searchLocation: ElementSearchLocation = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subsystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+      };
+      const requestQuery = '?data=BAS&search=yes&return=FIR';
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const elementsWithEndevorExtension: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'test-ext1',
+          instance: 'TEST-INST',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'test-ext2',
+          instance: 'TEST-INST',
+        },
+      ];
+      const elementsWithTypeExtension: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE1',
+          stageNumber: '1',
+          extension: 'test-type1',
+          instance: 'TEST-INST',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE2',
+          stageNumber: '1',
+          extension: 'test-type2',
+          instance: 'TEST-INST',
+        },
+      ];
+      const expectedElements = elementsWithEndevorExtension.concat(
+        elementsWithTypeExtension
+      );
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...elementsWithEndevorExtension.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension.toUpperCase(),
+              };
+            }),
+            ...elementsWithTypeExtension.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(searchLocation)
+        )
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualElements = await searchForElements(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualElements).toEqual(expectedElements);
     });
 
     // TODO
@@ -596,6 +735,7 @@ describe('endevor public API', () => {
           type: 'TEST-TYPE',
           stageNumber: '1',
           instance: 'TEST-INST',
+          extension: 'test-type',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -887,6 +1027,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -947,6 +1088,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -1008,6 +1150,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const v1BasePath = basePath;
       const serviceLocation: ServiceLocation = {
@@ -1041,6 +1184,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -1106,6 +1250,7 @@ describe('endevor public API', () => {
         subSystem: '*',
         type: '*',
         name: '*',
+        extension: '*',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -1173,6 +1318,7 @@ describe('endevor public API', () => {
         subSystem: 'SBS',
         type: 'COB',
         name: 'ELM',
+        extension: 'ext',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -1244,6 +1390,7 @@ describe('endevor public API', () => {
         subSystem: '*',
         type: '*',
         name: '*',
+        extension: '*',
       };
       const request: MockRequest<null> = {
         method: 'GET',
@@ -1336,6 +1483,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1398,6 +1546,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1461,6 +1610,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const v1BasePath = basePath;
       const serviceLocation: ServiceLocation = {
@@ -1494,6 +1644,7 @@ describe('endevor public API', () => {
         subSystem: 'TEST-SBS',
         type: 'TEST-TYPE',
         name: 'ELM1',
+        extension: 'ext',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1561,6 +1712,7 @@ describe('endevor public API', () => {
         subSystem: '*',
         type: '*',
         name: '*',
+        extension: '*',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1630,6 +1782,7 @@ describe('endevor public API', () => {
         subSystem: 'SBS',
         type: 'COB',
         name: 'ELM',
+        extension: 'ext',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1703,6 +1856,7 @@ describe('endevor public API', () => {
         subSystem: '*',
         type: '*',
         name: '*',
+        extension: '*',
       };
       const requestQuery = '?print=LISTING';
       const request: MockRequest<null> = {
@@ -1749,6 +1903,547 @@ describe('endevor public API', () => {
       expect(calledOnce).toBe(true);
 
       expect(actualContent).toBeUndefined();
+    });
+  });
+
+  describe('signing in an element', () => {
+    const toRequestPath =
+      (basePath: string) =>
+      ({
+        instance,
+        environment,
+        stageNumber,
+        system,
+        subSystem,
+        type,
+        name,
+      }: Element): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'subsys',
+          subSystem,
+          'type',
+          type,
+          'ele',
+          name
+        );
+      };
+
+    it('should sign in an element', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM1',
+        extension: 'ext',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0',
+          reasonCode: '0',
+          reports: {
+            APIMSGS: '/reports/1631287369-1243603095386082-APIMSGS',
+            C1MSGS1: '/reports/1631287369-1243603095386082-C1MSGS1',
+          },
+          data: [],
+          messages: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(signInResponse).toBeUndefined();
+    });
+
+    it('should sign in an element for v1 Endevor API base path', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM1',
+        extension: 'ext',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0',
+          reasonCode: '0',
+          reports: {
+            APIMSGS: '/reports/1631287369-1243603095386082-APIMSGS',
+            C1MSGS1: '/reports/1631287369-1243603095386082-C1MSGS1',
+          },
+          data: [],
+          messages: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const v1BasePath = basePath;
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: v1BasePath,
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(signInResponse).toBeUndefined();
+    });
+
+    it('should return error for trying to sign in a not signed out element', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM1',
+        extension: 'ext',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '4',
+          reasonCode: '0',
+          reports: {
+            APIMSGS: '/reports/1631384702-0836720775451138-APIMSGS',
+            C1MSGS1: '/reports/1631384702-0836720775451138-C1MSGS1',
+          },
+          data: [],
+          messages: [
+            'C1G0172W  EXPLICIT SIGN-IN NOT PERFORMED, ELEMENT IS CURRENTLY NOT SIGNED-OUT',
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(signInResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect connection details', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM1',
+        extension: 'ext',
+      };
+      const v1BasePath = basePath;
+      const serviceLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: v1BasePath,
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      expect(isError(signInResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect base credentials', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM1',
+        extension: 'ext',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '20',
+          reasonCode: '34',
+          reports: null,
+          data: [],
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(signInResponse)).toBe(true);
+    });
+
+    it('should return error for partially specified element location', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: '*',
+        subSystem: '*',
+        type: '*',
+        name: '*',
+        extension: '*',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '12',
+          reasonCode: '0',
+          reports: null,
+          data: [],
+          messages: [
+            'EWS1216E Wildcarded element name is not supported for this action',
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(signInResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect element location', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const invalidElement: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'SYS',
+        subSystem: 'SBS',
+        type: 'COB',
+        name: 'ELM',
+        extension: 'ext',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(invalidElement),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '4',
+          reasonCode: '0',
+          reports: {
+            C1MSGS1: '/reports/1621956951-160920989-C1MSGS1',
+          },
+          data: [],
+          messages: ['C1G0208W  ELEMENT NOT FOUND FOR SYNTAX STATEMENT #1'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(invalidElement)
+        )
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(invalidElement);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(signInResponse)).toBe(true);
+    });
+
+    it('should return error if something goes wrong in Endevor side', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: Element = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: '*',
+        subSystem: '*',
+        type: '*',
+        name: '*',
+        extension: '*',
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(toVersion2Api(basePath))(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'signin' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          realData: ['Is it real data or not???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(element))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const signInResponse = await signInElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(signInResponse)).toBe(true);
     });
   });
 
@@ -1929,6 +2624,69 @@ describe('endevor public API', () => {
       expect(updateResult).toBeUndefined();
     });
 
+    it('should update an element even after change regression error', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        200,
+        {
+          returnCode: 8,
+          reasonCode: 0,
+          reports: null,
+          data: [],
+          messages: [
+            'EWS1117I Request processed by SysID A01SENF, STC TSO1MFTS - STC07435',
+            '03:41:46 SMGR123C 99% PRIOR INSERTS DELETED AND/OR 01% PRIOR DELETES RE-INSERTED',
+          ],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const updateResult = await updateElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(existingElementLocation)(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toBeUndefined();
+    });
+
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const credential: BaseCredential = {
@@ -2093,6 +2851,8 @@ describe('endevor public API', () => {
 
     it('should return an error for outdated fingerprint', async () => {
       // arrange
+      const exptectedMessage =
+        "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.";
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
       mockServer.anyRequest().thenJson(
@@ -2101,9 +2861,7 @@ describe('endevor public API', () => {
           returnCode: 12,
           reasonCode: 34,
           reports: null,
-          messages: [
-            "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.",
-          ],
+          messages: [exptectedMessage],
           data: [],
         },
         {
@@ -2131,7 +2889,6 @@ describe('endevor public API', () => {
         type: 'TEST-TYPE',
         name: 'ELM',
       };
-      const elementLocationAsString = `${existingElementLocation.system}/${existingElementLocation.subSystem}/${existingElementLocation.type}/${existingElementLocation.name}`;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -2156,7 +2913,7 @@ describe('endevor public API', () => {
         errorMessage = updateResult.message;
       }
       expect(errorMessage).toBe(
-        `Unable to update element ${elementLocationAsString}. Fingerprint provided does not match record in Endevor.`
+        `Fingerprint provided does not match record in Endevor for element ${existingElementLocation.name}: ${exptectedMessage}`
       );
     });
 
@@ -2322,6 +3079,407 @@ describe('endevor public API', () => {
       })(existingElementLocation)(updateActionChangeControlValue)(element);
       // assert
       expect(isError(updateResult)).toBe(true);
+    });
+  });
+
+  describe('Adding element', () => {
+    const content = 'Very important addition!';
+
+    it('should return void if everything is OK and an element is added', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        200,
+        {
+          data: [],
+          messages: [],
+          reports: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(addResult).toBeUndefined();
+    });
+
+    it('should return an error for incorrect connection details', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const serviceLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error for incorrect base credentials', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        500,
+        {
+          returnCode: 20,
+          reasonCode: 34,
+          reports: null,
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error for partially element location specified', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        500,
+        {
+          returnCode: 12,
+          reasonCode: 34,
+          reports: null,
+          messages: ['EWS1232E Parameter system cannot be Wildcarded.'],
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: '*',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error for incorrect content', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const serviceLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error for incorrect ccid&comment', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        500,
+        {
+          returnCode: 12,
+          reasonCode: 34,
+          reports: null,
+          messages: [
+            '11:33:28  C1G0142E  SYSTEM REQUIRES A CCID TO BE SPECIFIED - REQUEST NOT PERFORMED',
+          ],
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: '',
+        comment: '',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error for duplicate element', async () => {
+      // arrange
+      const exptectedMessage = 'C1G0024E  THE ELEMENT WAS ALREADY PRESENT.';
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        500,
+        {
+          returnCode: 12,
+          reasonCode: 34,
+          reports: null,
+          messages: [exptectedMessage],
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
+    });
+
+    it('should return an error if something went wrong in Endevor side', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.anyRequest().thenJson(
+        500,
+        {
+          returnCode: 20,
+          reasonCode: 34,
+          reports: null,
+          messages: ['Something went really wrong....'],
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const element: ElementMapPath = {
+        instance: 'TEST-INST',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const { protocol, hostname, port } = new URL(mockServer.url);
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const addResult = await addElement(logger)(progress)({
+        rejectUnauthorized,
+        location: serviceLocation,
+        credential,
+      })(element)(addActionChangeControlValue)(content);
+      // assert
+      expect(isError(addResult)).toBe(true);
     });
   });
 });
