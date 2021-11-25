@@ -12,7 +12,7 @@
  */
 
 import { parseToType } from '@local/type-parser/parser';
-import { LocationConfig, LocationConfigs } from '../_ext/settings';
+import { LocationConfig, LocationConfigs, AutoSignOut } from '../_ext/settings';
 
 describe('parseToType location configs', () => {
   it('should parse proper location config structure', () => {
@@ -56,6 +56,25 @@ describe('parseToType location configs', () => {
       'Invalid value undefined supplied to : ' +
         'Array<{ service: string, elementLocations: Array<string> }>/0:' +
         ' { service: string, elementLocations: Array<string> }/elementLocations: Array<string>'
+    );
+  });
+});
+
+describe('parseToType auto sign-out', () => {
+  it('should parse correctly', () => {
+    // arrange
+    const expectedValue = false;
+    // act
+    const actualAutoSignOutValue = parseToType(AutoSignOut, expectedValue);
+    // assert
+    expect(actualAutoSignOutValue).toEqual(expectedValue);
+  });
+  it('should report if wrong type is provided', () => {
+    // arrange
+    const notBool = 'aaaa';
+    // act && assert
+    expect(() => parseToType(AutoSignOut, notBool)).toThrow(
+      'Invalid value "' + notBool + '" supplied to : boolean'
     );
   });
 });

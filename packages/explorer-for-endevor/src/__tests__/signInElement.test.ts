@@ -14,7 +14,6 @@
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
 import { CommandId } from '../commands/id';
-import { toTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
 import * as assert from 'assert';
 import {
@@ -23,30 +22,28 @@ import {
   Service,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { printElement } from '../commands/printElement';
-import { Schemas } from '../_doc/Uri';
-import { elementContentProvider } from '../view/elementContentProvider';
-import { mockPrintingElementWith } from '../_mocks/endevor';
-import { mockShowingDocumentWith } from '../_mocks/window';
+import { signInElementCommand } from '../commands/signInElement';
+import { mockSignInElement } from '../_mocks/endevor';
 import * as sinon from 'sinon';
+import { toTreeElementUri } from '../uri/treeElementUri';
 import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
+import { Actions } from '../_doc/Actions';
 
-describe('printing element content', () => {
+describe('sign in element', () => {
   before(() => {
-    vscode.commands.registerCommand(CommandId.PRINT_ELEMENT, printElement);
-    vscode.workspace.registerTextDocumentContentProvider(
-      Schemas.TREE_ELEMENT,
-      elementContentProvider
+    vscode.commands.registerCommand(
+      CommandId.SIGN_IN_ELEMENT,
+      signInElementCommand
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Sinon has some issues with cleaning up the environment after itself, so we have to do it
     // TODO: take a look into Fake API instead of Stub
     sinon.restore();
   });
 
-  it('should show fetched element content', async () => {
+  it('should call sign in element properly', async () => {
     // arrange
     const serviceName = 'serviceName';
     const service: Service = {
@@ -63,6 +60,12 @@ describe('printing element content', () => {
       },
       rejectUnauthorized: false,
     };
+    const searchLocationName = 'searchLocationName';
+    const searchLocation: ElementSearchLocation = {
+      instance: 'ANY-INSTANCE',
+      ccid: '',
+      comment: '',
+    };
     const element: Element = {
       instance: 'ANY',
       environment: 'ENV',
@@ -73,15 +76,11 @@ describe('printing element content', () => {
       name: 'ELM',
       extension: 'ext',
     };
-    const searchLocationName = 'searchLocationName';
-    const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
-    };
     const elementUri = toTreeElementUri({
       serviceName,
       searchLocationName,
-      element,
       service,
+      element,
       searchLocation,
     })(UNIQUE_ELEMENT_FRAGMENT);
     if (isError(elementUri)) {
@@ -90,54 +89,65 @@ describe('printing element content', () => {
         `Uri was not built correctly for tests because of: ${error.message}`
       );
     }
-    const expectedElementContent = 'Show me this Endevor!';
-    const printElementStub = mockPrintingElementWith(
+    const signInSuccessResult = undefined;
+    const signInElementStub = mockSignInElement(
       service,
       element
-    )(expectedElementContent);
-    const success = Promise.resolve();
-    const showElementContentStub = mockShowingDocumentWith()(success);
+    )(signInSuccessResult);
+    const dispatchSignInAction = sinon.spy();
     // act
     try {
-      await vscode.commands.executeCommand(CommandId.PRINT_ELEMENT, elementUri);
+      await vscode.commands.executeCommand(
+        CommandId.SIGN_IN_ELEMENT,
+        dispatchSignInAction,
+        {
+          type: 'TYP',
+          name: 'ELM',
+          uri: elementUri,
+        },
+        undefined
+      );
     } catch (e) {
       assert.fail(
         `Test failed because of uncatched error inside command: ${e.message}`
       );
     }
-    // assert
-    const [
-      generalPrintFunctionStub,
-      printWithServiceStub,
-      printElementContentStub,
-    ] = printElementStub;
-    assert.ok(
-      generalPrintFunctionStub.called,
-      'Fetch element content was not called'
-    );
-    const actualService = printWithServiceStub.args[0]?.[0];
+    const [generalFunctionStub, withServiceStub, withContentStub] =
+      signInElementStub;
+    assert.ok(generalFunctionStub.called, 'Signin element was not called');
+    const actualService = withServiceStub.args[0]?.[0];
     assert.deepStrictEqual(
       actualService,
       service,
-      `Fetch element content was not called with expected ${service}, it was called with ${actualService}`
+      `Signin element was not called with expected ${service}, it was called with ${actualService}`
     );
-    const actualElement = printElementContentStub.args[0]?.[0];
+    const actualElement = withContentStub.args[0]?.[0];
     assert.deepStrictEqual(
       actualElement,
       element,
-      `Fetch element content was not called with expected ${element}, it was called with ${actualElement}`
+      `Signin element was not called with expected ${element}, it was called with ${actualElement}`
     );
-
-    assert.ok(
-      showElementContentStub.called,
-      'Show element content was not called'
-    );
-    const showedDocument = showElementContentStub.args[0]?.[0];
-    const actualShowedContent = showedDocument?.getText();
     assert.deepStrictEqual(
-      actualShowedContent,
-      expectedElementContent,
-      `Show element content was not called with expected ${expectedElementContent}, it was called with ${actualShowedContent}`
+      dispatchSignInAction.called,
+      true,
+      'Dispatch for signin element was not called'
+    );
+    const expextedSignInAction = {
+      type: Actions.ELEMENT_SIGNEDIN,
+      serviceName,
+      searchLocationName,
+      service,
+      searchLocation,
+      elements: [element],
+    };
+    assert.deepStrictEqual(
+      expextedSignInAction,
+      dispatchSignInAction.args[0]?.[0],
+      `Expexted dispatch for signin element to have been called with ${JSON.stringify(
+        expextedSignInAction
+      )}, but it was called with ${JSON.stringify(
+        dispatchSignInAction.args[0]?.[0]
+      )}`
     );
   });
 });

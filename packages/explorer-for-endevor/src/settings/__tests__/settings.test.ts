@@ -15,6 +15,8 @@ import { assert } from 'chai';
 import {
   EDIT_FOLDER_DEFAULT,
   EDIT_FOLDER_SETTING,
+  AUTOMATIC_SIGN_OUT_SETTING,
+  AUTOMATIC_SIGN_OUT_DEFAULT,
   ENDEVOR_CONFIGURATION,
   LOCATIONS_DEFAULT,
   LOCATIONS_SETTING,
@@ -29,8 +31,10 @@ import {
   getLocations,
   getMaxParallelRequests,
   getTempEditFolder,
+  isAutomaticSignOut,
   removeElementLocation,
   removeService,
+  turnOnAutomaticSignOut,
 } from '../settings';
 import { ConfigurationTarget, workspace } from 'vscode';
 
@@ -39,6 +43,7 @@ describe('extension settings', () => {
   let beforeTestsLocations: ReadonlyArray<LocationConfig> | NotDefined;
   let beforeTestsRequestsAmount: number | NotDefined;
   let beforeTestsEditFolder: string | NotDefined;
+  let beforeTestsAutoSignOut: boolean | NotDefined;
   beforeEach(async () => {
     beforeTestsLocations = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
@@ -49,6 +54,9 @@ describe('extension settings', () => {
     beforeTestsEditFolder = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(EDIT_FOLDER_SETTING);
+    beforeTestsAutoSignOut = workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .get(AUTOMATIC_SIGN_OUT_SETTING);
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(LOCATIONS_SETTING, LOCATIONS_DEFAULT, ConfigurationTarget.Global);
@@ -64,6 +72,13 @@ describe('extension settings', () => {
       .update(
         EDIT_FOLDER_SETTING,
         EDIT_FOLDER_DEFAULT,
+        ConfigurationTarget.Global
+      );
+    await workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .update(
+        AUTOMATIC_SIGN_OUT_SETTING,
+        AUTOMATIC_SIGN_OUT_DEFAULT,
         ConfigurationTarget.Global
       );
   });
@@ -87,6 +102,13 @@ describe('extension settings', () => {
       .update(
         EDIT_FOLDER_SETTING,
         beforeTestsEditFolder,
+        ConfigurationTarget.Global
+      );
+    await workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .update(
+        AUTOMATIC_SIGN_OUT_SETTING,
+        beforeTestsAutoSignOut,
         ConfigurationTarget.Global
       );
   });
@@ -165,5 +187,13 @@ describe('extension settings', () => {
     const actualFolderName = getTempEditFolder();
     // assert
     assert.equal(actualFolderName, folderName);
+  });
+
+  it('should turn on auto signout', async () => {
+    // act
+    await turnOnAutomaticSignOut();
+    // assert
+    const actualValue = isAutomaticSignOut();
+    assert.isTrue(actualValue);
   });
 });
