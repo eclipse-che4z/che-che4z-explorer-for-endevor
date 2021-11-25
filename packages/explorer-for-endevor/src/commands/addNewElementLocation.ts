@@ -34,7 +34,7 @@ import { isError } from '@local/profiles/utils';
 export const addNewElementLocation =
   (
     getCredentialFromStore: (name: string) => Credential | undefined,
-    dispatch: (action: Action) => void
+    dispatch: (action: Action) => Promise<void>
   ) =>
   async ({ name: serviceName }: ServiceNode): Promise<void> => {
     logger.trace('Add a New Location Profile was called.');

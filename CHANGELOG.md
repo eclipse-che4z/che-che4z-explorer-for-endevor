@@ -2,13 +2,21 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.14.0] &ndash; 2021-11-25
+
+### Added
+
+- Added the sing out and sign in features.
+- Added the Automatic Signout setting.
+- Added the Add an Element feature.
+
 ## [0.13.2] &ndash; 2021-11-12
 
 ### Added
 
 - Added the compatibility for the latest Endevor WebServices charset response headers
 
-## [0.13.1] &ndash; 2021-27-08
+## [0.13.1] &ndash; 2021-08-27
 
 ### Added
 

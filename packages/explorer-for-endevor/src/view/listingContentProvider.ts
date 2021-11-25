@@ -19,7 +19,8 @@ import type {
 } from 'vscode';
 import { printListing } from '../endevor';
 import { logger } from '../globals';
-import { fromVirtualDocUri } from '../uri';
+import { fromElementListingUri } from '../uri/elementListingUri';
+import { isError } from '../utils';
 
 export const listingContentProvider: TextDocumentContentProvider = {
   async provideTextDocumentContent(
@@ -31,7 +32,16 @@ export const listingContentProvider: TextDocumentContentProvider = {
         JSON.parse(uri.query)
       )}`
     );
-    const { service, element } = fromVirtualDocUri(uri);
+    const uriParams = fromElementListingUri(uri);
+    if (isError(uriParams)) {
+      const error = uriParams;
+      logger.error(
+        `Unable to show element listing`,
+        `Unable to show element listing, because of ${error.message}`
+      );
+      return;
+    }
+    const { service, element } = uriParams;
     const listingContent = await printListing({
       report: () => {
         // progress bar is already implemented in command

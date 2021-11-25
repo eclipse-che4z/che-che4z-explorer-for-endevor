@@ -19,6 +19,8 @@ export const LOCATIONS_SETTING = 'locations';
 export const LOCATIONS_DEFAULT = [];
 export const EDIT_FOLDER_SETTING = 'editDownloadFolder';
 export const EDIT_FOLDER_DEFAULT = '.e4e';
+export const AUTOMATIC_SIGN_OUT_SETTING = 'automaticSignOut';
+export const AUTOMATIC_SIGN_OUT_DEFAULT = false;
 export const MAX_PARALLEL_REQUESTS_SETTING = 'maxParallelRequests';
 export const MAX_PARALLEL_REQUESTS_DEFAULT = 4;
 
@@ -29,3 +31,8 @@ export const TREE_VIEW_ID = `${COMMAND_PREFIX}.elmTreeView`;
 export const ENCODING = 'UTF-8';
 
 export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;
+
+export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';
+// ms
+// the same time, as VSCode uses to hide notification
+export const NOTIFICATION_TIMEOUT = 15000;

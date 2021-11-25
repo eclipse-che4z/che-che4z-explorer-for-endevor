@@ -3,7 +3,7 @@ out
 node_modules
 dependencies.txt
 dependencies.json
-.vscode-test/
+.vscode-*/
 *.vsix
 results
 .cov
@@ -12,3 +12,5 @@ results
 COBOL
 .e4e
 .env
+LICENSE
+NOTICE.md

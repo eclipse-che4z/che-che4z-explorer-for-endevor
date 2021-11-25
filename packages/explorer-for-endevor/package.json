@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Explorer for Endevor",
   "author": "Broadcom",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -53,7 +53,7 @@
     "commands": [
       {
         "command": "e4e.refreshTreeView",
-        "title": "Refresh Tree",
+        "title": "Refresh the Tree",
         "icon": {
           "light": "resources/light/refresh.svg",
           "dark": "resources/dark/refresh.svg"
@@ -76,12 +76,17 @@
         }
       },
       {
+        "command": "e4e.addElementFromFileSystem",
+        "title": "Add an Element",
+        "icon": "$(file-add)"
+      },
+      {
         "command": "e4e.hideElementLocation",
-        "title": "Remove Location Profile"
+        "title": "Remove a Location Profile"
       },
       {
         "command": "e4e.hideService",
-        "title": "Remove Profile"
+        "title": "Remove a Profile"
       },
       {
         "command": "e4e.viewElementDetails",
@@ -116,6 +121,14 @@
         "command": "e4e.diff.acceptChanges",
         "title": "Accept changes",
         "icon": "$(check)"
+      },
+      {
+        "command": "e4e.signOutElement",
+        "title": "Sign out"
+      },
+      {
+        "command": "e4e.signInElement",
+        "title": "Sign In"
       }
     ],
     "menus": {
@@ -175,9 +188,24 @@
           "group": "3_e4e_retrieve_actions@1"
         },
         {
+          "command": "e4e.signOutElement",
+          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "4_e4e_sign_actions@0"
+        },
+        {
+          "command": "e4e.signInElement",
+          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "group": "4_e4e_sign_actions@1"
+        },
+        {
           "command": "e4e.hideElementLocation",
           "when": "view == e4e.elmTreeView && viewItem == ELEMENT_LOCATION",
           "group": "e4e_element_location_actions"
+        },
+        {
+          "command": "e4e.addElementFromFileSystem",
+          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_LOCATION",
+          "group": "inline"
         },
         {
           "command": "e4e.hideService",
@@ -193,6 +221,10 @@
       "commandPalette": [
         {
           "command": "e4e.addNewElementLocation",
+          "when": "false"
+        },
+        {
+          "command": "e4e.addElementFromFileSystem",
           "when": "false"
         },
         {
@@ -234,6 +266,14 @@
         {
           "command": "e4e.diff.acceptChanges",
           "when": "isWeb"
+        },
+        {
+          "command": "e4e.signOutElement",
+          "when": "false"
+        },
+        {
+          "command": "e4e.signInElement",
+          "when": "false"
         }
       ]
     },
@@ -279,6 +319,13 @@
           "description": "Number of parallel HTTP requests supported by Endevor",
           "scope": "resource",
           "default": 4
+        },
+        "endevor.automaticSignOut": {
+          "type": "boolean",
+          "scope": "resource",
+          "title": "Automatic sign-out",
+          "description": "Automatically sign elements out",
+          "default": false
         }
       }
     }
@@ -297,7 +344,7 @@
     "test:watch": "jest --config jest.config.js --watch",
     "test:vscode": "ts-node ./vscode-test.run.ts",
     "tsc:watch": "tsc --noemit --watch",
-    "package": "mkdirp vsce && vsce package --yarn -o vsce/explorer-for-endevor.vsix",
+    "package": "mkdirp vsce && vsce package --yarn -o vsce/explorer-for-endevor-$npm_package_version.vsix",
     "clean": "rimraf dist results vsce node_modules .vscode-test LICENSE NOTICE.md",
     "copy-into-repo-root": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md CONTRIBUTING.md ../../"
   },

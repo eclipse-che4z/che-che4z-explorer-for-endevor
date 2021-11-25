@@ -17,22 +17,87 @@ import {
   SubSystemNode,
   TypeNode,
   ElementNode,
+  Services,
+  ServiceNode,
+  LocationNode,
 } from '../_doc/ElementTree';
 import {
   Element,
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
-import { toVirtualDocUri } from '../uri';
-import { Schemas } from '../_doc/Uri';
+import { toTreeElementUri } from '../uri/treeElementUri';
+import { isError } from '../utils';
+import { logger } from '../globals';
+import { CachedElement } from '../_doc/Store';
+import {
+  ElementLocationName,
+  EndevorServiceName,
+  LocationConfig,
+} from '../_doc/settings';
+import { Uri } from 'vscode';
+
+export const toElementId =
+  (service: EndevorServiceName) =>
+  (searchLocation: ElementLocationName) =>
+  (element: Element): string => {
+    return `${service}/${searchLocation}/${element.instance}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+  };
+
+export const toServiceId = (service: EndevorServiceName): string => {
+  return service;
+};
+
+export const toSearchLocationId =
+  (service: EndevorServiceName) =>
+  (searchLocation: ElementLocationName): string => {
+    return `${service}/${searchLocation}`;
+  };
+
+export const toServiceNodes = (
+  locations: ReadonlyArray<LocationConfig>
+): Services => {
+  return locations.map((location) =>
+    toServiceNode(location.service)(location.elementLocations)
+  );
+};
+
+export const toServiceNode =
+  (service: EndevorServiceName) =>
+  (searchLocations: ReadonlyArray<ElementLocationName>): ServiceNode => {
+    return {
+      id: toServiceId(service),
+      type: 'SERVICE',
+      name: service,
+      children: searchLocations.map((elementLocation) => ({
+        id: toSearchLocationId(service)(elementLocation),
+        type: 'LOCATION',
+        name: elementLocation,
+        serviceName: service,
+      })),
+    };
+  };
+
+export const toSearchLocationNode =
+  (service: EndevorServiceName) =>
+  (searchLocation: ElementLocationName): LocationNode => {
+    return {
+      id: toSearchLocationId(service)(searchLocation),
+      type: 'LOCATION',
+      name: searchLocation,
+      serviceName: service,
+    };
+  };
 
 /**
  * Converts list element result into a tree for tree view
  */
 export const buildTree = (
+  serviceName: EndevorServiceName,
   service: Service,
+  searchLocationName: ElementLocationName,
   elementsSearchLocation: ElementSearchLocation,
-  elements: ReadonlyArray<Element>
+  elements: ReadonlyArray<CachedElement>
 ): SystemNode[] => {
   const systems: Systems = new Map();
 
@@ -74,22 +139,54 @@ export const buildTree = (
     return node;
   };
 
-  const addElementNode = async (endevorElement: Element): Promise<void> => {
-    const type = addTypeNode(endevorElement);
-    const name = endevorElement.name;
-    const node: ElementNode = {
-      type: 'ELEMENT',
-      name,
-      uri: toVirtualDocUri(Schemas.TREE_ELEMENT)({
-        service,
-        element: endevorElement,
-        endevorSearchLocation: elementsSearchLocation,
-      }),
-    };
-    type.children.set(name, node);
+  const addElementNode = async (
+    endevorElement: CachedElement
+  ): Promise<void> => {
+    const type = addTypeNode(endevorElement.element);
+    const name = endevorElement.element.name;
+    const serializedUri = toTreeElementUri({
+      serviceName,
+      searchLocationName,
+      service,
+      element: endevorElement.element,
+      searchLocation: elementsSearchLocation,
+    })(endevorElement.lastRefreshTimestamp.toString());
+    if (isError(serializedUri)) {
+      const error = serializedUri;
+      logger.trace(
+        `Cannot show an element ${name} in the tree, because of: ${error.message}`
+      );
+    } else {
+      const node = newElementNode(
+        serviceName,
+        searchLocationName,
+        endevorElement.element,
+        name,
+        serializedUri
+      );
+      type.children.set(name, node);
+    }
   };
 
-  elements.forEach(addElementNode);
+  Array.from(elements)
+    .sort((l, r) => l.element.name.localeCompare(r.element.name))
+    .forEach(addElementNode);
 
   return Array.from(systems.values());
+};
+
+export const newElementNode = (
+  serviceName: EndevorServiceName,
+  searchLocationName: ElementLocationName,
+  element: Element,
+  name: string,
+  serializedUri: Uri
+): ElementNode => {
+  return {
+    id: toElementId(serviceName)(searchLocationName)(element),
+    searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+    type: 'ELEMENT',
+    name,
+    uri: serializedUri,
+  };
 };

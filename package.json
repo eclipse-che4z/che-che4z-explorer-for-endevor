@@ -27,6 +27,7 @@
   "resolutions": {
     "**/lodash": "4.17.21",
     "**/ansi-regex": "5.0.1",
+    "**/json-schema": "0.4.0",
     "**/@zowe/imperative": "4.15.1"
   },
   "devDependencies": {
@@ -48,12 +49,15 @@
     "chai-spies": "^1.0.0",
     "cheerio": "^1.0.0-rc.9",
     "concurrently": "^6.2.0",
+    "copyfiles": "^2.4.1",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-jest": "^24.3.6",
     "eslint-plugin-prettier": "^3.4.0",
     "fast-check": "^2.16.0",
     "glob": "^7.1.7",
+    "glob-promise": "^4.2.0",
+    "ignore": "^5.1.8",
     "jest": "^27.0.4",
     "jest-html-reporter": "^3.4.1",
     "js-yaml": "^4.1.0",
@@ -70,14 +74,11 @@
     "ts-jest": "^27.0.3",
     "ts-loader": "^8.3.0",
     "ts-node": "^9.1.1",
-    "typescript": "^4.3.2",
+    "typescript": "^4.4.2",
     "vsce": "^1.93.0",
     "vscode-test": "^1.5.2",
     "webpack": "^4.46.0",
     "webpack-bundle-analyzer": "^4.4.2",
-    "webpack-cli": "^4.7.2",
-    "ignore": "^5.1.8",
-    "glob-promise": "^4.2.0",
-    "copyfiles": "^2.4.1"
+    "webpack-cli": "^4.7.2"
   }
 }

@@ -16,6 +16,8 @@ import {
   LOCATIONS_SETTING,
   EDIT_FOLDER_SETTING,
   EDIT_FOLDER_DEFAULT,
+  AUTOMATIC_SIGN_OUT_SETTING,
+  AUTOMATIC_SIGN_OUT_DEFAULT,
   MAX_PARALLEL_REQUESTS_SETTING,
   MAX_PARALLEL_REQUESTS_DEFAULT,
   LOCATIONS_DEFAULT,
@@ -32,8 +34,10 @@ import { LocationConfig } from '../_doc/settings';
 import {
   LocationConfigs,
   EditConfig,
+  AutoSignOut,
   MaxParallelRequests,
 } from '../_ext/settings';
+import { replaceWith } from '../utils';
 
 export const getLocations = (): ReadonlyArray<LocationConfig> => {
   // please, pay attention: this call can be lazy
@@ -51,6 +55,14 @@ export const getTempEditFolder = (): string => {
     EDIT_FOLDER_DEFAULT
   );
   return parseToType(EditConfig, downloadPath);
+};
+
+export const isAutomaticSignOut = (): boolean => {
+  const autoSignOut = getEndevorConfigurationValue(ENDEVOR_CONFIGURATION)(
+    AUTOMATIC_SIGN_OUT_SETTING,
+    AUTOMATIC_SIGN_OUT_DEFAULT
+  );
+  return parseToType(AutoSignOut, autoSignOut);
 };
 
 export const getMaxParallelRequests = (): number => {
@@ -73,11 +85,18 @@ const updateLocationsWithNewItem = (
   locations: ReadonlyArray<LocationConfig>,
   updatedItem: LocationConfig
 ): ReadonlyArray<LocationConfig> => {
-  const filteredLocations = locations.filter(
-    (service) => service.service !== updatedItem.service
+  const existingLocation = locations.find(
+    (existingItem) => existingItem.service === updatedItem.service
   );
-  filteredLocations.push(updatedItem);
-  return filteredLocations;
+  if (!existingLocation) {
+    return [...locations, updatedItem];
+  }
+  const result = replaceWith(locations)(
+    (item1: LocationConfig, item2: LocationConfig) =>
+      item1.service === item2.service,
+    updatedItem
+  );
+  return result;
 };
 
 const updateConfiguration = (
@@ -147,8 +166,10 @@ export const removeElementLocation = (
   );
 };
 
-export const watchForLocations = (dispatch: (action: Action) => void) => {
-  return vscode.workspace.onDidChangeConfiguration((e) => {
+export const watchForLocations = (
+  dispatch: (action: Action) => Promise<void>
+) => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
     if (
       e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${LOCATIONS_SETTING}`)
     ) {
@@ -166,7 +187,7 @@ export const watchForLocations = (dispatch: (action: Action) => void) => {
         logger.trace(`Error when reading settings: ${e.message}`);
         updatedLocations = [];
       }
-      dispatch({
+      await dispatch({
         type: Actions.LOCATION_CONFIG_CHANGED,
         payload: updatedLocations,
       });
@@ -174,29 +195,9 @@ export const watchForLocations = (dispatch: (action: Action) => void) => {
   });
 };
 
-export const watchForEditFolder = (dispatch: (action: Action) => void) => {
-  return vscode.workspace.onDidChangeConfiguration((e) => {
-    if (
-      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${EDIT_FOLDER_SETTING}`)
-    ) {
-      let updatedEditFolder;
-      try {
-        updatedEditFolder = getTempEditFolder();
-        logger.trace(
-          `Settings updated. Value: ${JSON.stringify(
-            updatedEditFolder,
-            null,
-            2
-          )}`
-        );
-      } catch (e) {
-        logger.trace(`Error when reading settings: ${e.message}`);
-        updatedEditFolder = undefined;
-      }
-      dispatch({
-        type: Actions.EDIT_FOLDER_CHANGED,
-        payload: updatedEditFolder,
-      });
-    }
-  });
+export const turnOnAutomaticSignOut = async (): Promise<void> => {
+  return updateGlobalEndevorConfiguration(ENDEVOR_CONFIGURATION)(
+    AUTOMATIC_SIGN_OUT_SETTING,
+    true
+  );
 };

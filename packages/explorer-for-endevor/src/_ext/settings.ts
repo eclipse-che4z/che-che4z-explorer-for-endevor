@@ -18,6 +18,8 @@ export type LocationConfigs = t.TypeOf<typeof LocationConfigs>;
 
 export type EditConfig = t.TypeOf<typeof EditConfig>;
 
+export type AutoSignOut = t.TypeOf<typeof AutoSignOut>;
+
 export type MaxParallelRequests = t.TypeOf<typeof MaxParallelRequests>;
 
 export const LocationConfig = t.type({
@@ -27,5 +29,7 @@ export const LocationConfig = t.type({
 export const LocationConfigs = t.array(LocationConfig);
 
 export const EditConfig = t.string;
+
+export const AutoSignOut = t.boolean;
 
 export const MaxParallelRequests = t.number;

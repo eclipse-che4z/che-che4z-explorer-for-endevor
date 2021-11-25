@@ -102,11 +102,6 @@ color-name (1.1.3)
 - License: MIT
 - Project: https://www.npmjs.com/package/color-name
 
-colorette (1.2.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/colorette
-
 colors (1.4.0)
 
 - License: MIT
@@ -132,7 +127,7 @@ date-format (2.1.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/date-format
 
-debug (4.3.1)
+debug (4.3.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/debug
@@ -162,12 +157,12 @@ domelementtype (2.2.0)
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/domelementtype
 
-domhandler (4.2.0)
+domhandler (4.2.2)
 
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/domhandler
 
-domutils (2.6.0)
+domutils (2.8.0)
 
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/domutils
@@ -212,7 +207,7 @@ form-data (2.5.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/form-data
 
-fp-ts (2.10.5)
+fp-ts (2.11.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/fp-ts
@@ -232,12 +227,12 @@ get-caller-file (2.0.5)
 - License: ISC
 - Project: https://www.npmjs.com/package/get-caller-file
 
-glob (7.1.7)
+glob (7.2.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/glob
 
-graceful-fs (4.2.6)
+graceful-fs (4.2.8)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/graceful-fs
@@ -292,12 +287,12 @@ jsonschema (1.1.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/jsonschema
 
-klona (2.0.4)
+klona (2.0.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/klona
 
-linkify-it (3.0.2)
+linkify-it (3.0.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/linkify-it
@@ -332,12 +327,12 @@ mdurl (1.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/mdurl
 
-mime-db (1.48.0)
+mime-db (1.51.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-db
 
-mime-types (2.1.31)
+mime-types (2.1.34)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-types
@@ -362,7 +357,7 @@ mustache (2.3.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/mustache
 
-nanoid (3.1.23)
+nanoid (3.1.30)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/nanoid
@@ -417,12 +412,17 @@ path-is-absolute (1.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/path-is-absolute
 
+picocolors (1.0.0)
+
+- License: ISC
+- Project: https://www.npmjs.com/package/picocolors
+
 pkg-up (2.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/pkg-up
 
-postcss (8.3.0)
+postcss (8.3.11)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/postcss

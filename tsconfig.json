@@ -13,6 +13,8 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // TODO: resolve the issues with error type checking in catch blocks
+    "useUnknownInCatchVariables": false
   }
 }

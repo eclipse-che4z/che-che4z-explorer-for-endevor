@@ -10,8 +10,8 @@
     "clean": "rimraf results node_modules"
   },
   "dependencies": {
-    "@local/type-parser": "1.0.0",
     "@local/extension": "1.0.0",
+    "@local/type-parser": "1.0.0",
     "@zowe/imperative": "^4.15.1"
   },
   "license": "UNLICENSED"

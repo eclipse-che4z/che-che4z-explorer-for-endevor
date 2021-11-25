@@ -11,27 +11,64 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { FINGERPRINT_MISMATCH_ERROR } from '../const';
+import {
+  DUPLICATE_ELEMENT_ERROR,
+  FINGERPRINT_MISMATCH_ERROR,
+  FINGERPRINT_SIGNOUT_ERROR,
+  NOT_SIGNOUT_ERROR,
+  CHANGE_REGRESSION_INFO,
+} from '../const';
 
-export function getTypedErrorFromEndevorError(endevorMessage: string): Error {
+type GeneralError = Error;
+
+export function getTypedErrorFromEndevorError(
+  elementName: string,
+  endevorMessage: string
+): FingerprintMismatchError | SignoutError | GeneralError {
   switch (true) {
     case endevorMessage.includes(FINGERPRINT_MISMATCH_ERROR):
-      return new FingerprintMismatchError();
+      return new FingerprintMismatchError(elementName, endevorMessage);
+    case endevorMessage.includes(FINGERPRINT_SIGNOUT_ERROR):
+      return new SignoutError(elementName, endevorMessage);
+    case endevorMessage.includes(NOT_SIGNOUT_ERROR):
+      return new SignoutError(elementName, endevorMessage);
+    case endevorMessage.includes(DUPLICATE_ELEMENT_ERROR):
+      return new DuplicateElementError(elementName, endevorMessage);
+    case endevorMessage.includes(CHANGE_REGRESSION_INFO):
+      return new ChangeRegressionError(elementName, endevorMessage);
     default:
-      return new Error(endevorMessage);
+      return new Error(
+        `Endevor error for element ${elementName}: ${endevorMessage}`
+      );
   }
 }
 
 export class FingerprintMismatchError extends Error {
-  constructor() {
-    super(`Fingerprint provided does not match record in Endevor.`);
+  constructor(elementName: string, endevorMessage: string) {
+    super(
+      `Fingerprint provided does not match record in Endevor for element ${elementName}: ${endevorMessage}`
+    );
   }
 }
 
-export class UpdateError extends Error {
-  causeError: Error | undefined;
-  constructor(elementName: string, causeError?: Error) {
-    super(`Unable to update element ${elementName}. ${causeError?.message}`);
-    this.causeError = causeError;
+export class SignoutError extends Error {
+  constructor(elementName: string, endevorMessage: string) {
+    super(`Unable to signout element ${elementName}: ${endevorMessage}`);
+  }
+}
+
+export class DuplicateElementError extends Error {
+  constructor(elementName: string, endevorMessage: string) {
+    super(
+      `An element with the name ${elementName} already exist: ${endevorMessage}`
+    );
+  }
+}
+
+export class ChangeRegressionError extends Error {
+  constructor(elementName: string, endevorMessage: string) {
+    super(
+      `Regression on prior level of element ${elementName}: ${endevorMessage}`
+    );
   }
 }

@@ -15,33 +15,42 @@ import {
   Service,
   ChangeControlValue,
   Element,
+  ElementSearchLocation,
 } from '@local/endevor/_doc/Endevor';
 import {
   withNotificationProgress,
   showDiffEditor,
 } from '@local/vscode-wrapper/window';
 import { saveFileIntoWorkspaceFolder } from '@local/vscode-wrapper/workspace';
+import * as path from 'path';
 import { Uri } from 'vscode';
 import { retrieveElementWithFingerprint } from '../endevor';
 import { logger } from '../globals';
 import { toComparedElementUri } from '../uri/comparedElementUri';
 import { isError } from '../utils';
-import { getTempEditFolderUri } from '../workspace';
 import { Schemas } from '../_doc/Uri';
+import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 
 export const compareElementWithRemoteVersion =
-  (service: Service) =>
+  (service: Service, searchLocation: ElementSearchLocation) =>
   (uploadChangeControlValue: ChangeControlValue) =>
-  (element: Element, editedElementTempFilePath: string) =>
+  (
+    element: Element,
+    editedElementTempFilePath: string,
+    serviceName: EndevorServiceName,
+    searchLocationName: ElementLocationName
+  ) =>
   async (localVersionElementTempFilePath: string): Promise<void | Error> => {
-    const tempFolderUri = await getTempEditFolderUri();
-    if (isError(tempFolderUri)) {
-      const error = tempFolderUri;
-      logger.trace(error.message);
+    const tempFolder = path.dirname(editedElementTempFilePath);
+    if (!tempFolder) {
+      logger.trace(
+        'Unable to get a valid edit folder name to compare elements.'
+      );
       return new Error(
-        'Unable to get a valid edit folder name from settings to compare elements.'
+        'Unable to get a valid edit folder name to compare elements.'
       );
     }
+    const tempFolderUri = Uri.file(tempFolder);
     const savedRemoteElementVersion = await retrieveRemoteVersionIntoFolder(
       service
     )(element)(tempFolderUri);
@@ -52,9 +61,15 @@ export const compareElementWithRemoteVersion =
     const { savedRemoteVersionUri, fingerprint: remoteVersionFingerprint } =
       savedRemoteElementVersion;
     const remoteVersionTempFilePath = savedRemoteVersionUri.fsPath;
-    const localElementVersionUploadableUri = toUploadableDiffEditorUri(service)(
-      uploadChangeControlValue
-    )(element, editedElementTempFilePath)(
+    const localElementVersionUploadableUri = toUploadableDiffEditorUri(
+      service,
+      searchLocation
+    )(uploadChangeControlValue)(
+      element,
+      editedElementTempFilePath,
+      serviceName,
+      searchLocationName
+    )(
       remoteVersionTempFilePath,
       remoteVersionFingerprint
     )(localVersionElementTempFilePath);
@@ -92,7 +107,9 @@ const retrieveRemoteVersionIntoFolder =
     const remoteElementVersion = await withNotificationProgress(
       `Retrieving remote element ${element.name} version`
     )((progressReporter) => {
-      return retrieveElementWithFingerprint(progressReporter)(service)(element);
+      return retrieveElementWithFingerprint(progressReporter)(service)(
+        element
+      )();
     });
     if (!remoteElementVersion) {
       return new Error(
@@ -100,12 +117,23 @@ const retrieveRemoteVersionIntoFolder =
       );
     }
     try {
+      if (remoteElementVersion instanceof Error) {
+        return new Error(
+          `Unable to save a remote version of the element ${element.name} to compare elements.`
+        );
+      }
+      let tempContent;
+      if ('content' in remoteElementVersion) {
+        tempContent = remoteElementVersion.content;
+      } else {
+        return new Error('Unable to retrieve remote element content.');
+      }
       const savedFileUri = await saveFileIntoWorkspaceFolder(folder)(
         {
           fileName: `${element.name}-remote-version`,
           fileExtension: `${element.extension}`,
         },
-        remoteElementVersion.content
+        tempContent
       );
       return {
         savedRemoteVersionUri: savedFileUri,
@@ -122,15 +150,23 @@ const retrieveRemoteVersionIntoFolder =
   };
 
 const toUploadableDiffEditorUri =
-  (service: Service) =>
+  (service: Service, searchLocation: ElementSearchLocation) =>
   (uploadChangeControlValue: ChangeControlValue) =>
-  (element: Element, editedElementTempFilePath: string) =>
+  (
+    element: Element,
+    editedElementTempFilePath: string,
+    serviceName: EndevorServiceName,
+    searchLocationName: ElementLocationName
+  ) =>
   (remoteVersionTempFilePath: string, remoteVersionFingerprint: string) =>
   (localVersionTempFilePath: string) => {
     return toComparedElementUri(localVersionTempFilePath)({
       service,
+      serviceName,
       element,
       fingerprint: remoteVersionFingerprint,
+      searchLocation,
+      searchLocationName,
       uploadChangeControlValue,
       initialElementTempFilePath: editedElementTempFilePath,
       remoteVersionTempFilePath,

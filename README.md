@@ -10,6 +10,7 @@
 
 The Explorer for Endevor VS Code extension modernizes the way you interact with CA Endevor, offering a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
 
+- Add an element
 - View an element
 - Retrieve an element with dependencies
 - View element details
@@ -110,6 +111,7 @@ If an existing `endevor-location` profile that you created in Zowe CLI does not 
 
 Review the following use cases to familiarize yourself with the basic Explorer for Endevor features:
 
+- [Add an element](#add-an-element): You can upload an element from your workstation to a chosen Endevor location.
 - [View an element](#view-an-element): You can view the contents, summary report, and source level information of the selected element.
 - [View details](#view-details): You can view the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
 - [Retrieve an element](#retrieve-an-element): You can download the selected element.
@@ -117,6 +119,27 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Edit](#edit): The Edit action enables you to download an element to your workspace, edit and upload the selected element step by step. All you need to do is edit an element and press CTRL+S or Command+S to upload the edited element back.
 - [Generate](#generate): You can call the Generate action for an element to invoke the Generate Processor that creates an executable form of the element.
 - [Print listing](#print-listing): You can reveal the output of the performed Generate action.
+- [Sign out](#sing-out): You can lock an Endevor element so that the element is only editable by you.
+- [Sign in](#sign-in): Let you unlock a locked element. You can only unlock the elements that were locked by you.
+
+#### Add an Element
+
+You can upload a new element to your Endevor location. The uploaded element appears under the selected type in the tree.
+
+**Follow these steps:**
+
+1. Hover over an Endevor location in the tree.
+
+   The "Add an Element" icon appears on the right side of the panel.
+
+2. Click the "Add an Element" icon to upload a new element.
+
+   The Explorer dialog appears. You can now select an element that you want to upload from your workstation.
+
+3. Select an element that you want to upload from your workstation.
+
+![Add an Element](packages/explorer-for-endevor/images/E4E-add.gif?raw=true 'Add an Element')
+<br /><br />
 
 #### View an Element
 
@@ -124,12 +147,12 @@ You can view the contents, summary, and source level information of an element b
 
 **Follow these steps:**
 
-1. Hover over an element you want to view.
+1. Hover over an element that you want to view.
 2. Click the element to see the contents of the element.
 
    The contents of the element appear in the editor area.
 
-![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true "View an Element")
+![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true 'View an Element')
 <br /><br />
 
 #### View Details
@@ -138,12 +161,12 @@ The details of an element you want to view appear in the editor area in a separa
 
 **Follow these steps:**
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **View Details** option.
 
    The details of the element appear in the editor area.
 
-![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true "View Details")
+![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true 'View Details')
 <br /><br />
 
 #### Retrieve an Element
@@ -152,14 +175,14 @@ You can download an element to your workspace and work with the element locally.
 
 **Follow these steps:**
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **Retrieve** option.
 
    The extension downloads and places the element into your workspace. The contents of the element appear in the editor area. You can find the element in the workspace folder.
 
 You successfully retrieved the element.
 
-![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true "Retrieve an Element")
+![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
 <br /><br />
 
 #### Retrieve an Element with Dependencies
@@ -168,14 +191,14 @@ You can download an element with dependencies to your workspace and work with th
 
 **Follow these steps:**
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **Retrieve with dependencies** option.
 
    The extension downloads and places the element with dependencies into your workspace. The contents of the element appear in the editor area.
 
 You successfully retrieved the element with dependencies.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true "Retrieve with Dependencies")
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
 
 #### Edit
@@ -184,7 +207,7 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
 **Follow these steps:**
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **Edit** option.
 
    The contents of the element appear in the editor area. You can now edit the element.
@@ -203,7 +226,7 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
 You successfully edited, saved, uploaded the element.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true "Retrieve with Dependencies")
+![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
 
 #### Generate
@@ -212,7 +235,7 @@ The **Generate** action creates an executable form of the element, together with
 
 **Follow these steps:**
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **Generate** option.
 
    The successful Generate call shows a pop-up with two options **Print listing** and **Cancel** and the following message:
@@ -231,24 +254,51 @@ You successfully performed the Generate action.
 
 If Generate is not successful, the listing is displayed automatically.
 
-![Generate](packages/explorer-for-endevor/images/E4E-Generate.gif?raw=true "Generate")
+![Generate](packages/explorer-for-endevor/images/E4E-Generate.gif?raw=true 'Generate')
 <br /><br />
 
-#### Print listing
+#### Print Listing
 
 The **Print listing** option enables you to display the most recently created listing.
 
 **Follow these steps**:
 
-1. Right-click on an element.
+1. Right-click an element.
 2. Select the **Print listing** option.
 
    The contents of the listing appear in the editor area.
 
 You successfully printed the listing.
 
-![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true "Print Listing")
+![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true 'Print Listing')
 <br /><br />
+
+#### Sign Out
+
+The **Sign out** option enables you to lock an element, which prevents other user from editing the element.
+
+**Follow these steps**:
+
+1. Right-click an element.
+2. Select the **Sign out** option.
+3. Enter a CCID.
+4. Enter a comment.
+
+You successfully signed out the element.
+
+![Sign Out](packages/explorer-for-endevor/images/E4E-Signout.gif?raw=true 'Sign Out')
+<br /><br />
+
+#### Sign In
+
+The **Sign in** option enables you to unlock an element that earlier was signed out by you.
+
+**Follow these steps**:
+
+1. Right-click an element.
+2. Select the **Sign in** option.
+
+You successfully signed in the element.
 
 ### Base Profiles
 
@@ -272,7 +322,7 @@ You can perform the following actions to manage your profiles:
 
 - **Edit a profile**: You can edit a profile or update your credentials, using the Zowe CLI and the `zowe profiles update endevor-profile <profileName>` and `zowe profiles update endevor-location-profile <profileName>` command. The commands enable you to update the details of existing profiles. If you use the CLI commands to update your profile, ensure that you click the refresh button in the extension so that the changes take effect.
 
-- **Hide a profile**: If you do not want to have some of your profiles in the tree, you can hide such profiles. To hide a profile, right-click on the profile and select **Remove Profile** option.
+- **Hide a profile**: If you do not want to have some of your profiles in the tree, you can hide such profiles. To hide a profile, right-click the profile and select **Remove Profile** option.
 
   **Note:** The **Remove Profile** action does not permanently delete the profile.
 
@@ -291,6 +341,8 @@ You can configure the following settings of the extension:
 - Endevor locations that are loaded at startup
 
 - The number of parallel HTTP requests supported by Endevor
+
+- Automatic Signout. The signout function locks elements for you. If the option is enabled, retrieved or edited elements are signed out to you. If an element is signed out to somebody else, a notification asking whether to override the signout pops up. If the option is not enabled, the extension just retrieves or edits an element without signout.
 
 To access the Explorer for Endevor settings, click **Manage** (the cog icon on the activity bar) > **Settings** > **Extensions** > **Explorer for Endevor**.
 
