@@ -30,7 +30,7 @@ jobs:
           pat: ${{ secrets.OPENVSX_TOKEN }}
           registryUrl: https://open-vsx.org
           extensionFile: ${{ github.workspace }}/packages/${{ env.PROJECT_NAME }}/vsce/explorer-for-endevor.vsix
-          packagePath: ""
+          packagePath: ''
       - name: Publish to Visual Studio Marketplace
         if: success()
         uses: HaaLeo/publish-vscode-extension@v0
@@ -38,4 +38,4 @@ jobs:
           pat: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
           extensionFile: ${{ github.workspace }}/packages/${{ env.PROJECT_NAME }}/vsce/explorer-for-endevor.vsix
-          packagePath: ""
+          packagePath: ''
