@@ -1,6 +1,5 @@
 name: E4E Release & Publish Workflow
 on:
-  workflow_dispatch:
   push:
     branches:
       - master
@@ -8,10 +7,14 @@ env:
   PROJECT_NAME: explorer-for-endevor
 jobs:
   build-package-publish:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build E4E
