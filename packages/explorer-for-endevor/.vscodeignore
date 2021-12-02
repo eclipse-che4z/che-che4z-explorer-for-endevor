@@ -5,7 +5,6 @@
 
 # Add what we actually want
 !dist/**
-!images/**
 !resources/**
 !package.json
 !README.md
