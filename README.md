@@ -8,7 +8,7 @@
 
 </div>
 
-The Explorer for Endevor VS Code extension modernizes the way you interact with CA Endevor, offering a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
+The Explorer for Endevor VS Code extension modernizes the way you interact with Endevor, offering a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
 
 - Add an element
 - View an element
@@ -45,15 +45,15 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 **Client-side prerequisites**:
 
-- Access to CA Endevor
+- Access to Endevor
 
 **Host-side prerequisites**:
 
-- CA Endevor version 18.0.12 or higher with the following PTFs applied:
+- Endevor version 18.0.12 or higher with the following PTFs applied:
   - (v18.0.x only) PTFs SO09580, SO09581, SO10013, and SO11268
   - (v18.1.x only) PTF SO11272
   - (Optional, Web Services with STC Pooling only) PTFs SO03928 and SO03929
-- CA Endevor Web Services v2 installed and configured.
+- Endevor Web Services v2 installed and configured.
 
 ## Getting Started
 
@@ -61,7 +61,7 @@ Create an Endevor profile and inventory location profile and review use cases to
 
 ### Create Endevor Profile
 
-Explorer for Endevor uses `endevor` and `endevor-location` profiles for CA Endevor Plug-in for Zowe CLI to access Endevor inventory locations on the mainframe and work with elements. If you already have a CA Endevor plug-in Zowe CLI profile, you can access inventory locations immediately, using your profile in the tree.
+Explorer for Endevor uses `endevor` and `endevor-location` profiles for Endevor Plug-in for Zowe CLI to access Endevor inventory locations on the mainframe and work with elements. If you already have a Endevor plug-in Zowe CLI profile, you can access inventory locations immediately, using your profile in the tree.
 
 If you do not have a profile, you can create one in Explorer for Endevor.
 
@@ -89,7 +89,7 @@ Once you have an Endevor profile, you need to add an Endevor location profile. E
 1. Click the **+** icon next to your Endevor profile to add a new location profile.
 2. Create a name for the Endevor location profile and press Enter.
 3. Select an instance from the drop-down menu and press Enter.
-4. Enter Endevor path and press Enter.
+4. Enter the Endevor path and press Enter.
 
    The path has the `environment/stagenumber/system/subsystem/type` format.
 
@@ -119,7 +119,7 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Edit](#edit): The Edit action enables you to download an element to your workspace, edit and upload the selected element step by step. All you need to do is edit an element and press CTRL+S or Command+S to upload the edited element back.
 - [Generate](#generate): You can call the Generate action for an element to invoke the Generate Processor that creates an executable form of the element.
 - [Print listing](#print-listing): You can reveal the output of the performed Generate action.
-- [Sign out](#sing-out): You can lock an Endevor element so that the element is only editable by you.
+- [Sign out](#sign-out): You can lock an Endevor element so that the element is only editable by you.
 - [Sign in](#sign-in): Let you unlock a locked element. You can only unlock the elements that were locked by you.
 
 #### Add an Element
@@ -231,7 +231,7 @@ You successfully edited, saved, uploaded the element.
 
 #### Generate
 
-The **Generate** action creates an executable form of the element, together with any associated outputs such as listings. You can use the **Generate** option to run the CA Endevor Generate action for a selected element.
+The **Generate** action creates an executable form of the element, together with any associated outputs such as listings. You can use the **Generate** option to run the Endevor Generate action for a selected element.
 
 **Follow these steps:**
 
@@ -401,19 +401,19 @@ Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. For m
 
 The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
 
-If you are on active support for CA Endevor, you get technical assistance and support in accordance with the terms, guidelines, details, and parameters that are located within the Broadcom [Working with Support](https://techdocs.broadcom.com/us/product-content/admin-content/ca-support-policies.html?intcmp=footernav) guide.
+If you are on active support for Endevor, you get technical assistance and support in accordance with the terms, guidelines, details, and parameters that are located within the Broadcom [Working with Support](https://techdocs.broadcom.com/us/product-content/admin-content/ca-support-policies.html?intcmp=footernav) guide.
 
 This support generally includes:
 
 - Telephone and online access to technical support
 - Ability to submit new incidents 24x7x365
 - 24x7x365 continuous support for Severity 1 incidents
-- 24x7x365 access to CA Support Online
+- 24x7x365 access to Broadcom Support
 - Interactive remote diagnostic support
 
 Technical support cases must be submitted to Broadcom in accordance with guidance provided in “Working with Support”.
 
-Note: To receive technical assistance and support, you must remain compliant with “Working with Support”, be current on all applicable licensing and maintenance requirements, and maintain an environment in which all computer hardware, operating systems, and third party software associated with the affected Broadcom CA software are on the releases and version levels from the manufacturer that Broadcom designates as compatible with the software. Changes you elect to make to your operating environment could detrimentally affect the performance of Broadcom CA software and Broadcom shall not be responsible for these effects or any resulting degradation in performance of the Broadcom CA software. Severity 1 cases must be opened via telephone and elevations of lower severity incidents to Severity 1 status must be requested via telephone.
+Note: To receive technical assistance and support, you must remain compliant with “Working with Support”, be current on all applicable licensing and maintenance requirements, and maintain an environment in which all computer hardware, operating systems, and third party software associated with the affected Broadcom software are on the releases and version levels from the manufacturer that Broadcom designates as compatible with the software. Changes you elect to make to your operating environment could detrimentally affect the performance of Broadcom software and Broadcom shall not be responsible for these effects or any resulting degradation in performance of the Broadcom software. Severity 1 cases must be opened via telephone and elevations of lower severity incidents to Severity 1 status must be requested via telephone.
 
 ---
 
