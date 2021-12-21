@@ -13,9 +13,10 @@
 
 import { ElementNode, Node } from './_doc/ElementTree';
 import * as path from 'path';
-import { Uri } from 'vscode';
+import * as vscode from 'vscode';
 import { TimeoutError } from './_doc/Error';
 import { Element } from '@local/endevor/_doc/Endevor';
+import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 
 const isElementNode = (node: Node): node is ElementNode => {
   return node.type === 'ELEMENT';
@@ -34,11 +35,11 @@ export const isError = <T>(value: T | Error): value is Error => {
 };
 
 export const getEditFolderUri =
-  (workspaceUri: Uri) =>
+  (workspaceUri: vscode.Uri) =>
   (editFolderWorkspacePath: string) =>
   (serviceName: string, locationName: string) =>
-  (element: Element): Uri => {
-    return Uri.file(
+  (element: Element): vscode.Uri => {
+    return vscode.Uri.file(
       path.join(
         workspaceUri.fsPath,
         editFolderWorkspacePath,
@@ -52,10 +53,28 @@ export const getEditFolderUri =
   };
 
 export const getEditRootFolderUri =
-  (workspaceUri: Uri) =>
-  (editFolderWorkspacePath: string): Uri => {
-    return Uri.file(path.join(workspaceUri.fsPath, editFolderWorkspacePath));
+  (workspaceUri: vscode.Uri) =>
+  (editFolderWorkspacePath: string): vscode.Uri => {
+    return vscode.Uri.file(
+      path.join(workspaceUri.fsPath, editFolderWorkspacePath)
+    );
   };
+
+export const updateEditFoldersWhenContext = (() => {
+  // use internal closure to store the edit folders between multiple calls
+  const editFolders: string[] = [];
+  // provide the function to append a new edit folder path to internal list
+  return (newEditFolder: string): void => {
+    // update the list and the context only if there is no such value yet
+    if (editFolders.includes(newEditFolder)) return;
+    editFolders.push(newEditFolder);
+    vscode.commands.executeCommand(
+      'setContext',
+      DIFF_EDITOR_WHEN_CONTEXT_NAME,
+      editFolders
+    );
+  };
+})();
 
 export const parseFilePath = (
   filePath: string
