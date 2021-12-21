@@ -2,11 +2,21 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.14.1] &ndash; 2021-12-21
+
+### Fixed
+
+- Fixed the issue that caused the accept/discard change buttons to disappear in the diff editor while saving an edited element.
+
+### Changed
+
+- Updated the documentation. Changed the old product names to new ones.
+
 ## [0.14.0] &ndash; 2021-11-25
 
 ### Added
 
-- Added the sing out and sign in features.
+- Added the sign out and sign in features.
 - Added the Automatic Signout setting.
 - Added the Add an Element feature.
 
