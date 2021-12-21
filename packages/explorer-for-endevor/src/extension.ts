@@ -13,7 +13,7 @@
 
 import { logger } from './globals'; // this import has to be first, it initializes global state
 import * as vscode from 'vscode';
-import { DIFF_EDITOR_WHEN_CONTEXT_NAME, TREE_VIEW_ID } from './constants';
+import { TREE_VIEW_ID } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
 import { make as makeStore, getCredential, toState } from './store/store';
@@ -48,7 +48,7 @@ import { signOutElementCommand } from './commands/signOutElement';
 import { signInElementCommand } from './commands/signInElement';
 import { cleanTempEditDirectory } from './workspace';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import { getEditRootFolderUri, isError } from './utils';
+import { isError } from './utils';
 import { generateElementCommand } from './commands/generateElement';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './_doc/Actions';
@@ -96,28 +96,6 @@ const getInitialLocations = () => {
     );
   }
   return locations;
-};
-
-const getInitialTempDirPath = async (): Promise<string | undefined> => {
-  const workspaceUri = await getWorkspaceUri();
-  if (!workspaceUri) return;
-  let tempEditFolderName;
-  try {
-    tempEditFolderName = getTempEditFolder();
-  } catch (error) {
-    logger.warn(
-      `Unable to get valid edit folder name from the settings.`,
-      `Error when reading settings: ${error.message}.`
-    );
-    return;
-  }
-  return getEditRootFolderUri(workspaceUri)(tempEditFolderName).fsPath;
-};
-
-const updateEditFolderWhenContext = (tempDirPath: string) => {
-  vscode.commands.executeCommand('setContext', DIFF_EDITOR_WHEN_CONTEXT_NAME, [
-    tempDirPath,
-  ]);
 };
 
 export const activate: Extension['activate'] = async (context) => {
@@ -312,10 +290,6 @@ export const activate: Extension['activate'] = async (context) => {
       },
     },
   ];
-  const initialTempDirPath = await getInitialTempDirPath();
-  if (initialTempDirPath) {
-    updateEditFolderWhenContext(initialTempDirPath);
-  }
   context.subscriptions.push(
     vscode.window.createTreeView(TREE_VIEW_ID, {
       treeDataProvider: elmTreeProvider,

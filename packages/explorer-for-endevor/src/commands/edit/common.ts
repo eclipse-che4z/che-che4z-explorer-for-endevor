@@ -24,7 +24,11 @@ import * as vscode from 'vscode';
 import { logger } from '../../globals';
 import { getTempEditFolder } from '../../settings/settings';
 import { toEditedElementUri } from '../../uri/editedElementUri';
-import { getEditFolderUri, isError } from '../../utils';
+import {
+  getEditFolderUri,
+  isError,
+  updateEditFoldersWhenContext,
+} from '../../utils';
 import { showSavedElementContent } from '../../workspace';
 import { ElementLocationName, EndevorServiceName } from '../../_doc/settings';
 
@@ -68,6 +72,8 @@ export const saveIntoEditFolder =
       const userMessage = `Element: ${element.name} was not saved into file system`;
       return new Error(userMessage);
     }
+    // update edit folders context variable to make sure all edited element paths are known
+    updateEditFoldersWhenContext(saveLocationUri.fsPath);
     return saveResult;
   };
 
