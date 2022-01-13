@@ -5,6 +5,7 @@ on:
       - master
 env:
   PROJECT_NAME: explorer-for-endevor
+  E4E_TELEMETRY_KEY: ${{ secrets.E4E_TELEMETRY_KEY }}
 jobs:
   build-package-publish:
     runs-on: ubuntu-latest
