@@ -50,7 +50,7 @@ export const askForCredential =
 
 export const askForCredentialWithDefaultPasswordPolicy = askForCredential({
   minLength: 6,
-  maxLength: 8,
+  maxLength: 100,
 });
 
 const askForUsername = async (): Promise<string | OperationCancelled> => {
