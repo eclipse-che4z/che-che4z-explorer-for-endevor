@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [0.14.2] &ndash; 2022-02-01
+
+### Fixed
+
+- Fix password length limit from 8 to 100 characters. You can now take advantage of a passphrase if the passprhase is configured on the server. Unlike a password, a passphrase is case sensitive.
+
 ## [0.14.1] &ndash; 2021-12-21
 
 ### Fixed

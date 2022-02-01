@@ -74,7 +74,10 @@ If you do not have a profile, you can create one in Explorer for Endevor.
 
    Adding your credentials to your profile lets you access different Endevor locations without having to enter your credentials more than once.
 
-   **Note**: If your profile does not include credentials during the first session of Explorer for Endevor, you are prompted to provide credentials.
+   **Notes**:
+
+   - If your profile does not include credentials during the first session of Explorer for Endevor, you are prompted to provide credentials.
+   - Passwords with 9 or more characters are treated as a _passsphrase_ by the server and are case sensitive.
 
 5. Select one of the options that either accept or reject connections with self-signed certificates.
 
