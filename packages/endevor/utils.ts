@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,6 +17,7 @@ import {
   FingerprintMismatchError,
   ChangeRegressionError,
   SignoutError,
+  DuplicateElementError,
 } from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
@@ -97,6 +98,12 @@ export const isFingerprintMismatchError = <T>(
   value: T | FingerprintMismatchError
 ): value is FingerprintMismatchError => {
   return value instanceof FingerprintMismatchError;
+};
+
+export const isDuplicateElementError = <T>(
+  value: T | DuplicateElementError
+): value is DuplicateElementError => {
+  return value instanceof DuplicateElementError;
 };
 
 export const isChangeRegressionError = <T>(

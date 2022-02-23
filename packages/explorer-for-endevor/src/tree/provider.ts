@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -30,11 +30,12 @@ import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Action, Actions } from '../_doc/Actions';
 import { resolveCredential } from '../credentials/credentials';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
 import { getCredential, getElements, getLocations } from '../store/store';
 import { State } from '../_doc/Store';
+import { ElementsFetchingStatus, TelemetryEvents } from '../_doc/Telemetry';
 
 class ElementItem extends vscode.TreeItem {
   constructor(node: ElementNode) {
@@ -66,7 +67,11 @@ class ServerItem extends vscode.TreeItem {
     this.contextValue = 'ENDEVOR_SERVICE';
   }
 }
-
+class EmptyMapItem extends vscode.TreeItem {
+  constructor() {
+    super('No results found.');
+  }
+}
 const makeElemTooltip = (element: Element): string => {
   const tooltip =
     element.instance && element
@@ -91,6 +96,7 @@ const toTreeItem = (node: Node): vscode.TreeItem => {
       return new ServerItem(node);
     case 'LOCATION':
       return new LocationItem(node);
+    case 'MAP':
     case 'SYS':
     case 'SUB':
     case 'TYPE': {
@@ -113,6 +119,8 @@ const toTreeItem = (node: Node): vscode.TreeItem => {
       }
       return elmNode;
     }
+    case 'EMPY_MAP_NODE':
+      return new EmptyMapItem();
     default:
       throw new UnreachableCaseError(node);
   }
@@ -151,7 +159,9 @@ export const make = (
        * that's why the code bellow is repeated in all cases :-/
        */
       if (node.type === 'TYPE') {
-        return Array.from(node.children.values());
+        const children: Node[] = Array.from(node.elements.values());
+        children.unshift(node.map);
+        return children;
       }
       if (node.type === 'SUB') {
         return Array.from(node.children.values()).sort((l, r) =>
@@ -160,6 +170,20 @@ export const make = (
       }
       if (node.type === 'SYS') {
         return Array.from(node.children.values());
+      }
+      if (node.type === 'MAP') {
+        const mapArray = Array.from(node.elements.values());
+        if (mapArray.length == 0) {
+          return [
+            {
+              type: 'EMPY_MAP_NODE',
+            },
+          ];
+        }
+        return mapArray;
+      }
+      if (node.type === 'EMPY_MAP_NODE') {
+        return [];
       }
       if (node.type === 'SERVICE') {
         return node.children;
@@ -198,10 +222,24 @@ export const make = (
           (progress) =>
             searchForElements(progress)(endevorService)(elementsSearchLocation)
         );
-        if (!elements.length) {
-          logger.warn('Unable to fetch any valid element from Endevor');
+        if (isError(elements)) {
+          const error = elements;
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+            status: ElementsFetchingStatus.GENERIC_ERROR,
+            error,
+          });
+          logger.error(
+            'Unable to fetch any valid element from Endevor.',
+            `${error.message}.`
+          );
           return [];
         }
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+          elementsAmount: elements.length,
+        });
         const latestElementVersion = Date.now();
         const newSystems = buildTree(
           node.serviceName,

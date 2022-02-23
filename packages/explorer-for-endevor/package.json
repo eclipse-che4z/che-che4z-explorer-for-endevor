@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Explorer for Endevor",
   "author": "Broadcom",
-  "version": "0.14.2",
+  "version": "1.0.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -174,7 +174,7 @@
         },
         {
           "command": "e4e.printListing",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
+          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_TYPE",
           "group": "2_e4e_edit_element_actions@2"
         },
         {
@@ -354,8 +354,5 @@
     "@local/profiles": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
     "@zowe/imperative": "^4.15.1"
-  },
-  "devDependencies": {
-    "dotenv": "^10.0.0"
   }
 }

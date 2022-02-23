@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -21,8 +21,12 @@ import {
   TextDocument,
 } from 'vscode';
 import { printElement } from '../endevor';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
+import {
+  ElementContentProviderCompletedStatus,
+  TelemetryEvents,
+} from '../_doc/Telemetry';
 
 export const elementContentProvider: TextDocumentContentProvider = {
   async provideTextDocumentContent(
@@ -33,26 +37,42 @@ export const elementContentProvider: TextDocumentContentProvider = {
     if (isError(uriParams)) {
       const error = uriParams;
       logger.error(
-        `Unable to print element content`,
-        `Unable to print element content because of ${error.message}`
+        `Unable to print element content.`,
+        `Unable to print element content because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }
     logger.trace(
       `Print element uri: \n  ${stringifyWithHiddenCredential(
-        JSON.parse(elementUri.query)
-      )}`
+        JSON.parse(decodeURIComponent(elementUri.query))
+      )}.`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED,
+    });
     const { service, element } = uriParams;
     const elementContent = await withNotificationProgress(
       `Printing element: ${element.name} content`
     )((progress) => printElement(progress)(service)(element));
-    if (!elementContent) {
+    if (isError(elementContent)) {
+      const error = elementContent;
       logger.error(
-        `Unable to print element: ${element.system}/${element.subSystem}/${element.type}/${element.name} content`
+        `Unable to print element ${element.name} content.`,
+        `${error.message}.`
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
+        status: ElementContentProviderCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED,
+      context: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
+      status: ElementContentProviderCompletedStatus.SUCCESS,
+    });
     return elementContent;
   },
 };

@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -21,6 +21,7 @@ import {
   SuccessRetrieveResponse,
   UpdateResponse,
   SignInResponse,
+  BaseResponse,
 } from '../_ext/Endevor';
 
 describe('Endevor responses type parsing', () => {
@@ -119,6 +120,47 @@ describe('Endevor responses type parsing', () => {
       );
     });
   });
+  describe('Endevor base response type parsing', () => {
+    it('should parse a response with correct return code', () => {
+      // arrange
+      const response = {
+        body: {
+          returnCode: 42,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(BaseResponse, response);
+      // assert
+      const expectedResponse: BaseResponse = {
+        body: {
+          returnCode: 42,
+        },
+      };
+      expect(parsedResponse).toStrictEqual(expectedResponse);
+    });
+    it('should throw an error for a response with incorrect return code', () => {
+      // arrange
+      const response = {
+        body: {
+          returnCode: '8',
+        },
+      };
+      // act && assert
+      expect(() => parseToType(BaseResponse, response)).toThrowError(
+        'Invalid value "8" supplied to : { body: { returnCode: number } }/body: { returnCode: number }/returnCode: number'
+      );
+    });
+    it('should throw an error for a response without return code', () => {
+      // arrange
+      const response = {
+        body: {},
+      };
+      // act && assert
+      expect(() => parseToType(BaseResponse, response)).toThrowError(
+        'Invalid value undefined supplied to : { body: { returnCode: number } }/body: { returnCode: number }/returnCode: number'
+      );
+    });
+  });
   describe('Endevor elements response type parsing', () => {
     it('should parse a response with any elements and correct return code', () => {
       // arrange
@@ -130,10 +172,8 @@ describe('Endevor responses type parsing', () => {
           whatttttt: 'whattttt??',
         },
       ];
-      const returnCode = 0;
       const response = {
         body: {
-          returnCode,
           data: anyData,
         },
       };
@@ -142,56 +182,10 @@ describe('Endevor responses type parsing', () => {
       // assert
       const expectedResponse: SuccessListElementsResponse = {
         body: {
-          returnCode,
           data: anyData,
         },
       };
       expect(parsedResponse).toStrictEqual(expectedResponse);
-    });
-    it('should throw an error for a response without return code', () => {
-      // arrange
-      const anyData = [
-        {
-          whaaat: 'whaaaat???',
-        },
-        {
-          whatttttt: 'whattttt??',
-        },
-      ];
-      const response = {
-        body: {
-          data: anyData,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(SuccessListElementsResponse, response)
-      ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/returnCode: number'
-      );
-    });
-    it('should throw an error for a response with incorrect return code', () => {
-      // arrange
-      const anyData = [
-        {
-          whaaat: 'whaaaat???',
-        },
-        {
-          whatttttt: 'whattttt??',
-        },
-      ];
-      const response = {
-        body: {
-          returnCode: '8',
-          data: anyData,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(SuccessListElementsResponse, response)
-      ).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/returnCode: number'
-      );
     });
     it('should throw an error for a response without data', () => {
       // arrange
@@ -204,7 +198,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListElementsResponse, response)
       ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/data: Array<unknown>'
+        'Invalid value undefined supplied to : { body: { data: Array<unknown> } }/body: { data: Array<unknown> }/data: Array<unknown>'
       );
     });
   });

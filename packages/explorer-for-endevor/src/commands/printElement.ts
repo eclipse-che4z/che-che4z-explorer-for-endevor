@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -14,9 +14,13 @@
 import * as vscode from 'vscode';
 import { showDocument as showElementContent } from '@local/vscode-wrapper/window';
 import { getElementContent } from '../view/elementContentProvider';
-import { logger } from '../globals';
+import { reporter } from '../globals';
+import { TelemetryEvents } from '../_doc/Telemetry';
 
 export const printElement = async (elementUri: vscode.Uri) => {
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
+  });
   try {
     const elementContent = await getElementContent(elementUri);
     if (!elementContent.getText()) {
@@ -24,10 +28,6 @@ export const printElement = async (elementUri: vscode.Uri) => {
     }
     await showElementContent(elementContent);
   } catch (error) {
-    logger.error(
-      `Unable to print element ${elementUri.path} content`,
-      `Unable to print element ${elementUri.path} content because of ${error.message}`
-    );
     return;
   }
 };

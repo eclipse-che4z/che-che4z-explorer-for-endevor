@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -16,12 +16,13 @@ import { BaseCredential } from '@local/endevor/_doc/Credential';
 import { ElementSearchLocation, Service } from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { searchForElements } from '../endevor';
+import { logger, reporter } from '../globals';
 import {
   toElementId,
   toSearchLocationNode,
   toServiceNode,
 } from '../tree/endevor';
-import { replaceWith } from '../utils';
+import { isError, replaceWith } from '../utils';
 import {
   Action,
   Actions,
@@ -47,6 +48,7 @@ import {
   State,
   StateItem,
 } from '../_doc/Store';
+import { ElementsFetchingStatus, TelemetryEvents } from '../_doc/Telemetry';
 
 export const make = (
   initialState: State,
@@ -232,7 +234,24 @@ const fetchingElementsReducer =
       (progress) =>
         searchForElements(progress)(endevorService)(elementsSearchLocation)
     );
-    if (!elements.length) return state;
+    if (isError(elements)) {
+      const error = elements;
+      logger.warn(
+        'Unable to fetch the updated list of elements from Endevor.',
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+        status: ElementsFetchingStatus.GENERIC_ERROR,
+        error,
+      });
+      return state;
+    }
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+      elementsAmount: elements.length,
+    });
     return replaceElementsReducer(state)({
       serviceName,
       searchLocationName,

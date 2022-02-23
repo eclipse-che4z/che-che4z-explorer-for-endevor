@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -73,6 +73,11 @@ export const askForElementLocationOrCreateNew =
         return undefined;
       }
       const existingInstances = await getInstanceNames();
+      if (!existingInstances.length) {
+        logger.error(`Unable to fetch the list instances.`);
+        logger.trace('Operation cancelled.');
+        return undefined;
+      }
       const locationValue = await askForLocationValue(existingInstances);
       if (
         operationCancelled(locationValue) ||

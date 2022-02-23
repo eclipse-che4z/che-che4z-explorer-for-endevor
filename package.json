@@ -28,7 +28,7 @@
     "**/lodash": "4.17.21",
     "**/ansi-regex": "5.0.1",
     "**/json-schema": "0.4.0",
-    "**/@zowe/imperative": "4.15.1"
+    "**/@zowe/imperative": "4.17.5"
   },
   "devDependencies": {
     "@types/chai": "^4.2.18",
@@ -40,7 +40,6 @@
     "@types/js-yaml": "^4.0.1",
     "@types/mocha": "^8.2.2",
     "@types/node": "^15.12.2",
-    "@types/selenium-webdriver": "^4.0.13",
     "@types/vscode": "^1.56.0",
     "@typescript-eslint/eslint-plugin": "^4.26.1",
     "@typescript-eslint/parser": "^4.26.1",
@@ -68,9 +67,7 @@
     "ovsx": "^0.2.1",
     "prettier": "^2.3.1",
     "rimraf": "^3.0.2",
-    "selenium-webdriver": "^4.0.0-alpha.8",
     "sinon": "^11.1.1",
-    "testcontainers": "^7.11.1",
     "ts-jest": "^27.0.3",
     "ts-loader": "^8.3.0",
     "ts-node": "^9.1.1",

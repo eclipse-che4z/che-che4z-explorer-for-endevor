@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,9 +11,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger } from './globals'; // this import has to be first, it initializes global state
+import { logger, reporter } from './globals'; // this import has to be first, it initializes global state
 import * as vscode from 'vscode';
-import { TREE_VIEW_ID } from './constants';
+import {
+  AUTOMATIC_SIGN_OUT_DEFAULT,
+  MAX_PARALLEL_REQUESTS_DEFAULT,
+  TREE_VIEW_ID,
+} from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
 import { make as makeStore, getCredential, toState } from './store/store';
@@ -21,6 +25,9 @@ import {
   watchForLocations,
   getLocations,
   getTempEditFolder,
+  watchForSettingChanges,
+  isAutomaticSignOut,
+  getMaxParallelRequests,
 } from './settings/settings';
 import {
   Extension,
@@ -60,6 +67,7 @@ import { isEditedElementUri } from './uri/editedElementUri';
 import { discardEditedElementChanges } from './commands/discardEditedElementChanges';
 import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/addElementFromFileSystem';
+import { TelemetryEvents } from './_doc/Telemetry';
 
 const cleanTempDirectory = async (): Promise<void> => {
   const workspace = await getWorkspaceUri();
@@ -88,18 +96,58 @@ const getInitialLocations = () => {
   let locations: ReadonlyArray<LocationConfig>;
   try {
     locations = [...getLocations()];
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
+      elementLocations: locations.map((location) => {
+        return {
+          elementLocationsAmount: location.elementLocations.length,
+        };
+      }),
+    });
   } catch (error) {
     locations = [];
     logger.warn(
       `Unable to get valid Endevor locations from the settings.`,
       `Error when reading settings: ${error.message}.`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      status: 'GENERIC_ERROR',
+      errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
+      error,
+    });
   }
   return locations;
 };
 
+const getInitialAutoSignoutSetting = (): boolean => {
+  try {
+    return isAutomaticSignOut();
+  } catch (e) {
+    logger.warn(
+      `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
+      `Reading settings error: ${e.message}`
+    );
+    return AUTOMATIC_SIGN_OUT_DEFAULT;
+  }
+};
+
+const getInitialMaxRequestsSetting = (): number => {
+  try {
+    return getMaxParallelRequests();
+  } catch (e) {
+    logger.warn(
+      `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
+      `Reading settings error: ${e.message}`
+    );
+    return MAX_PARALLEL_REQUESTS_DEFAULT;
+  }
+};
+
 export const activate: Extension['activate'] = async (context) => {
-  logger.trace('Activation requested');
+  logger.trace(
+    `${context.extension.id} extension with the build number: ${__E4E_BUILD_NUMBER__} will be activated.`
+  );
   await cleanTempDirectory();
   const treeChangeEmitter = new vscode.EventEmitter<Node | null>();
   let stateForTree: State = [];
@@ -132,6 +180,9 @@ export const activate: Extension['activate'] = async (context) => {
     };
 
   const refresh = async () => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.REFRESH_COMMAND_CALLED,
+    });
     await dispatch({
       type: Actions.REFRESH,
     });
@@ -148,9 +199,9 @@ export const activate: Extension['activate'] = async (context) => {
     ],
     [
       CommandId.PRINT_LISTING,
-      (elementNode?: ElementNode, nodes?: Node[]) => {
+      (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.PRINT_LISTING)(
-          printListingCommand(elementNode, nodes)
+          printListingCommand(elementNode)
         );
       },
     ],
@@ -291,6 +342,7 @@ export const activate: Extension['activate'] = async (context) => {
     },
   ];
   context.subscriptions.push(
+    reporter,
     vscode.window.createTreeView(TREE_VIEW_ID, {
       treeDataProvider: elmTreeProvider,
       canSelectMany: true,
@@ -312,6 +364,7 @@ export const activate: Extension['activate'] = async (context) => {
       vscode.commands.registerCommand(id, command)
     ),
     watchForLocations(dispatch),
+    watchForSettingChanges(),
     vscode.workspace.onDidSaveTextDocument((document) =>
       textDocumentSavedHandlers
         .filter((handler) => handler.isApplicable(document))
@@ -320,6 +373,12 @@ export const activate: Extension['activate'] = async (context) => {
         })
     )
   );
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.EXTENSION_ACTIVATED,
+    buildNumber: __E4E_BUILD_NUMBER__,
+    autoSignOut: getInitialAutoSignoutSetting(),
+    maxParallelRequests: getInitialMaxRequestsSetting(),
+  });
 };
 
 export const deactivate: Extension['deactivate'] = () => {

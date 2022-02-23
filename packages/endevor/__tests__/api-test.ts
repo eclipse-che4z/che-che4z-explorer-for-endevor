@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -63,7 +63,7 @@ const basePath = '/EndevorService/rest/';
 const mockServer = getLocal();
 beforeEach(async () => {
   await mockServer.start();
-  // mockServer.enableDebug();
+  mockServer.enableDebug();
 });
 afterEach(() => mockServer.stop());
 
@@ -633,7 +633,7 @@ describe('endevor public API', () => {
 
     // TODO
     // it('should return filtered elements for search location with any environment', async () => {});
-    it('should return empty list of elements for incorrect search location', async () => {
+    it('should return an error for incorrect search location', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -697,7 +697,7 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualElements).toEqual([]);
+      expect(isError(actualElements)).toBe(true);
     });
 
     it('should return filtered elements for v1 Endevor API base path', async () => {
@@ -814,7 +814,7 @@ describe('endevor public API', () => {
       expect(actualElements).toEqual(validElements);
     });
 
-    it('should return empty list of elements for incorrect connection details', async () => {
+    it('should return an error for incorrect connection details', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -832,7 +832,7 @@ describe('endevor public API', () => {
       const randomLocation: ServiceLocation = {
         protocol: 'http',
         port: 1234,
-        hostname: 'blahblah',
+        hostname: 'localhost',
         basePath: toVersion2Api(basePath),
       };
       // act
@@ -842,10 +842,10 @@ describe('endevor public API', () => {
         rejectUnauthorized,
       })(searchLocation);
       // assert
-      expect(actualElements).toEqual([]);
+      expect(isError(actualElements)).toBe(true);
     });
 
-    it('should return empty list of elements for incorrect base credentials', async () => {
+    it('should return an error for incorrect base credentials', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -910,10 +910,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualElements).toEqual([]);
+      expect(isError(actualElements)).toBe(true);
     });
 
-    it('should return empty list of elements if something went wrong in Endevor side', async () => {
+    it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -978,7 +978,7 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualElements).toEqual([]);
+      expect(isError(actualElements)).toBe(true);
     });
   });
 
@@ -1135,7 +1135,7 @@ describe('endevor public API', () => {
       expect(actualContent).toStrictEqual(content);
     });
 
-    it('should return nothing for incorrect connection details', async () => {
+    it('should return an error for incorrect connection details', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1166,10 +1166,10 @@ describe('endevor public API', () => {
         credential,
       })(element);
       // assert
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for incorrect base credentials', async () => {
+    it('should return an error for incorrect base credentials', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1232,10 +1232,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for partially specified element location', async () => {
+    it('should return an error for partially specified element location', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1300,10 +1300,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for incorrect element location', async () => {
+    it('should return an error for incorrect element location', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1372,10 +1372,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing if something went wrong in Endevor side', async () => {
+    it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1434,7 +1434,7 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
   });
 
@@ -1595,7 +1595,7 @@ describe('endevor public API', () => {
       expect(actualContent).toStrictEqual(content);
     });
 
-    it('should return nothing for incorrect connection details', async () => {
+    it('should return an error for incorrect connection details', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1626,10 +1626,10 @@ describe('endevor public API', () => {
         credential,
       })(element);
       // assert
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for incorrect base credentials', async () => {
+    it('should return an error for incorrect base credentials', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1694,10 +1694,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for partially specified element location', async () => {
+    it('should return an error for partially specified element location', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1764,10 +1764,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing for incorrect element location', async () => {
+    it('should return an error for incorrect element location', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1838,10 +1838,10 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
 
-    it('should return nothing if something went wrong in Endevor side', async () => {
+    it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const credential: BaseCredential = {
         user: 'test',
@@ -1902,7 +1902,7 @@ describe('endevor public API', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualContent).toBeUndefined();
+      expect(isError(actualContent)).toBe(true);
     });
   });
 
@@ -2851,8 +2851,6 @@ describe('endevor public API', () => {
 
     it('should return an error for outdated fingerprint', async () => {
       // arrange
-      const exptectedMessage =
-        "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.";
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
       mockServer.anyRequest().thenJson(
@@ -2861,7 +2859,9 @@ describe('endevor public API', () => {
           returnCode: 12,
           reasonCode: 34,
           reports: null,
-          messages: [exptectedMessage],
+          messages: [
+            "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.",
+          ],
           data: [],
         },
         {
@@ -2908,13 +2908,7 @@ describe('endevor public API', () => {
         credential,
       })(existingElementLocation)(updateActionChangeControlValue)(element);
       // assert
-      let errorMessage;
-      if (isError(updateResult)) {
-        errorMessage = updateResult.message;
-      }
-      expect(errorMessage).toBe(
-        `Fingerprint provided does not match record in Endevor for element ${existingElementLocation.name}: ${exptectedMessage}`
-      );
+      expect(isError(updateResult)).toBe(true);
     });
 
     it('should return an error for incorrect content', async () => {

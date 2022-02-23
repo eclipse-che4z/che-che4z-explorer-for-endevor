@@ -37,7 +37,12 @@ This project leverages the following third party content.
 - License: Broadcom Internal
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
-@zowe/imperative (4.15.1)
+@vscode/extension-telemetry (0.4.7)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@vscode/extension-telemetry
+
+@zowe/imperative (4.17.5)
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/imperative
@@ -82,7 +87,7 @@ chalk (2.4.2)
 - License: MIT
 - Project: https://www.npmjs.com/package/chalk
 
-cli-table3 (0.5.1)
+cli-table3 (0.6.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/cli-table3
@@ -92,12 +97,12 @@ cliui (6.0.0)
 - License: ISC
 - Project: https://www.npmjs.com/package/cliui
 
-color-convert (1.9.3)
+color-convert (2.0.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/color-convert
 
-color-name (1.1.3)
+color-name (1.1.4)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/color-name
@@ -122,12 +127,12 @@ dataobject-parser (1.2.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/dataobject-parser
 
-date-format (2.1.0)
+date-format (4.0.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/date-format
 
-debug (4.3.2)
+debug (4.3.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/debug
@@ -197,7 +202,7 @@ find-up (2.1.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/find-up
 
-flatted (2.0.2)
+flatted (3.2.5)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/flatted
@@ -212,7 +217,7 @@ fp-ts (2.11.5)
 - License: MIT
 - Project: https://www.npmjs.com/package/fp-ts
 
-fs-extra (8.1.0)
+fs-extra (10.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/fs-extra
@@ -262,7 +267,7 @@ io-ts (2.2.16)
 - License: MIT
 - Project: https://www.npmjs.com/package/io-ts
 
-is-fullwidth-code-point (2.0.0)
+is-fullwidth-code-point (3.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/is-fullwidth-code-point
@@ -277,7 +282,7 @@ js-yaml (3.14.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/js-yaml
 
-jsonfile (4.0.0)
+jsonfile (6.1.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/jsonfile
@@ -312,12 +317,12 @@ lodash-deep (2.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/lodash-deep
 
-log4js (6.3.0)
+log4js (6.4.0)
 
 - License: Apache-2.0
 - Project: https://www.npmjs.com/package/log4js
 
-markdown-it (12.0.4)
+markdown-it (12.3.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/markdown-it
@@ -357,7 +362,7 @@ mustache (2.3.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/mustache
 
-nanoid (3.1.30)
+nanoid (3.2.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/nanoid
@@ -366,11 +371,6 @@ node-diff3 (2.1.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/node-diff3
-
-object-assign (4.1.1)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/object-assign
 
 once (1.4.0)
 
@@ -422,12 +422,12 @@ pkg-up (2.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/pkg-up
 
-postcss (8.3.11)
+postcss (8.4.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/postcss
 
-prettyjson (1.2.1)
+prettyjson (1.2.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/prettyjson
@@ -482,7 +482,7 @@ set-blocking (2.0.0)
 - License: ISC
 - Project: https://www.npmjs.com/package/set-blocking
 
-source-map-js (0.6.2)
+source-map-js (1.0.2)
 
 - License: BSD-3-Clause
 - Project: https://www.npmjs.com/package/source-map-js
@@ -492,7 +492,7 @@ stack-trace (0.0.10)
 - License: MIT
 - Project: https://www.npmjs.com/package/stack-trace
 
-streamroller (2.2.4)
+streamroller (3.0.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/streamroller
@@ -502,12 +502,12 @@ string-to-file-stream (1.3.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/string-to-file-stream
 
-string-width (2.1.1)
+string-width (4.2.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/string-width
 
-strip-ansi (4.0.0)
+strip-ansi (6.0.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/strip-ansi
@@ -537,7 +537,7 @@ which-module (2.0.0)
 - License: ISC
 - Project: https://www.npmjs.com/package/which-module
 
-wrap-ansi (3.0.1)
+wrap-ansi (7.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/wrap-ansi
