@@ -4,7 +4,8 @@
   "include": [
     "src",
     "test",
-    "mocha-test.run.ts",
+    "mocha.global.ts",
+    "mocha.run.ts",
     "vscode-test.run.ts",
     "../endevor/testUtils.ts"
   ]
