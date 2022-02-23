@@ -1,0 +1,78 @@
+def EMAIL_LIST = "nikolay.imbirev@broadcom.com, roman.kupriyanov@broadcom.com"
+
+pipeline {
+    agent {
+        label "b4g-docker-agent"
+    }
+    environment {
+        E4E_TELEMETRY_KEY = credentials('E4E_TELEMETRY_KEY')
+    }
+    stages {
+        stage("Setup"){
+            steps{
+                echo "Executing Setup Stage"
+                sh "git clean -f -x -d"
+                sh "yarn install --frozen-lockfile"
+            }
+        }
+        stage("Audit"){
+            steps{
+                echo "Executing Audit Stage"
+                sh "yarn audit --level high || exit 0"
+            }
+        }
+        stage("Lint"){
+            steps{
+                echo "Executing Lint Stage"
+                sh "yarn run lint"
+            }
+        }
+        stage("Build"){
+            steps{
+                echo "Executing Build Stage"
+                sh "yarn workspace explorer-for-endevor build:prod"
+                sh "yarn workspace explorer-for-endevor copy-into-repo-root"
+            }
+        }
+        stage("Test"){
+            environment {
+                DISPLAY = ':99.0'
+            }
+            steps{
+                echo "Executing Test Setup Stage"
+                sh "/usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &"
+                echo "Executing Test Stage"
+                sh "yarn run test"
+            }
+        }
+        stage("Package E4E"){
+            steps{
+                echo "Executing Package E4E Stage"
+                sh 'yarn run copy-into-build-context'
+                sh "yarn workspace explorer-for-endevor package"
+            }
+        }
+        stage("Archive E4E"){
+            steps{
+                echo "Executing Archive E4E Stage"
+                archiveArtifacts "packages/explorer-for-endevor/vsce/*.vsix"
+            }
+        }
+    }
+    post {
+        success {
+            emailext (
+                to: EMAIL_LIST,
+                subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}",
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}\n More info at: ${env.BUILD_URL}"
+            )
+        }
+        failure {
+            emailext (
+                to: EMAIL_LIST,
+                subject: "Jenkins Build ${currentBuild.currentResult}: Job ${env.JOB_NAME}",
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}\n More info at: ${env.BUILD_URL}"
+                )  
+        }
+    }
+}
