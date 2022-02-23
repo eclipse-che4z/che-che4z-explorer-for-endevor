@@ -2,6 +2,27 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.0.0] &ndash; 2022-02-23
+
+### Added
+
+- Telemetry event recording.
+- Added a `[MAP]` folder in the tree view. It is being populated with elements found up the map.
+- Added a button `Show logs` in the notification panel which allows the user to open the extension's output.
+
+### Changed
+
+- Multiple error logging and notification events.
+
+### Fixed
+
+- Fixed an issue in the URI building process. Characters that may potentially break the building process are now being escaped.
+- Upload dialogs now prevent wildcards as input.
+- Fixed an issue with conflict resolution causing the command to fail when resolving reoccurring conflicts.
+- Fixed an issue with retrieving, editing multiple elements with auto signout option. Now it processes all the selected elements in groups by each location profile.
+- Fixed an issue with showing multiple elements for editing. An "editor already opened" error does not appear anymore.
+- Incorrect editors closure when discarding changes.
+
 ## [0.14.2] &ndash; 2022-02-01
 
 ### Fixed
