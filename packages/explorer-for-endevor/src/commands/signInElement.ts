@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,7 +13,7 @@
 
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { signInElement } from '../endevor';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
 import { ElementNode } from '../_doc/ElementTree';
@@ -24,6 +24,11 @@ import {
   Service,
 } from '@local/endevor/_doc/Endevor';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  SignInElementCommandCompletedStatus,
+  TelemetryEvents,
+  TreeElementCommandArguments,
+} from '../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
 
@@ -31,7 +36,7 @@ export const signInElementCommand = async (
   dispatch: (action: Action) => Promise<void>,
   elementNode: SelectedElementNode
 ) => {
-  logger.trace(`Signin command was called for ${elementNode.name}`);
+  logger.trace(`Signin command was called for ${elementNode.name}.`);
   await signInSingleElement(dispatch)(elementNode);
 };
 
@@ -42,8 +47,8 @@ const signInSingleElement =
     if (isError(uriParams)) {
       const error = uriParams;
       logger.error(
-        `Unable to signin the element ${elementNode.name}.`,
-        `Unable to signin the element ${elementNode.name}, because parsing of the element's URI failed with error: ${error.message}`
+        `Unable to sign in the element ${elementNode.name}.`,
+        `Unable to sign in the element ${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }
@@ -54,12 +59,27 @@ const signInSingleElement =
       element,
       searchLocation,
     } = uriParams;
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.SINGLE_ELEMENT,
+      },
+    });
     const signInResult = await withNotificationProgress(
       `Signing in the element: ${element.name}`
     )((progressReporter) => signInElement(progressReporter)(service)(element));
     if (isError(signInResult)) {
       const error = signInResult;
-      logger.error(error.message);
+      logger.error(
+        `Unable to sign in the element ${elementNode.name}.`,
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+        status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
     await updateTreeAfterSuccessfulSignin(dispatch)(
@@ -69,7 +89,11 @@ const signInSingleElement =
       searchLocation,
       [element]
     );
-    logger.info(`${element.name} was signed in successfully!`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
+      status: SignInElementCommandCompletedStatus.SUCCESS,
+    });
+    logger.info(`Element ${element.name} was signed in successfully!`);
   };
 
 const updateTreeAfterSuccessfulSignin =

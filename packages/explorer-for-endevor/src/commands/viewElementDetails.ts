@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,13 +11,17 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { ElementNode, Node } from '../_doc/ElementTree';
 import { renderElementAttributes } from '../view/elementAttributes';
 import { showWebView } from '@local/vscode-wrapper/window';
 import { filterElementNodes, isError } from '../utils';
 import { COMMAND_PREFIX } from '../constants';
 import { fromTreeElementUri } from '../uri/treeElementUri';
+import {
+  TelemetryEvents,
+  TreeElementCommandArguments,
+} from '../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];
@@ -33,11 +37,24 @@ export const viewElementDetails = (
         .map((node) => node.name)
         .join(',')}`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+        elementsAmount: elementNodes.length,
+      },
+    });
     elementNodes.forEach((elementNode) => showElementAttributes(elementNode));
   } else if (elementNode) {
     logger.trace(
       `View element details command was called for ${elementNode.name}`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.SINGLE_ELEMENT,
+      },
+    });
     showElementAttributes(elementNode);
   }
 };
@@ -47,8 +64,8 @@ const showElementAttributes = (elementNode: ElementNode): void => {
   if (isError(uriParams)) {
     const error = uriParams;
     logger.error(
-      `Unable to show element ${elementNode.name} details`,
-      `Unable to show element ${elementNode.name} details, because of ${error.message}`
+      `Unable to show the element ${elementNode.name} details.`,
+      `Unable to show the element ${elementNode.name} details because of ${error.message}`
     );
     return;
   }

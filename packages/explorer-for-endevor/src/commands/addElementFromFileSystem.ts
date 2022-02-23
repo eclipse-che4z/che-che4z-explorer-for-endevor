@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,8 +17,11 @@ import {
   getFileContent,
 } from '@local/vscode-wrapper/workspace';
 import { isError, parseFilePath } from '../utils';
-import { getElementExtension } from '@local/endevor/utils';
-import { logger } from '../globals';
+import {
+  getElementExtension,
+  isDuplicateElementError,
+} from '@local/endevor/utils';
+import { logger, reporter } from '../globals';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   askForChangeControlValue,
@@ -46,23 +49,26 @@ import { TextDecoder } from 'util';
 import { Uri } from 'vscode';
 import { ENCODING } from '../constants';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  AddElementCommandCompletedStatus,
+  TelemetryEvents,
+} from '../_doc/Telemetry';
 
 export const addElementFromFileSystem = async (
   getCredentialFromStore: (name: string) => Credential | undefined,
   dispatch: (action: Action) => Promise<void>,
   searchLocationNode: LocationNode
 ): Promise<void> => {
-  if (!searchLocationNode) {
-    logger.error(`Unable to add element`);
-    return;
-  }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+  });
   const fileUri = await chooseFileUriFromFs();
   if (!fileUri) {
     return;
   }
   const { fileName, fileExtension } = parseFilePath(fileUri.path);
   if (!fileName) {
-    logger.error(`Unable to add element ${fileName}`);
+    logger.error(`Unable to add the element ${fileName}.`);
     return;
   }
   const service = await getEndevorServiceByName(
@@ -74,14 +80,14 @@ export const addElementFromFileSystem = async (
     )
   );
   if (!service) {
-    logger.error(`Unable to add element ${fileName}`);
+    logger.error(`Unable to add the element ${fileName}.`);
     return;
   }
   const searchLocation = await getElementLocationByName(
     searchLocationNode.name
   );
   if (!searchLocation) {
-    logger.error(`Unable to add element ${fileName}`);
+    logger.error(`Unable to add the element ${fileName}.`);
     return;
   }
   const addValues = await askForAddValues(searchLocation, fileName);
@@ -93,16 +99,42 @@ export const addElementFromFileSystem = async (
   const content = await readElementContent(fileUri.path);
   if (isError(content)) {
     const error = content;
-    logger.error(error.message);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
+    logger.error(
+      `Unable to read the element content.`,
+      `Unable to read the element content because of error ${error.message}.`
+    );
     return;
   }
   const [addLocation, actionControlValue] = addValues;
   const addResult = await addNewElement(service)({
     ...addLocation,
   })(actionControlValue)(content);
+  if (isDuplicateElementError(addResult)) {
+    const error = addResult;
+    logger.error(`Unable to add the element ${fileName}.`, `${error.message}.`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      status: AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR,
+      error,
+    });
+    return;
+  }
   if (isError(addResult)) {
     const error = addResult;
-    logger.error(error.message);
+    logger.error(`Unable to add the element ${fileName}.`, `${error.message}.`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
     return;
   }
   const createdElement: Element = {
@@ -125,6 +157,10 @@ export const addElementFromFileSystem = async (
     searchLocation,
     createdElement
   );
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+    status: AddElementCommandCompletedStatus.SUCCESS,
+  });
   logger.info('Add successful!');
 };
 
@@ -134,7 +170,7 @@ const addNewElement =
   (uploadChangeControlValue: ChangeControlValue) =>
   async (elementContent: string): Promise<void | Error> => {
     const addResult = await withNotificationProgress(
-      `Adding element: ${element.name}`
+      `Adding element: ${element.name}.`
     )((progressReporter) => {
       return addElement(progressReporter)(service)(element)(
         uploadChangeControlValue
@@ -180,8 +216,7 @@ const readElementContent = async (
       await getFileContent(Uri.file(elementTempFilePath))
     );
   } catch (error) {
-    logger.trace(`Element content cannot be read because of ${error.message}`);
-    return new Error(`Element content cannot be read`);
+    return error;
   }
 };
 

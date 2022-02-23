@@ -11,4 +11,6 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export const ENDEVOR_V2_BASE_PATH = '/EndevorService/api/v2/';
+// https://stackoverflow.com/questions/50952917/nodejs-mocha-unit-testing-with-global-injected-variables-from-webpack-defineplug
+globalThis.__E4E_BUILD_NUMBER__ = 'test-build';
+globalThis.__E4E_TELEMETRY_KEY__ = '';

@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,7 +13,9 @@
 
 import { Credential } from '@local/endevor/_doc/Credential';
 import { askForCredentialWithDefaultPasswordPolicy } from '../dialogs/credentials/endevorCredentialDialogs';
+import { logger, reporter } from '../globals';
 import { Action, Actions } from '../_doc/Actions';
+import { TelemetryEvents } from '../_doc/Telemetry';
 
 export const resolveCredential =
   (
@@ -27,12 +29,21 @@ export const resolveCredential =
     let credential: Credential | undefined =
       getCredentialFromStore(serviceName) ?? credentialFromProfile;
     if (!credential) {
+      logger.warn(
+        `No saved Endevor credentials found for the service: ${serviceName}, please, provide them in the dialog, they will be saved in the current session only.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED,
+      });
       credential = await askForCredentialWithDefaultPasswordPolicy();
       if (credential) {
         await dispatch({
           type: Actions.ENDEVOR_CREDENTIAL_ADDED,
           serviceName,
           credential,
+        });
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
         });
       }
     }

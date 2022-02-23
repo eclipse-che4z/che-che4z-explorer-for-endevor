@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -42,7 +42,7 @@ export const toEditedElementUri =
       return emptyUri.with({
         scheme: Schemas.FILE,
         path: elementFileSystemPath,
-        query: JSON.stringify(query),
+        query: encodeURIComponent(JSON.stringify(query)),
       });
     } catch (e) {
       return e;
@@ -60,12 +60,13 @@ export const isEditedElementUri = (
   const actualScheme = uri.scheme;
   if (actualScheme === expectedScheme) {
     let parsedQuery: SerializedValue;
+    const decodedQuery: string = decodeURIComponent(uri.query);
     try {
-      parsedQuery = JSON.parse(uri.query);
+      parsedQuery = JSON.parse(decodedQuery);
     } catch (e) {
       return {
         valid: false,
-        message: `Uri has no valid query for edited elements to parse: ${uri.query}`,
+        message: `Uri has no valid query for edited elements to parse: ${decodedQuery}`,
       };
     }
     const actualType = parsedQuery.type;
@@ -90,7 +91,7 @@ export const fromEditedElementUri = (
 ): EditedElementUriQuery | Error => {
   const uriValidationResult = isEditedElementUri(uri);
   if (uriValidationResult.valid) {
-    return JSON.parse(uri.query);
+    return JSON.parse(decodeURIComponent(uri.query));
   }
   return new Error(uriValidationResult.message);
 };

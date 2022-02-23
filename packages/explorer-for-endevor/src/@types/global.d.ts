@@ -11,4 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export const ENDEVOR_V2_BASE_PATH = '/EndevorService/api/v2/';
+// will be inserted using Webpack Define plugin
+// using this advice to make a type check of new globalThis properties: https://stackoverflow.com/a/64723740
+/* eslint-disable no-var */
+declare namespace globalThis {
+  var __E4E_BUILD_NUMBER__: string;
+  var __E4E_TELEMETRY_KEY__: string;
+}

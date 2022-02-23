@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -28,7 +28,7 @@ import {
 } from '@local/endevor/_doc/Endevor';
 import { toTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { CachedElement } from '../_doc/Store';
 import {
   ElementLocationName,
@@ -36,6 +36,7 @@ import {
   LocationConfig,
 } from '../_doc/settings';
 import { Uri } from 'vscode';
+import { TelemetryEvents } from '../_doc/Telemetry';
 
 export const toElementId =
   (service: EndevorServiceName) =>
@@ -101,6 +102,13 @@ export const buildTree = (
 ): SystemNode[] => {
   const systems: Systems = new Map();
 
+  // mutations are bad, but they are hidden in one function
+  // it is much faster, than reiterating over the elements list again and again
+  let subsystems = 0;
+  let types = 0;
+  let elementsInPlace = 0;
+  let elementsUpTheMap = 0;
+
   const addSystemNode = (elm: Element): SystemNode => {
     const name = elm.system;
     const node: SystemNode = systems.get(name) ?? {
@@ -116,12 +124,16 @@ export const buildTree = (
   const addSubSystemNode = (element: Element): SubSystemNode => {
     const system = addSystemNode(element);
     const name = element.subSystem;
+    const existingNode = system.children.get(name);
+    if (existingNode) return existingNode;
+
     const node: SubSystemNode = system.children.get(name) ?? {
       type: 'SUB',
       name,
       children: new Map(),
     };
     system.children.set(name, node);
+    subsystems++;
 
     return node;
   };
@@ -129,12 +141,21 @@ export const buildTree = (
   const addTypeNode = (element: Element): TypeNode => {
     const subsystem = addSubSystemNode(element);
     const name = element.type;
+    const existingNode = subsystem.children.get(name);
+    if (existingNode) return existingNode;
+
     const node: TypeNode = subsystem.children.get(name) ?? {
       type: 'TYPE',
       name,
-      children: new Map(),
+      elements: new Map(),
+      map: {
+        type: 'MAP',
+        name: '[MAP]',
+        elements: new Map(),
+      },
     };
     subsystem.children.set(name, node);
+    types++;
 
     return node;
   };
@@ -142,36 +163,75 @@ export const buildTree = (
   const addElementNode = async (
     endevorElement: CachedElement
   ): Promise<void> => {
-    const type = addTypeNode(endevorElement.element);
-    const name = endevorElement.element.name;
+    const element = endevorElement.element;
+
     const serializedUri = toTreeElementUri({
       serviceName,
       searchLocationName,
       service,
-      element: endevorElement.element,
+      element,
       searchLocation: elementsSearchLocation,
     })(endevorElement.lastRefreshTimestamp.toString());
+
     if (isError(serializedUri)) {
       const error = serializedUri;
       logger.trace(
-        `Cannot show an element ${name} in the tree, because of: ${error.message}`
+        `Cannot show an element ${element.name} in the tree, because of: ${error.message}`
       );
-    } else {
-      const node = newElementNode(
+      return;
+    }
+
+    const typeNode = addTypeNode(element);
+
+    if (!isElementUpTheMap(element)) {
+      const name = element.name;
+      const elementNode = newElementNode(
         serviceName,
         searchLocationName,
-        endevorElement.element,
+        element,
         name,
         serializedUri
       );
-      type.children.set(name, node);
+      typeNode.elements.set(name, elementNode);
+      elementsInPlace++;
+    } else {
+      const name =
+        element.name + ` [${element.environment}/${element.stageNumber}]`;
+      const elementNode = newElementNode(
+        serviceName,
+        searchLocationName,
+        element,
+        name,
+        serializedUri
+      );
+      typeNode.map.elements.set(name, elementNode);
+      elementsUpTheMap++;
     }
+  };
+
+  const isElementUpTheMap = (element: Element) => {
+    return !(
+      element.environment === elementsSearchLocation.environment &&
+      element.stageNumber === elementsSearchLocation.stageNumber
+    );
   };
 
   Array.from(elements)
     .sort((l, r) => l.element.name.localeCompare(r.element.name))
     .forEach(addElementNode);
 
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.ELEMENTS_PROVIDED,
+    elementsInPlace: {
+      elements: elementsInPlace,
+      systems: systems.size,
+      subsystems,
+      types,
+    },
+    elementsUpTheMap: {
+      elements: elementsUpTheMap,
+    },
+  });
   return Array.from(systems.values());
 };
 
