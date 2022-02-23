@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -250,7 +250,7 @@ describe('uploading edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new FingerprintMismatchError(element.name, 'something');
+    const uploadError = new FingerprintMismatchError('something');
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
     Object.setPrototypeOf(uploadError, FingerprintMismatchError.prototype);
@@ -291,7 +291,6 @@ describe('uploading edited element', () => {
       searchLocation,
       uploadChangeControlValue,
       uploadLocation,
-      editedElementFilePath,
       serviceName,
       searchLocationName,
       localElementVersionTempFilePath
@@ -318,10 +317,22 @@ describe('uploading edited element', () => {
       comparingElementDialogStub.called,
       `Compare elements dialog was not closed`
     );
+    const expectedUpdatedElementAction = {
+      type: Actions.ELEMENT_UPDATED,
+      serviceName,
+      searchLocationName,
+      service,
+      searchLocation,
+      elements: [uploadLocation],
+    };
     assert.deepStrictEqual(
-      dispatchUpdatedElementAction.called,
-      false,
-      `Expexted dispatch for upload element should not have been called, but it was called ${dispatchUpdatedElementAction.callCount} times.`
+      expectedUpdatedElementAction,
+      dispatchUpdatedElementAction.args[0]?.[0],
+      `Expexted dispatch for element update to have been called with ${JSON.stringify(
+        expectedUpdatedElementAction
+      )}, but it was called with ${JSON.stringify(
+        dispatchUpdatedElementAction.args[0]?.[0]
+      )}`
     );
   });
 
@@ -345,7 +356,6 @@ describe('uploading edited element', () => {
       elementArg: Element,
       serviceNameArg: EndevorServiceName,
       searchLocationnameArg: ElementLocationName,
-      editedElementFilePathArg: string,
       localVersionElementTempFilePathArg: string
     ) =>
     (mockResult?: Error): CompareElementsStub => {
@@ -360,25 +370,18 @@ describe('uploading edited element', () => {
         .stub<
           [
             element: Element,
-            editedElementFilePath: string,
             serviceName: EndevorServiceName,
             searchLocationname: ElementLocationName
           ],
           (localVersionElementTempFilePath: string) => Promise<void | Error>
         >()
-        .withArgs(
-          elementArg,
-          editedElementFilePathArg,
-          serviceNameArg,
-          searchLocationnameArg
-        )
+        .withArgs(elementArg, serviceNameArg, searchLocationnameArg)
         .returns(withLocalVersionFileStub);
       const withChangeControlValueStub = sinon
         .stub<
           [uploadChangeControlValue: ActionChangeControlValue],
           (
             element: Element,
-            editedElementFilePath: string,
             serviceName: EndevorServiceName,
             searchLocationname: ElementLocationName
           ) => (
@@ -416,7 +419,7 @@ describe('uploading edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new SignoutError(element.name, 'something');
+    const uploadError = new SignoutError('something');
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
     Object.setPrototypeOf(uploadError, SignoutError.prototype);
@@ -522,7 +525,7 @@ describe('uploading edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new SignoutError(element.name, 'something');
+    const uploadError = new SignoutError('something');
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
     Object.setPrototypeOf(uploadError, SignoutError.prototype);
