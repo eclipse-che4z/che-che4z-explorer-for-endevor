@@ -17,9 +17,9 @@ You can find all notable changes to Explorer for Endevor in this document.
 ### Fixed
 
 - Fixed an issue in the URI building process. Characters that may potentially break the building process are escaped.
-- Upload dialogs now prevent wildcards as input.
+- Fixed an issue that erroneously allowed upload dialogs to use wildcards as input.
 - Fixed an issue that caused the conflict resolution command to fail when resolving reoccurring conflicts.
-- Fixed an issue with retrieving, editing multiple elements with auto signout option. Now it processes all the selected elements in groups by each location profile.
+- Fixed an issue with retrieving and editing multiple elements with the auto signout option. Now the retrieve and edit commands correctly process all the selected elements in groups by location profiles.
 - Fixed an issue with showing multiple elements for editing. An "editor already opened" error does not appear anymore.
 - Fixed an issue that caused editors to close when discarding changes.
 
