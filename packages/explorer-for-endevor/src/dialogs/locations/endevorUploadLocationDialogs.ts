@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -113,12 +113,9 @@ export const askForUploadLocation = async (
     value: string | undefined,
     partName: string | undefined
   ): Result<string> => {
-    const onlySymbolsUpToLengthEight = '^.{1,8}$';
-    if (
-      value &&
-      value.match(onlySymbolsUpToLengthEight) &&
-      value !== ANY_VALUE
-    ) {
+    // * is a wildcard in Endevor
+    const validationPattern = '^[^\\*]{1,8}$';
+    if (value && value.match(validationPattern) && value !== ANY_VALUE) {
       return value;
     }
     return new Error(

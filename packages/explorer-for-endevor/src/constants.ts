@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -10,6 +10,11 @@
  * Contributors:
  *   Broadcom, Inc. - initial API and implementation
  */
+
+import pkgjson = require('../package.json');
+
+export const EXT_ID = `${pkgjson.publisher}.${pkgjson.name}`;
+export const EXT_VERSION = pkgjson.version;
 
 export const COMMAND_PREFIX = 'e4e';
 export const OUTPUT_CHANNEL_NAME = 'Explorer for Endevor';
@@ -36,3 +41,58 @@ export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';
 // ms
 // the same time, as VSCode uses to hide notification
 export const NOTIFICATION_TIMEOUT = 15000;
+
+export const ENDEVOR_MESSAGE_CODE_PREFIXES = [
+  'ACMB',
+  'ACMO',
+  'ACMQ',
+  'ACMR',
+  'ANAL',
+  'API',
+  'BC1P',
+  'ENAP',
+  'B1E',
+  'B1NM',
+  'B1TS',
+  'BTSQ',
+  'C1A',
+  'C1C',
+  'C1B',
+  'C1E',
+  'C1F',
+  'C1G',
+  'C1I',
+  'C1L',
+  'C1P',
+  'C1R',
+  'C1X',
+  'C1U',
+  'C1V',
+  'C1Y',
+  'C2FM',
+  'CIIO',
+  'ECAP',
+  'ENB',
+  'ENB',
+  'ENC',
+  'END',
+  'EWS',
+  'ENI',
+  'ENM',
+  'FPVL',
+  'FUPD',
+  'IMGR',
+  'JLOG',
+  'JRCV',
+  'MCS',
+  'PDM',
+  'PKEX',
+  'PKMR',
+  'RDLT',
+  'SCHK',
+  'SHP',
+  'SMGR',
+  'SYN',
+  'VAL',
+  'VSI',
+];

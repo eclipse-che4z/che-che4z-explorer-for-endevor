@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import {
   filterElementNodes,
   isDefined,
@@ -59,6 +59,13 @@ import {
 import { SignoutError } from '@local/endevor/_doc/Error';
 import { Action, Actions, SignedOutElementsPayload } from '../_doc/Actions';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  DependencyRetrievalCompletedStatus,
+  RetrieveElementWithDepsCommandCompletedStatus,
+  SignoutErrorRecoverCommandCompletedStatus,
+  TelemetryEvents,
+  TreeElementCommandArguments,
+} from '../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = ElementNode[];
@@ -73,15 +80,15 @@ export const retrieveWithDependencies = async (
     logger.trace(
       `Retrieve element command was called for ${elementNodes
         .map((node) => node.name)
-        .join(',')}`
+        .join(',')}.`
     );
     let autoSignOut: boolean;
     try {
       autoSignOut = isAutomaticSignOut();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
+        `Reading settings error ${e.message}`
       );
       autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
     }
@@ -97,14 +104,16 @@ export const retrieveWithDependencies = async (
     await retrieveMultipleElementsWithDeps(elementNodes);
     return;
   } else if (elementNode) {
-    logger.trace(`Retrieve element command was called for ${elementNode.name}`);
+    logger.trace(
+      `Retrieve element command was called for ${elementNode.name}.`
+    );
     let autoSignOut: boolean;
     try {
       autoSignOut = isAutomaticSignOut();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
+        `Reading settings error ${e.message}`
       );
       autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
     }
@@ -127,11 +136,26 @@ const retrieveSingleElementWithDepsWithSignout =
       uri: vscode.Uri;
     }>
   ): Promise<void> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.SINGLE_ELEMENT,
+      },
+      autoSignOut: true,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
-      logger.error(
+      const error = new Error(
         'At least one workspace in this project should be opened to retrieve elements'
       );
+      logger.error(`${error.message}.`);
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status:
+          RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+        error,
+      });
       return;
     }
     let endevorMaxRequestsNumber: number;
@@ -139,8 +163,8 @@ const retrieveSingleElementWithDepsWithSignout =
       endevorMaxRequestsNumber = getMaxParallelRequests();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
+        `Reading settings error ${e.message}`
       );
       endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
     }
@@ -148,8 +172,8 @@ const retrieveSingleElementWithDepsWithSignout =
     if (isError(elementUri)) {
       const error = elementUri;
       logger.error(
-        `Unable to retrieve element: ${element.name}`,
-        `Unable to retrieve element: ${element.name}, because of ${error.message}`
+        `Unable to retrieve the element ${element.name}.`,
+        `Unable to retrieve the element ${element.name} because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }
@@ -159,7 +183,7 @@ const retrieveSingleElementWithDepsWithSignout =
     });
     if (dialogCancelled(signoutChangeControlValue)) {
       logger.error(
-        `CCID and Comment must be specified to sign out element ${element.name}`
+        `CCID and Comment must be specified to sign out element ${element.name}.`
       );
       return;
     }
@@ -177,6 +201,49 @@ const retrieveSingleElementWithDepsWithSignout =
     if (!retrieveResult) {
       return;
     }
+    const successDependencies = retrieveResult.dependencies
+      .map((retrieveResult) => {
+        const [element, dependency] = retrieveResult;
+        const dependencyNotRetrieved = isError(dependency);
+        if (dependencyNotRetrieved) {
+          return undefined;
+        }
+        const successDependency: [Dependency, ElementContent] = [
+          element,
+          dependency,
+        ];
+        return successDependency;
+      })
+      .filter(isDefined);
+    const errorsDependencies = retrieveResult.dependencies
+      .map((retrieveResult) => {
+        const [, dependency] = retrieveResult;
+        const dependencyNotRetrieved = isError(dependency);
+        if (dependencyNotRetrieved) {
+          const error = dependency;
+          return error;
+        }
+        return undefined;
+      })
+      .filter(isDefined);
+    if (errorsDependencies.length) {
+      logger.warn(
+        `There were some issues during retrieving of the element ${element.name} dependencies.`,
+        `There were some issues during retrieving of the element ${
+          element.name
+        } dependencies: ${JSON.stringify(
+          errorsDependencies.map((error) => error.message)
+        )}.`
+      );
+      errorsDependencies.forEach((error) => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED,
+          status: DependencyRetrievalCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+      });
+    }
     const saveResult = await saveIntoWorkspaceWithDependencies(workspaceUri)(
       elementUri.serviceName,
       elementUri.searchLocationName
@@ -185,14 +252,20 @@ const retrieveSingleElementWithDepsWithSignout =
         element: elementUri.element,
         content: retrieveResult.content,
       },
-      dependencies: retrieveResult.dependencies,
+      dependencies: successDependencies,
     });
     if (isError(saveResult)) {
       const error = saveResult;
       logger.error(
-        `Unable to save element: ${elementUri.element.name}`,
-        `Unable to save element: ${elementUri.element.name}, because of ${error.message}`
+        `Unable to save the element ${element.name} into the file system.`,
+        `Unable to save the element ${element.name} into the file system because of error ${error.message}.`
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
     const savedElementUri = saveResult;
@@ -200,11 +273,22 @@ const retrieveSingleElementWithDepsWithSignout =
     if (isError(showResult)) {
       const error = showResult;
       logger.error(
-        `Unable to show element: ${element.name}`,
-        `Unable to show element: ${element.name}, because of ${error.message}`
+        `Unable to open the element ${element.name} for editing.`,
+        `Unable to open the element ${element.name} for editing because of error ${error.message}.`
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
+      status: RetrieveElementWithDepsCommandCompletedStatus.SUCCESS,
+      dependenciesAmount: successDependencies.length,
+    });
   };
 
 const complexRetrieve =
@@ -227,8 +311,12 @@ const complexRetrieve =
     })(element)(signoutChangeControlValue);
     if (isSignoutError(retrieveWithSignoutResult)) {
       logger.warn(
-        `Element ${element.name} and its dependencies cannot be retrieved with signout, because it is signed out to somebody else.`
+        `Element ${element.name} and its dependencies cannot be retrieved with signout because the element is signed out to somebody else.`
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      });
       const overrideSignout = await askToOverrideSignOutForElements([
         element.name,
       ]);
@@ -243,7 +331,7 @@ const complexRetrieve =
           })(element)(signoutChangeControlValue);
         if (isError(retrieveWithOverrideSignoutResult)) {
           logger.warn(
-            `Override signout retrieve was not succesful, copy of ${element.name} and its dependencies will be retrieved.`
+            `Override signout retrieve was not successful, the copies of ${element.name} and its dependencies will be retrieved.`
           );
           const retrieveCopyResult = await retrieveSingleElementCopy({
             service,
@@ -251,11 +339,31 @@ const complexRetrieve =
           })(element);
           if (isError(retrieveCopyResult)) {
             const error = retrieveCopyResult;
-            logger.error(error.message);
+            logger.error(
+              `Unable to retrieve the element ${element.name}.`,
+              `${error.message}.`
+            );
+            reporter.sendTelemetryEvent({
+              type: TelemetryEvents.ERROR,
+              errorContext:
+                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+              status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+              error,
+            });
             return;
           }
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+            context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+            status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+          });
           return retrieveCopyResult;
         }
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+        });
         await updateTreeAfterSuccessfulSignout(dispatch)({
           serviceName,
           service,
@@ -274,15 +382,38 @@ const complexRetrieve =
         })(element);
         if (isError(retrieveCopyResult)) {
           const error = retrieveCopyResult;
-          logger.error(error.message);
+          logger.error(
+            `Unable to retrieve the element ${element.name}.`,
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+            status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
           return;
         }
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+        });
         return retrieveCopyResult;
       }
     }
     if (isError(retrieveWithSignoutResult)) {
       const error = retrieveWithSignoutResult;
-      logger.error(error.message);
+      logger.error(
+        `Unable to retrieve the element ${element.name}.`,
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
     await updateTreeAfterSuccessfulSignout(dispatch)({
@@ -300,7 +431,7 @@ const retrieveSingleElementWithSignout =
   (element: Element) =>
   (signoutChangeControlValue: ActionChangeControlValue) => {
     return withNotificationProgress(
-      `Retrieving element and its depencencies with signout : ${element.name}`
+      `Retrieving element and its dependencies with signout : ${element.name}`
     )(async (progressReporter) => {
       return retrieveElementWithDependenciesWithSignout(progressReporter)({
         service,
@@ -314,7 +445,7 @@ const retrieveSingleElementWithOverrideSignout =
   (element: Element) =>
   (signoutChangeControlValue: ActionChangeControlValue) => {
     return withNotificationProgress(
-      `Retrieving element and its depencencies with override signout : ${element.name}`
+      `Retrieving element and its dependencies with override signout : ${element.name}`
     )(async (progressReporter) => {
       return retrieveElementWithDependenciesOverrideSignout(progressReporter)({
         service,
@@ -327,7 +458,7 @@ const retrieveSingleElementCopy =
   ({ service, requestPoolMaxSize }: ServiceInstance) =>
   (element: Element) => {
     return withNotificationProgress(
-      `Retrieving element copy and its depencencies : ${element.name}`
+      `Retrieving element copy and its dependencies : ${element.name}`
     )(async (progressReporter) => {
       return retrieveElementWithDependenciesWithoutSignout(progressReporter)({
         service,
@@ -344,7 +475,7 @@ const saveIntoWorkspaceWithDependencies =
       element: Element;
       content: ElementContent;
     };
-    dependencies: ReadonlyArray<[Dependency, ElementContent | Error]>;
+    dependencies: ReadonlyArray<[Dependency, ElementContent]>;
   }): Promise<vscode.Uri | Error> => {
     const saveMainElementResult = await saveIntoWorkspace(workspaceUri)(
       serviceName,
@@ -357,10 +488,6 @@ const saveIntoWorkspaceWithDependencies =
     const dependenciesSaveResult = await Promise.all(
       elementWithDeps.dependencies.map((dependentElement) => {
         const [element, content] = dependentElement;
-        if (isError(content)) {
-          const error = content;
-          return error;
-        }
         return saveIntoWorkspace(workspaceUri)(serviceName, locationName)(
           element,
           content
@@ -374,10 +501,13 @@ const saveIntoWorkspaceWithDependencies =
       })
       .filter(isDefined);
     if (errors.length) {
-      logger.trace(
-        `There were some issues during retrieving element ${
+      logger.warn(
+        `There were some issues during saving of the element ${elementWithDeps.mainElement.element.name} dependencies.`,
+        `There were some issues during saving of the element ${
           elementWithDeps.mainElement.element.name
-        } dependencies: ${JSON.stringify(errors.map((error) => error.message))}`
+        } dependencies: ${JSON.stringify(
+          errors.map((error) => error.message)
+        )}.`
       );
     }
     return saveMainElementResult;
@@ -389,11 +519,26 @@ const retrieveSingleElementWithDeps = async (
     uri: vscode.Uri;
   }>
 ): Promise<void> => {
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+    commandArguments: {
+      type: TreeElementCommandArguments.SINGLE_ELEMENT,
+    },
+    autoSignOut: false,
+  });
   const workspaceUri = await getWorkspaceUri();
   if (!workspaceUri) {
-    logger.error(
+    const error = new Error(
       'At least one workspace in this project should be opened to retrieve elements'
     );
+    logger.error(`${error.message}.`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status:
+        RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+      error,
+    });
     return;
   }
   let endevorMaxRequestsNumber: number;
@@ -401,7 +546,7 @@ const retrieveSingleElementWithDeps = async (
     endevorMaxRequestsNumber = getMaxParallelRequests();
   } catch (e) {
     logger.warn(
-      `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
+      `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
       `Reading settings error: ${e.message}`
     );
     endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
@@ -410,8 +555,8 @@ const retrieveSingleElementWithDeps = async (
   if (isError(elementUri)) {
     const error = elementUri;
     logger.error(
-      `Unable to retrieve element: ${element.name}`,
-      `Unable to retrieve element: ${element.name}, because of ${error.message}`
+      `Unable to retrieve the element ${element.name}.`,
+      `Unable to retrieve the element ${element.name} because parsing of the element's URI failed with error ${error.message}.`
     );
     return;
   }
@@ -421,8 +566,60 @@ const retrieveSingleElementWithDeps = async (
   })(elementUri.element);
   if (isError(retrieveResult)) {
     const error = retrieveResult;
-    logger.error(error.message);
+    logger.error(
+      `Unable to retrieve the element ${element.name}.`,
+      `${error.message}`
+    );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
     return;
+  }
+  const successDependencies = retrieveResult.dependencies
+    .map((retrieveResult) => {
+      const [element, dependency] = retrieveResult;
+      const dependencyNotRetrieved = isError(dependency);
+      if (dependencyNotRetrieved) {
+        return undefined;
+      }
+      const successDependency: [Dependency, ElementContent] = [
+        element,
+        dependency,
+      ];
+      return successDependency;
+    })
+    .filter(isDefined);
+  const errorsDependencies = retrieveResult.dependencies
+    .map((retrieveResult) => {
+      const [, dependency] = retrieveResult;
+      const dependencyNotRetrieved = isError(dependency);
+      if (dependencyNotRetrieved) {
+        const error = dependency;
+        return error;
+      }
+      return undefined;
+    })
+    .filter(isDefined);
+  if (errorsDependencies.length) {
+    logger.warn(
+      `There were some issues during retrieving of the element ${element.name} dependencies.`,
+      `There were some issues during retrieving of the element ${
+        element.name
+      } dependencies: ${JSON.stringify(
+        errorsDependencies.map((error) => error.message)
+      )}.`
+    );
+    errorsDependencies.forEach((error) => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED,
+        status: DependencyRetrievalCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+    });
   }
   const saveResult = await saveIntoWorkspaceWithDependencies(workspaceUri)(
     elementUri.serviceName,
@@ -432,14 +629,20 @@ const retrieveSingleElementWithDeps = async (
       element: elementUri.element,
       content: retrieveResult.content,
     },
-    dependencies: retrieveResult.dependencies,
+    dependencies: successDependencies,
   });
   if (isError(saveResult)) {
     const error = saveResult;
     logger.error(
-      `Unable to save element: ${elementUri.element.name}`,
-      `Unable to save element: ${elementUri.element.name}, because of ${error.message}`
+      `Unable to save the element ${element.name} into the file system.`,
+      `Unable to save the element ${element.name} into the file system because of error ${error.message}.`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
     return;
   }
   const savedElementUri = saveResult;
@@ -447,11 +650,22 @@ const retrieveSingleElementWithDeps = async (
   if (isError(showResult)) {
     const error = showResult;
     logger.error(
-      `Unable to show element: ${element.name}`,
-      `Unable to show element: ${element.name}, because of ${error.message}`
+      `Unable to open the element ${element.name} for editing.`,
+      `Unable to open the element ${element.name} for editing because of error ${error.message}.`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
     return;
   }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
+    status: RetrieveElementWithDepsCommandCompletedStatus.SUCCESS,
+    dependenciesAmount: successDependencies.length,
+  });
 };
 
 const retrieveMultipleElementsWithDeps = async (
@@ -460,11 +674,27 @@ const retrieveMultipleElementsWithDeps = async (
     uri: vscode.Uri;
   }>
 ): Promise<void> => {
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+    commandArguments: {
+      type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+      elementsAmount: elements.length,
+    },
+    autoSignOut: false,
+  });
   const workspaceUri = await getWorkspaceUri();
   if (!workspaceUri) {
-    logger.error(
-      'At least one workspace in this project should be opened to edit elements'
+    const error = new Error(
+      'At least one workspace in this project should be opened to retrieve elements'
     );
+    logger.error(`${error.message}.`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status:
+        RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+      error,
+    });
     return;
   }
   let endevorMaxRequestsNumber: number;
@@ -472,8 +702,8 @@ const retrieveMultipleElementsWithDeps = async (
     endevorMaxRequestsNumber = getMaxParallelRequests();
   } catch (e) {
     logger.warn(
-      `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
-      `Reading settings error: ${e.message}`
+      `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
+      `Reading settings error ${e.message}`
     );
     endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
   }
@@ -483,14 +713,16 @@ const retrieveMultipleElementsWithDeps = async (
       if (isError(uriParams)) {
         const error = uriParams;
         logger.trace(
-          `Unable to retrieve element ${element.name}, because of ${error.message}`
+          `Unable to retrieve the element ${element.name} because parsing of the element's URI failed with error ${error.message}.`
         );
         return undefined;
       }
       return uriParams;
     })
     .filter(isDefined);
-  const retrieveResults = await retrieveMultipleElementCopies(
+  const retrieveResults: ReadonlyArray<
+    [ElementDetails, Error | ElementWithDependencies]
+  > = await retrieveMultipleElementCopies(
     validElementUris.map((uri) => {
       return {
         serviceName: uri.serviceName,
@@ -504,48 +736,188 @@ const retrieveMultipleElementsWithDeps = async (
       };
     })
   );
-  const saveResults = await Promise.all(
-    retrieveResults.map((retrieveResult) => {
-      const elementDetails = retrieveResult[0];
-      const elementWithDeps = retrieveResult[1];
-      if (isError(elementWithDeps)) {
-        const error = elementWithDeps;
-        return error;
+  retrieveResults
+    .map((retrieveResult) => {
+      const [elementDetails, elementWithDeps] = retrieveResult;
+      const mainElementRetrieved = !isError(elementWithDeps);
+      if (mainElementRetrieved) {
+        const successRetrieve: [ElementDetails, ElementWithDependencies] = [
+          elementDetails,
+          elementWithDeps,
+        ];
+        return successRetrieve;
       }
-      return saveIntoWorkspaceWithDependencies(workspaceUri)(
-        elementDetails.serviceName,
-        elementDetails.searchLocationName
-      )({
-        mainElement: {
-          element: elementDetails.element,
-          content: elementWithDeps.content,
-        },
-        dependencies: elementWithDeps.dependencies,
-      });
+      return undefined;
     })
-  );
-  const showResults = await Promise.all(
-    saveResults.map((result) => {
-      if (!isError(result)) {
-        const savedElementUri = result;
-        return showElementInEditor(savedElementUri);
+    .filter(isDefined)
+    .forEach(([elementDetails, elementWithDeps]) => {
+      const dependencyErrors = elementWithDeps.dependencies
+        .map((retrieveDependencyResult) => {
+          const [, dependency] = retrieveDependencyResult;
+          const dependencyWasRetrieved = !isError(dependency);
+          if (dependencyWasRetrieved) return undefined;
+          const error = dependency;
+          return error;
+        })
+        .filter(isDefined);
+      if (dependencyErrors.length) {
+        logger.warn(
+          `There were some issues during retrieving of the element ${elementDetails.element.name} dependencies.`,
+          `There were some issues during retrieving of the element ${
+            elementDetails.element.name
+          } dependencies: ${JSON.stringify(
+            dependencyErrors.map((error) => error.message)
+          )}.`
+        );
+        dependencyErrors.forEach((dependencyError) => {
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED,
+            status: DependencyRetrievalCompletedStatus.GENERIC_ERROR,
+            error: dependencyError,
+          });
+        });
       }
-      return result;
-    })
-  );
-  const errors = showResults
-    .map((value) => {
-      if (isError(value)) return value;
+    });
+  const saveResults: ReadonlyArray<[ElementDetails, Error | vscode.Uri]> =
+    await Promise.all(
+      retrieveResults.map(async (retrieveResult) => {
+        const [elementDetails, elementWithDeps] = retrieveResult;
+        if (isError(elementWithDeps)) {
+          return [elementDetails, elementWithDeps];
+        }
+        const successDependencies = elementWithDeps.dependencies
+          .map((retrieveResult) => {
+            const [element, dependency] = retrieveResult;
+            const dependencyNotRetrieved = isError(dependency);
+            if (dependencyNotRetrieved) {
+              return undefined;
+            }
+            const successDependency: [Dependency, ElementContent] = [
+              element,
+              dependency,
+            ];
+            return successDependency;
+          })
+          .filter(isDefined);
+        const saveResult = await saveIntoWorkspaceWithDependencies(
+          workspaceUri
+        )(
+          elementDetails.serviceName,
+          elementDetails.searchLocationName
+        )({
+          mainElement: {
+            element: elementDetails.element,
+            content: elementWithDeps.content,
+          },
+          dependencies: successDependencies,
+        });
+        if (isError(saveResult)) {
+          const error = saveResult;
+          return [
+            elementDetails,
+            new Error(
+              `Unable to save the element ${elementDetails.element.name} into the file system because of error ${error.message}`
+            ),
+          ];
+        }
+        return [elementDetails, saveResult];
+      })
+    );
+  // show text editors only in sequential order (concurrency: 1)
+  const sequentialShowing = 1;
+  const showResults: ReadonlyArray<[ElementDetails, Error | void]> =
+    await new PromisePool(
+      saveResults.map(([elementDetails, result]) => {
+        const showElementCallback: () => Promise<
+          [ElementDetails, Error | void]
+        > = async () => {
+          if (!isError(result)) {
+            const savedElementUri = result;
+            const showResult = await showElementInEditor(savedElementUri);
+            if (isError(showResult)) {
+              const error = showResult;
+              return [
+                elementDetails,
+                new Error(
+                  `Unable to show the element ${elementDetails.element.name} in the editor because of error ${error.message}`
+                ),
+              ];
+            }
+            return [elementDetails, showResult];
+          }
+          return [elementDetails, result];
+        };
+        return showElementCallback;
+      }),
+      {
+        concurrency: sequentialShowing,
+      }
+    ).start();
+  const errors: ReadonlyArray<[ElementDetails, Error]> = showResults
+    .map(([elementDetails, result]) => {
+      if (isError(result)) {
+        const errorResult: [ElementDetails, Error] = [elementDetails, result];
+        return errorResult;
+      }
       return undefined;
     })
     .filter(isDefined);
   if (errors.length) {
+    const elementNames = errors
+      .map(([elementDetails]) => elementDetails.element.name)
+      .join(', ');
     logger.error(
-      `There were some issues during retrieving elements: ${elements
-        .map((element) => element.name)
-        .join(', ')}: ${JSON.stringify(errors.map((error) => error.message))}`
+      `There were some issues during retrieving of the elements ${elementNames}.`,
+      `There were some issues during retrieving of the elements ${elementNames}: ${[
+        '',
+        errors.map(([, error]) => error.message),
+      ].join('\n')}.`
     );
   }
+  errors.forEach(([, error]) => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
+  });
+  retrieveResults
+    .map((retrieveResult) => {
+      const [, elementWithDeps] = retrieveResult;
+      const mainElementWasRetrieved = !isError(elementWithDeps);
+      if (mainElementWasRetrieved) {
+        return elementWithDeps;
+      }
+      return undefined;
+    })
+    .map((retrieveResult, index) => {
+      const saveResult = saveResults[index];
+      if (saveResult) {
+        const [, savedUri] = saveResult;
+        const elementWasNotSaved = isError(savedUri);
+        if (elementWasNotSaved) return undefined;
+      }
+      const showResult = showResults[index];
+      if (showResult) {
+        const [, shownElement] = showResult;
+        const elementWasNotShown = isError(shownElement);
+        if (elementWasNotShown) return undefined;
+      }
+      return retrieveResult;
+    })
+    .filter(isDefined)
+    .forEach((elementWithDeps) => {
+      const successDependencies = elementWithDeps.dependencies.filter(
+        ([, dependencyResult]) => !isError(dependencyResult)
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.SUCCESS,
+        dependenciesAmount: successDependencies.length,
+      });
+    });
 };
 
 const retrieveMultipleElementCopies = async (
@@ -590,11 +962,27 @@ const retrieveMultipleElementsWithDepsWithSignout =
       uri: vscode.Uri;
     }>
   ): Promise<void> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+        elementsAmount: elements.length,
+      },
+      autoSignOut: true,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
-      logger.error(
-        'At least one workspace in this project should be opened to edit elements'
+      const error = new Error(
+        'At least one workspace in this project should be opened to retrieve elements'
       );
+      logger.error(`${error.message}.`);
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status:
+          RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+        error,
+      });
       return;
     }
     let endevorMaxRequestsNumber: number;
@@ -602,7 +990,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
       endevorMaxRequestsNumber = getMaxParallelRequests();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
+        `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
         `Reading settings error: ${e.message}`
       );
       endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
@@ -613,8 +1001,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
     if (isError(firstElementUriParams)) {
       const error = firstElementUriParams;
       logger.error(
-        `Unable to show change control value dialog`,
-        `Unable to show change control value dialog, because of ${error.message}`
+        `Unable to show the change control value dialog.`,
+        `Unable to show the change control value dialog because of an error ${error.message}.`
       );
       return;
     }
@@ -623,7 +1011,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
       comment: firstElementUriParams.searchLocation.comment,
     });
     if (dialogCancelled(signoutChangeControlValue)) {
-      logger.error(`CCID and Comment must be specified to sign out element.`);
+      logger.error(`CCID and Comment must be specified to sign out elements.`);
       return;
     }
     const validElementUris = elements
@@ -632,14 +1020,16 @@ const retrieveMultipleElementsWithDepsWithSignout =
         if (isError(uriParams)) {
           const error = uriParams;
           logger.trace(
-            `Unable to retrieve element ${element.name}, because of ${error.message}`
+            `Unable to retrieve the element ${element.name} because parsing of the element's URI failed with error ${error.message}.`
           );
           return undefined;
         }
         return uriParams;
       })
       .filter(isDefined);
-    const retrieveResults = await complexMultipleRetrieve(dispatch)(
+    const retrieveResults: ReadonlyArray<
+      [ElementDetails, Error | ElementWithDependencies]
+    > = await complexMultipleRetrieve(dispatch)(
       validElementUris.map((uri) => {
         return {
           element: uri.element,
@@ -653,48 +1043,189 @@ const retrieveMultipleElementsWithDepsWithSignout =
         };
       })
     )(signoutChangeControlValue);
-    const saveResults = await Promise.all(
-      retrieveResults.map((retrieveResult) => {
-        const elementDetails = retrieveResult[0];
-        const elementWithDeps = retrieveResult[1];
-        if (isError(elementWithDeps)) {
-          const error = elementWithDeps;
-          return error;
+    retrieveResults
+      .map((retrieveResult) => {
+        const [elementDetails, elementWithDeps] = retrieveResult;
+        const mainElementRetrieved = !isError(elementWithDeps);
+        if (mainElementRetrieved) {
+          const successRetrieve: [ElementDetails, ElementWithDependencies] = [
+            elementDetails,
+            elementWithDeps,
+          ];
+          return successRetrieve;
         }
-        return saveIntoWorkspaceWithDependencies(workspaceUri)(
-          elementDetails.serviceName,
-          elementDetails.searchLocationName
-        )({
-          mainElement: {
-            element: elementDetails.element,
-            content: elementWithDeps.content,
-          },
-          dependencies: elementWithDeps.dependencies,
-        });
+        return undefined;
       })
-    );
-    const showedResults = await Promise.all(
-      saveResults.map((result) => {
-        if (!isError(result)) {
-          const savedElementUri = result;
-          return showElementInEditor(savedElementUri);
+      .filter(isDefined)
+      .forEach(([elementDetails, elementWithDeps]) => {
+        const dependencyErrors = elementWithDeps.dependencies
+          .map((retrieveDependencyResult) => {
+            const [, dependency] = retrieveDependencyResult;
+            const dependencyWasRetrieved = !isError(dependency);
+            if (dependencyWasRetrieved) return undefined;
+            const error = dependency;
+            return error;
+          })
+          .filter(isDefined);
+        if (dependencyErrors.length) {
+          logger.warn(
+            `There were some issues during retrieving of the element ${elementDetails.element.name} dependencies.`,
+            `There were some issues during retrieving of the element ${
+              elementDetails.element.name
+            } dependencies: ${JSON.stringify(
+              dependencyErrors.map((error) => error.message)
+            )}.`
+          );
+          dependencyErrors.forEach((dependencyError) => {
+            reporter.sendTelemetryEvent({
+              type: TelemetryEvents.ERROR,
+              errorContext:
+                TelemetryEvents.ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED,
+              status: DependencyRetrievalCompletedStatus.GENERIC_ERROR,
+              error: dependencyError,
+            });
+          });
         }
-        return result;
-      })
-    );
-    const errors = showedResults
-      .map((value) => {
-        if (isError(value)) return value;
+      });
+    const saveResults: ReadonlyArray<[ElementDetails, Error | vscode.Uri]> =
+      await Promise.all(
+        retrieveResults.map(async (retrieveResult) => {
+          const [elementDetails, elementWithDeps] = retrieveResult;
+          if (isError(elementWithDeps)) {
+            return [elementDetails, elementWithDeps];
+          }
+          const successDependencies = elementWithDeps.dependencies
+            .map((retrieveResult) => {
+              const [element, dependency] = retrieveResult;
+              const dependencyNotRetrieved = isError(dependency);
+              if (dependencyNotRetrieved) {
+                return undefined;
+              }
+              const successDependency: [Dependency, ElementContent] = [
+                element,
+                dependency,
+              ];
+              return successDependency;
+            })
+            .filter(isDefined);
+          const saveResult = await saveIntoWorkspaceWithDependencies(
+            workspaceUri
+          )(
+            elementDetails.serviceName,
+            elementDetails.searchLocationName
+          )({
+            mainElement: {
+              element: elementDetails.element,
+              content: elementWithDeps.content,
+            },
+            dependencies: successDependencies,
+          });
+          if (isError(saveResult)) {
+            const error = saveResult;
+            return [
+              elementDetails,
+              new Error(
+                `Unable to save the element ${elementDetails.element.name} into the file system because of error ${error.message}`
+              ),
+            ];
+          }
+          return [elementDetails, saveResult];
+        })
+      );
+    // show text editors only in sequential order (concurrency: 1)
+    const sequentialShowing = 1;
+    const showResults: ReadonlyArray<[ElementDetails, Error | void]> =
+      await new PromisePool(
+        saveResults.map(([elementDetails, result]) => {
+          const showElementCallback: () => Promise<
+            [ElementDetails, Error | void]
+          > = async () => {
+            if (!isError(result)) {
+              const savedElementUri = result;
+              const showResult = await showElementInEditor(savedElementUri);
+              if (isError(showResult)) {
+                const error = showResult;
+                return [
+                  elementDetails,
+                  new Error(
+                    `Unable to show the element ${elementDetails.element.name} in the editor because of error ${error.message}`
+                  ),
+                ];
+              }
+              return [elementDetails, showResult];
+            }
+            return [elementDetails, result];
+          };
+          return showElementCallback;
+        }),
+        {
+          concurrency: sequentialShowing,
+        }
+      ).start();
+    const errors: ReadonlyArray<[ElementDetails, Error]> = showResults
+      .map(([elementDetails, result]) => {
+        if (isError(result)) {
+          const errorResult: [ElementDetails, Error] = [elementDetails, result];
+          return errorResult;
+        }
         return undefined;
       })
       .filter(isDefined);
     if (errors.length) {
+      const elementNames = errors
+        .map(([elementDetails]) => elementDetails.element.name)
+        .join(', ');
       logger.error(
-        `There were some issues during retrieving elements: ${elements
-          .map((element) => element.name)
-          .join(', ')}: ${JSON.stringify(errors.map((error) => error.message))}`
+        `There were some issues during retrieving of the elements ${elementNames}.`,
+        `There were some issues during retrieving of the elements ${elementNames}: ${[
+          '',
+          errors.map(([, error]) => error.message),
+        ].join('\n')}.`
       );
     }
+    errors.forEach(([, error]) => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+    });
+    retrieveResults
+      .map((retrieveResult) => {
+        const [, elementWithDeps] = retrieveResult;
+        const mainElementWasRetrieved = !isError(elementWithDeps);
+        if (mainElementWasRetrieved) {
+          return elementWithDeps;
+        }
+        return undefined;
+      })
+      .map((retrieveResult, index) => {
+        const saveResult = saveResults[index];
+        if (saveResult) {
+          const [, savedUri] = saveResult;
+          const elementWasNotSaved = isError(savedUri);
+          if (elementWasNotSaved) return undefined;
+        }
+        const showResult = showResults[index];
+        if (showResult) {
+          const [, shownElement] = showResult;
+          const elementWasNotShown = isError(shownElement);
+          if (elementWasNotShown) return undefined;
+        }
+        return retrieveResult;
+      })
+      .filter(isDefined)
+      .forEach((elementWithDeps) => {
+        const successDependencies = elementWithDeps.dependencies.filter(
+          ([, dependencyResult]) => !isError(dependencyResult)
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
+          status: RetrieveElementWithDepsCommandCompletedStatus.SUCCESS,
+          dependenciesAmount: successDependencies.length,
+        });
+      });
   };
 
 type ElementDetails = Readonly<{
@@ -726,7 +1257,7 @@ const complexMultipleRetrieve =
     if (firstAttemptWasSuccessful) {
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
+          ([signedOutElement]) => signedOutElement
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
@@ -735,21 +1266,24 @@ const complexMultipleRetrieve =
     const genericErrorsAfterSignoutRetrieve = genericErrors(
       retrieveWithSignoutResult
     );
+    genericErrorsAfterSignoutRetrieve.forEach(([_, error]) =>
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      })
+    );
     const allErrorsAreGeneric =
       genericErrorsAfterSignoutRetrieve.length ===
       notRetrievedElementsWithSignout.length;
     if (allErrorsAreGeneric) {
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
+          ([signedOutElement]) => signedOutElement
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
-      logger.trace(
-        `Unable to retrieve the ${notRetrievedElementsWithSignout.map(
-          (elementDetails) => elementDetails.element.name
-        )} with signout.`
-      );
       return retrieveWithSignoutResult;
     }
     const signoutErrorsAfterSignoutRetrieve = signoutErrors(
@@ -758,7 +1292,13 @@ const complexMultipleRetrieve =
     logger.warn(
       `Elements ${signoutErrorsAfterSignoutRetrieve.map(
         (elementDetails) => elementDetails.element.name
-      )} cannot be retrieved with signout, because they are signed out to somebody else.`
+      )} with their dependencies cannot be retrieved with signout because the elements are signed out to somebody else.`
+    );
+    signoutErrorsAfterSignoutRetrieve.forEach(() =>
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+      })
     );
     const overrideSignout = await askToOverrideSignOutForElements(
       signoutErrorsAfterSignoutRetrieve.map(
@@ -773,13 +1313,28 @@ const complexMultipleRetrieve =
       );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
+          ([signedOutElement]) => signedOutElement
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
       const retrieveCopiesResult = await retrieveMultipleElementCopies(
         signoutErrorsAfterSignoutRetrieve
       );
+      allErrors(retrieveCopiesResult).forEach(([_, error]) => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+      });
+      withoutErrors(retrieveCopiesResult).forEach(() => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+        });
+      });
       return [
         ...successRetrievedElementsWithSignout,
         ...genericErrorsAfterSignoutRetrieve,
@@ -808,8 +1363,15 @@ const complexMultipleRetrieve =
         [
           ...successRetrievedElementsWithSignout,
           ...successRetrievedElementsWithOverrideSignout,
-        ].map((signedOutElement) => signedOutElement[0])
+        ].map(([signedOutElement]) => signedOutElement)
       );
+      successRetrievedElementsWithOverrideSignout.forEach(() => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+        });
+      });
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
       return [
         ...successRetrievedElementsWithSignout,
@@ -818,20 +1380,37 @@ const complexMultipleRetrieve =
       ];
     }
     logger.warn(
-      `Override signout retrieve was not succesful, ${notRetrievedElementsWithOverrideSignout.map(
-        (elementDetails) => elementDetails.element.name
-      )} copies will be retrieved.`
+      `Override signout retrieve was not successful, the copies of ${notRetrievedElementsWithOverrideSignout.map(
+        ([elementDetails]) => elementDetails.element.name
+      )} will be retrieved.`
     );
     const signedOutElements = toSignedOutElementsPayload(
       [
         ...successRetrievedElementsWithSignout,
         ...successRetrievedElementsWithOverrideSignout,
-      ].map((signedOutElement) => signedOutElement[0])
+      ].map(([signedOutElement]) => signedOutElement)
     );
     await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
     const retrieveCopiesResult = await retrieveMultipleElementCopies(
-      notRetrievedElementsWithOverrideSignout
+      notRetrievedElementsWithOverrideSignout.map(
+        ([elementDetails]) => elementDetails
+      )
     );
+    allErrors(retrieveCopiesResult).forEach(([_, error]) => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+    });
+    withoutErrors(retrieveCopiesResult).forEach(() => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+      });
+    });
     return [
       ...successRetrievedElementsWithSignout,
       ...genericErrorsAfterSignoutRetrieve,
@@ -845,9 +1424,8 @@ const signoutErrors = (
 ): ReadonlyArray<ElementDetails> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isSignoutError(retrieveResult)) {
-        const elementDetails = result[0];
         return elementDetails;
       }
       return undefined;
@@ -860,10 +1438,10 @@ const genericErrors = (
 ): ReadonlyArray<[ElementDetails, Error]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult) && !isSignoutError(retrieveResult)) {
         const mappedValue: [ElementDetails, Error] = [
-          result[0],
+          elementDetails,
           retrieveResult,
         ];
         return mappedValue;
@@ -875,13 +1453,16 @@ const genericErrors = (
 
 const allErrors = (
   input: ReadonlyArray<[ElementDetails, Error | ElementWithDependencies]>
-): ReadonlyArray<ElementDetails> => {
+): ReadonlyArray<[ElementDetails, Error]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult)) {
-        const elementDetails = result[0];
-        return elementDetails;
+        const mappedValue: [ElementDetails, Error] = [
+          elementDetails,
+          retrieveResult,
+        ];
+        return mappedValue;
       }
       return undefined;
     })
@@ -893,12 +1474,12 @@ const withoutErrors = (
 ): ReadonlyArray<[ElementDetails, ElementWithDependencies]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult)) {
         return undefined;
       }
       const mappedValue: [ElementDetails, ElementWithDependencies] = [
-        result[0],
+        elementDetails,
         retrieveResult,
       ];
       return mappedValue;
@@ -997,9 +1578,7 @@ const saveIntoWorkspace =
     )(element, elementContent);
     if (isError(saveResult)) {
       const error = saveResult;
-      logger.trace(`Element: ${element.name} persisting error: ${error}`);
-      const userMessage = `Element: ${element.name} was not saved into file system`;
-      return new Error(userMessage);
+      return error;
     }
     const savedFileUri = saveResult;
     return savedFileUri;
@@ -1011,10 +1590,7 @@ const showElementInEditor = async (
   const showResult = await showSavedElementContent(fileUri);
   if (isError(showResult)) {
     const error = showResult;
-    logger.trace(
-      `Element ${fileUri.fsPath} cannot be opened because of: ${error}.`
-    );
-    return new Error(`Element ${fileUri.fsPath} cannot be opened.`);
+    return error;
   }
 };
 

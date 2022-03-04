@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,11 +24,13 @@ export const toElementListingUri =
       return emptyUri.with({
         scheme: Schemas.ELEMENT_LISTING,
         path: `${element.name}.${elementExtension}`,
-        query: JSON.stringify({
-          service,
-          element,
-          elementFragment,
-        }),
+        query: encodeURIComponent(
+          JSON.stringify({
+            service,
+            element,
+            elementFragment,
+          })
+        ),
       });
     } catch (e) {
       return e;
@@ -42,7 +44,7 @@ export const fromElementListingUri = (
   const expectedScheme = Schemas.ELEMENT_LISTING;
   const actualScheme = uri.scheme;
   if (actualScheme === expectedScheme) {
-    return JSON.parse(uri.query);
+    return JSON.parse(decodeURIComponent(uri.query));
   }
   return new Error(
     `Uri scheme is incorrect: ${actualScheme}, but should be: ${expectedScheme}`

@@ -1,4 +1,4 @@
-# Explorer for Endevor
+# Explorer for Endevor <!-- omit in toc -->
 
 <div id="header" align="center">
 
@@ -22,13 +22,23 @@ The Explorer for Endevor VS Code extension modernizes the way you interact with 
 
 Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including the [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe), [COBOL Control Flow](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.ccf) and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
   - [Create Endevor Profile](#create-endevor-profile)
     - [Create Endevor Location Profile](#create-endevor-location-profile)
   - [Use Cases](#use-cases)
+    - [Add an Element](#add-an-element)
+    - [View an Element](#view-an-element)
+    - [View Details](#view-details)
+    - [Retrieve an Element](#retrieve-an-element)
+    - [Retrieve an Element with Dependencies](#retrieve-an-element-with-dependencies)
+    - [Edit](#edit)
+    - [Generate](#generate)
+    - [Print Listing](#print-listing)
+    - [Sign Out](#sign-out)
+    - [Sign In](#sign-in)
   - [Base Profiles](#base-profiles)
   - [Manage your Profiles](#manage-your-profiles)
   - [Environment Variables](#environment-variables)
@@ -37,6 +47,7 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
 - [Known Issues](#known-issues)
 - [Contribute to Explorer for Endevor](#contribute-to-explorer-for-endevor)
 - [Eclipse Che4z](#eclipse-che4z)
+- [Privacy Notice](#privacy-notice)
 - [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
 
 ## Prerequisites
@@ -49,11 +60,9 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 **Host-side prerequisites**:
 
-- Endevor version 18.0.12 or higher with the following PTFs applied:
-  - (v18.0.x only) PTFs SO09580, SO09581, SO10013, and SO11268
-  - (v18.1.x only) PTF SO11272
-  - (Optional, Web Services with STC Pooling only) PTFs SO03928 and SO03929
-- Endevor Web Services v2 installed and configured.
+- Endevor version 18.1 with the SO15978 PTF.
+
+**Note:** Explorer for Endevor only works with v2 of the REST API
 
 ## Getting Started
 
@@ -133,9 +142,9 @@ You can upload a new element to your Endevor location. The uploaded element appe
 
 1. Hover over an Endevor location in the tree.
 
-   The "Add an Element" icon appears on the right side of the panel.
+   The **Add an Element** icon appears on the right side of the panel.
 
-2. Click the "Add an Element" icon to upload a new element.
+2. Click the **Add an Element** icon to upload a new element.
 
    The Explorer dialog appears. You can now select an element that you want to upload from your workstation.
 
@@ -289,7 +298,7 @@ The **Sign out** option enables you to lock an element, which prevents other use
 
 You successfully signed out the element.
 
-![Sign Out](packages/explorer-for-endevor/images/E4E-Signout.gif?raw=true 'Sign Out')
+![Sign Out](packages/explorer-for-endevor/images/E4E-signout.gif?raw=true 'Sign Out')
 <br /><br />
 
 #### Sign In
@@ -347,6 +356,10 @@ You can configure the following settings of the extension:
 
 - Automatic Signout. The signout function locks elements for you. If the option is enabled, retrieved or edited elements are signed out to you. If an element is signed out to somebody else, a notification asking whether to override the signout pops up. If the option is not enabled, the extension just retrieves or edits an element without signout.
 
+- Telemetry level. You can disable or configure data that is collected by Telemetry in the VS Code Settings. Navigate to **Settings** > **Application** > **Telemetry** > **Telemetry Level** to do so. For more information, see [Disable Telemetry](https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting) in the VS Code documentation.
+
+  **Note:** This setting applies not only to Explorer for Endevor but to all extensions in your VS Code.
+
 To access the Explorer for Endevor settings, click **Manage** (the cog icon on the activity bar) > **Settings** > **Extensions** > **Explorer for Endevor**.
 
 ## List of Limitations
@@ -400,6 +413,28 @@ We encourage you to contribute to Explorer for Endevor.
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. For more information, see the [Eclipse Che4z webpage](https://projects.eclipse.org/projects/ecd.che.che4z).
 
+## Privacy Notice
+
+The extensions for Visual Studio Code developed by Broadcom Inc., including its corporate affiliates and subsidiaries, ("Broadcom") are provided free of charge, but in order to better understand and meet its users’ needs, Broadcom may collect, use, analyze and retain anonymous users’ metadata and interaction data, (collectively, “Usage Data”) and aggregate such Usage Data with similar Usage Data of other Broadcom customers. Please find more detailed information in [License and Service Terms & Repository](https://www.broadcom.com/company/legal/licensing).
+
+This data collection uses built-in Microsoft VS Code Telemetry, which can be disabled, at your sole discretion, if you do not want to send Usage Data.
+
+The current release of Explorer for Endevor collects anonymous data for the following events:
+
+- Extension commands, such as Add, Retrieve, Sign in, Sign out, Edit, Generate, etc.
+- Build the tree view, refresh the tree view
+- Internal and Endevor errors
+
+**Note** Any sensitive information is filtered, so the extension gets only anonymous error messages and Endevor REST API error codes. The Endevor REST API error codes are collected for the purposes of determining errors in the extension lifecycle.
+
+Each such event is logged with the following information:
+
+- Event time
+- Operating system and version
+- Country or region
+- Anonymous user and session ID
+- Version numbers of Microsoft VS Code and Explorer for Endevor
+
 ## Technical Assistance and Support for Explorer for Endevor
 
 The Explorer for Endevor extension is made available to customers on the Visual Studio Code Marketplace in accordance with the terms and conditions contained in the provided End-User License Agreement (EULA).
@@ -420,4 +455,4 @@ Note: To receive technical assistance and support, you must remain compliant wit
 
 ---
 
-Copyright © 2020 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+Copyright © 2022 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.

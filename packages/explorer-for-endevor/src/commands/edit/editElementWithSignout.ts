@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -25,7 +25,7 @@ import {
   dialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
-import { logger } from '../../globals';
+import { logger, reporter } from '../../globals';
 import { fromTreeElementUri } from '../../uri/treeElementUri';
 import * as vscode from 'vscode';
 import { isDefined, isError } from '../../utils';
@@ -41,6 +41,12 @@ import { PromisePool } from 'promise-pool-tool';
 import { retrieveElementWithFingerprint } from '../../endevor';
 import { Action, Actions, SignedOutElementsPayload } from '../../_doc/Actions';
 import { ElementLocationName, EndevorServiceName } from '../../_doc/settings';
+import {
+  TreeElementCommandArguments,
+  EditElementCommandCompletedStatus,
+  TelemetryEvents,
+  SignoutErrorRecoverCommandCompletedStatus,
+} from '../../_doc/Telemetry';
 
 export const editSingleElementWithSignout =
   (dispatch: (action: Action) => Promise<void>) =>
@@ -50,19 +56,33 @@ export const editSingleElementWithSignout =
       uri: vscode.Uri;
     }>
   ): Promise<void> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.SINGLE_ELEMENT,
+      },
+      autoSignOut: true,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
-      logger.error(
+      const error = new Error(
         'At least one workspace in this project should be opened to edit elements'
       );
+      logger.error(`${error.message}.`);
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+        error,
+      });
       return;
     }
     const elementUri = fromTreeElementUri(element.uri);
     if (isError(elementUri)) {
       const error = elementUri;
       logger.error(
-        `Unable to edit element ${element.name}`,
-        `Unable to edit element ${element.name}, because of ${error.message}`
+        `Unable to edit the element ${element.name}.`,
+        `Unable to edit the element ${element.name} because of error ${error.message}.`
       );
       return;
     }
@@ -72,7 +92,7 @@ export const editSingleElementWithSignout =
     });
     if (dialogCancelled(signoutChangeControlValue)) {
       logger.error(
-        `CCID and Comment must be specified to sign out element ${element.name}.`
+        `CCID and Comment must be specified to sign out the element ${element.name}.`
       );
       return;
     }
@@ -84,14 +104,30 @@ export const editSingleElementWithSignout =
       elementUri.searchLocationName,
       elementUri.element
     )(signoutChangeControlValue);
-    if (!retrieveResult) return;
+    if (isError(retrieveResult)) {
+      const error = retrieveResult;
+      logger.error(
+        `Unable to retrieve the element ${element.name}.`,
+        `${error.message}.`
+      );
+      return;
+    }
     const saveResult = await saveIntoEditFolder(workspaceUri)(
       elementUri.serviceName,
       elementUri.searchLocationName
     )(elementUri.element, retrieveResult.content);
     if (isError(saveResult)) {
       const error = saveResult;
-      logger.error(error.message);
+      logger.error(
+        `Unable to save the element ${element.name} into the file system.`,
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
     const uploadableElementUri = withUploadOptions(saveResult)({
@@ -102,9 +138,22 @@ export const editSingleElementWithSignout =
     const showResult = await showElementToEdit(uploadableElementUri);
     if (isError(showResult)) {
       const error = showResult;
-      logger.error(error.message);
+      logger.error(
+        `Unable to open the element ${element.name} for editing.`,
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
       return;
     }
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
+      status: EditElementCommandCompletedStatus.SUCCESS,
+    });
   };
 
 const complexRetrieve =
@@ -117,7 +166,7 @@ const complexRetrieve =
   ) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
-  ): Promise<ElementWithFingerprint | undefined> => {
+  ): Promise<ElementWithFingerprint | Error> => {
     const retrieveWithSignoutResult = await retrieveSingleElementWithSignout(
       service
     )(element)(signoutChangeControlValue);
@@ -132,8 +181,12 @@ const complexRetrieve =
     }
     if (isSignoutError(retrieveWithSignoutResult)) {
       logger.warn(
-        `Element ${element.name} cannot be retrieved with signout, because it is signed out to somebody else.`
+        `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+      });
       const overrideSignout = await askToOverrideSignOutForElements([
         element.name,
       ]);
@@ -144,9 +197,19 @@ const complexRetrieve =
         const retrieveCopyResult = await retrieveSingleCopy(service)(element);
         if (isError(retrieveCopyResult)) {
           const error = retrieveCopyResult;
-          logger.error(error.message);
-          return;
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+            status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return error;
         }
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+        });
         return retrieveCopyResult;
       }
       logger.trace(
@@ -158,14 +221,24 @@ const complexRetrieve =
         );
       if (isError(retrieveWithOverrideResult)) {
         logger.warn(
-          `Override signout retrieve was not succesful, ${element.name} copy will be retrieved.`
+          `Override signout retrieve was not successful, a copy of ${element.name} will be retrieved.`
         );
         const retrieveCopyResult = await retrieveSingleCopy(service)(element);
         if (isError(retrieveCopyResult)) {
           const error = retrieveCopyResult;
-          logger.error(error.message);
-          return;
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+            status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return error;
         }
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+        });
         return retrieveCopyResult;
       }
       await updateTreeAfterSuccessfulSignout(dispatch)({
@@ -175,12 +248,22 @@ const complexRetrieve =
         searchLocation,
         elements: [element],
       });
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+      });
       return retrieveWithOverrideResult;
     }
     if (isError(retrieveWithSignoutResult)) {
       const error = retrieveWithSignoutResult;
-      logger.error(error.message);
-      return;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+      return error;
     }
     return retrieveWithSignoutResult;
   };
@@ -236,11 +319,26 @@ export const editMultipleElementsWithSignout =
       uri: vscode.Uri;
     }>
   ): Promise<void> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+        elementsAmount: elements.length,
+      },
+      autoSignOut: true,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
-      logger.error(
+      const error = new Error(
         'At least one workspace in this project should be opened to edit elements'
       );
+      logger.error(`${error.message}.`);
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
+        error,
+      });
       return;
     }
     let endevorMaxRequestsNumber: number;
@@ -248,8 +346,8 @@ export const editMultipleElementsWithSignout =
       endevorMaxRequestsNumber = getMaxParallelRequests();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
+        `Reading settings error ${e.message}.`
       );
       endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
     }
@@ -259,8 +357,8 @@ export const editMultipleElementsWithSignout =
     if (isError(firstElementUriParams)) {
       const error = firstElementUriParams;
       logger.error(
-        `Unable to show change control value dialog`,
-        `Unable to show change control value dialog, because of ${error.message}`
+        `Unable to show the change control value dialog.`,
+        `Unable to show the change control value dialog because of error ${error.message}.`
       );
       return;
     }
@@ -277,10 +375,9 @@ export const editMultipleElementsWithSignout =
         const elementUploadOptions = fromTreeElementUri(element.uri);
         if (isError(elementUploadOptions)) {
           const error = elementUploadOptions;
-          logger.trace(
-            `Unable to edit element ${element.name}, because of ${error.message}`
+          return new Error(
+            `Unable to edit the element ${element.name} because of error ${error.message}`
           );
-          return new Error(`Unable to edit element ${element.name}`);
         }
         return elementUploadOptions;
       }
@@ -307,43 +404,76 @@ export const editMultipleElementsWithSignout =
           const error = result;
           return error;
         }
-        const retrievedItem = result[1];
+        const [elementDetails, retrievedItem] = result;
         if (isError(retrievedItem)) {
           const error = retrievedItem;
           return error;
         }
-        const elementDetails = result[0];
         const saveResult = await saveIntoEditFolder(workspaceUri)(
           elementDetails.serviceName,
           elementDetails.searchLocationName
         )(elementDetails.element, retrievedItem.content);
-        if (isError(saveResult)) return saveResult;
+        if (isError(saveResult)) {
+          const error = saveResult;
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return error;
+        }
         return withUploadOptions(saveResult)({
           ...elementDetails,
           fingerprint: retrievedItem.fingerprint,
         });
       })
     );
-    const showedElements = await Promise.all(
+    // show text editors only in sequential order (concurrency: 1)
+    const showedElements = await new PromisePool(
       savedElements.map((result) => {
         if (!isError(result) && result) {
           const savedElementUri = result;
-          return showElementToEdit(savedElementUri);
+          return async () => {
+            const showResult = await showElementToEdit(savedElementUri);
+            if (isError(showResult)) {
+              const error = showResult;
+              reporter.sendTelemetryEvent({
+                type: TelemetryEvents.ERROR,
+                errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+                status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+                error,
+              });
+              return Promise.resolve(error);
+            }
+            return Promise.resolve(showResult);
+          };
         }
-        return result;
-      })
-    );
-    const errors = showedElements
+        const error = result;
+        return () => Promise.resolve(error);
+      }),
+      {
+        concurrency: 1,
+      }
+    ).start();
+    const overallErrors = showedElements
       .map((value) => {
         if (isError(value)) return value;
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
+          status: EditElementCommandCompletedStatus.SUCCESS,
+        });
         return undefined;
       })
       .filter(isDefined);
-    if (errors.length) {
+    if (overallErrors.length) {
+      const elementNames = elements.map((element) => element.name).join(', ');
       logger.error(
-        `There were some issues during editing elements: ${elements
-          .map((element) => element.name)
-          .join(', ')}: ${JSON.stringify(errors.map((error) => error.message))}`
+        `There were some issues during editing of the elements ${elementNames}`,
+        `There were some issues during editing of the elements ${elementNames}: ${[
+          '',
+          ...overallErrors.map((error) => error.message),
+        ].join('\n')}`
       );
     }
   };
@@ -386,7 +516,7 @@ const complexRetrieveMultipleElements =
     if (firstAttemptWasSuccessful) {
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
+          ([signedOutElement]) => signedOutElement
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
@@ -395,19 +525,27 @@ const complexRetrieveMultipleElements =
     const genericErrorsAfterSignoutRetrieve = genericErrors(
       retrieveWithSignoutResult
     );
+    genericErrorsAfterSignoutRetrieve.forEach(([, error]) =>
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: EditElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      })
+    );
     const allErrorsAreGeneric =
       genericErrorsAfterSignoutRetrieve.length ===
       notRetrievedElementsWithSignout.length;
     if (allErrorsAreGeneric) {
-      const signedOutElements = toSignedOutElementsPayload([
-        ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
-        ),
-      ]);
+      const signedOutElements = toSignedOutElementsPayload(
+        successRetrievedElementsWithSignout.map(
+          ([signedOutElement]) => signedOutElement
+        )
+      );
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
       logger.trace(
-        `Unable to retrieve the ${notRetrievedElementsWithSignout.map(
-          (elementDetails) => elementDetails.element.name
+        `Unable to retrieve the element(s) ${notRetrievedElementsWithSignout.map(
+          ([elementDetails]) => elementDetails.element.name
         )} with signout.`
       );
       return retrieveWithSignoutResult;
@@ -417,29 +555,54 @@ const complexRetrieveMultipleElements =
     );
     logger.warn(
       `Elements ${signoutErrorsAfterSignoutRetrieve.map(
-        (elementDetails) => elementDetails.element.name
-      )} cannot be retrieved with signout, because they are signed out to somebody else.`
+        ([elementDetails]) => elementDetails.element.name
+      )} cannot be retrieved with signout because the elements are signed out to somebody else.`
+    );
+    signoutErrorsAfterSignoutRetrieve.forEach(() =>
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+      })
     );
     const overrideSignout = await askToOverrideSignOutForElements(
       signoutErrorsAfterSignoutRetrieve.map(
-        (elementDetails) => elementDetails.element.name
+        ([elementDetails]) => elementDetails.element.name
       )
     );
     if (!overrideSignout) {
       logger.trace(
         `Override signout option was not chosen, ${signoutErrorsAfterSignoutRetrieve.map(
-          (elementDetails) => elementDetails.element.name
+          ([elementDetails]) => elementDetails.element.name
         )} copies will be retrieved.`
       );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
-          (signedOutElement) => signedOutElement[0]
+          ([signedOutElement]) => signedOutElement
         ),
       ]);
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
       const retrieveCopiesResult = await retrieveMultipleElementCopies(
         endevorMaxRequestsNumber
-      )(signoutErrorsAfterSignoutRetrieve);
+      )(
+        signoutErrorsAfterSignoutRetrieve.map(
+          ([elementDetails]) => elementDetails
+        )
+      );
+      allErrors(retrieveCopiesResult).forEach(([, error]) => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+      });
+      withoutErrors(retrieveCopiesResult).forEach(() => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+        });
+      });
       return [
         ...successRetrievedElementsWithSignout,
         ...genericErrorsAfterSignoutRetrieve,
@@ -448,13 +611,17 @@ const complexRetrieveMultipleElements =
     }
     logger.trace(
       `Override signout option was chosen, ${signoutErrorsAfterSignoutRetrieve.map(
-        (elementDetails) => elementDetails.element.name
+        ([elementDetails]) => elementDetails.element.name
       )} will be retrieved with override signout.`
     );
     const retrieveWithOverrideSignoutResult =
       await retrieveMultipleElementsWithOverrideSignout(
         endevorMaxRequestsNumber
-      )(signoutErrorsAfterSignoutRetrieve)(signoutChangeControlValue);
+      )(
+        signoutErrorsAfterSignoutRetrieve.map(
+          ([elementDetails]) => elementDetails
+        )
+      )(signoutChangeControlValue);
     const successRetrievedElementsWithOverrideSignout = withoutErrors(
       retrieveWithOverrideSignoutResult
     );
@@ -468,9 +635,16 @@ const complexRetrieveMultipleElements =
         [
           ...successRetrievedElementsWithSignout,
           ...successRetrievedElementsWithOverrideSignout,
-        ].map((signedOutElement) => signedOutElement[0])
+        ].map(([signedOutElement]) => signedOutElement)
       );
       await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
+      successRetrievedElementsWithOverrideSignout.forEach(() => {
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+        });
+      });
       return [
         ...successRetrievedElementsWithSignout,
         ...genericErrorsAfterSignoutRetrieve,
@@ -478,20 +652,39 @@ const complexRetrieveMultipleElements =
       ];
     }
     logger.warn(
-      `Override signout retrieve was not succesful, ${notRetrievedElementsWithOverrideSignout.map(
-        (elementDetails) => elementDetails.element.name
-      )} copies will be retrieved.`
+      `Override signout retrieve was not successful, the copies of ${notRetrievedElementsWithOverrideSignout.map(
+        ([elementDetails]) => elementDetails.element.name
+      )} will be retrieved.`
     );
     const signedOutElements = toSignedOutElementsPayload(
       [
         ...successRetrievedElementsWithSignout,
         ...successRetrievedElementsWithOverrideSignout,
-      ].map((signedOutElement) => signedOutElement[0])
+      ].map(([signedOutElement]) => signedOutElement)
     );
     await updateTreeAfterSuccessfulSignout(dispatch)(signedOutElements);
     const retrieveCopiesResult = await retrieveMultipleElementCopies(
       endevorMaxRequestsNumber
-    )(notRetrievedElementsWithOverrideSignout);
+    )(
+      notRetrievedElementsWithOverrideSignout.map(
+        ([elementDetails]) => elementDetails
+      )
+    );
+    allErrors(retrieveCopiesResult).forEach(([, error]) => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+    });
+    withoutErrors(retrieveCopiesResult).forEach(() => {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS,
+      });
+    });
     return [
       ...successRetrievedElementsWithSignout,
       ...genericErrorsAfterSignoutRetrieve,
@@ -502,13 +695,16 @@ const complexRetrieveMultipleElements =
 
 const signoutErrors = (
   input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
-): ReadonlyArray<ElementDetails> => {
+): ReadonlyArray<[ElementDetails, Error]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isSignoutError(retrieveResult)) {
-        const elementDetails = result[0];
-        return elementDetails;
+        const mappedValue: [ElementDetails, Error] = [
+          elementDetails,
+          retrieveResult,
+        ];
+        return mappedValue;
       }
       return undefined;
     })
@@ -520,10 +716,10 @@ const genericErrors = (
 ): ReadonlyArray<[ElementDetails, Error]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult) && !isSignoutError(retrieveResult)) {
         const mappedValue: [ElementDetails, Error] = [
-          result[0],
+          elementDetails,
           retrieveResult,
         ];
         return mappedValue;
@@ -535,13 +731,16 @@ const genericErrors = (
 
 const allErrors = (
   input: ReadonlyArray<[ElementDetails, Error | ElementWithFingerprint]>
-): ReadonlyArray<ElementDetails> => {
+): ReadonlyArray<[ElementDetails, Error]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult)) {
-        const elementDetails = result[0];
-        return elementDetails;
+        const mappedValue: [ElementDetails, Error] = [
+          elementDetails,
+          retrieveResult,
+        ];
+        return mappedValue;
       }
       return undefined;
     })
@@ -553,12 +752,12 @@ const withoutErrors = (
 ): ReadonlyArray<[ElementDetails, ElementWithFingerprint]> => {
   return input
     .map((result) => {
-      const retrieveResult = result[1];
+      const [elementDetails, retrieveResult] = result;
       if (isError(retrieveResult)) {
         return undefined;
       }
       const mappedValue: [ElementDetails, ElementWithFingerprint] = [
-        result[0],
+        elementDetails,
         retrieveResult,
       ];
       return mappedValue;
@@ -692,13 +891,13 @@ const toSignedOutElementsPayload = (
   const accumulator: SignedOutElementsPayload = {
     elements: [],
   } as unknown as SignedOutElementsPayload;
-  return signedOutElements.reduce((accum, signedOutElement) => {
+  return signedOutElements.reduce((acc, signedOutElement) => {
     return {
       serviceName: signedOutElement.serviceName,
       service: signedOutElement.service,
       searchLocationName: signedOutElement.searchLocationName,
       searchLocation: signedOutElement.searchLocation,
-      elements: [...accum.elements, signedOutElement.element],
+      elements: [...acc.elements, signedOutElement.element],
     };
   }, accumulator);
 };

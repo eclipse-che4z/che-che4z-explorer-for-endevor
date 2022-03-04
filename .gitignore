@@ -1,14 +1,17 @@
+.DS_Store
 dist
 out
 node_modules
 dependencies.txt
 dependencies.json
 .vscode-*/
+vsce
 *.vsix
 results
 .cov
 .vs
 *.log
 COBOL
+.c4z
 .e4e
 .env

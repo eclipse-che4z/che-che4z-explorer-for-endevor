@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -27,30 +27,25 @@ import { SignoutError } from '@local/endevor/_doc/Error';
 export type PrintingElementStub = [
   sinon.SinonStub<
     [progress: ProgressReporter],
-    (
-      service: Service
-    ) => (element: Element) => Promise<ElementContent | undefined>
+    (service: Service) => (element: Element) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Service],
-    (element: Element) => Promise<ElementContent | undefined>
+    (element: Element) => Promise<ElementContent | Error>
   >,
-  sinon.SinonStub<[Element], Promise<ElementContent | undefined>>
+  sinon.SinonStub<[Element], Promise<ElementContent | Error>>
 ];
 
 export const mockPrintingElementWith =
   (serviceArg: Service, elementArg: Element) =>
-  (mockResult: ElementContent | undefined): PrintingElementStub => {
+  (mockResult: ElementContent | Error): PrintingElementStub => {
     const anyProgressReporter = sinon.match.any;
     const withContentStub = sinon
-      .stub<[element: Element], Promise<ElementContent | undefined>>()
+      .stub<[element: Element], Promise<ElementContent | Error>>()
       .withArgs(elementArg)
       .returns(Promise.resolve(mockResult));
     const withServiceStub = sinon
-      .stub<
-        [Service],
-        (element: Element) => Promise<ElementContent | undefined>
-      >()
+      .stub<[Service], (element: Element) => Promise<ElementContent | Error>>()
       .withArgs(serviceArg)
       .returns(withContentStub);
     const generalFunctionStub = sinon

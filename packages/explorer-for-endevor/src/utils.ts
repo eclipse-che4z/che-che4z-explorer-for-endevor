@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -32,6 +32,25 @@ export const isDefined = <T>(value: T | undefined): value is T => {
 
 export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
+};
+
+export const isUnique = <T>(
+  value: T,
+  index: number,
+  self: ReadonlyArray<T>
+): boolean => self.indexOf(value) == index;
+
+// TODO: copy extra fields (if any) depending on error type
+export const deepCopyError = (error: Error): Error => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  const copyError = new (<typeof Error>error.constructor)(error.message);
+  if (error.name) {
+    copyError.name = error.name;
+  }
+  if (error.stack) {
+    copyError.stack = error.stack;
+  }
+  return copyError;
 };
 
 export const getEditFolderUri =
@@ -109,17 +128,17 @@ export const toPromiseWithTimeout =
   };
 
 export const replaceWith =
-  <T>(initialSouce: ReadonlyArray<T>) =>
+  <T>(initialSource: ReadonlyArray<T>) =>
   (
     isReplacement: (t1: T, t2: T) => boolean,
     replacement: T
   ): ReadonlyArray<T> => {
     const accumulator: ReadonlyArray<T> = [];
-    return initialSouce.reduce((accum, existingItem) => {
+    return initialSource.reduce((acc, existingItem) => {
       if (isReplacement(existingItem, replacement)) {
-        return [...accum, replacement];
+        return [...acc, replacement];
       }
-      return [...accum, existingItem];
+      return [...acc, existingItem];
     }, accumulator);
   };
 
@@ -131,17 +150,14 @@ export const groupBySearchLocationId = (
   elementNodes: ReadonlyArray<ElementNode>
 ): GroupedElementNodes => {
   const accumulator: GroupedElementNodes = {};
-  return elementNodes.reduce((accum, currentNode) => {
-    const exisitingGroup = accum[currentNode.searchLocationId];
-    if (!exisitingGroup) {
-      return {
-        ...accum,
-        searchLocationId: [currentNode],
-      };
-    }
-    return {
-      ...accum,
-      searchLocationId: [...exisitingGroup, currentNode],
-    };
-  }, accumulator);
+  return elementNodes.reduce(
+    (acc, currentNode) => ({
+      ...acc,
+      [currentNode.searchLocationId]: [
+        ...(acc[currentNode.searchLocationId] || []),
+        currentNode,
+      ],
+    }),
+    accumulator
+  );
 };

@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -36,15 +36,15 @@ export const editElementCommand = async (
     logger.trace(
       `Edit element command was called for ${elementNodes
         .map((node) => node.name)
-        .join(',')}`
+        .join(', ')}`
     );
     let autoSignOut: boolean;
     try {
       autoSignOut = isAutomaticSignOut();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
+        `Reading settings error ${e.message}.`
       );
       autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
     }
@@ -64,8 +64,8 @@ export const editElementCommand = async (
       autoSignOut = isAutomaticSignOut();
     } catch (e) {
       logger.warn(
-        `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-        `Reading settings error: ${e.message}`
+        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
+        `Reading settings error: ${e.message}.`
       );
       autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
     }

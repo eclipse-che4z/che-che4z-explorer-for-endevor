@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -35,7 +35,7 @@ import {
   signOutElement,
   updateElement,
 } from '../endevor';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { isError } from '../utils';
 import { ANY_VALUE } from '@local/endevor/const';
 import {
@@ -62,25 +62,34 @@ import { turnOnAutomaticSignOut } from '../settings/settings';
 import * as path from 'path';
 import { Action, Actions } from '../_doc/Actions';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  UploadElementCommandCompletedStatus,
+  TelemetryEvents,
+  SignoutErrorRecoverCommandCompletedStatus,
+} from '../_doc/Telemetry';
+import { showElementToEdit } from './edit/common';
 
 export const uploadElementCommand = async (
   dispatch: (action: Action) => Promise<void>,
   elementUri: Uri
 ): Promise<void> => {
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+  });
   const editSessionParams = fromEditedElementUri(elementUri);
   if (isError(editSessionParams)) {
     const error = editSessionParams;
     logger.error(
-      `Element cannot be uploaded to Endevor.`,
-      `Element cannot be uploaded to Endevor. Parsing the element's URI failed with error: ${error.message}`
+      `Unable to upload the selected element to Endevor.`,
+      `Unable to upload the selected element to Endevor because parsing of the element's URI failed with error ${error.message}.`
     );
     return;
   }
   logger.trace(
-    `Upload element command was called for: ${stringifyWithHiddenCredential({
-      query: JSON.parse(elementUri.query),
+    `Upload the element command was called for ${stringifyWithHiddenCredential({
+      query: JSON.parse(decodeURIComponent(elementUri.query)),
       path: elementUri.fsPath,
-    })}`
+    })}.`
   );
   const {
     element,
@@ -93,10 +102,11 @@ export const uploadElementCommand = async (
   const uploadValues = await askForUploadValues(searchLocation, element);
   if (isError(uploadValues)) {
     const error = uploadValues;
-    logger.error(error.message);
+    logger.error(`${error.message}.`);
     return;
   }
   const [uploadLocation, uploadChangeControlValue] = uploadValues;
+  await closeEditSession(elementUri);
   const uploadResult = await uploadElement(dispatch)(
     service,
     searchLocation,
@@ -109,11 +119,16 @@ export const uploadElementCommand = async (
   if (isError(uploadResult)) {
     const error = uploadResult;
     logger.error(
-      `Element cannot be uploaded to Endevor.`,
-      `Element cannot be uploaded to Endevor because of ${error.message}.`
+      `Unable to upload the element ${element.name} to Endevor.`,
+      `${error.message}.`
     );
+    const reopenResult = await reopenEditSession(elementUri);
+    if (isError(reopenResult)) {
+      logger.trace(`${error.message}.`);
+    }
     return;
   }
+  await safeRemoveUploadedElement(elementUri);
   await updateTreeAfterSuccessfulUpload(dispatch)(
     serviceName,
     service,
@@ -121,14 +136,16 @@ export const uploadElementCommand = async (
     searchLocation,
     [element]
   );
-  await closeEditSession(elementUri);
-  logger.info('Update successful!');
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
+    status: UploadElementCommandCompletedStatus.SUCCESS,
+  });
 };
 
 const askForUploadValues = async (
   searchLocation: ElementSearchLocation,
   element: Element
-): Promise<Error | [ElementMapPath, ActionChangeControlValue]> => {
+): Promise<[ElementMapPath, ActionChangeControlValue] | Error> => {
   const uploadType =
     searchLocation.type && searchLocation.type !== ANY_VALUE
       ? searchLocation.type
@@ -144,7 +161,7 @@ const askForUploadValues = async (
   });
   if (uploadLocationDialogCancelled(uploadLocation)) {
     return new Error(
-      `Upload location must be specified to upload element ${element.name}.`
+      `Upload location must be specified to upload the element ${element.name}`
     );
   }
   const uploadChangeControlValue = await askForChangeControlValue({
@@ -153,7 +170,7 @@ const askForUploadValues = async (
   });
   if (changeControlDialogCancelled(uploadChangeControlValue)) {
     return new Error(
-      `CCID and Comment must be specified to upload element ${uploadLocation.name}.`
+      `CCID and Comment must be specified to upload the element ${uploadLocation.name}`
     );
   }
   return [uploadLocation, uploadChangeControlValue];
@@ -176,11 +193,16 @@ const uploadElement =
     const content = await readEditedElementContent(elementFilePath);
     if (isError(content)) {
       const error = content;
-      logger.error(error.message);
-      return;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+        status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+      return error;
     }
     const uploadResult = await withNotificationProgress(
-      `Uploading element: ${element.name}`
+      `Uploading the element ${element.name}...`
     )((progressReporter) => {
       return updateElement(progressReporter)(service)(element)(
         uploadChangeControlValue
@@ -191,7 +213,7 @@ const uploadElement =
     });
     if (isSignoutError(uploadResult)) {
       logger.warn(
-        `Endevor location requires the signout action to update/add elements.`
+        `The element ${element.name} requires a sign out action to update/add elements.`
       );
       const signoutResult = await complexSignoutElement(dispatch)(
         service,
@@ -201,6 +223,12 @@ const uploadElement =
       )(element)(uploadChangeControlValue);
       if (isError(signoutResult)) {
         const error = signoutResult;
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
         return error;
       }
       return uploadElement(dispatch)(
@@ -211,32 +239,56 @@ const uploadElement =
       )(element)(uploadChangeControlValue)(elementFilePath, fingerprint);
     }
     if (isFingerprintMismatchError(uploadResult)) {
+      logger.warn(
+        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
+      );
       const savedLocalElementVersionUri = await saveLocalElementVersion(
         elementFilePath
       )(element)(content);
       if (isError(savedLocalElementVersionUri)) {
-        const error = savedLocalElementVersionUri;
-        logger.trace(error.message);
-        return new Error(
-          `Unable to save a local version of the element ${element.name} to compare elements.`
+        const error = new Error(
+          `Unable to save a local version of the element ${element.name} to compare because of error ${savedLocalElementVersionUri.message}`
         );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+          status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+        return error;
       }
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL,
+        context: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
+      });
       const showCompareDialogResult = await compareElementWithRemoteVersion(
         service,
         searchLocation
       )(uploadChangeControlValue)(
         element,
-        elementFilePath,
         serviceName,
         searchLocationName
       )(savedLocalElementVersionUri.fsPath);
       if (isError(showCompareDialogResult)) {
         const error = showCompareDialogResult;
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+          status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
         return error;
       }
-      return new Error(
-        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
-      );
+      return;
+    }
+    if (isError(uploadResult)) {
+      const error = uploadResult;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+        status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
     }
     return uploadResult;
   };
@@ -249,8 +301,9 @@ const readEditedElementContent = async (
       await getFileContent(Uri.file(elementTempFilePath))
     );
   } catch (error) {
-    logger.trace(`Element content cannot be read because of ${error.message}`);
-    return new Error(`Element content cannot be read`);
+    return new Error(
+      `Unable to read the element content because of error ${error.message}`
+    );
   }
 };
 
@@ -266,24 +319,29 @@ const complexSignoutElement =
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<void | Error> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+      context: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+    });
     const signOut = await askToSignOutElements([element.name]);
     if (!signOut.signOutElements && !signOut.automaticSignOut) {
-      return new Error(
-        `${element.name} cannot be uploaded because it is signed out to somebody else.`
+      const error = new Error(
+        `Unable to upload the element ${element.name} because it is signed out to somebody else`
       );
+      return error;
     }
     if (signOut.automaticSignOut) {
       try {
         await turnOnAutomaticSignOut();
       } catch (e) {
         logger.warn(
-          `Global signout setting cannot be updated`,
-          `Global signout setting cannot be updated, because of ${e.message}`
+          `Unable to update the global sign out setting.`,
+          `Unable to update the global sign out setting because of error ${e.message}.`
         );
       }
     }
     const signOutResult = await withNotificationProgress(
-      `Signing out element: ${element.name}`
+      `Signing out the element ${element.name}...`
     )((progressReporter) =>
       signOutElement(progressReporter)(service)(element)(
         signoutChangeControlValue
@@ -291,26 +349,27 @@ const complexSignoutElement =
     );
     if (isSignoutError(signOutResult)) {
       logger.warn(
-        `Element ${element.name} cannot be signed out, because it signed out to somebody else.`
+        `Unable to sign out the element ${element.name} because it is signed out to somebody else.`
       );
       const overrideSignout = await askToOverrideSignOutForElements([
         element.name,
       ]);
       if (!overrideSignout) {
         return new Error(
-          `${element.name} cannot be uploaded because it is signed out to somebody else.`
+          `The element ${element.name} is signed out to somebody else, override signout action is not selected`
         );
       }
       const overrideSignoutResult = await withNotificationProgress(
-        `Signing out element: ${element.name}`
+        `Signing out the element ${element.name}...`
       )((progressReporter) =>
         overrideSignOutElement(progressReporter)(service)(element)(
           signoutChangeControlValue
         )
       );
       if (isError(overrideSignoutResult)) {
+        const error = signOutResult;
         return new Error(
-          `${element.name} cannot be uploaded because override signout action cannot be performed.`
+          `Unable to perform an override signout of the element ${element.name} because of error ${error.message}`
         );
       }
       await updateTreeAfterSuccessfulSignout(dispatch)(
@@ -320,10 +379,18 @@ const complexSignoutElement =
         searchLocation,
         [element]
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+      });
       return overrideSignoutResult;
     }
     if (isError(signOutResult)) {
-      return new Error(`${element.name} cannot be signed out.`);
+      const error = signOutResult;
+      return new Error(
+        `Unable to sign out the element ${element.name} because of error ${error.message}`
+      );
     }
     await updateTreeAfterSuccessfulSignout(dispatch)(
       serviceName,
@@ -332,6 +399,11 @@ const complexSignoutElement =
       searchLocation,
       [element]
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+      context: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+      status: SignoutErrorRecoverCommandCompletedStatus.SIGNOUT_SUCCESS,
+    });
   };
 
 const saveLocalElementVersion =
@@ -341,27 +413,39 @@ const saveLocalElementVersion =
     const tempEditFolder = path.dirname(elementFilePath);
     if (!tempEditFolder) {
       return new Error(
-        'Unable to get a valid edit folder name to compare elements.'
+        'Unable to get a valid edit folder name to compare the elements'
       );
     }
 
     const tempEditFolderUri = Uri.file(tempEditFolder);
-    return saveFileIntoWorkspaceFolder(tempEditFolderUri)(
-      {
-        fileName: `${element.name}-local-version`,
-        fileExtension: element.extension,
-      },
-      content
-    );
+    try {
+      return saveFileIntoWorkspaceFolder(tempEditFolderUri)(
+        {
+          fileName: `${element.name}-local-version`,
+          fileExtension: element.extension,
+        },
+        content
+      );
+    } catch (e) {
+      return e;
+    }
   };
 
-const closeEditSession = async (editedFileUri: Uri) => {
+const closeEditSession = async (_editedFileUri: Uri) => {
   await closeActiveTextEditor();
+};
+
+const reopenEditSession = (editedElementUri: Uri) => {
+  return showElementToEdit(editedElementUri);
+};
+
+const safeRemoveUploadedElement = async (editedElementUri: Uri) => {
   try {
-    await deleteFile(editedFileUri);
+    await deleteFile(editedElementUri);
   } catch (e) {
-    logger.trace(
-      `Edited file: ${editedFileUri.fsPath} was not deleted because of: ${e}.`
+    logger.error(
+      `Unable to remove the file ${editedElementUri.fsPath}.`,
+      `Unable to remove the file ${editedElementUri.fsPath} because of error ${e.message}.`
     );
   }
 };

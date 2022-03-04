@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,7 +17,7 @@ import {
   stringifyWithHiddenCredential,
 } from '@local/endevor/utils';
 import { Uri } from 'vscode';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { isError } from '../utils';
 import {
   closeActiveTextEditor,
@@ -49,17 +49,25 @@ import {
 } from '@local/endevor/_doc/Endevor';
 import { Action, Actions } from '../_doc/Actions';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  TelemetryEvents,
+  ApplyDiffEditorChangesCompletedStatus,
+  SignoutErrorRecoverCommandCompletedStatus,
+} from '../_doc/Telemetry';
 
 export const applyDiffEditorChanges = async (
   dispatch: (action: Action) => Promise<void>,
   incomingUri?: Uri
 ): Promise<void> => {
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+  });
   const comparedElementUri = await toElementUriEvenInTheia(incomingUri);
   if (isError(comparedElementUri)) {
     const error = comparedElementUri;
     logger.error(
-      `Element cannot be uploaded to Endevor.`,
-      `Element cannot be uploaded to Endevor because of ${error.message}`
+      'Unable to apply the element changes.',
+      `Unable to apply the element changes because obtaining the element URI failed with error ${error.message}`
     );
     return;
   }
@@ -67,15 +75,15 @@ export const applyDiffEditorChanges = async (
   if (isError(uriParms)) {
     const error = uriParms;
     logger.error(
-      `Element cannot be uploaded to Endevor.`,
-      `Element cannot be uploaded to Endevor. Parsing the element's URI failed with error: ${error.message}.`
+      'Unable to apply the element changes.',
+      `Unable to apply the element changes because parsing of the element's URI failed with error ${error.message}.`
     );
     return;
   }
   logger.trace(
-    `Upload compared element command was called for: ${stringifyWithHiddenCredential(
+    `Apply the element changes command was called for ${stringifyWithHiddenCredential(
       {
-        query: JSON.parse(comparedElementUri.query),
+        query: JSON.parse(decodeURIComponent(comparedElementUri.query)),
         path: comparedElementUri.fsPath,
       }
     )}`
@@ -86,9 +94,15 @@ export const applyDiffEditorChanges = async (
   if (isError(content)) {
     const error = content;
     logger.error(
-      `Element ${element.name} cannot be uploaded to Endevor.`,
-      `Element ${element.name} cannot be uploaded to Endevor because of ${error.message}.`
+      `Unable to apply changes for the element ${element.name}.`,
+      `Unable to apply changes for the element ${element.name} because of error ${error.message}.`
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+      status: ApplyDiffEditorChangesCompletedStatus.GENERIC_ERROR,
+      error,
+    });
     return;
   }
   const uploadResult = await uploadElement(dispatch)(content)(
@@ -97,8 +111,8 @@ export const applyDiffEditorChanges = async (
   if (isError(uploadResult)) {
     const error = uploadResult;
     logger.error(
-      `Element ${element.name} cannot be uploaded to Endevor.`,
-      `Element ${element.name} cannot be uploaded to Endevor because of ${error.message}.`
+      `Unable to upload the element ${element.name} to Endevor.`,
+      `${error.message}.`
     );
     return;
   }
@@ -109,8 +123,14 @@ export const applyDiffEditorChanges = async (
     searchLocation,
     [element]
   );
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL,
+    context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
+  });
   await discardEditedElementChanges(comparedElementUri);
-  logger.info(`Update of ${element.name} successful!`);
+  logger.info(
+    `Applying changes for the element ${element.name} was successful!`
+  );
   return;
 };
 
@@ -122,7 +142,7 @@ const toElementUriEvenInTheia = async (
     const activeDiffEditor = getActiveTextEditor();
     if (!activeDiffEditor) {
       return new Error(
-        `Element cannot be uploaded to Endevor because the active diff editor was closed.`
+        'Unable to open the active diff editor because it was closed'
       );
     }
     if (activeDiffEditor.document.isDirty) {
@@ -138,7 +158,7 @@ const readComparedElementContent = async (): Promise<string | Error> => {
   const activeDiffEditor = getActiveTextEditor();
   if (!activeDiffEditor) {
     return new Error(
-      `Element cannot be uploaded to Endevor because the active diff editor was closed.`
+      'Unable to open the active diff editor because it was closed'
     );
   }
   const comparedElementPath = activeDiffEditor.document.uri.fsPath;
@@ -154,8 +174,9 @@ const readComparedElementContent = async (): Promise<string | Error> => {
       await getFileContent(Uri.file(comparedElementPath))
     );
   } catch (error) {
-    logger.trace(`Element content cannot be read because of ${error.message}`);
-    return new Error(`Element content cannot be read`);
+    return new Error(
+      `Unable to read the element content because of error ${error.message}`
+    );
   }
 };
 
@@ -171,11 +192,10 @@ const uploadElement =
     fingerprint,
     searchLocation,
     searchLocationName,
-    initialElementTempFilePath,
     remoteVersionTempFilePath,
   }: ComparedElementUriQuery): Promise<void | Error> => {
     const uploadResult = await withNotificationProgress(
-      `Uploading element: ${element.name}`
+      `Uploading the element ${element.name}...`
     )((progressReporter) => {
       return updateElement(progressReporter)(service)(element)(
         uploadChangeControlValue
@@ -186,7 +206,7 @@ const uploadElement =
     });
     if (isSignoutError(uploadResult)) {
       logger.warn(
-        `Endevor location requires the signout action to update/add elements.`
+        `The element ${element.name} requires a sign out action to update/add elements.`
       );
       const signOutResult = await complexSignoutElement(dispatch)(
         service,
@@ -195,8 +215,14 @@ const uploadElement =
         searchLocationName
       )(element)(uploadChangeControlValue);
       if (isError(signOutResult)) {
-        logger.error(signOutResult.message);
-        return signOutResult;
+        const error = signOutResult;
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+        return error;
       }
       return uploadElement(dispatch)(content)(elementUri)({
         service,
@@ -206,37 +232,43 @@ const uploadElement =
         fingerprint,
         searchLocation,
         searchLocationName,
-        initialElementTempFilePath,
         remoteVersionTempFilePath,
       });
     }
     if (isFingerprintMismatchError(uploadResult)) {
-      const fingerprintError = uploadResult;
-      logger.error(
-        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`,
-        `Element ${element.name} cannot be uploaded to Endevor because of ${fingerprintError.message}`
+      logger.warn(
+        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
       );
+      const fingerprintError = uploadResult;
       await closeActiveTextEditor();
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL,
+        context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
+      });
       const showCompareDialogResult = await compareElementWithRemoteVersion(
         service,
         searchLocation
       )(uploadChangeControlValue)(
         element,
-        initialElementTempFilePath,
         serviceName,
         searchLocationName
       )(elementUri.fsPath);
       if (isError(showCompareDialogResult)) {
         const error = showCompareDialogResult;
-        logger.error(
-          `Element ${element.name} cannot be uploaded to Endevor.`,
-          `Element ${element.name} cannot be uploaded because of version conflicts and diff dialog cannot be opened because of ${error.message}.`
-        );
-        return fingerprintError;
+        return error;
       }
-      return;
+      return fingerprintError;
     }
-    return;
+    if (isError(uploadResult)) {
+      const error = uploadResult;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+        status: ApplyDiffEditorChangesCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+      return error;
+    }
   };
 
 const complexSignoutElement =
@@ -251,10 +283,14 @@ const complexSignoutElement =
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<void | Error> => {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+      context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+    });
     const signOut = await askToSignOutElements([element.name]);
     if (!signOut.signOutElements && !signOut.automaticSignOut) {
       return new Error(
-        `${element.name} cannot be uploaded because it is signed out to somebody else.`
+        `Unable to upload the element ${element.name} because it is signed out to somebody else`
       );
     }
     if (signOut.automaticSignOut) {
@@ -262,13 +298,13 @@ const complexSignoutElement =
         await turnOnAutomaticSignOut();
       } catch (e) {
         logger.warn(
-          `Global signout setting cannot be updated`,
-          `Global signout setting cannot be updated, because of ${e.message}`
+          `Unable to update the global sign out setting.`,
+          `Unable to update the global sign out setting because of error ${e.message}.`
         );
       }
     }
     const signOutResult = await withNotificationProgress(
-      `Signing out element: ${element.name}`
+      `Signing out the element ${element.name}...`
     )((progressReporter) =>
       signOutElement(progressReporter)(service)(element)(
         signoutChangeControlValue
@@ -276,26 +312,27 @@ const complexSignoutElement =
     );
     if (isSignoutError(signOutResult)) {
       logger.warn(
-        `Element ${element.name} cannot be signed out, because it signed out to somebody else.`
+        `Unable to sign out the element ${element.name} because it is signed out to somebody else.`
       );
       const overrideSignout = await askToOverrideSignOutForElements([
         element.name,
       ]);
       if (!overrideSignout) {
         return new Error(
-          `${element.name} cannot be uploaded because it is signed out to somebody else.`
+          `The element ${element.name} is signed out to somebody else, override signout action is not selected`
         );
       }
       const overrideSignoutResult = await withNotificationProgress(
-        `Signing out element: ${element.name}`
+        `Signing out the element ${element.name}...`
       )((progressReporter) =>
         overrideSignOutElement(progressReporter)(service)(element)(
           signoutChangeControlValue
         )
       );
       if (isError(overrideSignoutResult)) {
+        const error = overrideSignoutResult;
         return new Error(
-          `${element.name} cannot be uploaded because override signout action cannot be performed.`
+          `Unable to perform an override signout of the element ${element.name} because of error ${error.message}`
         );
       }
       await updateTreeAfterSuccessfulSignout(dispatch)(
@@ -305,10 +342,18 @@ const complexSignoutElement =
         searchLocation,
         [element]
       );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+      });
       return overrideSignoutResult;
     }
     if (isError(signOutResult)) {
-      return new Error(`${element.name} cannot be signed out.`);
+      const error = signOutResult;
+      return new Error(
+        `Unable to sign out the element ${element.name} because of error ${error.message}`
+      );
     }
     await updateTreeAfterSuccessfulSignout(dispatch)(
       serviceName,
@@ -317,6 +362,11 @@ const complexSignoutElement =
       searchLocation,
       [element]
     );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+      context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+      status: SignoutErrorRecoverCommandCompletedStatus.SIGNOUT_SUCCESS,
+    });
   };
 
 const updateTreeAfterSuccessfulSignout =

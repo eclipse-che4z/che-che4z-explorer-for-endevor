@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,7 +17,7 @@ import {
   dialogCancelled,
   serviceChosen,
 } from '../dialogs/locations/endevorServiceDialogs';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import {
   createEndevorService,
   getEndevorServiceNames,
@@ -26,14 +26,22 @@ import {
   addService,
   getLocations as getUsedEndevorServices,
 } from '../settings/settings';
+import {
+  CommandAddNewServiceCompletedStatus,
+  TelemetryEvents,
+} from '../_doc/Telemetry';
 
 export const addNewService = async (): Promise<void> => {
   logger.trace('Add a New Profile called.');
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
+  });
   const allServices = await getEndevorServiceNames();
   if (isError(allServices)) {
     const error = allServices;
     logger.error(
-      `Failed to fetch existing services because of: ${error.message}`
+      `Unable to fetch the existing services.`,
+      `Unable to fetch the existing services because of error ${error.message}.`
     );
     return;
   }
@@ -48,16 +56,30 @@ export const addNewService = async (): Promise<void> => {
     let serviceName;
     if (serviceChosen(dialogResult)) {
       serviceName = dialogResult;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
+        status: CommandAddNewServiceCompletedStatus.EXISTING_SERVICE_CHOSEN,
+      });
     } else {
       const createdService = dialogResult;
       serviceName = createdService.name;
       try {
         await createEndevorService(serviceName, createdService.value);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
+          status: CommandAddNewServiceCompletedStatus.NEW_SERVICE_CREATED,
+        });
       } catch (err) {
         logger.error(
-          `Something went wrong with profile: ${serviceName} saving`,
-          err.message
+          `Unable to save the profile ${serviceName}.`,
+          `Unable to save the profile ${serviceName} because of error ${err.message}.`
         );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR,
+          errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
+          error: err,
+        });
         return;
       }
     }

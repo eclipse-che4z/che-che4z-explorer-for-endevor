@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,12 +17,29 @@
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
+const webpack = require('webpack');
+const childProcess = require('child_process');
 
 const distFolderPath = path.resolve(__dirname, 'dist');
+
+var latestGitCommit = childProcess
+  .execSync('git rev-parse HEAD')
+  .toString()
+  .trim();
+
+// always use an empty api key for dev builds (avoiding telemetry from developers and tests)
+var telemetryApiKey = '';
 
 /**@type {import('webpack').Configuration}*/
 const config = {
   mode: 'development',
+  plugins: [
+    new webpack.DefinePlugin({
+      // the plugin will insert the runtime value by pure text replacement, so we need 'surrounding'
+      __E4E_BUILD_NUMBER__: `'${latestGitCommit}'`,
+      __E4E_TELEMETRY_KEY__: `'${telemetryApiKey}'`,
+    }),
+  ],
   optimization: {
     minimize: false,
     usedExports: true,
