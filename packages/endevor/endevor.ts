@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -21,7 +21,6 @@ import {
   toSeveralTasksProgress,
   getElementExtension,
 } from './utils';
-
 import {
   AddUpdElement,
   ElmSpecDictionary,
@@ -74,6 +73,7 @@ import {
   GenerateResponse,
   SignInResponse,
   AddResponse,
+  BaseResponse,
 } from './_ext/Endevor';
 import { Logger } from '@local/extension/_doc/Logger';
 import { ANY_VALUE } from './const';
@@ -97,7 +97,9 @@ export const getInstanceNames =
     try {
       response = await EndevorClient.listInstances(session);
     } catch (error) {
-      logger.trace(`List instances got error: ${error.message}`);
+      logger.trace(
+        `Unable to fetch the list instances because of error ${error.message}.`
+      );
       progress.report({ increment: 100 });
       return [];
     }
@@ -106,22 +108,21 @@ export const getInstanceNames =
     try {
       parsedResponse = parseToType(SuccessListRepositoriesResponse, response);
     } catch (e) {
-      logger.trace(`Response was not successful because of: ${e.message}`);
       try {
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+          `Unable to fetch the list instances because of error ${
             e.message
-          }`
+          }\nof an incorrect response ${JSON.stringify(response)}.`
         );
         progress.report({ increment: 100 });
         return [];
       }
       logger.trace(
-        `List instances got response code: ${
+        `Unable to fetch the list instances because of response code ${
           parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
+        } with reason \n${parsedResponse.body.messages.join('\n').trim()}.`
       );
       progress.report({ increment: 100 });
       return [];
@@ -132,9 +133,9 @@ export const getInstanceNames =
           return parseToType(Repository, repository);
         } catch (e) {
           logger.trace(
-            `Invalid data format for repository: ${JSON.stringify(
+            `Unable to fetch the instance ${JSON.stringify(
               repository
-            )}, it will be skipped: ${e.message}`
+            )} because of error ${e.message}.`
           );
           return;
         }
@@ -169,11 +170,11 @@ export const searchForElements =
     subsystem,
     type,
     element,
-  }: ElementSearchLocation): Promise<ReadonlyArray<Element>> => {
+  }: ElementSearchLocation): Promise<ReadonlyArray<Element> | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const minimalElementInfo = 'BAS';
     const searchUpInMap = true;
-    const firstOccurance = 'FIR';
+    const firstOccurrence = 'FIR';
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: environment || ANY_VALUE,
       'stage-number': fromStageNumber(stageNumber),
@@ -183,43 +184,62 @@ export const searchForElements =
       element: element || ANY_VALUE,
       data: minimalElementInfo,
       search: searchUpInMap,
-      return: firstOccurance,
+      return: firstOccurrence,
     };
     progress.report({ increment: 30 });
-    let response;
+    let response: BaseResponse;
     try {
       response = await EndevorClient.listElement(session)(instance)(
         requestArgs
       );
+      response = parseToType(BaseResponse, response);
     } catch (error) {
-      logger.trace(`List elements got error: ${error.message}`);
       progress.report({ increment: 100 });
-      return [];
+      return new Error(
+        `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of error ${error.message}`
+      );
     }
     progress.report({ increment: 50 });
     let parsedResponse: SuccessListElementsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error ${
+            error.message
+          }\nof an incorrect response ${JSON.stringify(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return new Error(
+          `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of response code ${response.body.returnCode}`
+        );
+      }
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the elements from ${requestArgs.environment}/${
+          requestArgs.system
+        }/${requestArgs.subsystem}/${
+          requestArgs.type
+        } because of response code ${
+          parsedResponse.body.returnCode
+        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
+      );
+    }
     try {
       parsedResponse = parseToType(SuccessListElementsResponse, response);
     } catch (error) {
-      logger.trace(`Response was not successful because of: ${error.message}`);
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (e) {
-        logger.trace(
-          `Invalid data format for: ${JSON.stringify(response)}, because of: ${
-            e.message
-          }`
-        );
-        progress.report({ increment: 100 });
-        return [];
-      }
       logger.trace(
-        `List elements got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
+        `Unable to fetch the elements from ${requestArgs.environment}/${
+          requestArgs.system
+        }/${requestArgs.subsystem}/${requestArgs.type} because of error ${
+          error.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
-      return [];
+      return new Error(
+        `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of incorrect response`
+      );
     }
     const elements = parsedResponse.body.data
       .map((element) => {
@@ -227,9 +247,9 @@ export const searchForElements =
           return parseToType(ExternalElement, element);
         } catch (e) {
           logger.trace(
-            `Invalid data format for element: ${JSON.stringify(
+            `Unable to fetch the element ${JSON.stringify(
               element
-            )}, it will be skipped: ${e.message}`
+            )} because of error ${e.message} in the response.`
           );
           return;
         }
@@ -297,7 +317,7 @@ export const printElement =
     subSystem,
     type,
     name,
-  }: Element): Promise<ElementContent | undefined> => {
+  }: Element): Promise<ElementContent | Error> => {
     const requestParms: ElmSpecDictionary & PrintElmCompDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
@@ -314,42 +334,50 @@ export const printElement =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Print element got error: ${error.message}`);
+      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`;
       progress.report({ increment: 100 });
-      return;
+      return new Error(errorMessage);
     }
     let parsedResponse: SuccessPrintResponse | ErrorResponse;
     try {
       parsedResponse = parseToType(SuccessPrintResponse, response);
     } catch (e) {
-      logger.trace(`Response was not successful because of: ${e.message}`);
+      logger.trace(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error ${
+          e.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
       try {
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+          `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error ${
             e.message
-          }`
+          }\nof an incorrect error response ${JSON.stringify(response)}.`
         );
         progress.report({ increment: 100 });
-        return;
+        return new Error(
+          `Unable to print the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
+        );
       }
-      logger.trace(
-        `Print element got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
-      );
+      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} because of response code ${
+        parsedResponse.body.returnCode
+      } with reason\n${parsedResponse.body.messages.join('\n').trim()}`;
       progress.report({ increment: 100 });
-      return;
+      return new Error(errorMessage);
     }
     progress.report({ increment: 50 });
     const [elementContent] = parsedResponse.body.data;
     if (!elementContent) {
       logger.trace(
-        `Element ${system}/${subSystem}/${type}/${name} content is not presented`
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response ${JSON.stringify(
+          response
+        )}.`
       );
       progress.report({ increment: 100 });
-      return;
+      return new Error(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
+      );
     }
     progress.report({ increment: 20 });
     return elementContent;
@@ -367,7 +395,7 @@ export const printListing =
     subSystem,
     type,
     name,
-  }: Element): Promise<ListingContent | undefined> => {
+  }: Element): Promise<ListingContent | Error> => {
     const requestParms: ElmSpecDictionary & PrintElmCompDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
@@ -385,42 +413,51 @@ export const printListing =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Print listing got error: ${error.message}`);
       progress.report({ increment: 100 });
-      return;
+      return new Error(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${error.message}`
+      );
     }
     let parsedResponse: SuccessPrintResponse | ErrorResponse;
     try {
       parsedResponse = parseToType(SuccessPrintResponse, response);
     } catch (e) {
-      logger.trace(`Response was not successful because of: ${e.message}`);
+      logger.trace(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${
+          e.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
       try {
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+          `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${
             e.message
-          }`
+          }\n of an incorrect error response ${JSON.stringify(response)}.`
         );
         progress.report({ increment: 100 });
-        return;
+        return new Error(
+          `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of incorrect response`
+        );
       }
-      logger.trace(
-        `Print element listing got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
-      );
+      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of response code ${
+        parsedResponse.body.returnCode
+      } with reason\n${parsedResponse.body.messages.join('\n').trim()}`;
       progress.report({ increment: 100 });
-      return;
+      return new Error(errorMessage);
     }
     progress.report({ increment: 50 });
     const [listingContent] = parsedResponse.body.data;
     if (!listingContent) {
       logger.trace(
-        `Element ${system}/${subSystem}/${type}/${name} listing content is not presented`
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because the content is not presented in the response ${JSON.stringify(
+          response
+        )}.`
       );
       progress.report({ increment: 100 });
-      return;
+      return new Error(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of incorrect response`
+      );
     }
     progress.report({ increment: 20 });
     return listingContent;
@@ -478,12 +515,9 @@ export const retrieveElementWithFingerprint =
         requestParms
       );
     } catch (error) {
-      logger.trace(
-        `Retrieve element ${system}/${subSystem}/${type}/${name} got error: ${error.message}`
-      );
       progressReporter.report({ increment: 100 });
       return new Error(
-        `Unable to retrieve element ${system}/${subSystem}/${type}/${name}`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
       );
     }
     progressReporter.report({ increment: 50 });
@@ -491,46 +525,43 @@ export const retrieveElementWithFingerprint =
     try {
       parsedResponse = parseToType(SuccessRetrieveResponse, response);
     } catch (error) {
-      logger.trace(
-        `Response was not successful for element ${system}/${subSystem}/${type}/${name} because of: ${error.message}`
-      );
       try {
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of a failed success response parsing:\n${
+            error.message
+          }\nand a failed error response parsing:\n${
             e.message
-          }`
+          }\nof an incorrect response:\n${JSON.stringify(response, null, 2)}.`
         );
         progressReporter.report({ increment: 100 });
         return new Error(
-          `Unable to retrieve element ${system}/${subSystem}/${type}/${name}`
+          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
         );
       }
-      logger.trace(
-        `Retrieve element ${system}/${subSystem}/${type}/${name} got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
-      );
-      if (parsedResponse.body.returnCode) {
-        const errorResponseAsString = parsedResponse.body.messages
-          .join('\n')
-          .trim();
-        return getTypedErrorFromEndevorError(name, errorResponseAsString);
-      }
-      progressReporter.report({ increment: 100 });
-      return new Error(
-        `Unable to retrieve element ${system}/${subSystem}/${type}/${name}`
+      // add extra \n in the beginning of the messages line
+      const errorResponseAsString = [
+        '',
+        ...parsedResponse.body.messages.map((message) => message.trim()),
+      ].join('\n');
+      const errorMessage = `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`;
+      return getTypedErrorFromEndevorError(
+        {
+          elementName: name,
+          endevorMessage: errorResponseAsString,
+        },
+        errorMessage
       );
     }
     const [elementContent] = parsedResponse.body.data;
     if (!elementContent) {
-      logger.trace(
-        `Element ${system}/${subSystem}/${type}/${name} content is not presented`
-      );
       progressReporter.report({ increment: 100 });
+      logger.trace(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response`
+      );
       return new Error(
-        `Unable to retrieve element ${system}/${subSystem}/${type}/${name}`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
       );
     }
     progressReporter.report({ increment: 20 });
@@ -549,7 +580,8 @@ export const retrieveElementWithoutSignout =
       progress
     )(service)(element)();
     if (isError(elementContent)) {
-      return elementContent;
+      const error = elementContent;
+      return error;
     }
     return elementContent.content;
   };
@@ -566,7 +598,8 @@ export const retrieveElementWithSignout =
       progress
     )(service)(element)(signoutChangeControlValue);
     if (isError(elementContent)) {
-      return elementContent;
+      const error = elementContent;
+      return error;
     }
     return elementContent.content;
   };
@@ -583,7 +616,8 @@ export const retrieveElementWithOverrideSignout =
       progress
     )(service)(element)(signoutChangeControlValue, true);
     if (isError(elementContent)) {
-      return elementContent;
+      const error = elementContent;
+      return error;
     }
     return elementContent.content;
   };
@@ -651,11 +685,9 @@ export const signInElement =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Sign in element got error: ${error.message}`);
+      const errorMessage = `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`;
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to sign in element ${system}/${subSystem}/${type}/${name}`
-      );
+      return new Error(errorMessage);
     }
     progress.report({ increment: 50 });
     let parsedResponse: SignInResponse;
@@ -663,24 +695,21 @@ export const signInElement =
       parsedResponse = parseToType(SignInResponse, response);
     } catch (e) {
       logger.trace(
-        `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+        `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of error ${
           e.message
-        }`
+        } in the incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to sign in element ${system}/${subSystem}/${type}/${name}`
+        `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
       );
     }
     if (parsedResponse.body.returnCode) {
-      logger.trace(
-        `Sign in element got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
-      );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to sign in element ${system}/${subSystem}/${type}/${name}`
+        `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason\n${parsedResponse.body.messages.join('\n').trim()}`
       );
     }
     progress.report({ increment: 20 });
@@ -716,16 +745,25 @@ const retrieveElementWithDependencies =
       )(serviceInstance.service)(element)(signoutControlValue);
     }
     if (isError(elementContent)) {
-      return elementContent;
+      const error = elementContent;
+      return error;
     }
     const dependenciesRequestProgressRatio = 4;
     const dependentElements = await retrieveDependentElements(logger)(
       toSeveralTasksProgress(progressReporter)(dependenciesRequestProgressRatio)
     )(serviceInstance.service)(element);
+    if (isError(dependentElements)) {
+      const error = dependentElements;
+      logger.trace(`${error.message}.`);
+      return {
+        content: elementContent,
+        dependencies: [],
+      };
+    }
     logger.trace(
       `Element ${element.name} has dependencies: ${JSON.stringify(
         dependentElements
-      )}`
+      )}.`
     );
     const dependenciesProgressRatio = 2;
     const dependencies = await retrieveElementDependencies(logger)(undefined)(
@@ -772,17 +810,25 @@ export const retrieveElementWithDependenciesOverrideSignout =
       progressReporter
     )(serviceInstance.service)(element)(signoutControlValue, true);
     if (isError(elementContent)) {
-      return elementContent;
+      const error = elementContent;
+      return error;
     }
-
     const dependenciesRequestProgressRatio = 4;
     const dependentElements = await retrieveDependentElements(logger)(
       toSeveralTasksProgress(progressReporter)(dependenciesRequestProgressRatio)
     )(serviceInstance.service)(element);
+    if (isError(dependentElements)) {
+      const error = dependentElements;
+      logger.trace(`${error.message}.`);
+      return {
+        content: elementContent.content,
+        dependencies: [],
+      };
+    }
     logger.trace(
       `Element ${element.name} has dependencies: ${JSON.stringify(
         dependentElements
-      )}`
+      )}.`
     );
     const dependenciesProgressRatio = 2;
     const dependencies = await retrieveElementDependencies(logger)(undefined)(
@@ -806,7 +852,7 @@ const retrieveDependentElements =
     type,
     name,
     instance,
-  }: Element): Promise<ReadonlyArray<Dependency>> => {
+  }: Element): Promise<ReadonlyArray<Dependency> | Error> => {
     const requestParms: ElmSpecDictionary & QueryAcmDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
@@ -826,42 +872,52 @@ const retrieveDependentElements =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Retrieve element dependencies got error: ${error.message}`);
       progressReporter.report({ increment: 100 });
-      return [];
+      return new Error(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${error.message}`
+      );
     }
     progressReporter.report({ increment: 50 });
     let parsedResponse: SuccessListDependenciesResponse | ErrorResponse;
     try {
       parsedResponse = parseToType(SuccessListDependenciesResponse, response);
     } catch (error) {
+      logger.trace(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${
+          error.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
       try {
-        logger.trace(
-          `Response was not successful because of: ${error.message}`
-        );
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Invalid data format for: ${response}, because of: ${error.message}`
+          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${
+            error.message
+          }\nof an incorrect error response ${JSON.stringify(response)}.`
         );
         progressReporter.report({ increment: 100 });
-        return [];
+        return new Error(
+          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of incorrect response`
+        );
       }
-      logger.trace(
-        `Retrieve element dependencies got response code: ${
+      progressReporter.report({ increment: 100 });
+      return new Error(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of response code ${
           parsedResponse.body.returnCode
         } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
       );
-      progressReporter.report({ increment: 100 });
-      return [];
     }
     const [elementResponse] = parsedResponse.body.data;
     if (!elementResponse || !elementResponse.components) {
       logger.trace(
-        `Element ${system}/${subSystem}/${type}/${name} dependencies are not presented`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because the components are not presented in the response ${JSON.stringify(
+          response
+        )}.`
       );
       progressReporter.report({ increment: 100 });
-      return [];
+      return new Error(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of incorrect response`
+      );
     }
     const dependencies: DependentElements = elementResponse.components
       .map((element) => {
@@ -869,7 +925,9 @@ const retrieveDependentElements =
           return parseToType(DependentElement, element);
         } catch (error) {
           logger.trace(
-            `Invalid data format for element: ${element}, it will be skipped: ${error.message}`
+            `Unable to retrieve the dependency for the element ${system}/${subSystem}/${type}/${name} because of error ${
+              error.message
+            }\nof an unexpected response format ${JSON.stringify(element)}.`
           );
           return;
         }
@@ -995,10 +1053,9 @@ export const generateElement =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Generate element got error: ${error.message}`);
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to generate element ${system}/${subSystem}/${type}/${name}`
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -1007,24 +1064,21 @@ export const generateElement =
       parsedResponse = parseToType(GenerateResponse, response);
     } catch (e) {
       logger.trace(
-        `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of error ${
           e.message
-        }`
+        } in the incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to generate element ${system}/${subSystem}/${type}/${name}`
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
       );
     }
     if (parsedResponse.body.returnCode) {
-      logger.trace(
-        `Generate element got response code: ${
-          parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
-      );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to generate element ${system}/${subSystem}/${type}/${name}`
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason\n${parsedResponse.body.messages.join('\n').trim()}`
       );
     }
     progress.report({ increment: 20 });
@@ -1067,9 +1121,8 @@ export const updateElement =
     });
     if (isError(requestParms)) {
       const error = requestParms;
-      logger.info(error.message);
       return new Error(
-        `Unable to update element ${system}/${subSystem}/${type}/${name}`
+        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
       );
     }
     progress.report({ increment: 30 });
@@ -1082,10 +1135,9 @@ export const updateElement =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Update element got error: ${error.message}`);
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to update element ${system}/${subSystem}/${type}/${name}`
+        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -1094,30 +1146,36 @@ export const updateElement =
       parsedResponse = parseToType(UpdateResponse, response);
     } catch (e) {
       logger.trace(
-        `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+        `Unable to update the element ${system}/${subSystem}/${type}/${name} because the Endevor response parsing is failed:\n${
           e.message
-        }`
+        }\nof an incorrect response:\n${JSON.stringify(response, null, 2)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to update element ${system}/${subSystem}/${type}/${name}`
+        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
       );
     }
     const updateReturnCode = parsedResponse.body.returnCode;
     if (updateReturnCode) {
-      const errorResponseAsString = parsedResponse.body.messages
-        .join('\n')
-        .trim();
+      // add an extra \n in the beginning of the Endevor messages line
+      const errorResponseAsString = [
+        '',
+        ...parsedResponse.body.messages.map((message) => message.trim()),
+      ].join('\n');
+      const errorMessage = `Unable to update the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`;
       const typedError = getTypedErrorFromEndevorError(
-        name,
-        errorResponseAsString
+        {
+          elementName: name,
+          endevorMessage: errorResponseAsString,
+        },
+        errorMessage
       );
       if (isChangeRegressionError(typedError)) {
-        // if expected regression info message appeared, just leave a trace and update successfully
-        logger.trace(typedError.message);
+        // if the expected regression info message appeared, just leave a trace and update successfully
+        logger.trace(`${errorMessage}.`);
       } else {
         logger.trace(
-          `Update element got response code: ${updateReturnCode} with reason: ${errorResponseAsString}`
+          `Update element was updated, but got a response code ${updateReturnCode} with reason ${errorResponseAsString}.`
         );
         progress.report({ increment: 100 });
         return typedError;
@@ -1138,7 +1196,7 @@ const toUpdateRequest = ({
     const string2fileStream = require('string-to-file-stream');
     tempFile = string2fileStream(content);
   } catch (error) {
-    return new Error(`Reading element from temp file error: ${error.message}`);
+    return new Error(`Reading element from temp file error ${error.message}`);
   }
   return {
     fromFile: tempFile,
@@ -1180,9 +1238,8 @@ export const addElement =
     });
     if (isError(requestParms)) {
       const error = requestParms;
-      logger.info(error.message);
       return new Error(
-        `Unable to add element ${system}/${subSystem}/${type}/${name}`
+        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
       );
     }
     progress.report({ increment: 30 });
@@ -1195,10 +1252,9 @@ export const addElement =
         requestParms
       );
     } catch (error) {
-      logger.trace(`Add element got error: ${error.message}`);
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to add element ${system}/${subSystem}/${type}/${name}`
+        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -1207,24 +1263,27 @@ export const addElement =
       parsedResponse = parseToType(AddResponse, response);
     } catch (e) {
       logger.trace(
-        `Invalid data format for: ${JSON.stringify(response)}, because of: ${
+        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${
           e.message
-        }`
+        }\nof an incorrect error response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to add element ${system}/${subSystem}/${type}/${name}`
+        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
       );
     }
     if (parsedResponse.body.returnCode) {
-      const errorResponseAsString = parsedResponse.body.messages
+      const errorResponseAsString = ['', ...parsedResponse.body.messages]
         .join('\n')
         .trim();
-      logger.trace(
-        `Add element got response code: ${parsedResponse.body.returnCode} with reason: ${errorResponseAsString}`
-      );
       progress.report({ increment: 100 });
-      return getTypedErrorFromEndevorError(name, errorResponseAsString);
+      return getTypedErrorFromEndevorError(
+        {
+          elementName: name,
+          endevorMessage: errorResponseAsString,
+        },
+        `Unable to add the element because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`
+      );
     }
     progress.report({ increment: 20 });
   };

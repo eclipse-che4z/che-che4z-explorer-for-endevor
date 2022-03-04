@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -18,8 +18,19 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
 const BundledLicensesPlugin = require('@local/bundled-licenses-webpack-plugin');
+const webpack = require('webpack');
+const childProcess = require('child_process');
+const process = require('process');
 
 const distFolderPath = path.resolve(__dirname, 'dist');
+
+var latestGitCommit = childProcess
+  .execSync('git rev-parse HEAD')
+  .toString()
+  .trim();
+
+// receive an api key from pipeline env variable for prod builds
+var telemetryApiKey = process.env.E4E_TELEMETRY_KEY || '';
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -48,6 +59,11 @@ THIS SOFTWARE.`,
         },
       },
       licenseTemplateFilePath: path.resolve(__dirname, 'license-template.txt'),
+    }),
+    new webpack.DefinePlugin({
+      // the plugin will insert the runtime value by pure text replacement, so we need 'surrounding'
+      __E4E_BUILD_NUMBER__: `'${latestGitCommit}'`,
+      __E4E_TELEMETRY_KEY__: `'${telemetryApiKey}'`,
     }),
   ],
   optimization: {

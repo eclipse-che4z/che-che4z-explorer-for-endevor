@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,7 +12,7 @@
  */
 
 import { signOutElement } from '../endevor';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { isError } from '../utils';
 import { ElementNode } from '../_doc/ElementTree';
 import { fromTreeElementUri } from '../uri/treeElementUri';
@@ -28,6 +28,12 @@ import {
   Service,
 } from '@local/endevor/_doc/Endevor';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  SignOutElementCommandCompletedStatus,
+  TelemetryEvents,
+  TreeElementCommandArguments,
+} from '../_doc/Telemetry';
+import { isSignoutError } from '@local/endevor/utils';
 
 type SelectedElementNode = ElementNode;
 
@@ -36,7 +42,7 @@ export const signOutElementCommand = async (
   elementNode: SelectedElementNode
 ) => {
   if (elementNode) {
-    logger.trace(`Signout element command was called for ${elementNode.name}`);
+    logger.trace(`Signout element command was called for ${elementNode.name}.`);
     await signOutSingleElement(dispatch)(elementNode);
   }
 };
@@ -48,11 +54,17 @@ const signOutSingleElement =
     if (isError(uriParams)) {
       const error = uriParams;
       logger.error(
-        `Unable to signout the element ${elementNode.name}.`,
-        `Unable to signout the element ${elementNode.name}, because parsing of the element's URI failed with error: ${error.message}`
+        `Unable to sign out the element ${elementNode.name}.`,
+        `Unable to sign out the element ${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
+      commandArguments: {
+        type: TreeElementCommandArguments.SINGLE_ELEMENT,
+      },
+    });
     const {
       serviceName,
       searchLocationName,
@@ -65,7 +77,9 @@ const signOutSingleElement =
       comment: searchLocation.comment,
     });
     if (dialogCancelled(signoutChangeControlValue)) {
-      logger.error('CCID and Comment must be specified to signout an element.');
+      logger.error(
+        'CCID and Comment must be specified to sign out an element.'
+      );
       return;
     }
     const signOutResult = await withNotificationProgress(
@@ -77,7 +91,18 @@ const signOutSingleElement =
     );
     if (isError(signOutResult)) {
       const error = signOutResult;
-      logger.error(error.message);
+      logger.error(
+        `Unable to sign out the element ${element.name}.`,
+        `${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
+        status: isSignoutError(signOutResult)
+          ? SignOutElementCommandCompletedStatus.SIGN_OUT_ERROR
+          : SignOutElementCommandCompletedStatus.GENERIC_ERROR,
+        error: signOutResult,
+      });
       return;
     }
     await updateTreeAfterSuccessfulSignout(dispatch)(
@@ -87,7 +112,11 @@ const signOutSingleElement =
       searchLocation,
       [element]
     );
-    logger.info(`${element.name} was signed out successfully!`);
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED,
+      status: SignOutElementCommandCompletedStatus.SUCCESS,
+    });
+    logger.info(`Element ${element.name} was signed out successfully!`);
   };
 
 const updateTreeAfterSuccessfulSignout =

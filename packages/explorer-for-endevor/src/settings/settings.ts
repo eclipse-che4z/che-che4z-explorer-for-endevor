@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -22,7 +22,7 @@ import {
   MAX_PARALLEL_REQUESTS_DEFAULT,
   LOCATIONS_DEFAULT,
 } from '../constants';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
 import {
   getEndevorConfigurationValue,
@@ -38,6 +38,7 @@ import {
   MaxParallelRequests,
 } from '../_ext/settings';
 import { replaceWith } from '../utils';
+import { TelemetryEvents, SettingChangedStatus } from '../_doc/Telemetry';
 
 export const getLocations = (): ReadonlyArray<LocationConfig> => {
   // please, pay attention: this call can be lazy
@@ -183,14 +184,116 @@ export const watchForLocations = (
             2
           )}`
         );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
+          elementLocations: updatedLocations.map((location) => {
+            return {
+              elementLocationsAmount: location.elementLocations.length,
+            };
+          }),
+        });
       } catch (e) {
         logger.trace(`Error when reading settings: ${e.message}`);
         updatedLocations = [];
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
+          status: 'GENERIC_ERROR',
+          error: e,
+        });
       }
       await dispatch({
         type: Actions.LOCATION_CONFIG_CHANGED,
         payload: updatedLocations,
       });
+    }
+  });
+};
+
+export const watchForSettingChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration(
+        `${ENDEVOR_CONFIGURATION}.${AUTOMATIC_SIGN_OUT_SETTING}`
+      )
+    ) {
+      let updatedAutomaticSignout;
+      try {
+        updatedAutomaticSignout = isAutomaticSignOut();
+        logger.trace(
+          `Settings updated. Value: ${JSON.stringify(
+            updatedAutomaticSignout,
+            null,
+            2
+          )}`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT,
+          status: SettingChangedStatus.SUCCESS,
+          value: updatedAutomaticSignout,
+        });
+      } catch (e) {
+        logger.trace(`Error when reading settings: ${e.message}`);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
+    }
+    if (
+      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${EDIT_FOLDER_SETTING}`)
+    ) {
+      let tempEditFolder;
+      try {
+        tempEditFolder = getTempEditFolder();
+        logger.trace(
+          `Settings updated. Value: ${JSON.stringify(tempEditFolder, null, 2)}`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER,
+          status: SettingChangedStatus.SUCCESS,
+        });
+      } catch (e) {
+        logger.trace(`Error when reading settings: ${e.message}`);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
+    }
+    if (
+      e.affectsConfiguration(
+        `${ENDEVOR_CONFIGURATION}.${MAX_PARALLEL_REQUESTS_SETTING}`
+      )
+    ) {
+      let maxParallelRequests;
+      try {
+        maxParallelRequests = getMaxParallelRequests();
+        logger.trace(
+          `Settings updated. Value: ${JSON.stringify(
+            maxParallelRequests,
+            null,
+            2
+          )}`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS,
+          status: SettingChangedStatus.SUCCESS,
+          value: maxParallelRequests,
+        });
+      } catch (e) {
+        logger.trace(`Error when reading settings: ${e.message}`);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
     }
   });
 };

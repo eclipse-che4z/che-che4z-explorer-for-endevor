@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -58,8 +58,15 @@ export type SubSystemNode = Readonly<{
 export type TypeNode = Readonly<{
   type: 'TYPE';
   name: string;
-  children: Elements;
+  elements: Elements;
+  map: EndevorMapNode;
 }>;
+export type EndevorMapNode = Readonly<{
+  type: 'MAP';
+  name: string;
+  elements: Elements;
+}>;
+
 export type ElementNode = Readonly<{
   id: string;
   searchLocationId: string;
@@ -73,11 +80,17 @@ export type ElementLocationNode =
   | TypeNode
   | ElementNode;
 
+export type EmptyMapNode = Readonly<{
+  type: 'EMPY_MAP_NODE';
+}>;
+
 export type Node =
   | AddNewProfileNode
   | ServiceNode
   | LocationNode
-  | ElementLocationNode;
+  | EndevorMapNode
+  | ElementLocationNode
+  | EmptyMapNode;
 
 export interface ElementTree {
   serviceName: EndevorServiceName;

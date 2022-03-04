@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,4 +13,5 @@
 
 /* eslint-disable no-undef */
 require('ts-node/register/transpile-only');
+require('./mocha.global.ts');
 module.exports = require('./mocha.run.ts');

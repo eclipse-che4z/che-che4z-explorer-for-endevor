@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -31,6 +31,7 @@ export type ElementDependencies = t.TypeOf<typeof ElementDependencies>;
 
 export type Content = t.TypeOf<typeof Content>;
 
+export type BaseResponse = t.TypeOf<typeof BaseResponse>;
 export type SuccessPrintResponse = t.TypeOf<typeof SuccessPrintResponse>;
 export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
 export type SuccessListElementsResponse = t.TypeOf<
@@ -95,6 +96,13 @@ export const ElementDependencies = t.array(ElementDependency);
 
 export const Content = t.string;
 
+// new type for general response parsing
+export const BaseResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+  }),
+});
+
 export const SuccessPrintResponse = t.type({
   body: t.type({
     returnCode: t.number,
@@ -133,7 +141,6 @@ export const SuccessListRepositoriesResponse = t.type({
 
 export const SuccessListElementsResponse = t.type({
   body: t.type({
-    returnCode: t.number,
     data: t.array(t.unknown),
   }),
 });

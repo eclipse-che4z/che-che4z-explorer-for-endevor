@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -43,8 +43,9 @@ export const saveIntoEditFolder =
     try {
       editFolder = getTempEditFolder();
     } catch (error) {
-      logger.trace(`Error when reading settings: ${error}`);
-      return new Error('Unable to get edit path from settings');
+      return new Error(
+        `Unable to get the edit path from the settings because of error ${error.message}`
+      );
     }
     const editFolderUri = getEditFolderUri(workspaceUri)(editFolder)(
       serviceName,
@@ -53,28 +54,27 @@ export const saveIntoEditFolder =
     let saveLocationUri;
     try {
       saveLocationUri = await createDirectory(editFolderUri);
-    } catch (e) {
-      logger.trace(`Error while creating a temp directory: ${e.message}`);
+    } catch (error) {
       return new Error(
-        `Unable to create required temp directory: ${editFolderUri.fsPath} for editing elements`
+        `Unable to create a required temp directory ${editFolderUri.fsPath} for editing the elements because of error ${error.message}`
       );
     }
-    const saveResult = await saveFileIntoWorkspaceFolder(saveLocationUri)(
-      {
-        fileName: element.name,
-        fileExtension: element.extension,
-      },
-      elementContent
-    );
-    if (isError(saveResult)) {
-      const error = saveResult;
-      logger.trace(`Element: ${element.name} persisting error: ${error}`);
-      const userMessage = `Element: ${element.name} was not saved into file system`;
-      return new Error(userMessage);
+    try {
+      const saveResult = await saveFileIntoWorkspaceFolder(saveLocationUri)(
+        {
+          fileName: element.name,
+          fileExtension: element.extension,
+        },
+        elementContent
+      );
+      // update edit folders context variable to make sure all edited element paths are known
+      updateEditFoldersWhenContext(saveLocationUri.fsPath);
+      return saveResult;
+    } catch (error) {
+      return new Error(
+        `Unable to save the element ${element.name} into the file system because of error ${error.message}`
+      );
     }
-    // update edit folders context variable to make sure all edited element paths are known
-    updateEditFoldersWhenContext(saveLocationUri.fsPath);
-    return saveResult;
   };
 
 // TODO: needs to be refactored, we ruin our URI abstraction here,
@@ -103,8 +103,8 @@ export const withUploadOptions =
       });
     } else {
       logger.error(
-        `Element ${uploadOptions.element.name} cannot be opened for editing. See log for more details.`,
-        `Opening element ${uploadOptions.element.name} failed with error: ${elementUri.message}`
+        `Unable to open the element ${uploadOptions.element.name} for editing.`,
+        `Unable to open the element ${uploadOptions.element.name} because of error ${elementUri.message}.`
       );
       return;
     }
@@ -116,9 +116,8 @@ export const showElementToEdit = async (
   const showResult = await showSavedElementContent(fileUri);
   if (isError(showResult)) {
     const error = showResult;
-    logger.trace(
-      `Element ${fileUri.fsPath} cannot be opened because of: ${error}.`
+    return new Error(
+      `Unable to open the element ${fileUri.fsPath} because of error ${error.message}`
     );
-    return new Error(`Element ${fileUri.fsPath} cannot be opened.`);
   }
 };

@@ -1,5 +1,5 @@
 /*
- * © 2021 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,7 +17,6 @@ module.exports = {
   // ts preprocessor
   testMatch: ['**/__tests__/**/*-test.ts'],
   preset: 'ts-jest',
-  testPathIgnorePatterns: ['src/__tests__/theia/__tests__'],
 
   // coverage
   coverageDirectory: '<rootDir>/results/unit/coverage',
