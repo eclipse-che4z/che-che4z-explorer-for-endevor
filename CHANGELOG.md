@@ -2,6 +2,16 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.0.1] &ndash; 2022-03-20
+
+### Added
+
+- Added alphabetical sorting on all levels of the endevor tree.
+
+### Fixed
+
+- Fixed an issue with wrong representation of elements in the endevor tree.
+
 ## [1.0.0] &ndash; 2022-02-23
 
 ### Added
