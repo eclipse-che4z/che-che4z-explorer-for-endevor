@@ -60,9 +60,7 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 **Host-side prerequisites**:
 
-- Endevor version 18.1 with the following PTFs:
-
-  - SO15978
+- Endevor version 18.1 with the SO15978 PTF.
 
 **Note:** Explorer for Endevor only works with v2 of the REST API
 
