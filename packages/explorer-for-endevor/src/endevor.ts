@@ -15,6 +15,9 @@ import { logger } from './globals';
 import * as endevor from '@local/endevor/endevor';
 
 export const getInstanceNames = endevor.getInstanceNames(logger);
+export const getAllEnvironmentStages = endevor.getAllEnvironmentStages(logger);
+export const getAllSystems = endevor.getAllSystems(logger);
+export const getAllSubSystems = endevor.getAllSubSystems(logger);
 export const searchForElements = endevor.searchForElements(logger);
 export const viewElement = endevor.viewElement(logger);
 export const retrieveElement = endevor.retrieveElementWithoutSignout(logger);

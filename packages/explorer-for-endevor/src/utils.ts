@@ -15,8 +15,13 @@ import { ElementNode, Node } from './_doc/ElementTree';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TimeoutError } from './_doc/Error';
-import { Element } from '@local/endevor/_doc/Endevor';
+import {
+  Element,
+  ElementSearchLocation,
+  IntermediateEnvironmentStage,
+} from '@local/endevor/_doc/Endevor';
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
+import { EnvironmentStage } from '../../endevor/_doc/Endevor';
 
 const isElementNode = (node: Node): node is ElementNode => {
   return node.type === 'ELEMENT';
@@ -32,6 +37,18 @@ export const isDefined = <T>(value: T | undefined): value is T => {
 
 export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
+};
+
+export const isTuple = <T>(value: Array<T> | unknown): value is Array<T> => {
+  return value instanceof Array;
+};
+
+export const isNotLastEnvStage = (
+  value: EnvironmentStage
+): value is IntermediateEnvironmentStage => {
+  return (
+    Object.keys(value).find((key) => key === 'nextEnvironment') !== undefined
+  );
 };
 
 export const isUnique = <T>(
@@ -161,3 +178,11 @@ export const groupBySearchLocationId = (
     accumulator
   );
 };
+
+export const isElementUpTheMap =
+  (elementsSearchLocation: ElementSearchLocation) => (element: Element) => {
+    return (
+      element.environment !== elementsSearchLocation.environment ||
+      element.stageNumber !== elementsSearchLocation.stageNumber
+    );
+  };

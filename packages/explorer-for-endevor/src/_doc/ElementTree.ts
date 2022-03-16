@@ -68,7 +68,6 @@ export type EndevorMapNode = Readonly<{
 }>;
 
 export type ElementNode = Readonly<{
-  id: string;
   searchLocationId: string;
   type: 'ELEMENT';
   name: string;

@@ -17,6 +17,7 @@ import {
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
+import { EndevorMap } from './Endevor';
 import {
   ElementLocationName,
   EndevorServiceName,
@@ -26,6 +27,7 @@ import {
 export const enum Actions {
   ENDEVOR_CREDENTIAL_ADDED = 'CREDENTIAL/ADDED',
   LOCATION_CONFIG_CHANGED = 'LOCATIONS/CHANGED',
+  ENDEVOR_MAP_BUILT = 'ENDEVOR_MAP_BUILT',
   ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
   REFRESH = 'REFRESH',
   ELEMENT_ADDED = 'ELEMENT_ADDED',
@@ -44,6 +46,13 @@ export interface EndevorCredentialAdded {
 export interface LocationConfigChanged {
   type: Actions.LOCATION_CONFIG_CHANGED;
   payload: ReadonlyArray<LocationConfig>;
+}
+
+export interface EndevorMapBuilt {
+  type: Actions.ENDEVOR_MAP_BUILT;
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  endevorMap: EndevorMap;
 }
 
 export interface ElementsUpdated {
@@ -108,6 +117,7 @@ export interface ElementSignedin {
 export type Action =
   | EndevorCredentialAdded
   | LocationConfigChanged
+  | EndevorMapBuilt
   | ElementsUpdated
   | Refresh
   | ElementUpdated
