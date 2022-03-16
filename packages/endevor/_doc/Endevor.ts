@@ -67,15 +67,50 @@ export type ActionChangeControlValue = ChangeControlValue;
 export type ElementSearchLocation = ElementSearchPath &
   Partial<ChangeControlValue>;
 
-export type ElementMapPath = Readonly<{
-  instance: Value;
+export type EnvironmentStageMapPath = Readonly<{
   environment: Value;
   stageNumber: StageNumber;
-  system: Value;
-  subSystem: Value;
-  type: Value;
-  name: Value;
 }>;
+
+export type IntermediateEnvironmentStage = EnvironmentStageMapPath &
+  Readonly<{
+    nextEnvironment: Value;
+    nextStageNumber: StageNumber;
+  }>;
+
+export type LastEnvironmentStage = EnvironmentStageMapPath;
+
+export type EnvironmentStage =
+  | IntermediateEnvironmentStage
+  | LastEnvironmentStage;
+
+export type SystemMapPath = EnvironmentStageMapPath &
+  Readonly<{
+    system: Value;
+  }>;
+
+export type System = SystemMapPath & {
+  nextSystem: Value;
+};
+
+export type SubSystemMapPath = SystemMapPath &
+  Readonly<{
+    subSystem: Value;
+  }>;
+
+export type SubSystem = SubSystemMapPath &
+  Readonly<{
+    nextSubSystem: Value;
+  }>;
+
+export type ElementMapPath = Readonly<{
+  instance: Value;
+}> &
+  SubSystemMapPath &
+  Readonly<{
+    type: Value;
+    name: Value;
+  }>;
 
 export type Element = ElementMapPath &
   Readonly<{
