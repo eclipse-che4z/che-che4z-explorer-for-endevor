@@ -16,6 +16,7 @@ const bundleLicenses = require('./deps');
 const defaultOptions = {
   override: {},
   licenseTemplateFilePath: 'license-template.txt',
+  noticeTemplateFilePath: 'NOTICE_TEMPLATE.md',
 };
 
 class BundledLicensesPlugin {
