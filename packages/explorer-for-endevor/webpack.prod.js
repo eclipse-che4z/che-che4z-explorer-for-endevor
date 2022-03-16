@@ -59,6 +59,7 @@ THIS SOFTWARE.`,
         },
       },
       licenseTemplateFilePath: path.resolve(__dirname, 'license-template.txt'),
+      noticeTemplateFilePath: path.resolve(__dirname, 'NOTICE_TEMPLATE.md'),
     }),
     new webpack.DefinePlugin({
       // the plugin will insert the runtime value by pure text replacement, so we need 'surrounding'
