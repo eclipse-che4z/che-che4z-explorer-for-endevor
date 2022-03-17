@@ -13,6 +13,7 @@
 
 import { BaseCredential } from '@local/endevor/_doc/Credential';
 import { Element } from '@local/endevor/_doc/Endevor';
+import { EndevorMap } from './Endevor';
 import { ElementLocationName, EndevorServiceName } from './settings';
 
 export type CachedElement = {
@@ -26,6 +27,7 @@ export type CachedElements = Readonly<{
 
 export type EndevorCacheItem = Readonly<{
   searchLocation: ElementLocationName;
+  endevorMap: EndevorMap;
   elements: CachedElements;
 }>;
 

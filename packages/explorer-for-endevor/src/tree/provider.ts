@@ -22,7 +22,12 @@ import {
 } from '../_doc/ElementTree';
 import { Element } from '@local/endevor/_doc/Endevor';
 import { addNewProfileButton } from './buttons';
-import { searchForElements } from '../endevor';
+import {
+  getAllEnvironmentStages,
+  getAllSubSystems,
+  getAllSystems,
+  searchForElements,
+} from '../endevor';
 import { buildTree, toServiceNodes } from './endevor';
 import { getEndevorServiceByName } from '../services/services';
 import { getElementLocationByName } from '../element-locations/elementLocations';
@@ -32,16 +37,27 @@ import { resolveCredential } from '../credentials/credentials';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
-import { isError } from '../utils';
-import { getCredential, getElements, getLocations } from '../store/store';
+import { isDefined, isError } from '../utils';
+import {
+  getCredential,
+  getElements,
+  getEndevorMap,
+  getLocations,
+} from '../store/store';
 import { State } from '../_doc/Store';
-import { ElementsFetchingStatus, TelemetryEvents } from '../_doc/Telemetry';
+import {
+  ElementsFetchingStatus,
+  EndevorMapBuildingStatus,
+  TelemetryEvents,
+} from '../_doc/Telemetry';
+import { toSeveralTasksProgress } from '@local/endevor/utils';
+import { EndevorMap } from '../_doc/Endevor';
+import { toEndevorMap, toEndevorMapWithWildcards } from './endevorMap';
+import { ANY_VALUE } from '@local/endevor/const';
 
 class ElementItem extends vscode.TreeItem {
   constructor(node: ElementNode) {
     super(node.name, vscode.TreeItemCollapsibleState.None);
-
-    this.id = node.id;
 
     this.resourceUri = node.uri;
     this.contextValue = 'ELEMENT_TYPE';
@@ -144,7 +160,9 @@ export const make = (
       if (node == null) {
         return [
           addNewProfileButton,
-          ...toServiceNodes(getLocations(getState())),
+          ...toServiceNodes(getLocations(getState())).sort((l, r) =>
+            l.name.localeCompare(r.name)
+          ),
         ];
       }
       if (node.type === 'ELEMENT') {
@@ -159,7 +177,9 @@ export const make = (
        * that's why the code bellow is repeated in all cases :-/
        */
       if (node.type === 'TYPE') {
-        const children: Node[] = Array.from(node.elements.values());
+        const children: Node[] = Array.from(node.elements.values()).sort(
+          (l, r) => l.name.localeCompare(r.name)
+        );
         children.unshift(node.map);
         return children;
       }
@@ -169,10 +189,14 @@ export const make = (
         );
       }
       if (node.type === 'SYS') {
-        return Array.from(node.children.values());
+        return Array.from(node.children.values()).sort((l, r) =>
+          l.name.localeCompare(r.name)
+        );
       }
       if (node.type === 'MAP') {
-        const mapArray = Array.from(node.elements.values());
+        const mapArray = Array.from(node.elements.values()).sort((l, r) =>
+          l.name.localeCompare(r.name)
+        );
         if (mapArray.length == 0) {
           return [
             {
@@ -186,7 +210,7 @@ export const make = (
         return [];
       }
       if (node.type === 'SERVICE') {
-        return node.children;
+        return node.children.sort((l, r) => l.name.localeCompare(r.name));
       }
       if (node.type === 'LOCATION') {
         const endevorService = await getEndevorServiceByName(
@@ -209,19 +233,39 @@ export const make = (
         const cachedElements = getElements(getState())(node.serviceName)(
           node.name
         );
-        if (cachedElements.length) {
+        const cachedEndevorMap = getEndevorMap(getState())(node.serviceName)(
+          node.name
+        );
+        if (cachedElements.length && cachedEndevorMap) {
           return buildTree(
             node.serviceName,
             endevorService,
             node.name,
-            elementsSearchLocation,
-            cachedElements
+            elementsSearchLocation
+          )(cachedEndevorMap)(cachedElements).sort((l, r) =>
+            l.name.localeCompare(r.name)
           );
         }
-        const elements = await withNotificationProgress('Fetching elements')(
-          (progress) =>
-            searchForElements(progress)(endevorService)(elementsSearchLocation)
-        );
+        const tasksNumber = 4;
+        const [elements, environmentStages, systems, subsystems] =
+          await withNotificationProgress(
+            'Fetching Endevor elements and map structure'
+          )((progress) => {
+            return Promise.all([
+              searchForElements(toSeveralTasksProgress(progress)(tasksNumber))(
+                endevorService
+              )(elementsSearchLocation),
+              getAllEnvironmentStages(
+                toSeveralTasksProgress(progress)(tasksNumber)
+              )(endevorService)(elementsSearchLocation.instance),
+              getAllSystems(toSeveralTasksProgress(progress)(tasksNumber))(
+                endevorService
+              )(elementsSearchLocation.instance),
+              getAllSubSystems(toSeveralTasksProgress(progress)(tasksNumber))(
+                endevorService
+              )(elementsSearchLocation.instance),
+            ]);
+          });
         if (isError(elements)) {
           const error = elements;
           reporter.sendTelemetryEvent({
@@ -240,24 +284,98 @@ export const make = (
           type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
           elementsAmount: elements.length,
         });
+        if (isError(environmentStages)) {
+          const error = environmentStages;
+          logger.error(
+            'Unable to fetch environments information from Endevor.',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          return [];
+        }
+        if (isError(systems)) {
+          const error = systems;
+          logger.error(
+            'Unable to fetch systems information from Endevor.',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          return [];
+        }
+        if (isError(subsystems)) {
+          const error = subsystems;
+          logger.error(
+            'Unable to fetch subsystems information from Endevor.',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          return [];
+        }
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const searchEnvironment = elementsSearchLocation.environment!;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const searchStage = elementsSearchLocation.stageNumber!;
+        let endevorMap: EndevorMap;
+        if (
+          !isDefined(elementsSearchLocation.subsystem) ||
+          elementsSearchLocation.subsystem === ANY_VALUE ||
+          !isDefined(elementsSearchLocation.system) ||
+          elementsSearchLocation.system === ANY_VALUE
+        ) {
+          endevorMap = toEndevorMapWithWildcards(environmentStages)(systems)(
+            subsystems
+          )({
+            environment: searchEnvironment,
+            stageNumber: searchStage,
+          });
+        } else {
+          endevorMap = toEndevorMap(environmentStages)(systems)(subsystems)({
+            environment: searchEnvironment,
+            stageNumber: searchStage,
+            system: elementsSearchLocation.system,
+            subSystem: elementsSearchLocation.subsystem,
+          });
+        }
         const latestElementVersion = Date.now();
         const newSystems = buildTree(
           node.serviceName,
           endevorService,
           node.name,
-          elementsSearchLocation,
+          elementsSearchLocation
+        )(endevorMap)(
           elements.map((element) => {
             return {
               element,
               lastRefreshTimestamp: latestElementVersion,
             };
           })
-        );
+        ).sort((l, r) => l.name.localeCompare(r.name));
         await dispatch({
           type: Actions.ELEMENTS_FETCHED,
           elements,
           serviceName: node.serviceName,
           searchLocationName: node.name,
+        });
+        await dispatch({
+          type: Actions.ENDEVOR_MAP_BUILT,
+          serviceName: node.serviceName,
+          searchLocationName: node.name,
+          endevorMap,
         });
         return newSystems;
       }
