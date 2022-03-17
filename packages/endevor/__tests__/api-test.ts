@@ -25,6 +25,9 @@ import {
   signInElement,
   updateElement,
   addElement,
+  getAllEnvironmentStages,
+  getAllSystems,
+  getAllSubSystems,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import { isError, toEndevorProtocol, toVersion2Api } from '../utils';
@@ -36,6 +39,9 @@ import {
   ElementSearchLocation,
   ElementWithFingerprint,
   ServiceLocation,
+  EnvironmentStage,
+  SubSystem,
+  System,
 } from '../_doc/Endevor';
 import { MockRequest, MockResponse } from '../_doc/MockServer';
 import { ProgressReporter } from '../_doc/Progress';
@@ -229,6 +235,795 @@ describe('endevor public API', () => {
       expect(calledOnce).toBe(true);
 
       expect(actualInstances).toEqual([]);
+    });
+  });
+
+  describe('fetching all systems', () => {
+    const toRequestPath =
+      (basePath: string) =>
+      (instance: string): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          ANY_VALUE,
+          'stgnum',
+          ANY_VALUE,
+          'sys',
+          ANY_VALUE
+        );
+      };
+    it('should return the list of all filtered systems', async () => {
+      // arrange
+      const instanceName = 'TEST';
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instanceName),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSystems: ReadonlyArray<System> = [
+        {
+          environment: 'TEST',
+          stageNumber: '1',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS2',
+        },
+        {
+          environment: 'TEST1',
+          stageNumber: '1',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const invalidSystems: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST1',
+          stageNumber: '1',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validSystems.map((system) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgSeqNum: system.stageNumber,
+                nextSys: system.nextSystem,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidSystems.map((system: any) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgSeqNum: system.stageNumber,
+                nextSys: system.nextSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(instanceName))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instanceName);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSystems).toEqual(validSystems);
+    });
+    it('should return the list of all filtered systems for v1 Endevor API base path', async () => {
+      // arrange
+      const instanceName = 'TEST';
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instanceName),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const expectedSystems: ReadonlyArray<System> = [
+        {
+          environment: 'TEST',
+          stageNumber: '1',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS2',
+        },
+        {
+          environment: 'TEST1',
+          stageNumber: '1',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...expectedSystems.map((system) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgSeqNum: system.stageNumber,
+                nextSys: system.nextSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(instanceName))
+      );
+      const v1BasePath = basePath;
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: v1BasePath,
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instanceName);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSystems).toEqual(expectedSystems);
+    });
+    it('should return an error in case of incorrect (nonexisting) instance', async () => {
+      // arrange
+      const nonExistingInstance = 'TEST';
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(nonExistingInstance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal Server Error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 16,
+          reasonCode: 0,
+          reports: null,
+          messages: [
+            `EWS1101E Configuration ${nonExistingInstance} is not defined or is invalid`,
+          ],
+          data: null,
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(nonExistingInstance))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(nonExistingInstance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSystems)).toBe(true);
+    });
+    it('should return an error in case of incorrect credentials', async () => {
+      // arrange
+      const instanceName = 'TEST';
+      const incorrectCredentials: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instanceName),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(incorrectCredentials)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 20,
+          reasonCode: 34,
+          reports: null,
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          data: null,
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(instanceName))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential: incorrectCredentials,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instanceName);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSystems)).toBe(true);
+    });
+    it('should return an error in case of incorrect connection details', async () => {
+      // arrange
+      const instanceName = 'TEST';
+      const credentials: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const nonExistingServiceLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential: credentials,
+        location: nonExistingServiceLocation,
+        rejectUnauthorized,
+      })(instanceName);
+      // assert
+      expect(isError(actualSystems)).toBe(true);
+    });
+    it('should return an error if something went wrong on the Endevor side', async () => {
+      // arrange
+      const instanceName = 'TEST';
+      const credentials: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instanceName),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credentials)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 16,
+          reasonCode: 20,
+          reports: null,
+          messages: ['Very important Endevor error'],
+          data: null,
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(instanceName))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)({
+        credential: credentials,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instanceName);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSystems)).toBe(true);
+    });
+  });
+
+  describe('fetching all subsystems', () => {
+    const instance = 'TEST-INST';
+    const toRequestPath =
+      (basePath: string) =>
+      (instance: string): string => {
+        return join(
+          basePath,
+          instance,
+          'env',
+          ANY_VALUE,
+          'stgnum',
+          ANY_VALUE,
+          'sys',
+          ANY_VALUE,
+          'subsys',
+          ANY_VALUE
+        );
+      };
+
+    it('should return the list of all filtered subsystems', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSubSystems: ReadonlyArray<SubSystem> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageNumber: '1',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const invalidSubSystems: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          stageNumber: '2',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validSubSystems.map((subsystem) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidSubSystems.map((subsystem: any) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(instance))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSubSystems).toEqual(validSubSystems);
+    });
+
+    it('should return the list of all filtered subsystems for v1 Endevor API base path', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSubSystems: ReadonlyArray<SubSystem> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageNumber: '1',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const invalidSubSystems: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          stageNumber: '2',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validSubSystems.map((subsystem) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidSubSystems.map((subsystem: any) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.name,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(instance))
+      );
+      const v1BasePath = basePath;
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: v1BasePath,
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSubSystems).toEqual(validSubSystems);
+    });
+
+    it('should return an error in case of incorrect (nonexisting) instance', async () => {
+      // arrange
+      const nonExistingInstance = 'TEST';
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(nonExistingInstance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal Server Error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 16,
+          reasonCode: 0,
+          reports: null,
+          messages: [
+            `EWS1101E Configuration ${nonExistingInstance} is not defined or is invalid`,
+          ],
+          data: null,
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(nonExistingInstance))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(nonExistingInstance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSubSystems)).toBe(true);
+    });
+
+    it('should return an error in case of incorrect credentials', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 20,
+          reasonCode: 34,
+          reports: null,
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          data: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(instance))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSubSystems)).toBe(true);
+    });
+
+    it('should return an error in case of incorrect connection details', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const randomLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: randomLocation,
+        rejectUnauthorized,
+      })(instance);
+      // assert
+      expect(isError(actualSubSystems)).toBe(true);
+    });
+
+    it('should return an error if something went wrong on Endevor side', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(instance),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const invalidResponse: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          realData: ['Hmm, is it real data???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(
+        request,
+        invalidResponse
+      )(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(toVersion2Api(basePath))(instance))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualSubSystems)).toBe(true);
     });
   });
 
@@ -3474,6 +4269,424 @@ describe('endevor public API', () => {
       })(element)(addActionChangeControlValue)(content);
       // assert
       expect(isError(addResult)).toBe(true);
+    });
+  });
+
+  describe('fetching all environment stages', () => {
+    const searchLocation: ElementSearchLocation = {
+      instance: 'TEST-INST',
+    };
+    const toRequestPath =
+      (basePath: string) =>
+      ({ instance }: ElementSearchLocation): string => {
+        return join(basePath, instance, 'env', ANY_VALUE, 'stgnum', ANY_VALUE);
+      };
+
+    it('should return filtered environment stages', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validEnvironments = [
+        {
+          environment: 'TEST-ENV1',
+          stageNumber: '1',
+          nextEnvironment: 'FINAL-ENV',
+          nextStageNumber: '1',
+        },
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '1',
+          nextEnvironment: null,
+          nextStageNumber: null,
+        },
+      ];
+      const invalidEnvironments = [
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '1',
+          nextEnvironment: 'TEST-ENV2',
+          nextStageNumber: 'TEST',
+        },
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '1',
+          nextEnvironment: 'TEST-ENV2',
+          nextStageNumber: null,
+        },
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '2',
+          nextEnvironment: null,
+          nextStageNumber: '1',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validEnvironments.map((element) => {
+              return {
+                envName: element.environment,
+                stgNum: element.stageNumber,
+                nextEnv: element.nextEnvironment,
+                nextStgNum: element.nextStageNumber,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidEnvironments.map((element: any) => {
+              return {
+                envName: element.environment,
+                stgName: element.stageName,
+                stgId: element.stageId,
+                stgNum: element.stageNumber,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(searchLocation)
+        )
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      const expectedEnvironments: ReadonlyArray<EnvironmentStage> = [
+        {
+          environment: 'TEST-ENV1',
+          stageNumber: '1',
+          nextEnvironment: 'FINAL-ENV',
+          nextStageNumber: '1',
+        },
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '1',
+        },
+      ];
+      expect(actualEnvironments).toEqual(expectedEnvironments);
+    });
+
+    it('should return environment stages for V1 base path specified', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validEnvironments = [
+        {
+          environment: 'TEST-ENV1',
+          stageNumber: '1',
+          nextEnvironment: 'TEST-ENV2',
+          nextStageNumber: '2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validEnvironments.map((element) => {
+              return {
+                envName: element.environment,
+                stgNum: element.stageNumber,
+                nextEnv: element.nextEnvironment,
+                nextStgNum: element.nextStageNumber,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(searchLocation)
+        )
+      );
+      const v1BasePath = basePath;
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: v1BasePath,
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualEnvironments).toEqual(validEnvironments);
+    });
+
+    it('should return an error in case of an incorrect (nonexisting) instance', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal Server Error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 16,
+          reasonCode: 0,
+          reports: null,
+          messages: [
+            `EWS1101E Configuration ${searchLocation.instance} is not defined or is invalid`,
+          ],
+          data: null,
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(toRequestPath(request.path)(searchLocation))
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualEnvironments)).toBe(true);
+    });
+
+    it('should return an error for incorrect connection details', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const randomLocation: ServiceLocation = {
+        protocol: 'http',
+        port: 1234,
+        hostname: 'localhost',
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: randomLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      expect(isError(actualEnvironments)).toBe(true);
+    });
+
+    it('should return an error for incorrect base credentials', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 20,
+          reasonCode: 34,
+          reports: null,
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          data: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(searchLocation)
+        )
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualEnvironments)).toBe(true);
+    });
+
+    it('should return an error if something went wrong on Endevor side', async () => {
+      // arrange
+      const credential: BaseCredential = {
+        user: 'test',
+        password: 'test',
+        type: CredentialType.BASE,
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(toVersion2Api(basePath))(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const invalidResponse: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          realData: ['Hmm, is it real data???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(
+        request,
+        invalidResponse
+      )(mockServer);
+      const { protocol, hostname, port } = new URL(
+        mockServer.urlFor(
+          toRequestPath(toVersion2Api(basePath))(searchLocation)
+        )
+      );
+      const serviceLocation: ServiceLocation = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        protocol: toEndevorProtocol(protocol)!,
+        port: parseInt(port),
+        hostname,
+        basePath: toVersion2Api(basePath),
+      };
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )({
+        credential,
+        location: serviceLocation,
+        rejectUnauthorized,
+      })(searchLocation.instance);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isError(actualEnvironments)).toBe(true);
     });
   });
 });

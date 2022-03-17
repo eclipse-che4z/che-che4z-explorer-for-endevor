@@ -109,7 +109,6 @@ const generateSingleElement =
       newElementUri = elementNode.uri;
     }
     const updatedElementNode: SelectedElementNode = {
-      id: elementNode.id,
       searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
       type: elementNode.type,
       name: elementNode.name,

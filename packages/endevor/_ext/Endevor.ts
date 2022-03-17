@@ -12,6 +12,7 @@
  */
 
 import * as t from 'io-ts';
+import { toEndevorStageNumber } from '../utils';
 import { StageNumber } from '../_doc/Endevor';
 
 // "What makes io-ts uniquely valuable is that it simultaneously defines a runtime validator and a static type."
@@ -19,6 +20,14 @@ import { StageNumber } from '../_doc/Endevor';
 
 export type Repository = t.TypeOf<typeof Repository>;
 export type Repositories = t.TypeOf<typeof Repositories>;
+
+export type EnvironmentStage = t.TypeOf<typeof EnvironmentStage>;
+
+export type System = t.TypeOf<typeof System>;
+export type Systems = t.TypeOf<typeof Systems>;
+
+export type SubSystem = t.TypeOf<typeof SubSystem>;
+export type SubSystems = t.TypeOf<typeof SubSystems>;
 
 export type Element = t.TypeOf<typeof Element>;
 export type Elements = t.TypeOf<typeof Elements>;
@@ -39,6 +48,15 @@ export type SuccessListElementsResponse = t.TypeOf<
 >;
 export type SuccessListRepositoriesResponse = t.TypeOf<
   typeof SuccessListRepositoriesResponse
+>;
+export type SuccessListEnvironmentStagesResponse = t.TypeOf<
+  typeof SuccessListEnvironmentStagesResponse
+>;
+export type SuccessListSystemsResponse = t.TypeOf<
+  typeof SuccessListSystemsResponse
+>;
+export type SuccessListSubSystemsResponse = t.TypeOf<
+  typeof SuccessListSubSystemsResponse
 >;
 export type SuccessListDependenciesResponse = t.TypeOf<
   typeof SuccessListDependenciesResponse
@@ -61,13 +79,34 @@ class StageNumberType extends t.Type<StageNumber> {
   constructor() {
     super(
       'StageNumber',
-      (value): value is StageNumber => value === '1' || value === '2',
+      (value): value is StageNumber => `${value}` === '1' || `${value}` === '2',
       (value, context) =>
-        this.is(value) ? t.success(value) : t.failure(value, context),
-      (value) => value
+        this.is(value)
+          ? t.success(this.encode(value))
+          : t.failure(value, context),
+      // it will be already checked within type guard
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      (value) => toEndevorStageNumber(value)!
     );
   }
 }
+
+export const System = t.type({
+  envName: t.string,
+  stgSeqNum: new StageNumberType(),
+  sysName: t.string,
+  nextSys: t.string,
+});
+export const Systems = t.array(System);
+
+export const SubSystem = t.type({
+  envName: t.string,
+  stgSeqNum: new StageNumberType(),
+  sysName: t.string,
+  sbsName: t.string,
+  nextSbs: t.string,
+});
+export const SubSystems = t.array(SubSystem);
 
 const Path = t.type({
   envName: t.string,
@@ -76,6 +115,13 @@ const Path = t.type({
   sbsName: t.string,
   typeName: t.string,
   elmName: t.string,
+});
+
+export const EnvironmentStage = t.type({
+  envName: t.string,
+  stgNum: new StageNumberType(),
+  nextEnv: t.union([t.string, t.null]),
+  nextStgNum: t.union([new StageNumberType(), t.null]),
 });
 
 export const Element = t.intersection([
@@ -135,6 +181,24 @@ export const SuccessRetrieveResponse = t.type({
 export const SuccessListRepositoriesResponse = t.type({
   body: t.type({
     returnCode: t.number,
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListEnvironmentStagesResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListSystemsResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListSubSystemsResponse = t.type({
+  body: t.type({
     data: t.array(t.unknown),
   }),
 });

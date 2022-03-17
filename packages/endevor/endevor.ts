@@ -49,6 +49,10 @@ import {
   SdkUpdateParams,
   OverrideSignOut,
   ElementWithDependenciesWithSignout,
+  EnvironmentStage,
+  Value,
+  SubSystem,
+  System,
 } from './_doc/Endevor';
 import {
   Session,
@@ -74,6 +78,12 @@ import {
   SignInResponse,
   AddResponse,
   BaseResponse,
+  EnvironmentStage as ExternalEnvironmentStage,
+  SuccessListEnvironmentStagesResponse,
+  SubSystem as ExternalSubSystem,
+  SuccessListSystemsResponse,
+  System as ExternalSystem,
+  SuccessListSubSystemsResponse,
 } from './_ext/Endevor';
 import { Logger } from '@local/extension/_doc/Logger';
 import { ANY_VALUE } from './const';
@@ -156,6 +166,278 @@ const toEndevorSession =
       basePath: toVersion2Api(basePath),
       rejectUnauthorized,
     });
+  };
+
+export const getAllEnvironmentStages =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (
+    instance: string
+  ): Promise<ReadonlyArray<EnvironmentStage> | Error> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+    };
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listStage(session)(instance)(requestArgs);
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the environments stages for the instance ${instance} because of error ${error.message}`
+      );
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListEnvironmentStagesResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error ${
+            error.message
+          }\nof an incorrect response ${JSON.stringify(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return new Error(
+          `Unable to fetch the environments stages for the instance ${instance} because of response code ${response.body.returnCode}`
+        );
+      }
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the environments stages for the instance ${instance} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
+      );
+    }
+    try {
+      parsedResponse = parseToType(
+        SuccessListEnvironmentStagesResponse,
+        response
+      );
+    } catch (error) {
+      logger.trace(
+        `Unable to fetch the environments stages for the instance ${instance} because of error ${
+          error.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the environments stages for the instance ${instance} because of incorrect response`
+      );
+    }
+    const environments = parsedResponse.body.data
+      .map((environment) => {
+        try {
+          return parseToType(ExternalEnvironmentStage, environment);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the environment ${JSON.stringify(
+              environment
+            )} because of error ${e.message} in the response.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((environment) => {
+        return {
+          environment: environment.envName,
+          stageNumber: environment.stgNum,
+          nextEnvironment:
+            environment.nextEnv === null ? undefined : environment.nextEnv,
+          nextStageNumber:
+            environment.nextStgNum === null
+              ? undefined
+              : environment.nextStgNum,
+        };
+      });
+    progress.report({ increment: 20 });
+    return environments;
+  };
+
+export const getAllSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (instance: Value): Promise<ReadonlyArray<System> | Error> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+      system: ANY_VALUE,
+    };
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listSystem(session)(instance)(requestArgs);
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the systems from ${instance} because of error ${error.message}`
+      );
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListSystemsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error ${
+            error.message
+          }\nof an incorrect response ${JSON.stringify(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return new Error(
+          `Unable to fetch the systems from ${instance} because of response code ${response.body.returnCode}`
+        );
+      }
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the systems from ${instance} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
+      );
+    }
+    try {
+      parsedResponse = parseToType(SuccessListSystemsResponse, response);
+    } catch (error) {
+      logger.trace(
+        `Unable to fetch the systems from ${instance} because of error ${
+          error.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the systems from ${instance} because of incorrect response`
+      );
+    }
+    const systems = parsedResponse.body.data
+      .map((system) => {
+        try {
+          return parseToType(ExternalSystem, system);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the system ${JSON.stringify(
+              system
+            )} because of error ${e.message} in the response.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((system) => {
+        return {
+          environment: system.envName,
+          // we treat stage sequence number as a stage number here,
+          // because with search for systems in all environments (*),
+          // each environment will be treated independently, so sequence number will be the same as stage number
+          // TODO: change to stageID
+          stageNumber: system.stgSeqNum,
+          system: system.sysName,
+          nextSystem: system.nextSys,
+        };
+      });
+    progress.report({ increment: 20 });
+    return systems;
+  };
+
+export const getAllSubSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (instance: string): Promise<ReadonlyArray<SubSystem> | Error> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+      system: ANY_VALUE,
+      subsystem: ANY_VALUE,
+    };
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listSubsystem(session)(instance)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the subsystems from ${instance} because of error ${error.message}`
+      );
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListSubSystemsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error ${
+            error.message
+          }\nof an incorrect response ${JSON.stringify(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return new Error(
+          `Unable to fetch the subsystems from ${instance} because of response code ${response.body.returnCode}`
+        );
+      }
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the subsystems from ${instance} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
+      );
+    }
+    try {
+      parsedResponse = parseToType(SuccessListSubSystemsResponse, response);
+    } catch (error) {
+      logger.trace(
+        `Unable to fetch the subsystems from ${instance} because of error ${
+          error.message
+        }\nof an incorrect response ${JSON.stringify(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to fetch the subsystems from ${instance} because of incorrect response`
+      );
+    }
+    const subSystems = parsedResponse.body.data
+      .map((subSystem) => {
+        try {
+          return parseToType(ExternalSubSystem, subSystem);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the subsystem ${JSON.stringify(
+              subSystem
+            )} because of error ${e.message} in the response.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((subSystem): SubSystem => {
+        return {
+          environment: subSystem.envName,
+          // we treat stage sequence number as a stage number here,
+          // because with search for systems in all environments (*),
+          // each environment will be treated independently, so sequence number will be the same as stage number
+          // TODO: change to stageID
+          stageNumber: subSystem.stgSeqNum,
+          system: subSystem.sysName,
+          subSystem: subSystem.sbsName,
+          nextSubSystem: subSystem.nextSbs,
+        };
+      });
+    progress.report({ increment: 20 });
+    return subSystems;
   };
 
 export const searchForElements =

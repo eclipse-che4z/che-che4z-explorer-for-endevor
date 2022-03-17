@@ -34,8 +34,10 @@ import {
   ElementGenerated,
   ElementSignedin,
   ElementSignedout,
+  EndevorMapBuilt,
 } from '../_doc/Actions';
 import { Node } from '../_doc/ElementTree';
+import { EndevorMap } from '../_doc/Endevor';
 import {
   ElementLocationName,
   EndevorServiceName,
@@ -66,6 +68,11 @@ export const make = (
       }
       case Actions.LOCATION_CONFIG_CHANGED: {
         state = locationsReducer(state)(action);
+        refreshTree(state);
+        break;
+      }
+      case Actions.ENDEVOR_MAP_BUILT: {
+        state = endevorMapBuiltReducer(state)(action);
         refreshTree(state);
         break;
       }
@@ -126,6 +133,7 @@ export const toState = (locations: ReadonlyArray<LocationConfig>): State => {
       cachedElements: locationConfig.elementLocations.map((locationItem) => {
         return {
           searchLocation: locationItem,
+          endevorMap: {},
           elements: {},
         };
       }),
@@ -179,6 +187,38 @@ const locationsReducer =
     });
   };
 
+const endevorMapBuiltReducer =
+  (initialState: State) =>
+  ({ serviceName, searchLocationName, endevorMap }: EndevorMapBuilt): State => {
+    const existingItem = initialState.find((stateItem) => {
+      return stateItem.serviceName === serviceName;
+    });
+    if (!existingItem) return initialState;
+    const existingCache = existingItem.cachedElements.find(
+      (element) => element.searchLocation === searchLocationName
+    );
+    if (!existingCache) return initialState;
+    const updatedCacheItem = {
+      searchLocation: existingCache.searchLocation,
+      endevorMap,
+      elements: existingCache.elements,
+    };
+    const updatedItem = {
+      serviceName: existingItem.serviceName,
+      credential: existingItem.credential,
+      cachedElements: replaceWith(existingItem.cachedElements)(
+        (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
+          value1.searchLocation === value2.searchLocation,
+        updatedCacheItem
+      ),
+    };
+    return replaceWith(initialState)(
+      (value1: StateItem, value2: StateItem) =>
+        value1.serviceName === value2.serviceName,
+      updatedItem
+    );
+  };
+
 const addedElementReducer = (
   initialState: State,
   elementAddedAction: ElementAdded
@@ -205,6 +245,7 @@ const addedElementReducer = (
   };
   const updatedCacheItem = {
     searchLocation: existingCache.searchLocation,
+    endevorMap: existingCache.endevorMap,
     elements: updatedCachedElements,
   };
   const updatedItem = {
@@ -268,6 +309,7 @@ const removingLocalElementsCacheReducer = (initialState: State): State => {
       cachedElements: stateItem.cachedElements.map((element) => {
         return {
           searchLocation: element.searchLocation,
+          endevorMap: element.endevorMap,
           elements: {},
         };
       }),
@@ -309,6 +351,7 @@ const smartElementReducer = (
   };
   const updatedCacheItem = {
     searchLocation: existingCache.searchLocation,
+    endevorMap: existingCache.endevorMap,
     elements: updatedElements,
   };
   const updatedStateItem = {
@@ -342,6 +385,7 @@ const replaceElementsReducer =
     const latestElementVersion = Date.now();
     const updatedCacheItem = {
       searchLocation: existingCache.searchLocation,
+      endevorMap: existingCache.endevorMap,
       elements: elements.reduce((accum, element) => {
         const newElementId =
           toElementId(serviceName)(searchLocationName)(element);
@@ -407,4 +451,22 @@ export const getElements =
     });
     if (!existingLocation) return [];
     return Object.values(existingLocation.elements);
+  };
+
+export const getEndevorMap =
+  (state: State) =>
+  (serviceName: EndevorServiceName) =>
+  (searchLocationName: ElementLocationName): EndevorMap | undefined => {
+    const existingService = state.find((stateItem) => {
+      const serviceExists = stateItem.serviceName === serviceName;
+      return serviceExists;
+    });
+    if (!existingService) return;
+    const existingLocation = existingService.cachedElements.find((element) => {
+      const searchLocationExists =
+        element.searchLocation === searchLocationName;
+      return searchLocationExists;
+    });
+    if (!existingLocation) return;
+    return existingLocation.endevorMap;
   };

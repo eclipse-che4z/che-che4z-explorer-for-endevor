@@ -20,6 +20,7 @@ export const enum TelemetryEvents {
   ELEMENT_LOCATIONS_PROVIDED = 'element locations provided in the tree',
   ELEMENTS_PROVIDED = 'elements provided in the tree',
   ELEMENTS_WERE_FETCHED = 'elements were fetched',
+  ENDEVOR_MAP_STRUCTURE_BUILT = 'endevor map structure built',
   MISSING_CREDENTIALS_PROMPT_CALLED = 'missing credentials prompt called',
   MISSING_CREDENTIALS_PROVIDED = 'missing credentials provided',
   COMMAND_ADD_ELEMENT_CALLED = 'add element command called',
@@ -108,6 +109,17 @@ export type ElementsFetchedEvent =
       type: TelemetryEvents.ELEMENTS_WERE_FETCHED;
       elementsAmount: number;
     };
+
+export const enum EndevorMapBuildingStatus {
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type EndevorMapNotBuiltEvent = {
+  type: TelemetryEvents.ERROR;
+  errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT;
+  status: EndevorMapBuildingStatus.GENERIC_ERROR;
+  error: Error;
+};
 
 export type ElementLocationsProvidedInTheTreeEvent = {
   type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED;
@@ -602,6 +614,7 @@ export type TelemetryEvent =
   | CommandAddElementCompletedEvent
   | ElementsProvidedInTheTreeEvent
   | ElementsFetchedEvent
+  | EndevorMapNotBuiltEvent
   | ElementLocationsProvidedInTheTreeEvent
   | ElementLocationsNotProvidedInTheTreeEvent
   | MissingCredentialsPromptCalledEvent

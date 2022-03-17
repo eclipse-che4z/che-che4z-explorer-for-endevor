@@ -22,6 +22,9 @@ import {
   UpdateResponse,
   SignInResponse,
   BaseResponse,
+  SuccessListEnvironmentStagesResponse,
+  SuccessListSystemsResponse,
+  SuccessListSubSystemsResponse,
 } from '../_ext/Endevor';
 
 describe('Endevor responses type parsing', () => {
@@ -158,6 +161,107 @@ describe('Endevor responses type parsing', () => {
       // act && assert
       expect(() => parseToType(BaseResponse, response)).toThrowError(
         'Invalid value undefined supplied to : { body: { returnCode: number } }/body: { returnCode: number }/returnCode: number'
+      );
+    });
+  });
+  describe('Endevor systems response type parsing', () => {
+    it('should parse a response with any systems', () => {
+      // arrange
+      const anyData = [
+        {
+          whaaat: 'whaaaat???',
+        },
+        {
+          whatttttt: 'whattttt??',
+        },
+        {
+          envName: 'test',
+          sysName: 'test-sys',
+          stgSeqNum: 1,
+        },
+      ];
+      const successResponse = {
+        body: {
+          data: anyData,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(
+        SuccessListSystemsResponse,
+        successResponse
+      );
+      // assert
+      const expectedResponse: SuccessListSystemsResponse = {
+        body: {
+          data: anyData,
+        },
+      };
+      expect(parsedResponse).toStrictEqual(expectedResponse);
+    });
+    it('should throw an error for a response without systems', () => {
+      // arrange
+      const errorResponse = {
+        body: {
+          returnCode: 8,
+          data: null,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(SuccessListSystemsResponse, errorResponse)
+      ).toThrowError(
+        'Invalid value null supplied to : { body: { data: Array<unknown> } }/body: { data: Array<unknown> }/data: Array<unknown>'
+      );
+    });
+  });
+  describe('Endevor subsystems response type parsing', () => {
+    it('should parse a response with any subsystems', () => {
+      // arrange
+      const anyData = [
+        {
+          whaaat: 'whaaaat???',
+        },
+        {
+          whatttttt: 'whattttt??',
+        },
+        {
+          envName: 'test',
+          sysName: 'test-sys',
+          sbsName: 'test-subsys',
+          stgSeqNum: 1,
+        },
+      ];
+      const successResponse = {
+        body: {
+          data: anyData,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(
+        SuccessListSubSystemsResponse,
+        successResponse
+      );
+      // assert
+      const expectedResponse: SuccessListSubSystemsResponse = {
+        body: {
+          data: anyData,
+        },
+      };
+      expect(parsedResponse).toStrictEqual(expectedResponse);
+    });
+    it('should throw an error for a response without subsystems', () => {
+      // arrange
+      const errorResponse = {
+        body: {
+          returnCode: 8,
+          data: null,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(SuccessListSubSystemsResponse, errorResponse)
+      ).toThrowError(
+        'Invalid value null supplied to : { body: { data: Array<unknown> } }/body: { data: Array<unknown> }/data: Array<unknown>'
       );
     });
   });
@@ -759,6 +863,53 @@ describe('Endevor responses type parsing', () => {
       // act && assert
       expect(() => parseToType(SignInResponse, response)).toThrowError(
         'Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+      );
+    });
+  });
+  describe('Endevor environment stages response type parsing', () => {
+    it('should parse a response with any data', () => {
+      // arrange
+      const anyData = [
+        {
+          some_name: 'blah',
+        },
+        {
+          some_different_name: 'blah',
+        },
+        {
+          name: 'real_name',
+        },
+      ];
+      const response = {
+        body: {
+          data: anyData,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(
+        SuccessListEnvironmentStagesResponse,
+        response
+      );
+      // assert
+      const expectedResponse: SuccessListEnvironmentStagesResponse = {
+        body: {
+          data: anyData,
+        },
+      };
+      expect(parsedResponse).toStrictEqual(expectedResponse);
+    });
+    it('should throw an error for a response without environment stages', () => {
+      // arrange
+      const errorResponse = {
+        body: {
+          data: null,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(SuccessListEnvironmentStagesResponse, errorResponse)
+      ).toThrowError(
+        'Invalid value null supplied to : { body: { data: Array<unknown> } }/body: { data: Array<unknown> }/data: Array<unknown>'
       );
     });
   });

@@ -29,7 +29,7 @@ async function bundleLicenses(compilation, options) {
     options.override
   );
   await Promise.all([
-    writeNoticeFile(depsLicenses),
+    writeNoticeFile(depsLicenses, options.noticeTemplateFilePath),
     writeLicenseFile(depsLicenses, options.licenseTemplateFilePath),
   ]);
 }
@@ -41,16 +41,19 @@ function getDependenciesLicenseInfo(compilation, override) {
   return getSortedLicenseInformation(licenses);
 }
 
-async function writeNoticeFile(depsLicenses) {
+async function writeNoticeFile(depsLicenses, noticeTemplateFilePath) {
+  const noticeText = (await readFile(noticeTemplateFilePath))
+    .toString(ENCODING)
+    .trim();
+  const header = noticeText;
   const separator = `${lineSeparator}${lineSeparator}`;
-  const header = `## Third-party Content${separator}This project leverages the following third party content.`;
   const depsContent = depsLicenses
     .map(
       (dep) =>
         `${dep.name} (${dep.version})${lineSeparator}${lineSeparator}- License: ${dep.licenseName}${lineSeparator}- Project: https://www.npmjs.com/package/${dep.name}`
     )
     .join(separator);
-  const content = `${header}${separator}${depsContent}`;
+  const content = `${header}${separator}${depsContent}${lineSeparator}`;
   await writeFile('NOTICE.md', content);
 }
 
@@ -63,10 +66,12 @@ async function writeLicenseFile(depsLicenses, licenseTemplateFilePath) {
   const depsContent = depsLicenses
     .map(
       (dep) =>
-        `${dep.licenseName}${lineSeparator}(${dep.name} ${dep.version})${lineSeparator}${lineSeparator}${dep.licenseText}`
+        `${dep.licenseName}${lineSeparator}(${dep.name} ${
+          dep.version
+        })${lineSeparator}${lineSeparator}${dep.licenseText.trim()}`
     )
     .join(separator);
-  const content = `${header}${separator}${depsContent}`;
+  const content = `${header}${separator}${depsContent}${lineSeparator}`;
   await writeFile('LICENSE', content);
 }
 
