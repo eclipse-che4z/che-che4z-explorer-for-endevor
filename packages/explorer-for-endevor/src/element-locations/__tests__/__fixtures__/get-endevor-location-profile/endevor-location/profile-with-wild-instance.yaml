@@ -1,0 +1,5 @@
+instance: '*'
+environment: 'test-env'
+stageNumber: '1'
+system: 'sys'
+subsystem: 'sbs'
