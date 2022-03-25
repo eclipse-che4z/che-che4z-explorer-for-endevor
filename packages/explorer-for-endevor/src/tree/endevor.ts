@@ -42,7 +42,6 @@ import {
   mapSubsystems,
   toSubsystemMapPathId,
 } from '../_doc/Endevor';
-import { ANY_VALUE } from '@local/endevor/const';
 
 export const toElementId =
   (service: EndevorServiceName) =>
@@ -114,13 +113,9 @@ export const buildTree =
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const searchStageNumber = elementsSearchLocation.stageNumber!;
 
-    const searchSystemDefined =
-      elementsSearchLocation.system &&
-      elementsSearchLocation.system !== ANY_VALUE;
+    const searchSystemDefined = elementsSearchLocation.system;
 
-    const searchSubsystemDefined =
-      elementsSearchLocation.subsystem &&
-      elementsSearchLocation.subsystem !== ANY_VALUE;
+    const searchSubsystemDefined = elementsSearchLocation.subsystem;
 
     const elementsInPlace: Array<CachedElement> = [];
     const elementsUpTheMap: Array<CachedElement> = [];

@@ -35,26 +35,27 @@ export type ServiceInstance = Readonly<{
   requestPoolMaxSize: number;
 }>;
 
-export type AnyValue = '*';
 export type Value = string;
 export type StageNumber = '1' | '2';
 
+// We do not use wildcards as a values.
+// Every value is uppercased by default, except the instance.
 export type InstanceSearchPath = Readonly<{
   instance: Value;
 }> &
   Partial<
     Readonly<{
-      environment: Value | AnyValue;
+      environment: Value;
       stageNumber: StageNumber;
-      system: Value | AnyValue;
-      subsystem: Value | AnyValue;
-      type: Value | AnyValue;
+      system: Value;
+      subsystem: Value;
+      type: Value;
     }>
   >;
 export type ElementSearchPath = InstanceSearchPath &
   Partial<
     Readonly<{
-      element: Value | AnyValue;
+      element: Value;
     }>
   >;
 

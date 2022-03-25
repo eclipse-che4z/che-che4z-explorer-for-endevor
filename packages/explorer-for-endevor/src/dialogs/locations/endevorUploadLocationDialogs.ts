@@ -142,11 +142,11 @@ export const askForUploadLocation = async (
       const type = value.type;
       const name = value.element;
       return [
-        env ? (env !== ANY_VALUE ? env : '*ENV*') : '*ENV*',
+        env ? env : '*ENV*',
         stage ?? '*STGNUM*',
-        sys ? (sys !== ANY_VALUE ? sys : '*SYS*') : '*SYS*',
-        subsys ? (subsys !== ANY_VALUE ? subsys : '*SUBSYS*') : '*SUBSYS*',
-        type ? (type !== ANY_VALUE ? type : '*TYPE*') : '*TYPE*',
+        sys ? sys : '*SYS*',
+        subsys ? subsys : '*SUBSYS*',
+        type ? type : '*TYPE*',
         name ?? '*NAME*',
       ].join(delimiter);
     };

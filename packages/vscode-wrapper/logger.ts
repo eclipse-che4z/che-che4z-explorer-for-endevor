@@ -14,7 +14,7 @@
 import * as vscode from 'vscode';
 import { Logger } from '@local/extension/_doc/Logger';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { LoggerChannel, LOGLEVEL } from './_doc/logger';
+import { LoggerChannel, LOG_LEVEL } from './_doc/logger';
 
 const showLogsOption = 'Show Logs';
 
@@ -23,25 +23,25 @@ const prependTimestamp = (message: string): string =>
 
 const logAndDisplay =
   (outputChannel: LoggerChannel) =>
-  (lvl: LOGLEVEL) =>
+  (lvl: LOG_LEVEL) =>
   (userMsg: string, logMsg?: string) => {
     outputChannel.appendLine(prependTimestamp(userMsg));
     if (logMsg) outputChannel.appendLine(prependTimestamp(logMsg));
 
     switch (lvl) {
-      case LOGLEVEL.TRACE:
+      case LOG_LEVEL.TRACE:
         break;
-      case LOGLEVEL.INFO:
+      case LOG_LEVEL.INFO:
         vscode.window.showInformationMessage(userMsg);
         break;
-      case LOGLEVEL.WARN:
+      case LOG_LEVEL.WARN:
         vscode.window
           .showWarningMessage(userMsg, showLogsOption)
           .then((showLogsChosen) => {
             if (showLogsChosen) outputChannel.showLogs();
           });
         break;
-      case LOGLEVEL.ERROR:
+      case LOG_LEVEL.ERROR:
         vscode.window
           .showErrorMessage(userMsg, showLogsOption)
           .then((showLogsChosen) => {
@@ -55,17 +55,15 @@ const logAndDisplay =
 
 const make = (outputChannel: vscode.OutputChannel): Logger => {
   const log = logAndDisplay({
-    appendLine: outputChannel.appendLine,
-    showLogs: () => {
-      return outputChannel.show(true);
-    },
+    appendLine: (value: string) => outputChannel.appendLine(value),
+    showLogs: () => outputChannel.show(true),
   });
 
   return {
-    trace: (msg: string) => log(LOGLEVEL.TRACE)(msg),
-    info: log(LOGLEVEL.INFO),
-    warn: log(LOGLEVEL.WARN),
-    error: log(LOGLEVEL.ERROR),
+    trace: (msg: string) => log(LOG_LEVEL.TRACE)(msg),
+    info: log(LOG_LEVEL.INFO),
+    warn: log(LOG_LEVEL.WARN),
+    error: log(LOG_LEVEL.ERROR),
   };
 };
 

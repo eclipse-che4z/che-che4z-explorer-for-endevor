@@ -92,11 +92,27 @@ export const getElementLocationByName = async (
   if (profileIsCorrect(locationProfile) && locationProfile.instance) {
     return {
       instance: locationProfile.instance,
-      environment: locationProfile.environment,
+      environment: locationProfile.environment
+        ? locationProfile.environment !== ANY_VALUE
+          ? locationProfile.environment.toUpperCase()
+          : undefined
+        : undefined,
       stageNumber: locationProfile.stageNumber,
-      system: locationProfile.system,
-      subsystem: locationProfile.subsystem,
-      type: locationProfile.type,
+      system: locationProfile.system
+        ? locationProfile.system !== ANY_VALUE
+          ? locationProfile.system.toUpperCase()
+          : undefined
+        : undefined,
+      subsystem: locationProfile.subsystem
+        ? locationProfile.subsystem !== ANY_VALUE
+          ? locationProfile.subsystem.toUpperCase()
+          : undefined
+        : undefined,
+      type: locationProfile.type
+        ? locationProfile.type !== ANY_VALUE
+          ? locationProfile.type.toUpperCase()
+          : undefined
+        : undefined,
       ccid: locationProfile.ccid,
       comment: locationProfile.comment,
     };
