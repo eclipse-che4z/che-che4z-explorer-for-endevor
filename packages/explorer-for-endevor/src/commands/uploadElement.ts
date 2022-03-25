@@ -37,7 +37,6 @@ import {
 } from '../endevor';
 import { logger, reporter } from '../globals';
 import { isError } from '../utils';
-import { ANY_VALUE } from '@local/endevor/const';
 import {
   closeActiveTextEditor,
   withNotificationProgress,
@@ -146,10 +145,7 @@ const askForUploadValues = async (
   searchLocation: ElementSearchLocation,
   element: Element
 ): Promise<[ElementMapPath, ActionChangeControlValue] | Error> => {
-  const uploadType =
-    searchLocation.type && searchLocation.type !== ANY_VALUE
-      ? searchLocation.type
-      : element.type;
+  const uploadType = searchLocation.type ? searchLocation.type : element.type;
   const uploadLocation = await askForUploadLocation({
     environment: searchLocation.environment,
     stageNumber: searchLocation.stageNumber,

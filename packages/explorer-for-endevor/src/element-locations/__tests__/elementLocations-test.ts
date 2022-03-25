@@ -40,7 +40,7 @@ jest.mock(
   { virtual: true }
 );
 
-describe('Create Endevor locations', () => {
+describe('creating Endevor locations', () => {
   let elementLocations: typeof import('../elementLocations');
   const profileRootDir = './__fixtures__/create-endevor-location-profile';
   beforeAll(async () => {
@@ -67,7 +67,7 @@ describe('Create Endevor locations', () => {
     // delete the new profile after test
     await fs.promises.unlink(newLocationPath);
   });
-  it('should create a element location file on disk', async () => {
+  it('should save an element location on disk', async () => {
     // arrange
     const newElementLocation: ElementSearchLocation = {
       instance: 'TEST',
@@ -136,6 +136,106 @@ describe('Endevor element locations fetching', () => {
     // act
     const elementLocation = await elementLocations.getElementLocationByName(
       'endevor-location_1'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+});
+
+describe('fetching an Endevor location by name', () => {
+  it('should return a saved location', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'correct-location-profile'
+    );
+    // assert
+    expect(elementLocation).toStrictEqual({
+      instance: 'TEST-INS',
+      environment: 'TEST-ENV',
+      stageNumber: '1',
+      system: 'SYS',
+      subsystem: 'SBS',
+      type: undefined,
+      ccid: undefined,
+      comment: undefined,
+    });
+  });
+  it('should return undefined for non existing location', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'non-existing-profile'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location without instance', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-without-instance'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location without environment', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-without-env'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location without stage number', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-without-stage'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location with wildcarded instance', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-with-wild-instance'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location with wildcarded environment', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-with-wild-env'
+    );
+    // assert
+    expect(elementLocation).toBeUndefined();
+  });
+  it('should return undefined for the location with incorrect stage number', async () => {
+    // arrange
+    setupGlobals('./__fixtures__/get-endevor-location-profile');
+    const elementLocations = await import('../elementLocations');
+    // act
+    const elementLocation = await elementLocations.getElementLocationByName(
+      'profile-with-incorrect-stage'
     );
     // assert
     expect(elementLocation).toBeUndefined();

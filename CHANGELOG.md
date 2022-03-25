@@ -2,6 +2,13 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.0.2] &ndash; 2022-03-25
+
+### Fixed
+
+- Fixed an issue that prevented the extension from building an Endevor map tree if lowercased values were used in an Endevor location profile.
+- Fixed an issue that caused the extension activation failure in the VSCode version 1.63.2 or lower.
+
 ## [1.0.1] &ndash; 2022-03-17
 
 ### Added
@@ -37,7 +44,7 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 ### Fixed
 
-- Fix password length limit from 8 to 100 characters. You can now take advantage of a passphrase if the passprhase is configured on the server. Unlike a password, a passphrase is case sensitive.
+- Fixed the password length limit from 8 to 100 characters. You can now take advantage of a passphrase if the passphrase is configured on the server. Unlike a password, a passphrase is case-sensitive.
 
 ## [0.14.1] &ndash; 2021-12-21
 

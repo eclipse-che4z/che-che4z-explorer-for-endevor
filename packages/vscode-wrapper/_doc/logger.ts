@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export enum LOGLEVEL {
+export enum LOG_LEVEL {
   TRACE,
   INFO,
   WARN,

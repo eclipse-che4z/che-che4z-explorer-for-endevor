@@ -53,7 +53,6 @@ import {
 import { toSeveralTasksProgress } from '@local/endevor/utils';
 import { EndevorMap } from '../_doc/Endevor';
 import { toEndevorMap, toEndevorMapWithWildcards } from './endevorMap';
-import { ANY_VALUE } from '@local/endevor/const';
 
 class ElementItem extends vscode.TreeItem {
   constructor(node: ElementNode) {
@@ -333,9 +332,7 @@ export const make = (
         let endevorMap: EndevorMap;
         if (
           !isDefined(elementsSearchLocation.subsystem) ||
-          elementsSearchLocation.subsystem === ANY_VALUE ||
-          !isDefined(elementsSearchLocation.system) ||
-          elementsSearchLocation.system === ANY_VALUE
+          !isDefined(elementsSearchLocation.system)
         ) {
           endevorMap = toEndevorMapWithWildcards(environmentStages)(systems)(
             subsystems
