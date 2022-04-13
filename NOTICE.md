@@ -177,7 +177,7 @@ emoji-regex (8.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/emoji-regex
 
-entities (2.2.0)
+entities (2.1.0)
 
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/entities

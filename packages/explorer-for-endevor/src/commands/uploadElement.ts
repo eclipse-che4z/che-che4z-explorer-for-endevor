@@ -30,13 +30,9 @@ import {
   askForUploadLocation,
   dialogCancelled as uploadLocationDialogCancelled,
 } from '../dialogs/locations/endevorUploadLocationDialogs';
-import {
-  overrideSignOutElement,
-  signOutElement,
-  updateElement,
-} from '../endevor';
+import { signOutElement, updateElement } from '../endevor';
 import { logger, reporter } from '../globals';
-import { isError } from '../utils';
+import { isError, isTheSameLocation } from '../utils';
 import {
   closeActiveTextEditor,
   withNotificationProgress,
@@ -49,6 +45,7 @@ import {
   ElementMapPath,
   ElementSearchLocation,
   Service,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
 import { TextDecoder } from 'util';
@@ -92,11 +89,14 @@ export const uploadElementCommand = async (
   );
   const {
     element,
-    searchLocation,
-    service,
     fingerprint,
-    searchLocationName,
-    serviceName,
+    endevorConnectionDetails: service,
+    searchContext: {
+      searchLocationName,
+      serviceName,
+      overallSearchLocation: searchLocation,
+      initialSearchLocation,
+    },
   } = editSessionParams;
   const uploadValues = await askForUploadValues(searchLocation, element);
   if (isError(uploadValues)) {
@@ -107,14 +107,14 @@ export const uploadElementCommand = async (
   const [uploadLocation, uploadChangeControlValue] = uploadValues;
   await closeEditSession(elementUri);
   const uploadResult = await uploadElement(dispatch)(
-    service,
-    searchLocation,
     serviceName,
-    searchLocationName
-  )({
-    ...uploadLocation,
-    extension: element.extension,
-  })(uploadChangeControlValue)(elementUri.fsPath, fingerprint);
+    searchLocationName,
+    initialSearchLocation
+  )(service, searchLocation)(uploadChangeControlValue, uploadLocation)(
+    element,
+    elementUri.fsPath,
+    fingerprint
+  );
   if (isError(uploadResult)) {
     const error = uploadResult;
     logger.error(
@@ -128,16 +128,47 @@ export const uploadElementCommand = async (
     return;
   }
   await safeRemoveUploadedElement(elementUri);
-  await updateTreeAfterSuccessfulUpload(dispatch)(
-    serviceName,
-    service,
-    searchLocationName,
-    searchLocation,
-    [element]
-  );
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
     status: UploadElementCommandCompletedStatus.SUCCESS,
+  });
+  const isNewElementAdded = uploadLocation.name !== element.name;
+  if (isNewElementAdded) {
+    await dispatch({
+      type: Actions.ELEMENT_ADDED,
+      serviceName,
+      service,
+      searchLocationName,
+      searchLocation,
+      element: {
+        ...uploadLocation,
+        extension: element.extension,
+      },
+    });
+    return;
+  }
+  const isElementEditedInPlace = isTheSameLocation(uploadLocation)(element);
+  if (isElementEditedInPlace) {
+    await dispatch({
+      type: Actions.ELEMENT_UPDATED_IN_PLACE,
+      serviceName,
+      service,
+      searchLocationName,
+      searchLocation,
+      elements: [element],
+    });
+    return;
+  }
+  await dispatch({
+    type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
+    fetchElementsArgs: { service, searchLocation },
+    treePath: {
+      serviceName,
+      searchLocationName,
+      searchLocation: initialSearchLocation,
+    },
+    pathUpTheMap: element,
+    targetLocation: uploadLocation,
   });
 };
 
@@ -175,14 +206,17 @@ const askForUploadValues = async (
 const uploadElement =
   (dispatch: (action: Action) => Promise<void>) =>
   (
-    service: Service,
-    searchLocation: ElementSearchLocation,
     serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName
+    searchLocationName: ElementLocationName,
+    treePath: SubSystemMapPath
   ) =>
-  (element: Element) =>
-  (uploadChangeControlValue: ChangeControlValue) =>
+  (service: Service, searchLocation: ElementSearchLocation) =>
+  (
+    uploadChangeControlValue: ChangeControlValue,
+    uploadTargetLocation: ElementMapPath
+  ) =>
   async (
+    element: Element,
     elementFilePath: string,
     fingerprint: string
   ): Promise<void | Error> => {
@@ -198,9 +232,9 @@ const uploadElement =
       return error;
     }
     const uploadResult = await withNotificationProgress(
-      `Uploading the element ${element.name}...`
+      `Uploading the element ${uploadTargetLocation.name}...`
     )((progressReporter) => {
-      return updateElement(progressReporter)(service)(element)(
+      return updateElement(progressReporter)(service)(uploadTargetLocation)(
         uploadChangeControlValue
       )({
         fingerprint,
@@ -209,7 +243,7 @@ const uploadElement =
     });
     if (isSignoutError(uploadResult)) {
       logger.warn(
-        `The element ${element.name} requires a sign out action to update/add elements.`
+        `The element ${uploadTargetLocation.name} requires a sign out action to update/add elements.`
       );
       const signoutResult = await complexSignoutElement(dispatch)(
         service,
@@ -227,23 +261,28 @@ const uploadElement =
         });
         return error;
       }
-      return uploadElement(dispatch)(
+      return uploadElement(dispatch)(serviceName, searchLocationName, treePath)(
         service,
-        searchLocation,
-        serviceName,
-        searchLocationName
-      )(element)(uploadChangeControlValue)(elementFilePath, fingerprint);
+        searchLocation
+      )(uploadChangeControlValue, uploadTargetLocation)(
+        element,
+        elementFilePath,
+        fingerprint
+      );
     }
     if (isFingerprintMismatchError(uploadResult)) {
       logger.warn(
-        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
+        `There is a conflict with the remote copy of element ${uploadTargetLocation.name}. Please resolve it before uploading again.`
       );
       const savedLocalElementVersionUri = await saveLocalElementVersion(
         elementFilePath
-      )(element)(content);
+      )({
+        ...uploadTargetLocation,
+        extension: element.extension,
+      })(content);
       if (isError(savedLocalElementVersionUri)) {
         const error = new Error(
-          `Unable to save a local version of the element ${element.name} to compare because of error ${savedLocalElementVersionUri.message}`
+          `Unable to save a local version of the element ${uploadTargetLocation.name} to compare because of error ${savedLocalElementVersionUri.message}`
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
@@ -259,11 +298,12 @@ const uploadElement =
       });
       const showCompareDialogResult = await compareElementWithRemoteVersion(
         service,
-        searchLocation
-      )(uploadChangeControlValue)(
-        element,
+        searchLocation,
+        element
+      )(uploadChangeControlValue, uploadTargetLocation)(
         serviceName,
-        searchLocationName
+        searchLocationName,
+        treePath
       )(savedLocalElementVersionUri.fsPath);
       if (isError(showCompareDialogResult)) {
         const error = showCompareDialogResult;
@@ -339,9 +379,9 @@ const complexSignoutElement =
     const signOutResult = await withNotificationProgress(
       `Signing out the element ${element.name}...`
     )((progressReporter) =>
-      signOutElement(progressReporter)(service)(element)(
-        signoutChangeControlValue
-      )
+      signOutElement(progressReporter)(service)(element)({
+        signoutChangeControlValue,
+      })
     );
     if (isSignoutError(signOutResult)) {
       logger.warn(
@@ -358,9 +398,10 @@ const complexSignoutElement =
       const overrideSignoutResult = await withNotificationProgress(
         `Signing out the element ${element.name}...`
       )((progressReporter) =>
-        overrideSignOutElement(progressReporter)(service)(element)(
-          signoutChangeControlValue
-        )
+        signOutElement(progressReporter)(service)(element)({
+          signoutChangeControlValue,
+          overrideSignOut: true,
+        })
       );
       if (isError(overrideSignoutResult)) {
         const error = signOutResult;
@@ -456,26 +497,7 @@ const updateTreeAfterSuccessfulSignout =
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      elements,
-    });
-  };
-
-const updateTreeAfterSuccessfulUpload =
-  (dispatch: (action: Action) => Promise<void>) =>
-  async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
-    elements: ReadonlyArray<Element>
-  ): Promise<void> => {
-    await dispatch({
-      type: Actions.ELEMENT_UPDATED,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       service,
       searchLocationName,

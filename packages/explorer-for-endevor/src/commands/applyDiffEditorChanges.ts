@@ -18,7 +18,7 @@ import {
 } from '@local/endevor/utils';
 import { Uri } from 'vscode';
 import { logger, reporter } from '../globals';
-import { isError } from '../utils';
+import { isError, isTheSameLocation } from '../utils';
 import {
   closeActiveTextEditor,
   getActiveTextEditor,
@@ -27,11 +27,7 @@ import {
 import { fromComparedElementUri } from '../uri/comparedElementUri';
 import { discardEditedElementChanges } from './discardEditedElementChanges';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
-import {
-  overrideSignOutElement,
-  signOutElement,
-  updateElement,
-} from '../endevor';
+import { signOutElement, updateElement } from '../endevor';
 import { getFileContent } from '@local/vscode-wrapper/workspace';
 import { TextDecoder } from 'util';
 import { ENCODING } from '../constants';
@@ -40,12 +36,14 @@ import {
   askToSignOutElements,
 } from '../dialogs/change-control/signOutDialogs';
 import { turnOnAutomaticSignOut } from '../settings/settings';
-import { ComparedElementUriQuery } from '../_doc/Uri';
 import {
   ActionChangeControlValue,
   Element,
   Service,
   ElementSearchLocation,
+  ChangeControlValue,
+  ElementMapPath,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { Action, Actions } from '../_doc/Actions';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
@@ -88,14 +86,23 @@ export const applyDiffEditorChanges = async (
       }
     )}`
   );
-  const { serviceName, service, searchLocation, searchLocationName, element } =
-    uriParms;
+  const {
+    uploadTargetLocation,
+    element,
+    endevorConnectionDetails: service,
+    initialSearchContext: {
+      serviceName,
+      searchLocationName,
+      overallSearchLocation,
+      initialSearchLocation,
+    },
+  } = uriParms;
   const content = await readComparedElementContent();
   if (isError(content)) {
     const error = content;
     logger.error(
-      `Unable to apply changes for the element ${element.name}.`,
-      `Unable to apply changes for the element ${element.name} because of error ${error.message}.`
+      `Unable to apply changes for the element ${uploadTargetLocation.name}.`,
+      `Unable to apply changes for the element ${uploadTargetLocation.name} because of error ${error.message}.`
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
@@ -105,31 +112,71 @@ export const applyDiffEditorChanges = async (
     });
     return;
   }
-  const uploadResult = await uploadElement(dispatch)(content)(
+  const uploadResult = await uploadElement(dispatch)(
+    uriParms.initialSearchContext.serviceName,
+    uriParms.initialSearchContext.searchLocationName,
+    uriParms.initialSearchContext.initialSearchLocation
+  )(
+    uriParms.endevorConnectionDetails,
+    uriParms.initialSearchContext.overallSearchLocation
+  )(uriParms.uploadChangeControlValue, uriParms.uploadTargetLocation)(
+    uriParms.element,
     comparedElementUri
-  )(uriParms);
+  )(uriParms.fingerprint, content);
   if (isError(uploadResult)) {
     const error = uploadResult;
     logger.error(
-      `Unable to upload the element ${element.name} to Endevor.`,
+      `Unable to upload the element ${uploadTargetLocation.name} to Endevor.`,
       `${error.message}.`
     );
     return;
   }
-  await updateTreeAfterSuccessfulUpload(dispatch)(
-    serviceName,
-    service,
-    searchLocationName,
-    searchLocation,
-    [element]
-  );
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL,
     context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
   });
   await discardEditedElementChanges(comparedElementUri);
+  const isNewElementAdded = uploadTargetLocation.name !== element.name;
+  if (isNewElementAdded) {
+    await dispatch({
+      type: Actions.ELEMENT_ADDED,
+      serviceName,
+      service,
+      searchLocationName,
+      searchLocation: overallSearchLocation,
+      element: {
+        ...uploadTargetLocation,
+        extension: element.extension,
+      },
+    });
+    return;
+  }
+  const isElementEditedInPlace =
+    isTheSameLocation(uploadTargetLocation)(element);
+  if (isElementEditedInPlace) {
+    await dispatch({
+      type: Actions.ELEMENT_UPDATED_IN_PLACE,
+      serviceName,
+      service,
+      searchLocationName,
+      searchLocation: overallSearchLocation,
+      elements: [element],
+    });
+    return;
+  }
+  await dispatch({
+    type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
+    fetchElementsArgs: { service, searchLocation: overallSearchLocation },
+    treePath: {
+      serviceName,
+      searchLocationName,
+      searchLocation: initialSearchLocation,
+    },
+    pathUpTheMap: element,
+    targetLocation: uploadTargetLocation,
+  });
   logger.info(
-    `Applying changes for the element ${element.name} was successful!`
+    `Applying changes for the element ${uploadTargetLocation.name} was successful!`
   );
   return;
 };
@@ -182,35 +229,38 @@ const readComparedElementContent = async (): Promise<string | Error> => {
 
 const uploadElement =
   (dispatch: (action: Action) => Promise<void>) =>
-  (content: string) =>
-  (elementUri: Uri) =>
-  async ({
-    service,
-    serviceName,
-    element,
-    uploadChangeControlValue,
-    fingerprint,
-    searchLocation,
-    searchLocationName,
-    remoteVersionTempFilePath,
-  }: ComparedElementUriQuery): Promise<void | Error> => {
+  (
+    serviceName: EndevorServiceName,
+    searchLocationName: ElementLocationName,
+    initialSearchLocation: SubSystemMapPath
+  ) =>
+  (
+    endevorConnectionDetails: Service,
+    overallSearchLocation: ElementSearchLocation
+  ) =>
+  (
+    uploadChangeControlValue: ChangeControlValue,
+    uploadTargetLocation: ElementMapPath
+  ) =>
+  (element: Element, elementUri: Uri) =>
+  async (fingerprint: string, content: string): Promise<void | Error> => {
     const uploadResult = await withNotificationProgress(
-      `Uploading the element ${element.name}...`
+      `Uploading the element ${uploadTargetLocation.name}...`
     )((progressReporter) => {
-      return updateElement(progressReporter)(service)(element)(
-        uploadChangeControlValue
-      )({
+      return updateElement(progressReporter)(endevorConnectionDetails)(
+        uploadTargetLocation
+      )(uploadChangeControlValue)({
         fingerprint,
         content,
       });
     });
     if (isSignoutError(uploadResult)) {
       logger.warn(
-        `The element ${element.name} requires a sign out action to update/add elements.`
+        `The element ${uploadTargetLocation.name} requires a sign out action to update/add elements.`
       );
       const signOutResult = await complexSignoutElement(dispatch)(
-        service,
-        searchLocation,
+        endevorConnectionDetails,
+        overallSearchLocation,
         serviceName,
         searchLocationName
       )(element)(uploadChangeControlValue);
@@ -224,20 +274,18 @@ const uploadElement =
         });
         return error;
       }
-      return uploadElement(dispatch)(content)(elementUri)({
-        service,
+      return uploadElement(dispatch)(
         serviceName,
-        element,
-        uploadChangeControlValue,
-        fingerprint,
-        searchLocation,
         searchLocationName,
-        remoteVersionTempFilePath,
-      });
+        initialSearchLocation
+      )(endevorConnectionDetails, overallSearchLocation)(
+        uploadChangeControlValue,
+        uploadTargetLocation
+      )(element, elementUri)(fingerprint, content);
     }
     if (isFingerprintMismatchError(uploadResult)) {
       logger.warn(
-        `There is a conflict with the remote copy of element ${element.name}. Please resolve it before uploading again.`
+        `There is a conflict with the remote copy of element ${uploadTargetLocation.name}. Please resolve it before uploading again.`
       );
       const fingerprintError = uploadResult;
       await closeActiveTextEditor();
@@ -246,12 +294,13 @@ const uploadElement =
         context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
       });
       const showCompareDialogResult = await compareElementWithRemoteVersion(
-        service,
-        searchLocation
-      )(uploadChangeControlValue)(
-        element,
+        endevorConnectionDetails,
+        overallSearchLocation,
+        element
+      )(uploadChangeControlValue, uploadTargetLocation)(
         serviceName,
-        searchLocationName
+        searchLocationName,
+        initialSearchLocation
       )(elementUri.fsPath);
       if (isError(showCompareDialogResult)) {
         const error = showCompareDialogResult;
@@ -306,9 +355,9 @@ const complexSignoutElement =
     const signOutResult = await withNotificationProgress(
       `Signing out the element ${element.name}...`
     )((progressReporter) =>
-      signOutElement(progressReporter)(service)(element)(
-        signoutChangeControlValue
-      )
+      signOutElement(progressReporter)(service)(element)({
+        signoutChangeControlValue,
+      })
     );
     if (isSignoutError(signOutResult)) {
       logger.warn(
@@ -325,9 +374,10 @@ const complexSignoutElement =
       const overrideSignoutResult = await withNotificationProgress(
         `Signing out the element ${element.name}...`
       )((progressReporter) =>
-        overrideSignOutElement(progressReporter)(service)(element)(
-          signoutChangeControlValue
-        )
+        signOutElement(progressReporter)(service)(element)({
+          signoutChangeControlValue,
+          overrideSignOut: true,
+        })
       );
       if (isError(overrideSignoutResult)) {
         const error = overrideSignoutResult;
@@ -379,26 +429,7 @@ const updateTreeAfterSuccessfulSignout =
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      elements,
-    });
-  };
-
-const updateTreeAfterSuccessfulUpload =
-  (dispatch: (action: Action) => Promise<void>) =>
-  async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
-    elements: ReadonlyArray<Element>
-  ): Promise<void> => {
-    await dispatch({
-      type: Actions.ELEMENT_UPDATED,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       service,
       searchLocationName,

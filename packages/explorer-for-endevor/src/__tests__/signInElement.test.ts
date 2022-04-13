@@ -133,7 +133,7 @@ describe('sign in element', () => {
       'Dispatch for signin element was not called'
     );
     const expextedSignInAction = {
-      type: Actions.ELEMENT_SIGNEDIN,
+      type: Actions.ELEMENT_SIGNED_IN,
       serviceName,
       searchLocationName,
       service,

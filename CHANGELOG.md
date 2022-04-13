@@ -2,6 +2,24 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.1.0] &ndash; 2022-04-01
+
+### Added
+
+- Added the generate an element with copyback and generate with no source features.
+- Added the Signout-overriding functionality to the generate an element feature.
+
+### Changed
+
+- The **Remove profile** context menu item is changed to **Hide profile** to avoid confusion.
+- Now multiple notification messages are displayed in one message upon successful element generation.
+- Changed the VS Code version requirement. Ensure that you use VS Code 1.58.0 or higher.
+
+### Fixed
+
+- Fixed an issue with the signout error recovery attempt when an element is edited and uploaded into a different location.
+- Fixed an issue that prevented the extension from updating an Endevor map tree after uploading the edited element into a new location.
+
 ## [1.0.2] &ndash; 2022-03-25
 
 ### Fixed

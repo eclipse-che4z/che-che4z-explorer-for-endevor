@@ -21,3 +21,6 @@ export const DUPLICATE_ELEMENT_ERROR = 'C1G0024E';
 // it is an informational message according to:
 // https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-scm-messages/1-0/smgr-messages/smgr123c.html
 export const CHANGE_REGRESSION_INFO = 'SMGR123C';
+
+export const PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR = 'C1G0129E';
+export const PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE = 'C1G0129S';

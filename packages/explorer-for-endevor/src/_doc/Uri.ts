@@ -15,8 +15,10 @@
 import {
   ChangeControlValue,
   Element,
+  ElementMapPath,
   ElementSearchLocation,
   Service,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { ElementLocationName, EndevorServiceName } from './settings';
 
@@ -46,23 +48,38 @@ export type TreeElementUriQuery = Readonly<{
 }>;
 
 export type EditedElementUriQuery = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
-  service: Service;
   element: Element;
-  searchLocation: ElementSearchLocation;
   fingerprint: string;
+  // TODO: remove from the URI, it is not related to the element itself and not secure
+  endevorConnectionDetails: Service;
+  searchContext: {
+    initialSearchLocation: SubSystemMapPath;
+    // TODO: remove from the URI, not related to the element itself
+    overallSearchLocation: ElementSearchLocation;
+    // TODO: remove from the URI, not related to the element itself
+    serviceName: EndevorServiceName;
+    // TODO: remove from the URI, not related to the element itself
+    searchLocationName: ElementLocationName;
+  };
 }>;
 
 export type ComparedElementUriQuery = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
-  service: Service;
-  searchLocation: ElementSearchLocation;
   element: Element;
   fingerprint: string;
-  uploadChangeControlValue: ChangeControlValue;
   remoteVersionTempFilePath: string;
+  // TODO: remove from the URI, it is not related to the element itself and not secure
+  endevorConnectionDetails: Service;
+  initialSearchContext: {
+    initialSearchLocation: SubSystemMapPath;
+    // TODO: remove from the URI, not related to the element itself
+    overallSearchLocation: ElementSearchLocation;
+    // TODO: remove from the URI, not related to the element itself
+    serviceName: EndevorServiceName;
+    // TODO: remove from the URI, not related to the element itself
+    searchLocationName: ElementLocationName;
+  };
+  uploadChangeControlValue: ChangeControlValue;
+  uploadTargetLocation: ElementMapPath;
 }>;
 
 export type ElementListingUriQuery = Readonly<{

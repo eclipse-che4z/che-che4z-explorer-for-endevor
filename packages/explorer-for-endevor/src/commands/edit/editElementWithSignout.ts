@@ -18,6 +18,7 @@ import {
   ElementWithFingerprint,
   Element,
   ElementSearchLocation,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
@@ -27,13 +28,8 @@ import {
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import { logger, reporter } from '../../globals';
 import { fromTreeElementUri } from '../../uri/treeElementUri';
-import * as vscode from 'vscode';
 import { isDefined, isError } from '../../utils';
-import {
-  saveIntoEditFolder,
-  showElementToEdit,
-  withUploadOptions,
-} from './common';
+import { saveIntoEditFolder, showElementToEdit } from './common';
 import { getMaxParallelRequests } from '../../settings/settings';
 import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../../constants';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
@@ -47,15 +43,13 @@ import {
   TelemetryEvents,
   SignoutErrorRecoverCommandCompletedStatus,
 } from '../../_doc/Telemetry';
+import { toEditedElementUri } from '../../uri/editedElementUri';
+import { ElementNode } from '../../_doc/ElementTree';
+import { TreeElementUriQuery } from '../../_doc/Uri';
 
 export const editSingleElementWithSignout =
   (dispatch: (action: Action) => Promise<void>) =>
-  async (
-    element: Readonly<{
-      name: string;
-      uri: vscode.Uri;
-    }>
-  ): Promise<void> => {
+  async (element: ElementNode): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
       commandArguments: {
@@ -130,11 +124,32 @@ export const editSingleElementWithSignout =
       });
       return;
     }
-    const uploadableElementUri = withUploadOptions(saveResult)({
-      ...elementUri,
+    const uploadableElementUri = toEditedElementUri(saveResult.fsPath)({
+      element: elementUri.element,
       fingerprint: retrieveResult.fingerprint,
+      endevorConnectionDetails: elementUri.service,
+      searchContext: {
+        serviceName: elementUri.serviceName,
+        searchLocationName: elementUri.searchLocationName,
+        overallSearchLocation: elementUri.searchLocation,
+        initialSearchLocation: {
+          subSystem: element.parent.parent.name,
+          system: element.parent.parent.parent.name,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: elementUri.searchLocation.stageNumber!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: elementUri.searchLocation.environment!,
+        },
+      },
     });
-    if (!uploadableElementUri) return;
+    if (isError(uploadableElementUri)) {
+      const error = uploadableElementUri;
+      logger.error(
+        `Unable to open the element ${element.name} for editing.`,
+        `Unable to open the element ${element.name} because of error ${error.message}.`
+      );
+      return;
+    }
     const showResult = await showElementToEdit(uploadableElementUri);
     if (isError(showResult)) {
       const error = showResult;
@@ -313,12 +328,7 @@ const retrieveSingleCopy =
 
 export const editMultipleElementsWithSignout =
   (dispatch: (action: Action) => Promise<void>) =>
-  async (
-    elements: ReadonlyArray<{
-      name: string;
-      uri: vscode.Uri;
-    }>
-  ): Promise<void> => {
+  async (elements: ReadonlyArray<ElementNode>): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
       commandArguments: {
@@ -370,19 +380,32 @@ export const editMultipleElementsWithSignout =
       logger.error(`CCID and Comment must be specified to sign out element.`);
       return;
     }
-    const elementUris: ReadonlyArray<ElementDetails | Error> = elements.map(
-      (element) => {
-        const elementUploadOptions = fromTreeElementUri(element.uri);
-        if (isError(elementUploadOptions)) {
-          const error = elementUploadOptions;
-          return new Error(
-            `Unable to edit the element ${element.name} because of error ${error.message}`
-          );
-        }
-        return elementUploadOptions;
+    type UploadOptions = TreeElementUriQuery &
+      Readonly<{
+        initialSearchLocation: SubSystemMapPath;
+      }>;
+    const elementUploadOptions = elements.map((element) => {
+      const elementsUriParams = fromTreeElementUri(element.uri);
+      if (isError(elementsUriParams)) {
+        const error = elementsUriParams;
+        return new Error(
+          `Unable to edit the element ${element.name} because of an error ${error.message}`
+        );
       }
-    );
-    const validUris = elementUris
+      const uploadOptions: UploadOptions = {
+        ...elementsUriParams,
+        initialSearchLocation: {
+          subSystem: element.parent.parent.name,
+          system: element.parent.parent.parent.name,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: elementsUriParams.searchLocation.stageNumber!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: elementsUriParams.searchLocation.environment!,
+        },
+      };
+      return uploadOptions;
+    });
+    const validUris = elementUploadOptions
       .map((uri) => {
         if (isError(uri)) return undefined;
         return uri;
@@ -391,7 +414,7 @@ export const editMultipleElementsWithSignout =
     const retrieveResult = await complexRetrieveMultipleElements(dispatch)(
       endevorMaxRequestsNumber
     )(validUris)(signoutChangeControlValue);
-    const invalidUris = elementUris
+    const invalidUris = elementUploadOptions
       .map((uri) => {
         if (!isError(uri)) return undefined;
         return uri;
@@ -423,10 +446,25 @@ export const editMultipleElementsWithSignout =
           });
           return error;
         }
-        return withUploadOptions(saveResult)({
-          ...elementDetails,
+        const uploadableElementUri = toEditedElementUri(saveResult.fsPath)({
+          element: elementDetails.element,
           fingerprint: retrievedItem.fingerprint,
+          endevorConnectionDetails: elementDetails.service,
+          searchContext: {
+            serviceName: elementDetails.serviceName,
+            searchLocationName: elementDetails.searchLocationName,
+            overallSearchLocation: elementDetails.searchLocation,
+            initialSearchLocation: elementDetails.initialSearchLocation,
+          },
         });
+        if (isError(uploadableElementUri)) {
+          const error = uploadableElementUri;
+          logger.trace(
+            `Unable to open the element ${elementDetails.element.name} because of error ${error.message}.`
+          );
+          return;
+        }
+        return uploadableElementUri;
       })
     );
     // show text editors only in sequential order (concurrency: 1)
@@ -484,6 +522,7 @@ type ElementDetails = Readonly<{
   service: Service;
   element: Element;
   searchLocation: ElementSearchLocation;
+  initialSearchLocation: SubSystemMapPath;
 }>;
 
 const complexRetrieveMultipleElements =
@@ -496,6 +535,7 @@ const complexRetrieveMultipleElements =
       service: Service;
       element: Element;
       searchLocation: ElementSearchLocation;
+      initialSearchLocation: SubSystemMapPath;
     }>
   ) =>
   async (
@@ -774,6 +814,7 @@ const retrieveMultipleElementsWithSignout =
       service: Service;
       element: Element;
       searchLocation: ElementSearchLocation;
+      initialSearchLocation: SubSystemMapPath;
     }>
   ) =>
   async (
@@ -815,6 +856,7 @@ const retrieveMultipleElementsWithOverrideSignout =
       service: Service;
       element: Element;
       searchLocation: ElementSearchLocation;
+      initialSearchLocation: SubSystemMapPath;
     }>
   ) =>
   async (
@@ -906,7 +948,7 @@ const updateTreeAfterSuccessfulSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (actionPayload: SignedOutElementsPayload): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       ...actionPayload,
     });
   };

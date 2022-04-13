@@ -31,11 +31,8 @@ export const enum TelemetryEvents {
   LISTING_CONTENT_PROVIDER_CALLED = 'listing content provider called',
   LISTING_CONTENT_PROVIDER_COMPLETED = 'listing content provider completed',
   COMMAND_VIEW_ELEMENT_DETAILS_CALLED = 'view element details command called',
-  COMMAND_GENERATE_ELEMENT_CALLED = 'generate element command called',
-  COMMAND_GENERATE_ELEMENT_COMPLETED = 'generate element command completed',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED = 'resolve conflict with remote command called',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED = 'resolve conflict with remote command completed',
-  COMMAND_PRINT_LISTING_CALL = 'print listing command call performed',
   COMMAND_SIGNOUT_ERROR_RECOVER_CALLED = 'signout error recover command called',
   COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED = 'signout error recover command completed',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL = 'resolve conflict with remote call performed',
@@ -233,39 +230,12 @@ export type CommandViewElementDetailsCalledEvent = {
   commandArguments: CommandArguments;
 };
 
-export type CommandGenerateElementCalledEvent = {
-  type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
-};
-
-export const enum GenerateElementCommandCompletedStatus {
-  SUCCESS = 'SUCCESS',
-  GENERIC_ERROR = 'GENERIC_ERROR',
-}
-
-export type CommandPrintListingCallEvent = {
-  type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL;
-  context: TelemetryEvents.COMMAND_GENERATE_ELEMENT_COMPLETED;
-};
-
 export type CommandResolveConflictWithRemoteCallEvent = {
   type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL;
   context:
     | TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED
     | TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED;
 };
-
-export type CommandGenerateElementCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_GENERATE_ELEMENT_CALLED;
-      status: GenerateElementCommandCompletedStatus.GENERIC_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_COMPLETED;
-      status: GenerateElementCommandCompletedStatus.SUCCESS;
-    };
 
 export type CommandPrintListingCalledEvent = {
   type: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED;
@@ -619,10 +589,7 @@ export type TelemetryEvent =
   | ElementLocationsNotProvidedInTheTreeEvent
   | MissingCredentialsPromptCalledEvent
   | MissingCredentialsProvidedEvent
-  | CommandGenerateElementCalledEvent
-  | CommandGenerateElementCompletedEvent
   | CommandViewElementDetailsCalledEvent
-  | CommandPrintListingCallEvent
   | CommandResolveConflictWithRemoteCallEvent
   | CommandPrintListingCalledEvent
   | CommandPrintElementCalledEvent
@@ -658,8 +625,3 @@ export type TelemetryEvent =
   | CommandDiscardEditedElementChangesCalledEvent
   | CommandDiscardEditedElementChangesCallEvent
   | CommandApplyDiffEditorChangesCompletedEvent;
-
-export type TelemetryReporter = {
-  sendTelemetryEvent: (event: TelemetryEvent) => void;
-  dispose: () => Promise<unknown>;
-};

@@ -106,7 +106,7 @@ const updateTreeAfterSuccessfulSignin =
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDIN,
+      type: Actions.ELEMENT_SIGNED_IN,
       serviceName,
       service,
       searchLocationName,

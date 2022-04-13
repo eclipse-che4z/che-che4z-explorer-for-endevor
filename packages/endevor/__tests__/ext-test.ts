@@ -619,7 +619,7 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         stgNum: '2',
         nextEnv: 'ENV2',
-        nextStgNUm: '1',
+        nextStgNumber: '1',
       };
       // act && assert
       expect(() => parseToType(EnvironmentStage, environment)).toThrowError(

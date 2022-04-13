@@ -21,13 +21,13 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  SignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { retrieveElementCommand } from '../commands/retrieveElement';
 import {
   mockRetrieveElementWithoutSignout,
   mockRetrieveElementWithSignout,
-  mockRetrieveElementWithOverrideSignout,
 } from '../_mocks/endevor';
 import {
   mockCreatingWorkspaceDirectory,
@@ -239,7 +239,7 @@ describe('retrieve element', () => {
     assert.deepStrictEqual(
       dispatchSignoutAction.called,
       false,
-      'Dispatch for signout element when retrieveing without signout was called'
+      'Dispatch for signout element when retrieving without signout was called'
     );
   });
   it('should retrieve element with signout', async () => {
@@ -299,11 +299,13 @@ describe('retrieve element', () => {
       ccid: 'test',
       comment: 'very very long comment',
     };
+    const expectedSignOutParams: SignOutParams = {
+      signoutChangeControlValue: expectedSignoutChangeControlValue,
+    };
     const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
-      element,
-      expectedSignoutChangeControlValue
-    )(expectedElementContent);
+      element
+    )(expectedSignOutParams, expectedElementContent)();
     const workspaceMockUri = elementUri;
     mockGettingWorkspaceUri(workspaceMockUri);
     mockAskingForChangeControlValue(expectedSignoutChangeControlValue);
@@ -354,7 +356,7 @@ describe('retrieve element', () => {
       generalRetrieveFunctionStub,
       retrieveWithServiceStub,
       retrieveContentStub,
-      signoutChangeControlValueStub,
+      signOutParamsStub,
     ] = retrieveElementStub;
     assert.ok(
       generalRetrieveFunctionStub.called,
@@ -372,12 +374,13 @@ describe('retrieve element', () => {
       element,
       `Fetch element content was not called with expected element ${element}, it was called with ${actualElement}`
     );
-    const actualSignoutChangeControlValue =
-      signoutChangeControlValueStub.args[0]?.[0];
+    const actualSignOutParams = signOutParamsStub.args[0]?.[0];
     assert.deepStrictEqual(
-      actualSignoutChangeControlValue,
-      expectedSignoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${expectedSignoutChangeControlValue}, it was called with ${actualSignoutChangeControlValue}`
+      actualSignOutParams,
+      expectedSignOutParams,
+      `Fetch element content was not called with expected signout parameters value ${JSON.stringify(
+        expectedSignOutParams
+      )}, it was called with ${JSON.stringify(actualSignOutParams)}`
     );
 
     const [generalCreateLocalDirectoryFunctionStub, localDirectoryStub] =
@@ -417,10 +420,10 @@ describe('retrieve element', () => {
     assert.deepStrictEqual(
       dispatchSignoutAction.called,
       true,
-      'Dispatch for signout element when retrieveing with signout was not called'
+      'Dispatch for signout element when retrieving with signout was not called'
     );
-    const expextedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+    const expectedSignoutAction = {
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -428,10 +431,10 @@ describe('retrieve element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
-      expextedSignoutAction,
+      expectedSignoutAction,
       dispatchSignoutAction.args[0]?.[0],
-      `Expexted dispatch for retrieve element with signout to have been called with ${JSON.stringify(
-        expextedSignoutAction
+      `Expected dispatch for retrieve element with signout to have been called with ${JSON.stringify(
+        expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchSignoutAction.args[0]?.[0]
       )}`
@@ -498,19 +501,21 @@ describe('retrieve element', () => {
       ccid: 'test',
       comment: 'very very long comment',
     };
-    const retrieveElementStub = mockRetrieveElementWithSignout(
-      service,
-      element,
-      expectedSignoutChangeControlValue
-    )(error);
-
+    const expectedSignOutParams: SignOutParams = {
+      signoutChangeControlValue: expectedSignoutChangeControlValue,
+    };
+    const expectedOverrideSignOutParams: SignOutParams = {
+      signoutChangeControlValue: expectedSignoutChangeControlValue,
+      overrideSignOut: true,
+    };
     const expectedContent = 'Show me this!';
-    const retrieveElementWithOverrideStub =
-      mockRetrieveElementWithOverrideSignout(
-        service,
-        element,
-        expectedSignoutChangeControlValue
-      )(expectedContent);
+    const retrieveElementWithOverrideStub = mockRetrieveElementWithSignout(
+      service,
+      element
+    )(expectedSignOutParams, error)(
+      expectedOverrideSignOutParams,
+      expectedContent
+    );
     const workspaceMockUri = elementUri;
     mockGettingWorkspaceUri(workspaceMockUri);
     mockAskingForChangeControlValue(expectedSignoutChangeControlValue);
@@ -562,30 +567,59 @@ describe('retrieve element', () => {
       generalRetrieveFunctionStub,
       retrieveWithServiceStub,
       retrieveContentStub,
-      signoutChangeControlValueStub,
-    ] = retrieveElementStub;
+      signOutParamsStub,
+    ] = retrieveElementWithOverrideStub;
     assert.ok(
-      generalRetrieveFunctionStub.called,
-      'Fetch element content was not called'
+      generalRetrieveFunctionStub.calledTwice,
+      `Fetch element content was not called twice, it was called: ${generalRetrieveFunctionStub.callCount}`
     );
-    const actualService = retrieveWithServiceStub.args[0]?.[0];
+
+    const actualServiceForSignOut = retrieveWithServiceStub.args[0]?.[0];
     assert.deepStrictEqual(
-      actualService,
+      actualServiceForSignOut,
       service,
-      `Fetch element content was not called with expected service ${service}, it was called with ${actualService}`
+      `Fetch element content with signout was not called with expected service ${service}, it was called with ${actualServiceForSignOut}`
     );
-    const actualElement = retrieveContentStub.args[0]?.[0];
+    const actualServiceForOverrideSignOut =
+      retrieveWithServiceStub.args[1]?.[0];
     assert.deepStrictEqual(
-      actualElement,
+      actualServiceForOverrideSignOut,
+      service,
+      `Fetch element content with override signout was not called with expected service ${service}, it was called with ${actualServiceForOverrideSignOut}`
+    );
+
+    const actualElementForSignOut = retrieveContentStub.args[0]?.[0];
+    assert.deepStrictEqual(
+      actualElementForSignOut,
       element,
-      `Fetch element content was not called with expected element ${element}, it was called with ${actualElement}`
+      `Fetch element content with signout was not called with expected element ${element}, it was called with ${actualElementForSignOut}`
     );
-    const actualSignoutChangeControlValue =
-      signoutChangeControlValueStub.args[0]?.[0];
+    const actualElementForOverrideSignOut = retrieveContentStub.args[1]?.[0];
     assert.deepStrictEqual(
-      actualSignoutChangeControlValue,
-      expectedSignoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${expectedSignoutChangeControlValue}, it was called with ${actualSignoutChangeControlValue}`
+      actualElementForSignOut,
+      element,
+      `Fetch element content with override signout was not called with expected element ${element}, it was called with ${actualElementForOverrideSignOut}`
+    );
+
+    const actualSignOutParams = signOutParamsStub.withArgs(
+      expectedSignOutParams
+    ).args[0]?.[0];
+    assert.deepStrictEqual(
+      actualSignOutParams,
+      expectedSignOutParams,
+      `Fetch element content with signout was not called with expected signout parameters value ${JSON.stringify(
+        expectedSignOutParams
+      )}, it was called with ${JSON.stringify(actualSignOutParams)}`
+    );
+    const actualOverrideSignOutParams = signOutParamsStub.withArgs(
+      expectedOverrideSignOutParams
+    ).args[0]?.[0];
+    assert.deepStrictEqual(
+      actualOverrideSignOutParams,
+      expectedOverrideSignOutParams,
+      `Fetch element content with override signout was not called with expected override signout parameters value ${JSON.stringify(
+        expectedOverrideSignOutParams
+      )}, it was called with ${JSON.stringify(actualOverrideSignOutParams)}`
     );
 
     const [generalCreateLocalDirectoryFunctionStub, localDirectoryStub] =
@@ -622,44 +656,14 @@ describe('retrieve element', () => {
       showSavedElementStub.called,
       'Show saved element in the editor was not called'
     );
-    const [
-      generalRetrieveWithOverrideFunctionStub,
-      retrieveWithOverrideWithServiceStub,
-      retrieveWithOverrideContentStub,
-      signoutWithOverrideChangeControlValueStub,
-    ] = retrieveElementWithOverrideStub;
-    assert.ok(
-      generalRetrieveWithOverrideFunctionStub.called,
-      'Fetch element content was not called'
-    );
-    const actualWithOverrideService =
-      retrieveWithOverrideWithServiceStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Fetch element content was not called with expected service ${service}, it was called with ${actualWithOverrideService}`
-    );
-    const actualElementWithOverride =
-      retrieveWithOverrideContentStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Fetch element content was not called with expected element ${element}, it was called with ${actualElementWithOverride}`
-    );
-    const actualSignoutWithOverrideChangeControlValue =
-      signoutWithOverrideChangeControlValueStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualSignoutChangeControlValue,
-      expectedSignoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${expectedSignoutChangeControlValue}, it was called with ${actualSignoutWithOverrideChangeControlValue}`
-    );
+
     assert.deepStrictEqual(
       dispatchSignoutActions.called,
       true,
       'Dispatch for override signout element on retrieve was not called'
     );
-    const expextedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+    const expectedSignoutAction = {
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -667,10 +671,10 @@ describe('retrieve element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
-      expextedSignoutAction,
+      expectedSignoutAction,
       dispatchSignoutActions.args[0]?.[0],
-      `Expexted dispatch for retrieve element with override signout to have been called with ${JSON.stringify(
-        expextedSignoutAction
+      `Expected dispatch for retrieve element with override signout to have been called with ${JSON.stringify(
+        expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchSignoutActions.args[0]?.[0]
       )}`

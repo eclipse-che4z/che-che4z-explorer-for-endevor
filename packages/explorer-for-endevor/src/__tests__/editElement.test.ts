@@ -38,7 +38,7 @@ import {
 import { mockShowingFileContentWith } from '../_mocks/window';
 import { fromEditedElementUri } from '../uri/editedElementUri';
 import { mockRetrievingElementWithFingerprint } from '../_mocks/endevor';
-import { QueryTypes } from '../_doc/Uri';
+import { EditedElementUriQuery } from '../_doc/Uri';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
@@ -46,6 +46,7 @@ import {
 import { SignoutError } from '@local/endevor/_doc/Error';
 import { Actions } from '../_doc/Actions';
 import { toElementId } from '../tree/endevor';
+import { TypeNode } from '../_doc/ElementTree';
 
 describe('starting edit session for element', () => {
   before(() => {
@@ -113,6 +114,8 @@ describe('starting edit session for element', () => {
   const elementId = toElementId(serviceName)(searchLocationName)(element);
   const searchLocation: ElementSearchLocation = {
     instance: 'ANY-INSTANCE',
+    environment: 'ANY-ENV',
+    stageNumber: '1',
   };
   const elementUri = toTreeElementUri({
     serviceName,
@@ -128,7 +131,7 @@ describe('starting edit session for element', () => {
     );
   }
 
-  it('should start edit session for element without signout', async () => {
+  it('should start an edit session for an element without signout', async () => {
     // arrange
     const automaticSignoutSetting = false;
     await workspace
@@ -183,17 +186,38 @@ describe('starting edit session for element', () => {
     const showSavedElementStub = mockShowingFileContentWith()(
       Promise.resolve()
     );
-    const dispatchSignoutActions = sinon.spy();
+    const dispatchActions = sinon.spy();
     // act
+    const parent: TypeNode = {
+      type: 'TYPE',
+      name: element.type,
+      elements: new Map(),
+      parent: {
+        type: 'SUB',
+        name: element.subSystem,
+        parent: {
+          type: 'SYS',
+          name: element.system,
+          children: new Map(),
+        },
+        children: new Map(),
+      },
+      map: {
+        type: 'MAP',
+        name: 'MAP',
+        elements: new Map(),
+      },
+    };
     try {
       await commands.executeCommand(
         CommandId.QUICK_EDIT_ELEMENT,
-        dispatchSignoutActions,
+        dispatchActions,
         {
           type: element.type,
           name: element.name,
           uri: elementUri,
           id: elementId,
+          parent,
         }
       );
     } catch (e) {
@@ -202,79 +226,64 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, withServiceStub, contentStub] = retrieveElementStub;
-    const actualService = withServiceStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Fetch element content was not called with expected service ${JSON.stringify(
-        service
-      )}, it was called with ${JSON.stringify(actualService)}`
-    );
-    const actualElement = contentStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Fetch element content was not called with expected service ${JSON.stringify(
-        element
-      )}, it was called with ${JSON.stringify(actualElement)}`
+    const [, , contentStub] = retrieveElementStub;
+    assert.ok(
+      contentStub.called,
+      'Retrieve an element Endevor API was not called'
     );
     assert.ok(
       createElementDirectoryStub.called,
-      'Create element local directory was not called'
-    );
-    const actualElementDirectory =
-      createElementDirectoryStub.args[0]?.[0].fsPath;
-    const expectedLocalElementDirectory = elementDirectoryUri.fsPath;
-    assert.deepStrictEqual(
-      actualElementDirectory,
-      expectedLocalElementDirectory,
-      `Creating of element local directory was not called with expected ${expectedLocalElementDirectory}, it was called with ${actualElementDirectory}`
+      'Create an element local directory API was not called'
     );
     const [, elementDetailsStub] = saveElementStub;
-    const actualSavedElementDetails = elementDetailsStub.args[0]?.[0];
-    const expectedSavedElementDetails = {
-      fileName: element.name,
-      fileExtension: element.extension,
-    };
-    assert.deepStrictEqual(
-      actualSavedElementDetails,
-      expectedSavedElementDetails,
-      `Saving element into local directory was not called with expected ${JSON.stringify(
-        expectedSavedElementDetails
-      )}, it was called with ${JSON.stringify(actualSavedElementDetails)}`
+    assert.ok(
+      elementDetailsStub.called,
+      'Save an element in a local directory API was not called'
+    );
+    assert.ok(
+      showSavedElementStub.called,
+      'Show a saved element in the editor API was not called'
     );
     const actualShowedElementUri = showSavedElementStub.args[0]?.[0];
     const actualShowedElementDetails = fromEditedElementUri(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       actualShowedElementUri!
     );
-    const editSessionDetails = {
-      searchLocationName: 'searchLocationName',
-      serviceName: 'serviceName',
-      service,
+    const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
-      searchLocation,
       fingerprint,
-      type: QueryTypes.EDITED_ELEMENT,
+      endevorConnectionDetails: service,
+      searchContext: {
+        searchLocationName,
+        serviceName,
+        overallSearchLocation: searchLocation,
+        initialSearchLocation: {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: searchLocation.environment!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: searchLocation.stageNumber!,
+          subSystem: parent.parent.name,
+          system: parent.parent.parent.name,
+        },
+      },
     };
     assert.deepStrictEqual(
       actualShowedElementDetails,
-      editSessionDetails,
+      expectedEditSessionDetails,
       `Shown element URI details should be: ${JSON.stringify(
-        editSessionDetails
+        expectedEditSessionDetails
       )}, but the actual value is: ${JSON.stringify(
         actualShowedElementDetails
       )}`
     );
     assert.deepStrictEqual(
-      dispatchSignoutActions.called,
+      dispatchActions.called,
       false,
       'Dispatch for signout element when edit without signout was called'
     );
   });
 
-  it('should start edit session for element with signout', async () => {
+  it('should start an edit session for an element with signout', async () => {
     // arrange
     const automaticSignoutSetting = true;
     await workspace
@@ -284,13 +293,13 @@ describe('starting edit session for element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const content = 'Show me this Endevor!';
-    const fingerprint = 'finger';
     const signoutChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
     mockAskingForChangeControlValue(signoutChangeControlValue);
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
     const retrieveElementStub = mockRetrievingElementWithFingerprint(
       service,
       element
@@ -316,19 +325,18 @@ describe('starting edit session for element', () => {
         elementDirectory,
         ConfigurationTarget.Global
       );
-    const createdElementDirectoryUri = getEditFolderUri(workspaceUri)(
+    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
       elementDirectory
     )(
       serviceName,
       searchLocationName
     )(element);
-    const createLocalDirectoryStub = mockCreatingDirectory()(
-      createdElementDirectoryUri
-    );
+    const createElementDirectoryStub =
+      mockCreatingDirectory()(elementDirectoryUri);
     // can be anything, but URI
     const savedFileMockUri = Uri.file(__dirname);
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
-      createdElementDirectoryUri,
+      elementDirectoryUri,
       {
         content,
         extension: element.extension,
@@ -338,17 +346,38 @@ describe('starting edit session for element', () => {
     const showSavedElementStub = mockShowingFileContentWith()(
       Promise.resolve()
     );
-    const dispatchSignoutActions = sinon.spy();
+    const dispatchActions = sinon.spy();
     // act
+    const parent: TypeNode = {
+      type: 'TYPE',
+      name: element.type,
+      elements: new Map(),
+      parent: {
+        type: 'SUB',
+        name: element.subSystem,
+        parent: {
+          type: 'SYS',
+          name: element.system,
+          children: new Map(),
+        },
+        children: new Map(),
+      },
+      map: {
+        type: 'MAP',
+        name: 'MAP',
+        elements: new Map(),
+      },
+    };
     try {
       await commands.executeCommand(
         CommandId.QUICK_EDIT_ELEMENT,
-        dispatchSignoutActions,
+        dispatchActions,
         {
           type: element.type,
           name: element.name,
           uri: elementUri,
           id: elementId,
+          parent,
         }
       );
     } catch (e) {
@@ -357,86 +386,63 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [
-      ,
-      retrieveWithServiceStub,
-      retrieveContentStub,
-      retrieveWithSignoutValueStub,
-    ] = retrieveElementStub;
-    const actualService = retrieveWithServiceStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Fetch element content was not called with expected service ${JSON.stringify(
-        service
-      )}, it was called with ${JSON.stringify(actualService)}`
+    const [, , contentStub] = retrieveElementStub;
+    assert.ok(
+      contentStub.called,
+      'Retrieve an element Endevor API was not called'
     );
-    const actualElement = retrieveContentStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Fetch element content was not called with expected element ${JSON.stringify(
-        element
-      )}, it was called with ${JSON.stringify(actualElement)}`
+    assert.ok(
+      createElementDirectoryStub.called,
+      'Create an element local directory API was not called'
     );
-    const actualSignoutValue = retrieveWithSignoutValueStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualSignoutValue,
-      signoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${JSON.stringify(
-        signoutChangeControlValue
-      )}, it was called with ${JSON.stringify(actualSignoutValue)}`
+    const [, elementDetailsStub] = saveElementStub;
+    assert.ok(
+      elementDetailsStub.called,
+      'Save an element in a local directory API was not called'
     );
-    const actualElementDirectory = createLocalDirectoryStub.args[0]?.[0].fsPath;
-    const expectedLocalElementDirectory = createdElementDirectoryUri.fsPath;
-    assert.deepStrictEqual(
-      actualElementDirectory,
-      expectedLocalElementDirectory,
-      `Creating of element local directory was not called with expected ${expectedLocalElementDirectory}, it was called with ${actualElementDirectory}`
-    );
-    const [, savedElementDetailsStub] = saveElementStub;
-    const actualSavedElementDetails = savedElementDetailsStub.args[0]?.[0];
-    const expectedSavedElementDetails = {
-      fileName: element.name,
-      fileExtension: element.extension,
-    };
-    assert.deepStrictEqual(
-      actualSavedElementDetails,
-      expectedSavedElementDetails,
-      `Saving element into local directory was not called with expected ${JSON.stringify(
-        expectedSavedElementDetails
-      )}, it was called with ${JSON.stringify(actualSavedElementDetails)}`
+    assert.ok(
+      showSavedElementStub.called,
+      'Show a saved element in the editor API was not called'
     );
     const actualShowedElementUri = showSavedElementStub.args[0]?.[0];
-    const actualEditedElementDetails = fromEditedElementUri(
+    const actualShowedElementDetails = fromEditedElementUri(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       actualShowedElementUri!
     );
-    const expectedEditSessionDetails = {
-      searchLocationName: 'searchLocationName',
-      serviceName: 'serviceName',
-      service,
+    const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
-      searchLocation,
       fingerprint,
-      type: QueryTypes.EDITED_ELEMENT,
+      endevorConnectionDetails: service,
+      searchContext: {
+        searchLocationName,
+        serviceName,
+        overallSearchLocation: searchLocation,
+        initialSearchLocation: {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: searchLocation.environment!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: searchLocation.stageNumber!,
+          subSystem: parent.parent.name,
+          system: parent.parent.parent.name,
+        },
+      },
     };
     assert.deepStrictEqual(
-      actualEditedElementDetails,
+      actualShowedElementDetails,
       expectedEditSessionDetails,
       `Shown element URI details should be: ${JSON.stringify(
         expectedEditSessionDetails
       )}, but the actual value is: ${JSON.stringify(
-        actualEditedElementDetails
+        actualShowedElementDetails
       )}`
     );
     assert.deepStrictEqual(
-      dispatchSignoutActions.called,
+      dispatchActions.called,
       true,
       'Dispatch for signout element when editing with signout was not called'
     );
     const expectedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -444,12 +450,12 @@ describe('starting edit session for element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
+      dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      dispatchSignoutActions.args[0]?.[0],
       `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
-        dispatchSignoutActions.args[0]?.[0]
+        dispatchActions.args[0]?.[0]
       )}`
     );
   });
@@ -464,14 +470,11 @@ describe('starting edit session for element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const content = 'Show me this Endevor!';
-    const fingerprint = 'finger';
     const signoutChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
     mockAskingForChangeControlValue(signoutChangeControlValue);
-    mockAskingForOverrideSignout([element.name])(true);
     const error = new SignoutError('something');
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
@@ -482,6 +485,9 @@ describe('starting edit session for element', () => {
       },
       result: error,
     };
+    mockAskingForOverrideSignout([element.name])(true);
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
     const secondAttempt = {
       signoutArg: {
         signoutChangeControlValue,
@@ -499,27 +505,26 @@ describe('starting edit session for element', () => {
     // can be anything, but URI
     const workspaceUri = elementUri;
     mockGettingWorkspaceUri(workspaceUri);
-    const expectedElementDirectory = 'test-edit-folder';
+    const elementDirectory = 'test-edit-folder';
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
         EDIT_FOLDER_SETTING,
-        expectedElementDirectory,
+        elementDirectory,
         ConfigurationTarget.Global
       );
-    const createdElementDirectoryUri = getEditFolderUri(workspaceUri)(
-      expectedElementDirectory
+    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
+      elementDirectory
     )(
       serviceName,
       searchLocationName
     )(element);
-    const createLocalDirectoryStub = mockCreatingDirectory()(
-      createdElementDirectoryUri
-    );
+    const createElementDirectoryStub =
+      mockCreatingDirectory()(elementDirectoryUri);
     // can be anything, but URI
     const savedFileMockUri = Uri.file(__dirname);
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
-      createdElementDirectoryUri,
+      elementDirectoryUri,
       {
         content,
         extension: element.extension,
@@ -529,17 +534,38 @@ describe('starting edit session for element', () => {
     const showSavedElementStub = mockShowingFileContentWith()(
       Promise.resolve()
     );
-    const dispatchSignoutActions = sinon.spy();
+    const dispatchActions = sinon.spy();
     // act
+    const parent: TypeNode = {
+      type: 'TYPE',
+      name: element.type,
+      elements: new Map(),
+      parent: {
+        type: 'SUB',
+        name: element.subSystem,
+        parent: {
+          type: 'SYS',
+          name: element.system,
+          children: new Map(),
+        },
+        children: new Map(),
+      },
+      map: {
+        type: 'MAP',
+        name: 'MAP',
+        elements: new Map(),
+      },
+    };
     try {
       await commands.executeCommand(
         CommandId.QUICK_EDIT_ELEMENT,
-        dispatchSignoutActions,
+        dispatchActions,
         {
           type: element.type,
           name: element.name,
           uri: elementUri,
           id: elementId,
+          parent,
         }
       );
     } catch (e) {
@@ -548,104 +574,63 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, withService, withElementStub, withSignoutChangeControlValueStub] =
-      retrieveElementStub;
-    const actualService = withService.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Fetch element content was not called with expected service ${JSON.stringify(
-        service
-      )}, it was called with ${JSON.stringify(actualService)}`
+    const [, , contentStub] = retrieveElementStub;
+    assert.ok(
+      contentStub.calledTwice,
+      'Retrieve an element Endevor API was not called twice'
     );
-    const actualElement = withElementStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Fetch element content was not called with expected element ${JSON.stringify(
-        element
-      )}, it was called with ${JSON.stringify(actualElement)}`
+    assert.ok(
+      createElementDirectoryStub.called,
+      'Create an element local directory API was not called'
     );
-    const firstAttemptSignoutValue =
-      withSignoutChangeControlValueStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      firstAttemptSignoutValue,
-      signoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${JSON.stringify(
-        signoutChangeControlValue
-      )}, it was called with ${JSON.stringify(firstAttemptSignoutValue)}`
+    const [, elementDetailsStub] = saveElementStub;
+    assert.ok(
+      elementDetailsStub.called,
+      'Save an element in a local directory API was not called'
     );
-    const firstAttemptOverrideSignoutValue =
-      withSignoutChangeControlValueStub.args[0]?.[1];
-    assert.deepStrictEqual(
-      firstAttemptOverrideSignoutValue,
-      undefined,
-      `Fetch element content was not called with expected override signout value ${undefined}, it was called with ${firstAttemptOverrideSignoutValue}`
-    );
-    const secondAttemptSignoutValue =
-      withSignoutChangeControlValueStub.args[1]?.[0];
-    assert.deepStrictEqual(
-      secondAttemptSignoutValue,
-      signoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${JSON.stringify(
-        signoutChangeControlValue
-      )}, it was called with ${JSON.stringify(firstAttemptSignoutValue)}`
-    );
-    const secondAttemptOverrideSignoutValue =
-      withSignoutChangeControlValueStub.args[1]?.[1];
-    assert.deepStrictEqual(
-      secondAttemptOverrideSignoutValue,
-      true,
-      `Fetch element content was not called with expected override signout value ${true}, it was called with ${secondAttemptOverrideSignoutValue}`
-    );
-    const actualElementDirectory = createLocalDirectoryStub.args[0]?.[0].fsPath;
-    const expectedLocalElementDirectory = createdElementDirectoryUri.fsPath;
-    assert.deepStrictEqual(
-      actualElementDirectory,
-      expectedLocalElementDirectory,
-      `Creating of element local directory was not called with expected ${expectedLocalElementDirectory}, it was called with ${actualElementDirectory}`
-    );
-    const [, savedElementDetailsStub] = saveElementStub;
-    const actualSavedElementDetails = savedElementDetailsStub.args[0]?.[0];
-    const expectedSavedElementDetails = {
-      fileName: element.name,
-      fileExtension: element.extension,
-    };
-    assert.deepStrictEqual(
-      actualSavedElementDetails,
-      expectedSavedElementDetails,
-      `Saving element into local directory was not called with expected ${expectedSavedElementDetails}, it was called with ${actualSavedElementDetails}`
+    assert.ok(
+      showSavedElementStub.called,
+      'Show a saved element in the editor API was not called'
     );
     const actualShowedElementUri = showSavedElementStub.args[0]?.[0];
-    const actualEditedElementDetails = fromEditedElementUri(
+    const actualShowedElementDetails = fromEditedElementUri(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       actualShowedElementUri!
     );
-    const expectedEditSessionDetails = {
-      searchLocationName,
-      serviceName,
-      service,
+    const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
-      searchLocation,
       fingerprint,
-      type: QueryTypes.EDITED_ELEMENT,
+      endevorConnectionDetails: service,
+      searchContext: {
+        searchLocationName,
+        serviceName,
+        overallSearchLocation: searchLocation,
+        initialSearchLocation: {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: searchLocation.environment!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: searchLocation.stageNumber!,
+          subSystem: parent.parent.name,
+          system: parent.parent.parent.name,
+        },
+      },
     };
     assert.deepStrictEqual(
-      actualEditedElementDetails,
+      actualShowedElementDetails,
       expectedEditSessionDetails,
       `Shown element URI details should be: ${JSON.stringify(
         expectedEditSessionDetails
       )}, but the actual value is: ${JSON.stringify(
-        actualEditedElementDetails
+        actualShowedElementDetails
       )}`
     );
     assert.deepStrictEqual(
-      dispatchSignoutActions.called,
+      dispatchActions.called,
       true,
-      'Dispatch for signout element when editing with override signout was not called'
+      'Dispatch for signout element when editing with signout was not called'
     );
     const expectedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -653,12 +638,12 @@ describe('starting edit session for element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
+      dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      dispatchSignoutActions.args[0]?.[0],
-      `Expexted dispatch for edit element with override signout to have been called with ${JSON.stringify(
+      `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
-        dispatchSignoutActions.args[0]?.[0]
+        dispatchActions.args[0]?.[0]
       )}`
     );
   });
@@ -673,14 +658,11 @@ describe('starting edit session for element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const content = 'Show me this Endevor!';
-    const fingerprint = 'finger';
     const signoutChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
     mockAskingForChangeControlValue(signoutChangeControlValue);
-    mockAskingForOverrideSignout([element.name])(false);
     const signoutError = new SignoutError('something');
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
@@ -691,6 +673,9 @@ describe('starting edit session for element', () => {
       },
       result: signoutError,
     };
+    mockAskingForOverrideSignout([element.name])(false);
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
     const secondRetrieveAttempt = {
       result: {
         content,
@@ -704,27 +689,26 @@ describe('starting edit session for element', () => {
     // can be anything, but URI
     const workspaceUri = elementUri;
     mockGettingWorkspaceUri(workspaceUri);
-    const expectedElementDirectory = 'test-edit-folder';
+    const elementDirectory = 'test-edit-folder';
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
         EDIT_FOLDER_SETTING,
-        expectedElementDirectory,
+        elementDirectory,
         ConfigurationTarget.Global
       );
-    const createdElementDirectoryUri = getEditFolderUri(workspaceUri)(
-      expectedElementDirectory
+    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
+      elementDirectory
     )(
       serviceName,
       searchLocationName
     )(element);
-    const createLocalDirectoryStub = mockCreatingDirectory()(
-      createdElementDirectoryUri
-    );
+    const createElementDirectoryStub =
+      mockCreatingDirectory()(elementDirectoryUri);
     // can be anything, but URI
     const savedFileMockUri = Uri.file(__dirname);
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
-      createdElementDirectoryUri,
+      elementDirectoryUri,
       {
         content,
         extension: element.extension,
@@ -734,17 +718,38 @@ describe('starting edit session for element', () => {
     const showSavedElementStub = mockShowingFileContentWith()(
       Promise.resolve()
     );
-    const dispatchSignoutActions = sinon.spy();
+    const dispatchActions = sinon.spy();
     // act
+    const parent: TypeNode = {
+      type: 'TYPE',
+      name: element.type,
+      elements: new Map(),
+      parent: {
+        type: 'SUB',
+        name: element.subSystem,
+        parent: {
+          type: 'SYS',
+          name: element.system,
+          children: new Map(),
+        },
+        children: new Map(),
+      },
+      map: {
+        type: 'MAP',
+        name: 'MAP',
+        elements: new Map(),
+      },
+    };
     try {
       await commands.executeCommand(
         CommandId.QUICK_EDIT_ELEMENT,
-        dispatchSignoutActions,
+        dispatchActions,
         {
           type: element.type,
           name: element.name,
           uri: elementUri,
           id: elementId,
+          parent,
         }
       );
     } catch (e) {
@@ -753,101 +758,63 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [
-      ,
-      withServiceStub,
-      withElementStub,
-      withSignoutChangeControlValueStub,
-    ] = retrieveElementStub;
-    const actualService = withServiceStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Fetch element content was not called with expected service ${JSON.stringify(
-        service
-      )}, it was called with ${JSON.stringify(actualService)}`
+    const [, , contentStub] = retrieveElementStub;
+    assert.ok(
+      contentStub.calledTwice,
+      'Retrieve an element Endevor API was not called twice'
     );
-    const actualElement = withElementStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Fetch element content was not called with expected element ${JSON.stringify(
-        element
-      )}, it was called with ${JSON.stringify(actualElement)}`
+    assert.ok(
+      createElementDirectoryStub.called,
+      'Create an element local directory API was not called'
     );
-    const firstAttemptSignoutValue =
-      withSignoutChangeControlValueStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      firstAttemptSignoutValue,
-      signoutChangeControlValue,
-      `Fetch element content was not called with expected signout value ${JSON.stringify(
-        signoutChangeControlValue
-      )}, it was called with ${JSON.stringify(firstAttemptSignoutValue)}`
+    const [, elementDetailsStub] = saveElementStub;
+    assert.ok(
+      elementDetailsStub.called,
+      'Save an element in a local directory API was not called'
     );
-    const firstAttemptOverrideSignoutValue =
-      withSignoutChangeControlValueStub.args[0]?.[1];
-    assert.deepStrictEqual(
-      firstAttemptOverrideSignoutValue,
-      undefined,
-      `Fetch element content was not called with expected override signout value ${undefined}, it was called with ${firstAttemptOverrideSignoutValue}`
-    );
-    const secondAttemptSignoutValue =
-      withSignoutChangeControlValueStub.args[1]?.[0];
-    assert.deepStrictEqual(
-      secondAttemptSignoutValue,
-      undefined,
-      `Fetch element content was not called with expected signout value ${undefined}, it was called with ${firstAttemptSignoutValue}`
-    );
-    const actualElementDirectory = createLocalDirectoryStub.args[0]?.[0].fsPath;
-    const expectedLocalElementDirectory = createdElementDirectoryUri.fsPath;
-    assert.deepStrictEqual(
-      actualElementDirectory,
-      expectedLocalElementDirectory,
-      `Creating of element local directory was not called with expected ${expectedLocalElementDirectory}, it was called with ${actualElementDirectory}`
-    );
-    const [, savedElementDetailsStub] = saveElementStub;
-    const actualSavedElementDetails = savedElementDetailsStub.args[0]?.[0];
-    const expectedSavedElementDetails = {
-      fileName: element.name,
-      fileExtension: element.extension,
-    };
-    assert.deepStrictEqual(
-      actualSavedElementDetails,
-      expectedSavedElementDetails,
-      `Saving element into local directory was not called with expected ${JSON.stringify(
-        expectedSavedElementDetails
-      )}, it was called with ${JSON.stringify(actualSavedElementDetails)}`
+    assert.ok(
+      showSavedElementStub.called,
+      'Show a saved element in the editor API was not called'
     );
     const actualShowedElementUri = showSavedElementStub.args[0]?.[0];
-    const actualEditedElementDetails = fromEditedElementUri(
+    const actualShowedElementDetails = fromEditedElementUri(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       actualShowedElementUri!
     );
-    const expectedEditSessionDetails = {
-      searchLocationName,
-      serviceName,
-      service,
+    const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
-      searchLocation,
       fingerprint,
-      type: QueryTypes.EDITED_ELEMENT,
+      endevorConnectionDetails: service,
+      searchContext: {
+        searchLocationName,
+        serviceName,
+        overallSearchLocation: searchLocation,
+        initialSearchLocation: {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          environment: searchLocation.environment!,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stageNumber: searchLocation.stageNumber!,
+          subSystem: parent.parent.name,
+          system: parent.parent.parent.name,
+        },
+      },
     };
     assert.deepStrictEqual(
-      actualEditedElementDetails,
+      actualShowedElementDetails,
       expectedEditSessionDetails,
       `Shown element URI details should be: ${JSON.stringify(
         expectedEditSessionDetails
       )}, but the actual value is: ${JSON.stringify(
-        actualEditedElementDetails
+        actualShowedElementDetails
       )}`
     );
     assert.deepStrictEqual(
-      dispatchSignoutActions.called,
+      dispatchActions.called,
       true,
-      'Dispatch for signout element when editing without signout was called'
+      'Dispatch for signout element when editing with signout was not called'
     );
     const expectedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -855,12 +822,12 @@ describe('starting edit session for element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
+      dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      dispatchSignoutActions.args[0]?.[0],
-      `Expexted dispatch for edit element with override signout to have been called with ${JSON.stringify(
+      `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
-        dispatchSignoutActions.args[0]?.[0]
+        dispatchActions.args[0]?.[0]
       )}`
     );
   });
