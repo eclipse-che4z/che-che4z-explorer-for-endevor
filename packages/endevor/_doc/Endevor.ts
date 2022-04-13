@@ -140,16 +140,6 @@ export type ElementWithFingerprint = Readonly<{
 
 export type ListingContent = string;
 
-export type GenerateParams = Readonly<{
-  copyBack: boolean;
-  noSource: boolean;
-  overrideSignOut: boolean;
-}>;
-export type GenerateWithCopyBackParams = Readonly<{ noSource?: boolean }>;
-export type GenerateSignOutParams = Readonly<{
-  overrideSignOut?: boolean;
-}>;
-
 export type DomainUpdateParams = Readonly<{
   content: ElementContent;
   fingerprint: Value;
@@ -165,8 +155,3 @@ export type SdkUpdateParams = Readonly<{
 }>;
 
 export type OverrideSignOut = boolean;
-
-export type SignOutParams = Readonly<{
-  signoutChangeControlValue: ActionChangeControlValue;
-  overrideSignOut?: OverrideSignOut;
-}>;

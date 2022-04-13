@@ -21,13 +21,13 @@ export const getAllSubSystems = endevor.getAllSubSystems(logger);
 export const searchForElements = endevor.searchForElements(logger);
 export const viewElement = endevor.viewElement(logger);
 export const retrieveElement = endevor.retrieveElementWithoutSignout(logger);
-export const generateElementInPlace = endevor.generateElementInPlace(logger);
-export const generateElementWithCopyBack =
-  endevor.generateElementWithCopyBack(logger);
+export const generateElement = endevor.generateElement(logger);
 export const retrieveElementWithDependenciesWithoutSignout =
   endevor.retrieveElementWithDependenciesWithoutSignout(logger);
 export const retrieveElementWithDependenciesWithSignout =
   endevor.retrieveElementWithDependenciesWithSignout(logger);
+export const retrieveElementWithDependenciesOverrideSignout =
+  endevor.retrieveElementWithDependenciesOverrideSignout(logger);
 export const retrieveElementWithFingerprint =
   endevor.retrieveElementWithFingerprint(logger);
 export const printElement = endevor.printElement(logger);
@@ -37,6 +37,9 @@ export const retrieveElementWithoutSignout =
   endevor.retrieveElementWithoutSignout(logger);
 export const retrieveElementWithSignout =
   endevor.retrieveElementWithSignout(logger);
+export const retrieveElementWithOverrideSignout =
+  endevor.retrieveElementWithOverrideSignout(logger);
 export const signOutElement = endevor.signOutElement(logger);
+export const overrideSignOutElement = endevor.overrideSignOutElement(logger);
 export const signInElement = endevor.signInElement(logger);
 export const addElement = endevor.addElement(logger);

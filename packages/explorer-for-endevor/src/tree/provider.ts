@@ -59,7 +59,7 @@ class ElementItem extends vscode.TreeItem {
     super(node.name, vscode.TreeItemCollapsibleState.None);
 
     this.resourceUri = node.uri;
-    this.contextValue = node.type;
+    this.contextValue = 'ELEMENT_TYPE';
 
     this.command = {
       title: 'print',
@@ -121,8 +121,7 @@ const toTreeItem = (node: Node): vscode.TreeItem => {
       );
       return typeTreeItem;
     }
-    case 'ELEMENT_UP_THE_MAP':
-    case 'ELEMENT_IN_PLACE': {
+    case 'ELEMENT': {
       const elmNode = new ElementItem(node);
       const uriParams = fromTreeElementUri(node.uri);
       if (isError(uriParams)) {
@@ -165,10 +164,7 @@ export const make = (
           ),
         ];
       }
-      if (
-        node.type === 'ELEMENT_IN_PLACE' ||
-        node.type === 'ELEMENT_UP_THE_MAP'
-      ) {
+      if (node.type === 'ELEMENT') {
         return []; // elemetns are leaf nodes and have no children
       }
       if (node.type === 'BUTTON_ADD_PROFILE') {

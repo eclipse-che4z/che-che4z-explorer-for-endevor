@@ -101,18 +101,14 @@ describe('discarding local changes in compared element', () => {
       instance: 'ANY-INSTANCE',
     };
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
+      service,
+      serviceName,
       element,
-      endevorConnectionDetails: service,
-      fingerprint: remoteElementVersionFingerprint,
       uploadChangeControlValue,
-      uploadTargetLocation: element,
+      searchLocation,
+      searchLocationName,
+      fingerprint: remoteElementVersionFingerprint,
       remoteVersionTempFilePath: remoteElementVersionFsPath,
-      initialSearchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: searchLocation,
-        initialSearchLocation: element,
-      },
     });
     if (isError(comparedElementUri)) {
       const error = comparedElementUri;

@@ -11,19 +11,26 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Element } from '@local/endevor/_doc/Endevor';
+import {
+  Service,
+  ElementSearchLocation,
+  Element,
+} from '@local/endevor/_doc/Endevor';
 import {
   createDirectory,
   saveFileIntoWorkspaceFolder,
 } from '@local/vscode-wrapper/workspace';
 import * as vscode from 'vscode';
+import { logger } from '../../globals';
 import { getTempEditFolder } from '../../settings/settings';
+import { toEditedElementUri } from '../../uri/editedElementUri';
 import {
   getEditFolderUri,
   isError,
   updateEditFoldersWhenContext,
 } from '../../utils';
 import { showSavedElementContent } from '../../workspace';
+import { ElementLocationName, EndevorServiceName } from '../../_doc/settings';
 
 export const saveIntoEditFolder =
   (workspaceUri: vscode.Uri) =>
@@ -67,6 +74,39 @@ export const saveIntoEditFolder =
       return new Error(
         `Unable to save the element ${element.name} into the file system because of error ${error.message}`
       );
+    }
+  };
+
+// TODO: needs to be refactored, we ruin our URI abstraction here,
+// because now, we know, where the location and etc stored
+export const withUploadOptions =
+  (fileUri: vscode.Uri) =>
+  (uploadOptions: {
+    serviceName: EndevorServiceName;
+    service: Service;
+    element: Element;
+    searchLocation: ElementSearchLocation;
+    searchLocationName: ElementLocationName;
+    fingerprint: string;
+  }): vscode.Uri | undefined => {
+    const elementUri = toEditedElementUri(fileUri.fsPath)({
+      serviceName: uploadOptions.serviceName,
+      service: uploadOptions.service,
+      element: uploadOptions.element,
+      searchLocation: uploadOptions.searchLocation,
+      searchLocationName: uploadOptions.searchLocationName,
+      fingerprint: uploadOptions.fingerprint,
+    });
+    if (!isError(elementUri)) {
+      return fileUri.with({
+        query: elementUri.query,
+      });
+    } else {
+      logger.error(
+        `Unable to open the element ${uploadOptions.element.name} for editing.`,
+        `Unable to open the element ${uploadOptions.element.name} because of error ${elementUri.message}.`
+      );
+      return;
     }
   };
 

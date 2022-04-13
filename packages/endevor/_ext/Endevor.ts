@@ -41,13 +41,6 @@ export type ElementDependencies = t.TypeOf<typeof ElementDependencies>;
 export type Content = t.TypeOf<typeof Content>;
 
 export type BaseResponse = t.TypeOf<typeof BaseResponse>;
-export type BaseResponseWithUnknownData = t.TypeOf<
-  typeof BaseResponseWithUnknownData
->;
-export type BaseResponseWithMessages = t.TypeOf<
-  typeof BaseResponseWithMessages
->;
-export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
 export type SuccessPrintResponse = t.TypeOf<typeof SuccessPrintResponse>;
 export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
 export type SuccessListElementsResponse = t.TypeOf<
@@ -69,10 +62,13 @@ export type SuccessListDependenciesResponse = t.TypeOf<
   typeof SuccessListDependenciesResponse
 >;
 export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
+export type GenerateResponse = t.TypeOf<typeof GenerateResponse>;
 
 export type SignInResponse = t.TypeOf<typeof SignInResponse>;
 
 export type AddResponse = t.TypeOf<typeof AddResponse>;
+
+export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
 
 export const Repository = t.type({
   name: t.string,
@@ -153,27 +149,13 @@ export const BaseResponse = t.type({
   }),
 });
 
-export const BaseResponseWithMessages = t.type({
-  body: t.type({
-    returnCode: t.number,
-    messages: t.array(t.string),
-  }),
-});
-
-export const BaseResponseWithUnknownData = t.type({
-  body: t.type({
-    data: t.array(t.unknown),
-  }),
-});
-
-export const ErrorResponse = BaseResponseWithMessages;
-
 export const SuccessPrintResponse = t.type({
   body: t.type({
     returnCode: t.number,
     data: t.array(Content),
   }),
 });
+
 class RetrieveContentType extends t.Type<Buffer> {
   constructor() {
     super(
@@ -203,10 +185,29 @@ export const SuccessListRepositoriesResponse = t.type({
   }),
 });
 
-export const SuccessListEnvironmentStagesResponse = BaseResponseWithUnknownData;
-export const SuccessListSystemsResponse = BaseResponseWithUnknownData;
-export const SuccessListSubSystemsResponse = BaseResponseWithUnknownData;
-export const SuccessListElementsResponse = BaseResponseWithUnknownData;
+export const SuccessListEnvironmentStagesResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListSystemsResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListSubSystemsResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
+
+export const SuccessListElementsResponse = t.type({
+  body: t.type({
+    data: t.array(t.unknown),
+  }),
+});
 
 export const SuccessListDependenciesResponse = t.type({
   body: t.type({
@@ -219,6 +220,31 @@ export const SuccessListDependenciesResponse = t.type({
   }),
 });
 
-export const UpdateResponse = BaseResponseWithMessages;
-export const SignInResponse = BaseResponseWithMessages;
-export const AddResponse = BaseResponseWithMessages;
+export const UpdateResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});
+export const GenerateResponse = UpdateResponse;
+
+export const ErrorResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});
+
+export const SignInResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});
+
+export const AddResponse = t.type({
+  body: t.type({
+    returnCode: t.number,
+    messages: t.array(t.string),
+  }),
+});

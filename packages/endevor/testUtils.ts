@@ -23,8 +23,6 @@ export const mockEndpoint =
   (mockServer: Mockttp): Promise<MockedEndpoint> => {
     const mockRuleBuilder = createMockBuilder(mockServer, req.path, req.method);
     if (req.query) mockRuleBuilder.withExactQuery(req.query);
-    // check only specified body values, ignoring extra values (if any)
-    if (req.body) mockRuleBuilder.withJsonBodyIncluding(req.body);
     return mockRuleBuilder
       .withHeaders(req.headers)
       .thenReply(

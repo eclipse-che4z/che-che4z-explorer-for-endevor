@@ -56,8 +56,7 @@ import { signInElementCommand } from './commands/signInElement';
 import { cleanTempEditDirectory } from './workspace';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import { isError } from './utils';
-import { generateElementInPlaceCommand } from './commands/generateElementInPlace';
-import { generateElementWithCopyBackCommand } from './commands/generateElementWithCopyBack';
+import { generateElementCommand } from './commands/generateElement';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './_doc/Actions';
 import { State } from './_doc/Store';
@@ -253,25 +252,9 @@ export const activate: Extension['activate'] = async (context) => {
     ],
     [
       CommandId.GENERATE_ELEMENT,
-      (elementNode: ElementNode) => {
+      (elementNode?: ElementNode, nodes?: Node[]) => {
         return withErrorLogging(CommandId.GENERATE_ELEMENT)(
-          generateElementInPlaceCommand(dispatch, elementNode)
-        );
-      },
-    ],
-    [
-      CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-      (elementNode: ElementNode) => {
-        return withErrorLogging(CommandId.GENERATE_ELEMENT_WITH_COPY_BACK)(
-          generateElementWithCopyBackCommand(dispatch, elementNode, false)
-        );
-      },
-    ],
-    [
-      CommandId.GENERATE_ELEMENT_WITH_NO_SOURCE,
-      (elementNode: ElementNode) => {
-        return withErrorLogging(CommandId.GENERATE_ELEMENT_WITH_NO_SOURCE)(
-          generateElementWithCopyBackCommand(dispatch, elementNode, true)
+          generateElementCommand(dispatch)(elementNode, nodes)
         );
       },
     ],

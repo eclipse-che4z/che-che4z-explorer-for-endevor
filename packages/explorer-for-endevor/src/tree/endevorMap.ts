@@ -110,15 +110,10 @@ export const toEndevorMap =
         }
         // this is not the last environment stage
         systemsSequence.push(matchingSystem);
-        const systemWithinEnv = matchingSystem.system;
-        const systemFromNextEnv = matchingSystem.nextSystem;
         addSystem({
           environment: matchingEnv.nextEnvironment,
           stageNumber: matchingEnv.nextStageNumber,
-          system:
-            matchingEnv.stageNumber === '1'
-              ? systemWithinEnv
-              : systemFromNextEnv,
+          system: matchingSystem.nextSystem,
         })(environmentStageSequenceIndex + 1);
       };
     addSystem({
@@ -159,21 +154,11 @@ export const toEndevorMap =
         }
         // this is not the last environment stage
         subsystemsSequence.push(matchingSubSystem);
-        const systemWithinEnv = matchingSystem.system;
-        const systemFromNextEnv = matchingSystem.nextSystem;
-        const subsysWithinEnv = matchingSubSystem.subSystem;
-        const subsysFromNextEnv = matchingSubSystem.nextSubSystem;
         addSubsystem({
           environment: matchingEnv.nextEnvironment,
           stageNumber: matchingEnv.nextStageNumber,
-          system:
-            matchingEnv.stageNumber === '1'
-              ? systemWithinEnv
-              : systemFromNextEnv,
-          subSystem:
-            matchingEnv.stageNumber === '1'
-              ? subsysWithinEnv
-              : subsysFromNextEnv,
+          system: matchingSystem.nextSystem,
+          subSystem: matchingSubSystem.nextSubSystem,
         })(systemsSequenceIndex + 1);
       };
     addSubsystem({ environment, stageNumber, system, subSystem })(initialIndex);

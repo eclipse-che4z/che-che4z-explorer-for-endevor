@@ -53,13 +53,11 @@ export type SystemNode = Readonly<{
 export type SubSystemNode = Readonly<{
   type: 'SUB';
   name: string;
-  parent: SystemNode;
   children: Types;
 }>;
 export type TypeNode = Readonly<{
   type: 'TYPE';
   name: string;
-  parent: SubSystemNode;
   elements: Elements;
   map: EndevorMapNode;
 }>;
@@ -69,24 +67,12 @@ export type EndevorMapNode = Readonly<{
   elements: Elements;
 }>;
 
-type ElementInPlaceNode = Readonly<{
+export type ElementNode = Readonly<{
   searchLocationId: string;
-  type: 'ELEMENT_IN_PLACE';
+  type: 'ELEMENT';
   name: string;
   uri: Uri;
-  parent: TypeNode;
 }>;
-
-type ElementUpTheMapNode = Readonly<{
-  searchLocationId: string;
-  type: 'ELEMENT_UP_THE_MAP';
-  name: string;
-  uri: Uri;
-  parent: TypeNode;
-}>;
-
-export type ElementNode = ElementInPlaceNode | ElementUpTheMapNode;
-
 export type ElementLocationNode =
   | SystemNode
   | SubSystemNode

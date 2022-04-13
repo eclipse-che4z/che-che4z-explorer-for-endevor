@@ -21,7 +21,6 @@ import { Uri } from 'vscode';
 import * as changeControlValueDialogs from '../dialogs/change-control/endevorChangeControlDialogs';
 import * as signoutDialogs from '../dialogs/change-control/signOutDialogs';
 import * as uploadLocationDialogs from '../dialogs/locations/endevorUploadLocationDialogs';
-import * as printListingDialogs from '../dialogs/listings/showListingDialogs';
 
 type PrefilledDialogValue = {
   ccid?: string;
@@ -94,19 +93,5 @@ export const mockChooseFileUriFromFs = (
   return sinon
     .stub(workspace, 'chooseFileUriFromFs')
     .withArgs()
-    .resolves(mockResult);
-};
-
-type AskForForPrintListingStub = sinon.SinonStub<
-  [ReadonlyArray<string>],
-  Promise<boolean>
->;
-
-export const mockAskingForPrintListing = (
-  mockResult: boolean
-): AskForForPrintListingStub => {
-  return sinon
-    .stub(printListingDialogs, 'askToShowListing')
-    .withArgs(sinon.match.any)
     .resolves(mockResult);
 };

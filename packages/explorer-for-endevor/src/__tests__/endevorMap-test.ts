@@ -71,7 +71,6 @@ describe('building the endevor map', () => {
       nextEnvironment: 'PROD-ENV1',
       nextStageNumber: '2',
     },
-    // end of the map
     {
       environment: 'PROD-ENV1',
       stageNumber: '2',
@@ -86,7 +85,7 @@ describe('building the endevor map', () => {
       environment: 'TEST-ENV1',
       stageNumber: '1',
       system: 'TEST-SYS1',
-      nextSystem: 'QA-SYS1',
+      nextSystem: 'TEST-SYS1',
     },
     {
       environment: 'TEST-ENV1',
@@ -98,7 +97,7 @@ describe('building the endevor map', () => {
       environment: 'TEST-ENV1',
       stageNumber: '1',
       system: 'TEST-SYS2',
-      nextSystem: 'QA-SYS1',
+      nextSystem: 'TEST-SYS2',
     },
     {
       environment: 'TEST-ENV1',
@@ -110,7 +109,7 @@ describe('building the endevor map', () => {
       environment: 'QA-ENV1',
       stageNumber: '1',
       system: 'QA-SYS1',
-      nextSystem: 'PROD-SYS1',
+      nextSystem: 'QA-SYS1',
     },
     {
       environment: 'QA-ENV1',
@@ -122,7 +121,7 @@ describe('building the endevor map', () => {
       environment: 'QFIX-ENV1',
       stageNumber: '1',
       system: 'QFIX-SYS1',
-      nextSystem: 'PROD-SYS1',
+      nextSystem: 'QFIX-SYS1',
     },
     {
       environment: 'QFIX-ENV1',
@@ -130,15 +129,16 @@ describe('building the endevor map', () => {
       system: 'QFIX-SYS1',
       nextSystem: 'PROD-SYS1',
     },
+    // no system specified for PROD-ENV1/1
     {
       environment: 'PROD-ENV1',
       stageNumber: '2',
       system: 'PROD-SYS1',
-      // end of the map
-      nextSystem: 'PROD-SYS1',
+      // non existing system specified
+      nextSystem: 'PROD-ENV1',
     },
   ];
-  // TEST-ENV1/1/TEST-SYS1/TEST-SBS2  -> (unreal case)
+  // TEST-ENV1/1/TEST-SYS1/TEST-SBS2  ->
   // TEST-ENV1/1/TEST-SYS1/TEST-SBS1 -> TEST-ENV1/2/TEST-SYS1/TEST-SBS1 -> QA-ENV1/1/QA-SYS1/QA-SBS1 -> QA-ENV1/2/QA-SYS1/QA-SBS1                -> PROD-ENV1/2/PROD-SYS1/PROD-SBS1
   // TEST-ENV1/1/TEST-SYS2/TEST-SBS1 -> TEST-ENV1/2/TEST-SYS2/TEST-SBS1 ->
   //                                                                          QFIX-ENV1/1/QFIX-SYS1/QFIX-SBS1 -> QFIX-ENV1/2/QFIX-SYS1/QFIX-SBS1 ->
@@ -150,7 +150,6 @@ describe('building the endevor map', () => {
       system: 'TEST-SYS1',
       subSystem: 'TEST-SBS1',
       stageNumber: '1',
-      // no subsystem like this in QA-ENV1/1/QA-SYS
       nextSubSystem: 'TEST-SBS1',
     },
     {
@@ -158,14 +157,14 @@ describe('building the endevor map', () => {
       system: 'TEST-SYS2',
       subSystem: 'TEST-SBS1',
       stageNumber: '1',
-      nextSubSystem: 'QA-SBS1',
+      nextSubSystem: 'TEST-SBS1',
     },
     {
       environment: 'TEST-ENV1',
       system: 'TEST-SYS1',
       subSystem: 'TEST-SBS2',
       stageNumber: '1',
-      nextSubSystem: 'QA-SBS1',
+      nextSubSystem: 'TEST-SBS1',
     },
     {
       environment: 'TEST-ENV1',
@@ -186,14 +185,14 @@ describe('building the endevor map', () => {
       system: 'QFIX-SYS1',
       subSystem: 'QFIX-SBS1',
       stageNumber: '1',
-      nextSubSystem: 'PROD-SBS1',
+      nextSubSystem: 'QFIX-SBS1',
     },
     {
       environment: 'QFIX-ENV1',
       system: 'QFIX-SYS1',
       subSystem: 'QFIX-SBS2',
       stageNumber: '1',
-      nextSubSystem: 'PROD-SBS1',
+      nextSubSystem: 'QFIX-SBS1',
     },
     {
       environment: 'QFIX-ENV1',
@@ -207,7 +206,7 @@ describe('building the endevor map', () => {
       system: 'QA-SYS1',
       subSystem: 'QA-SBS1',
       stageNumber: '1',
-      nextSubSystem: 'PROD-SBS1',
+      nextSubSystem: 'QA-SBS1',
     },
     {
       environment: 'QA-ENV1',
@@ -216,12 +215,12 @@ describe('building the endevor map', () => {
       stageNumber: '2',
       nextSubSystem: 'PROD-SBS1',
     },
+    // no subsystem specified for PROD-ENV1/1
     {
       environment: 'PROD-ENV1',
       system: 'PROD-SYS1',
       subSystem: 'PROD-SBS1',
       stageNumber: '2',
-      // end of the map
       nextSubSystem: 'PROD-SBS1',
     },
   ];
@@ -357,6 +356,7 @@ describe('building the endevor map', () => {
     const result = toEndevorMapWithWildcards(allEnvStages)(allSystems)(
       allSubSystems
     )(environmentStageMapPath);
+    // because the subsystems are on the same level and point to the same subsys the up the map arrays they have should be the same
     // assert
     const expectedRoute = [
       'QFIX-ENV1/2/QFIX-SYS1/QFIX-SBS1',
@@ -364,9 +364,7 @@ describe('building the endevor map', () => {
     ];
     const expectedResult: EndevorMap = {
       ['QFIX-ENV1/1/QFIX-SYS1/QFIX-SBS1']: expectedRoute,
-      // Endevor does not allow for system or subsystem names to change from stage 1 to 2 in the same environment.
-      // This technically means our fake setup cannot exist in real word, but it is a good test.
-      ['QFIX-ENV1/1/QFIX-SYS1/QFIX-SBS2']: [],
+      ['QFIX-ENV1/1/QFIX-SYS1/QFIX-SBS2']: expectedRoute,
     };
 
     expect(result).toEqual(expectedResult);
@@ -380,6 +378,7 @@ describe('building the endevor map', () => {
     const result = toEndevorMapWithWildcards(allEnvStages)(allSystems)(
       allSubSystems
     )(environmentStageMapPath);
+    // because the subsystems are on the same level and point to the same subsys the up the map arrays they have should be the same
     // assert
     const expectedRoute = [
       'TEST-ENV1/2/TEST-SYS1/TEST-SBS1',
@@ -389,9 +388,7 @@ describe('building the endevor map', () => {
     ];
     const expectedResult: EndevorMap = {
       ['TEST-ENV1/1/TEST-SYS1/TEST-SBS1']: expectedRoute,
-      // Endevor does not allow for system or subsystem names to change from stage 1 to 2 in the same environment.
-      // This technically means our fake setup cannot exist in real word, but it is a good test.
-      ['TEST-ENV1/1/TEST-SYS1/TEST-SBS2']: [],
+      ['TEST-ENV1/1/TEST-SYS1/TEST-SBS2']: expectedRoute,
       ['TEST-ENV1/1/TEST-SYS2/TEST-SBS1']: [
         'TEST-ENV1/2/TEST-SYS2/TEST-SBS1',
         'QA-ENV1/1/QA-SYS1/QA-SBS1',

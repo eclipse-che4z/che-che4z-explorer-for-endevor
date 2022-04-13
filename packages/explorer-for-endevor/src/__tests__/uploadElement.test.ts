@@ -23,11 +23,8 @@ import * as sinon from 'sinon';
 import {
   ActionChangeControlValue,
   Element,
-  ElementMapPath,
   ElementSearchLocation,
   Service,
-  SignOutParams,
-  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toEditedElementUri } from '../uri/editedElementUri';
@@ -41,6 +38,7 @@ import {
 } from '../_mocks/workspace';
 import { TextEncoder } from 'util';
 import {
+  mockOverrideSignOutElement,
   mockSignOutElement,
   mockUploadingElementWith,
 } from '../_mocks/endevor';
@@ -58,13 +56,9 @@ import {
 import * as compareDialog from '../commands/compareElementWithRemoteVersion';
 import * as path from 'path';
 import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
-import {
-  Actions,
-  ElementAdded,
-  ElementUpdatedFromUpTheMap,
-} from '../_doc/Actions';
+import { Actions } from '../_doc/Actions';
 
-describe('uploading an edited element', () => {
+describe('uploading edited element', () => {
   before(() => {
     commands.registerCommand(CommandId.UPLOAD_ELEMENT, uploadElementCommand);
   });
@@ -117,27 +111,8 @@ describe('uploading an edited element', () => {
     rejectUnauthorized: false,
   };
   const searchLocationName = 'searchLocationName';
-  const vagueSearchLocation: ElementSearchLocation = {
+  const searchLocation: ElementSearchLocation = {
     instance: 'ANY-INSTANCE',
-    environment: 'TEST',
-    stageNumber: '1',
-  };
-  const preciseSearchLocation: ElementSearchLocation = {
-    instance: vagueSearchLocation.instance,
-    environment: vagueSearchLocation.environment,
-    stageNumber: vagueSearchLocation.stageNumber,
-    system: 'ANY-SYS',
-    subsystem: 'SUBSYS2',
-  };
-  const subsystemMapPathDownTheMap: SubSystemMapPath = {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    environment: preciseSearchLocation.environment!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    stageNumber: preciseSearchLocation.stageNumber!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    system: preciseSearchLocation.system!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    subSystem: preciseSearchLocation.subsystem!,
   };
   const element: Element = {
     instance: 'ANY',
@@ -151,14 +126,28 @@ describe('uploading an edited element', () => {
   };
   const elementFingerprint = 'some_value';
   const editedElementFilePath = '/some/temp/element.cbl';
+  const editedElementUri = toEditedElementUri(editedElementFilePath)({
+    serviceName,
+    searchLocationName,
+    element,
+    service,
+    searchLocation,
+    fingerprint: elementFingerprint,
+  });
+  if (isError(editedElementUri)) {
+    const error = editedElementUri;
+    assert.fail(
+      `Uri was not built correctly for tests because of: ${error.message}`
+    );
+  }
 
-  it('should upload an element in place', async () => {
+  it('should upload element', async () => {
     // arrange
     const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
       type: element.type,
       element: element.name,
       instance: element.instance,
@@ -187,23 +176,6 @@ describe('uploading an edited element', () => {
     const closeActiveEditorsStub = mockClosingActiveEditorWith(
       Promise.resolve()
     );
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
     const deleteTempFilesStub = mockDeletingFileWith([
       [editedElementUri, Promise.resolve()],
     ]);
@@ -237,16 +209,16 @@ describe('uploading an edited element', () => {
       `Expexted dispatch for upload element was not called.`
     );
     const expectedUpdatedElementAction = {
-      type: Actions.ELEMENT_UPDATED_IN_PLACE,
+      type: Actions.ELEMENT_UPDATED,
       serviceName,
       searchLocationName,
       service,
-      searchLocation: preciseSearchLocation,
+      searchLocation,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
-      dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
+      dispatchUpdatedElementAction.args[0]?.[0],
       `Expexted dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
@@ -255,234 +227,13 @@ describe('uploading an edited element', () => {
     );
   });
 
-  it('should upload a new element', async () => {
+  it('should call compare dialogs function', async () => {
     // arrange
     const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
-      type: element.type,
-      element: element.name,
-      instance: element.instance,
-    };
-    const newUploadLocation = {
-      ...element,
-      name: 'NEW-ELM',
-    };
-    mockAskingForUploadLocation(prefilledLocationDialogValue)(
-      newUploadLocation
-    );
-    const uploadChangeControlValue: ActionChangeControlValue = {
-      ccid: 'test',
-      comment: 'test',
-    };
-    mockAskingForChangeControlValue(uploadChangeControlValue);
-    const editedElementContent =
-      'everybody is on hackaton, and Im sitting alone, writing tests :(';
-    mockGettingFileContentWith(Uri.file(editedElementFilePath))(
-      Promise.resolve(new TextEncoder().encode(editedElementContent))
-    );
-    const uploadElementContentStub = mockUploadingElementWith(
-      service,
-      newUploadLocation,
-      uploadChangeControlValue,
-      {
-        content: editedElementContent,
-        fingerprint: elementFingerprint,
-      }
-    )([undefined]);
-    const closeActiveEditorsStub = mockClosingActiveEditorWith(
-      Promise.resolve()
-    );
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const deleteTempFilesStub = mockDeletingFileWith([
-      [editedElementUri, Promise.resolve()],
-    ]);
-    const dispatchUpdatedElementAction = sinon.spy();
-    // act
-    try {
-      await commands.executeCommand(
-        CommandId.UPLOAD_ELEMENT,
-        dispatchUpdatedElementAction,
-        editedElementUri
-      );
-    } catch (e) {
-      assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
-      );
-    }
-    // assert
-    const [generalUploadFunctionStub] = uploadElementContentStub;
-    assert.ok(
-      generalUploadFunctionStub.called,
-      `Upload element content was not called`
-    );
-    assert.ok(
-      closeActiveEditorsStub.called,
-      `Edited element editor was not closed`
-    );
-    assert.ok(deleteTempFilesStub.called, `Delete temp file was not called`);
-    assert.deepStrictEqual(
-      dispatchUpdatedElementAction.called,
-      true,
-      `Expexted dispatch for upload element was not called.`
-    );
-    const expectedUpdatedElementAction: ElementAdded = {
-      type: Actions.ELEMENT_ADDED,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
-      element: newUploadLocation,
-    };
-    assert.deepStrictEqual(
-      dispatchUpdatedElementAction.args[0]?.[0],
-      expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
-        expectedUpdatedElementAction
-      )}, but it was called with ${JSON.stringify(
-        dispatchUpdatedElementAction.args[0]?.[0]
-      )}`
-    );
-  });
-
-  it('should upload an element from up the map even with a vague search location', async () => {
-    // arrange
-    const prefilledLocationDialogValue = {
-      environment: vagueSearchLocation.environment,
-      stageNumber: vagueSearchLocation.stageNumber,
-      system: vagueSearchLocation.system,
-      subsystem: vagueSearchLocation.subsystem,
-      type: element.type,
-      element: element.name,
-      instance: element.instance,
-    };
-    const existingLocationDownTheMap: ElementMapPath = {
-      name: element.name,
-      type: element.type,
-      instance: preciseSearchLocation.instance,
-      ...subsystemMapPathDownTheMap,
-    };
-    mockAskingForUploadLocation(prefilledLocationDialogValue)(
-      existingLocationDownTheMap
-    );
-    const uploadChangeControlValue: ActionChangeControlValue = {
-      ccid: 'test',
-      comment: 'test',
-    };
-    mockAskingForChangeControlValue(uploadChangeControlValue);
-    const editedElementContent =
-      'everybody is on hackaton, and Im sitting alone, writing tests :(';
-    mockGettingFileContentWith(Uri.file(editedElementFilePath))(
-      Promise.resolve(new TextEncoder().encode(editedElementContent))
-    );
-    const uploadElementContentStub = mockUploadingElementWith(
-      service,
-      existingLocationDownTheMap,
-      uploadChangeControlValue,
-      {
-        content: editedElementContent,
-        fingerprint: elementFingerprint,
-      }
-    )([undefined]);
-    const closeActiveEditorsStub = mockClosingActiveEditorWith(
-      Promise.resolve()
-    );
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: vagueSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const deleteTempFilesStub = mockDeletingFileWith([
-      [editedElementUri, Promise.resolve()],
-    ]);
-    const dispatchUpdatedElementAction = sinon.spy();
-    // act
-    try {
-      await commands.executeCommand(
-        CommandId.UPLOAD_ELEMENT,
-        dispatchUpdatedElementAction,
-        editedElementUri
-      );
-    } catch (e) {
-      assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
-      );
-    }
-    // assert
-    const [generalUploadFunctionStub] = uploadElementContentStub;
-    assert.ok(
-      generalUploadFunctionStub.called,
-      `Upload element content was not called`
-    );
-    assert.ok(
-      closeActiveEditorsStub.called,
-      `Edited element editor was not closed`
-    );
-    assert.ok(deleteTempFilesStub.called, `Delete temp file was not called`);
-    assert.deepStrictEqual(
-      dispatchUpdatedElementAction.called,
-      true,
-      `Expexted dispatch for upload element was not called.`
-    );
-    const expectedUpdatedElementAction: ElementUpdatedFromUpTheMap = {
-      type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
-      fetchElementsArgs: { service, searchLocation: vagueSearchLocation },
-      targetLocation: existingLocationDownTheMap,
-      pathUpTheMap: element,
-      treePath: {
-        serviceName,
-        searchLocationName,
-        searchLocation: subsystemMapPathDownTheMap,
-      },
-    };
-    assert.deepStrictEqual(
-      dispatchUpdatedElementAction.args[0]?.[0],
-      expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
-        expectedUpdatedElementAction
-      )}, but it was called with ${JSON.stringify(
-        dispatchUpdatedElementAction.args[0]?.[0]
-      )}`
-    );
-  });
-
-  it('should call compare dialogs function for an element in place', async () => {
-    // arrange
-    const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
       type: element.type,
       element: element.name,
       instance: element.instance,
@@ -512,23 +263,6 @@ describe('uploading an edited element', () => {
         fingerprint: elementFingerprint,
       }
     )([uploadError]);
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
     // can be anything, but URI
     const workspaceUri = editedElementUri;
     mockGettingWorkspaceUri(workspaceUri);
@@ -549,18 +283,16 @@ describe('uploading an edited element', () => {
       {
         content: editedElementContent,
         extension: element.extension,
-        name: uploadLocation.name,
+        name: element.name,
       }
     )(Uri.file(localElementVersionTempFilePath));
     const comparingElementDialogStub = mockComparingElementsDialog(
       service,
-      preciseSearchLocation,
+      searchLocation,
       uploadChangeControlValue,
       uploadLocation,
-      element,
       serviceName,
       searchLocationName,
-      subsystemMapPathDownTheMap,
       localElementVersionTempFilePath
     )();
     const dispatchUpdatedElementAction = sinon.spy();
@@ -586,16 +318,16 @@ describe('uploading an edited element', () => {
       `Compare elements dialog was not closed`
     );
     const expectedUpdatedElementAction = {
-      type: Actions.ELEMENT_UPDATED_IN_PLACE,
+      type: Actions.ELEMENT_UPDATED,
       serviceName,
       searchLocationName,
       service,
-      searchLocation: preciseSearchLocation,
+      searchLocation,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
-      dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
+      dispatchUpdatedElementAction.args[0]?.[0],
       `Expexted dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
@@ -605,14 +337,14 @@ describe('uploading an edited element', () => {
   });
 
   type CompareElementsStub = sinon.SinonStub<
-    [service: Service, searchLocation: ElementSearchLocation, element: Element],
+    [service: Service, searchLocation: ElementSearchLocation],
     (
-      uploadChangeControlValue: ActionChangeControlValue,
-      uploadTargetLocation: ElementMapPath
+      uploadChangeControlValue: ActionChangeControlValue
     ) => (
+      element: Element,
+      editedElementFilePath: string,
       serviceName: EndevorServiceName,
-      searchLocationname: ElementLocationName,
-      treePath: SubSystemMapPath
+      searchLocationname: ElementLocationName
     ) => (localVersionElementTempFilePath: string) => Promise<void | Error>
   >;
 
@@ -621,11 +353,9 @@ describe('uploading an edited element', () => {
       serviceArg: Service,
       searchLocationArg: ElementSearchLocation,
       uploadChangeControlValueArg: ActionChangeControlValue,
-      uploadTargetLocationArg: ElementMapPath,
       elementArg: Element,
       serviceNameArg: EndevorServiceName,
       searchLocationnameArg: ElementLocationName,
-      treePathArg: SubSystemMapPath,
       localVersionElementTempFilePathArg: string
     ) =>
     (mockResult?: Error): CompareElementsStub => {
@@ -639,43 +369,40 @@ describe('uploading an edited element', () => {
       const withElementStub = sinon
         .stub<
           [
+            element: Element,
             serviceName: EndevorServiceName,
-            searchLocationname: ElementLocationName,
-            treePath: SubSystemMapPath
+            searchLocationname: ElementLocationName
           ],
           (localVersionElementTempFilePath: string) => Promise<void | Error>
         >()
-        .withArgs(serviceNameArg, searchLocationnameArg, treePathArg)
+        .withArgs(elementArg, serviceNameArg, searchLocationnameArg)
         .returns(withLocalVersionFileStub);
       const withChangeControlValueStub = sinon
         .stub<
-          [
-            uploadChangeControlValue: ActionChangeControlValue,
-            uploadTargetLocation: ElementMapPath
-          ],
+          [uploadChangeControlValue: ActionChangeControlValue],
           (
+            element: Element,
             serviceName: EndevorServiceName,
-            searchLocationname: ElementLocationName,
-            treePath: SubSystemMapPath
+            searchLocationname: ElementLocationName
           ) => (
             localVersionElementTempFilePath: string
           ) => Promise<void | Error>
         >()
-        .withArgs(uploadChangeControlValueArg, uploadTargetLocationArg)
+        .withArgs(uploadChangeControlValueArg)
         .returns(withElementStub);
       return sinon
         .stub(compareDialog, 'compareElementWithRemoteVersion')
-        .withArgs(serviceArg, searchLocationArg, elementArg)
+        .withArgs(serviceArg, searchLocationArg)
         .returns(withChangeControlValueStub);
     };
 
-  it('should signout an element in place during uploading', async () => {
+  it('should signout element during uploading', async () => {
     // arrange
     const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
       type: element.type,
       element: element.name,
       instance: element.instance,
@@ -685,9 +412,6 @@ describe('uploading an edited element', () => {
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
-    };
-    const uploadSignOutParams: SignOutParams = {
-      signoutChangeControlValue: uploadChangeControlValue,
     };
     mockAskingForChangeControlValue(uploadChangeControlValue);
     const editedElementContent =
@@ -714,27 +438,11 @@ describe('uploading an edited element', () => {
     });
     const [signoutElementStub] = mockSignOutElement(
       service,
-      uploadLocation
-    )(uploadSignOutParams)();
+      uploadLocation,
+      uploadChangeControlValue
+    )();
     const dispatchActions = sinon.spy();
     // act
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
     try {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
@@ -743,7 +451,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncaught error inside command: ${e.message}`
+        `Test failed because of uncatched error inside command: ${e.message}`
       );
     }
     // assert
@@ -756,34 +464,51 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchActions.callCount,
       expectedDispatchedActions,
-      `Expected dispatch for upload element to have been called ${expectedDispatchedActions} times, but it was called ${dispatchActions.callCount} times.`
+      `Expexted dispatch for upload element to have been called ${expectedDispatchedActions} times, but it was called ${dispatchActions.callCount} times.`
     );
-    const expectedSignOutAction = {
-      type: Actions.ELEMENT_SIGNED_OUT,
+    const expextedSignOutAction = {
+      type: Actions.ELEMENT_SIGNEDOUT,
       serviceName,
       searchLocationName,
       service,
-      searchLocation: preciseSearchLocation,
+      searchLocation,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
+      expextedSignOutAction,
       dispatchActions.args[0]?.[0],
-      expectedSignOutAction,
-      `Expected dispatch for signout element on upload to have been called with ${JSON.stringify(
-        expectedSignOutAction
+      `Expexted dispatch for signout element on upload to have been called with ${JSON.stringify(
+        expextedSignOutAction
       )}, but it was called with ${JSON.stringify(
         dispatchActions.args[0]?.[0]
       )}`
     );
+    const expextedUpdateAction = {
+      type: Actions.ELEMENT_UPDATED,
+      serviceName,
+      searchLocationName,
+      service,
+      searchLocation,
+      elements: [uploadLocation],
+    };
+    assert.deepStrictEqual(
+      expextedUpdateAction,
+      dispatchActions.args[1]?.[0],
+      `Expexted dispatch for element update on upload with signout to have been called with ${JSON.stringify(
+        expextedUpdateAction
+      )}, but it was called with ${JSON.stringify(
+        dispatchActions.args[1]?.[0]
+      )}`
+    );
   });
 
-  it('should override signout for an element in place', async () => {
+  it('should override signout of element during uploading', async () => {
     // arrange
     const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
       type: element.type,
       element: element.name,
       instance: element.instance,
@@ -793,13 +518,6 @@ describe('uploading an edited element', () => {
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
-    };
-    const uploadSignOutParams: SignOutParams = {
-      signoutChangeControlValue: uploadChangeControlValue,
-    };
-    const uploadOverrideSignOutParams: SignOutParams = {
-      signoutChangeControlValue: uploadChangeControlValue,
-      overrideSignOut: true,
     };
     mockAskingForChangeControlValue(uploadChangeControlValue);
     const editedElementContent =
@@ -825,30 +543,19 @@ describe('uploading an edited element', () => {
       automaticSignOut: false,
     });
     const signoutError = uploadError;
+    const [signoutElementStub] = mockSignOutElement(
+      service,
+      uploadLocation,
+      uploadChangeControlValue
+    )(signoutError);
     mockAskingForOverrideSignout([uploadLocation.name])(true);
-    const [signoutElementStub] = mockSignOutElement(service, uploadLocation)(
-      uploadSignOutParams,
-      signoutError
-    )(uploadOverrideSignOutParams);
+    const [overrideSignoutElementStub] = mockOverrideSignOutElement(
+      service,
+      uploadLocation,
+      uploadChangeControlValue
+    )();
     const dispatchActions = sinon.spy();
     // act
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
     try {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
@@ -857,13 +564,14 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncaught error inside command: ${e.message}`
+        `Test failed because of uncatched error inside command: ${e.message}`
       );
     }
     // assert
+    assert.ok(signoutElementStub.called, `Signout element was not called`);
     assert.ok(
-      signoutElementStub.calledTwice,
-      `Signout element was not called twice, it was called: ${signoutElementStub.callCount}`
+      overrideSignoutElementStub.called,
+      `Override signout element was not called`
     );
     assert.ok(
       uploadElementStub.calledTwice,
@@ -873,147 +581,40 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchActions.callCount,
       expectedDispatchedActions,
-      `Expected dispatch for upload element to have been called ${expectedDispatchedActions} times, but it was called ${dispatchActions.callCount} times.`
+      `Expexted dispatch for upload element to have been called ${expectedDispatchedActions} times, but it was called ${dispatchActions.callCount} times.`
     );
-    const expectedSignOutAction = {
-      type: Actions.ELEMENT_SIGNED_OUT,
+    const expextedSignOutAction = {
+      type: Actions.ELEMENT_SIGNEDOUT,
       serviceName,
       searchLocationName,
       service,
-      searchLocation: preciseSearchLocation,
+      searchLocation,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
+      expextedSignOutAction,
       dispatchActions.args[0]?.[0],
-      expectedSignOutAction,
-      `Expected dispatch for override signout element on upload to have been called with ${JSON.stringify(
-        expectedSignOutAction
+      `Expexted dispatch for override signout element on upload to have been called with ${JSON.stringify(
+        expextedSignOutAction
       )}, but it was called with ${JSON.stringify(
         dispatchActions.args[0]?.[0]
       )}`
     );
-  });
-
-  it('should override signout for an element from up the map', async () => {
-    // arrange
-    const prefilledLocationDialogValue = {
-      environment: preciseSearchLocation.environment,
-      stageNumber: preciseSearchLocation.stageNumber,
-      system: preciseSearchLocation.system,
-      subsystem: preciseSearchLocation.subsystem,
-      type: element.type,
-      element: element.name,
-      instance: element.instance,
-    };
-    const existingLocationDownTheMap: ElementMapPath = {
-      name: element.name,
-      type: element.type,
-      instance: preciseSearchLocation.instance,
-      ...subsystemMapPathDownTheMap,
-    };
-    mockAskingForUploadLocation(prefilledLocationDialogValue)(
-      existingLocationDownTheMap
-    );
-    const uploadChangeControlValue: ActionChangeControlValue = {
-      ccid: 'test',
-      comment: 'test',
-    };
-    const uploadSignOutParams: SignOutParams = {
-      signoutChangeControlValue: uploadChangeControlValue,
-    };
-    const uploadOverrideSignOutParams: SignOutParams = {
-      signoutChangeControlValue: uploadChangeControlValue,
-      overrideSignOut: true,
-    };
-    mockAskingForChangeControlValue(uploadChangeControlValue);
-    const editedElementContent =
-      'everybody is on hackaton, and Im sitting alone, writing tests :(';
-    mockGettingFileContentWith(Uri.file(editedElementFilePath))(
-      Promise.resolve(new TextEncoder().encode(editedElementContent))
-    );
-    const uploadError = new SignoutError('something');
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(uploadError, SignoutError.prototype);
-    const [uploadElementStub] = mockUploadingElementWith(
-      service,
-      existingLocationDownTheMap,
-      uploadChangeControlValue,
-      {
-        content: editedElementContent,
-        fingerprint: elementFingerprint,
-      }
-    )([uploadError, undefined]);
-    mockAskingForSignout([existingLocationDownTheMap.name])({
-      signOutElements: true,
-      automaticSignOut: false,
-    });
-    const signoutError = uploadError;
-    mockAskingForOverrideSignout([existingLocationDownTheMap.name])(true);
-    const [signoutElementStub] = mockSignOutElement(service, element)(
-      uploadSignOutParams,
-      signoutError
-    )(uploadOverrideSignOutParams);
-    const dispatchActions = sinon.spy();
-    // act
-    const editedElementUri = toEditedElementUri(editedElementFilePath)({
-      element,
-      fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
-      searchContext: {
-        serviceName,
-        searchLocationName,
-        overallSearchLocation: preciseSearchLocation,
-        initialSearchLocation: subsystemMapPathDownTheMap,
-      },
-    });
-    if (isError(editedElementUri)) {
-      const error = editedElementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    try {
-      await commands.executeCommand(
-        CommandId.UPLOAD_ELEMENT,
-        dispatchActions,
-        editedElementUri
-      );
-    } catch (e) {
-      assert.fail(
-        `Test failed because of uncaught error inside command: ${e.message}`
-      );
-    }
-    // assert
-    assert.ok(
-      signoutElementStub.calledTwice,
-      `Signout element was not called twice, it was called: ${signoutElementStub.callCount}`
-    );
-    assert.ok(
-      uploadElementStub.calledTwice,
-      `Upload element content was not called twice, it was called: ${uploadElementStub.callCount}`
-    );
-    const expectedDispatchedActions = 2;
-    assert.deepStrictEqual(
-      dispatchActions.callCount,
-      expectedDispatchedActions,
-      `Expected dispatch for upload element to have been called ${expectedDispatchedActions} times, but it was called ${dispatchActions.callCount} times.`
-    );
-    const expectedSignOutAction = {
-      type: Actions.ELEMENT_SIGNED_OUT,
+    const expectedUpdateAction = {
+      type: Actions.ELEMENT_UPDATED,
       serviceName,
       searchLocationName,
       service,
-      searchLocation: preciseSearchLocation,
-      elements: [element],
+      searchLocation,
+      elements: [uploadLocation],
     };
     assert.deepStrictEqual(
-      dispatchActions.args[0]?.[0],
-      expectedSignOutAction,
-      `Expected dispatch for override signout element on upload to have been called with ${JSON.stringify(
-        expectedSignOutAction
+      expectedUpdateAction,
+      dispatchActions.args[1]?.[0],
+      `Expexted dispatch for element update on upload with override signout to have been called with ${JSON.stringify(
+        expectedUpdateAction
       )}, but it was called with ${JSON.stringify(
-        dispatchActions.args[0]?.[0]
+        dispatchActions.args[1]?.[0]
       )}`
     );
   });

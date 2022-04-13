@@ -19,19 +19,12 @@ import {
   Element,
   ElementSearchLocation,
   IntermediateEnvironmentStage,
-  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 import { EnvironmentStage } from '../../endevor/_doc/Endevor';
 
 const isElementNode = (node: Node): node is ElementNode => {
-  switch (node.type) {
-    case 'ELEMENT_IN_PLACE':
-    case 'ELEMENT_UP_THE_MAP':
-      return true;
-    default:
-      return false;
-  }
+  return node.type === 'ELEMENT';
 };
 
 export const filterElementNodes = (nodes: Node[]): ElementNode[] => {
@@ -191,16 +184,5 @@ export const isElementUpTheMap =
     return (
       element.environment !== elementsSearchLocation.environment ||
       element.stageNumber !== elementsSearchLocation.stageNumber
-    );
-  };
-
-export const isTheSameLocation =
-  (firstLocation: SubSystemMapPath) =>
-  (secondLocation: SubSystemMapPath): boolean => {
-    return (
-      firstLocation.environment === secondLocation.environment &&
-      firstLocation.stageNumber === secondLocation.stageNumber &&
-      firstLocation.subSystem === secondLocation.subSystem &&
-      firstLocation.system === secondLocation.system
     );
   };

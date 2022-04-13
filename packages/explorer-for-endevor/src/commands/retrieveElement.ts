@@ -14,6 +14,7 @@
 import {
   retrieveElementWithoutSignout,
   retrieveElementWithSignout,
+  retrieveElementWithOverrideSignout,
 } from '../endevor';
 import { logger, reporter } from '../globals';
 import {
@@ -345,27 +346,28 @@ const complexRetrieve =
 const retrieveSingleElementWithSignout =
   (service: Service) =>
   (element: Element) =>
-  async (signoutChangeControlValue: ActionChangeControlValue) =>
-    withNotificationProgress(
+  async (signoutChangeControlValue: ActionChangeControlValue) => {
+    return withNotificationProgress(
       `Retrieving element with signout : ${element.name}`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(element)({
-        signoutChangeControlValue,
-      });
+      return retrieveElementWithSignout(progressReporter)(service)(element)(
+        signoutChangeControlValue
+      );
     });
+  };
 
 const retrieveSingleElementWithOverrideSignout =
   (service: Service) =>
   (element: Element) =>
-  async (signoutChangeControlValue: ActionChangeControlValue) =>
-    withNotificationProgress(
+  async (signoutChangeControlValue: ActionChangeControlValue) => {
+    return withNotificationProgress(
       `Retrieving element with override signout : ${element.name}`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(element)({
-        signoutChangeControlValue,
-        overrideSignOut: true,
-      });
+      return retrieveElementWithOverrideSignout(progressReporter)(service)(
+        element
+      )(signoutChangeControlValue);
     });
+  };
 
 const retrieveSingleElementCopy =
   (service: Service) => async (element: Element) => {
@@ -380,7 +382,7 @@ const updateTreeAfterSuccessfulSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (actionPayload: SignedOutElementsPayload): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNED_OUT,
+      type: Actions.ELEMENT_SIGNEDOUT,
       ...actionPayload,
     });
   };
@@ -1098,9 +1100,7 @@ const retrieveMultipleElementsWithSignout =
             return async () => {
               return retrieveElementWithSignout(
                 toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.element)({
-                signoutChangeControlValue,
-              });
+              )(element.service)(element.element)(signoutChangeControlValue);
             };
           }),
           {
@@ -1137,12 +1137,9 @@ const retrieveMultipleElementsWithOverrideSignout =
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElementWithSignout(
+              return retrieveElementWithOverrideSignout(
                 toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.element)({
-                signoutChangeControlValue,
-                overrideSignOut: true,
-              });
+              )(element.service)(element.element)(signoutChangeControlValue);
             };
           }),
           {

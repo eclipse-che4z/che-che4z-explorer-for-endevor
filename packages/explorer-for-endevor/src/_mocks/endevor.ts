@@ -20,15 +20,9 @@ import {
   ElementMapPath,
   ElementWithFingerprint,
   Service,
-  SignOutParams,
-  GenerateWithCopyBackParams,
-  GenerateSignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
-import {
-  ProcessorStepMaxRcExceededError,
-  SignoutError,
-} from '@local/endevor/_doc/Error';
+import { SignoutError } from '@local/endevor/_doc/Error';
 
 export type PrintingElementStub = [
   sinon.SinonStub<
@@ -381,56 +375,48 @@ type RetrieveElementWithSignoutStub = [
       service: Service
     ) => (
       element: Element
-    ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Service],
     (
       element: Element
-    ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Element],
-    (signOutParams: SignOutParams) => Promise<ElementContent | Error>
+    (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<ElementContent | Error>
   >,
-  sinon.SinonStub<[SignOutParams], Promise<ElementContent | Error>>
+  sinon.SinonStub<[ActionChangeControlValue], Promise<ElementContent | Error>>
 ];
 
 export const mockRetrieveElementWithSignout =
-  (serviceArg: Service, elementArg: Element) =>
   (
-    signOutParamsArg: SignOutParams,
-    signOutMockResult: ElementContent | Error
+    serviceArg: Service,
+    elementArg: Element,
+    signoutChangeControlValueArg: ActionChangeControlValue
   ) =>
-  (
-    overrideSignOutParamsArg?: SignOutParams,
-    overrideSignOutMockResult?: ElementContent | Error
-  ): RetrieveElementWithSignoutStub => {
+  (mockResult: ElementContent | Error): RetrieveElementWithSignoutStub => {
     const anyProgressReporter = sinon.match.any;
-    const withContentStub = sinon.stub<
-      [signOutParams: SignOutParams],
-      Promise<ElementContent | Error>
-    >();
-    // stub withArgs for signout
-    withContentStub
-      .withArgs(signOutParamsArg)
-      .returns(Promise.resolve(signOutMockResult));
-    // stub withArgs for override signout if selected
-    if (overrideSignOutParamsArg) {
-      withContentStub
-        .withArgs(overrideSignOutParamsArg)
-        .returns(
-          Promise.resolve(
-            overrideSignOutMockResult
-              ? overrideSignOutMockResult
-              : new Error('the result is not specified')
-          )
-        );
-    }
-    const withSignoutParamsStub = sinon
+    const withContentStub = sinon
+      .stub<
+        [changeControlValue: ActionChangeControlValue],
+        Promise<ElementContent | Error>
+      >()
+      .withArgs(signoutChangeControlValueArg)
+      .returns(Promise.resolve(mockResult));
+    const withSignoutChangeControlValueStub = sinon
       .stub<
         [element: Element],
-        (signOutParams: SignOutParams) => Promise<ElementContent | Error>
+        (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<ElementContent | Error>
       >()
       .withArgs(elementArg)
       .returns(withContentStub);
@@ -439,10 +425,12 @@ export const mockRetrieveElementWithSignout =
         [Service],
         (
           element: Element
-        ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
+        ) => (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<ElementContent | Error>
       >()
       .withArgs(serviceArg)
-      .returns(withSignoutParamsStub);
+      .returns(withSignoutChangeControlValueStub);
     const generalFunctionStub = sinon
       .stub(endevor, 'retrieveElementWithSignout')
       .withArgs(anyProgressReporter)
@@ -450,7 +438,82 @@ export const mockRetrieveElementWithSignout =
     return [
       generalFunctionStub,
       withServiceStub,
-      withSignoutParamsStub,
+      withSignoutChangeControlValueStub,
+      withContentStub,
+    ];
+  };
+
+type OverrideSignOutElementStub = [
+  sinon.SinonStub<
+    [progress: ProgressReporter],
+    (
+      service: Service
+    ) => (
+      element: Element
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
+  >,
+  sinon.SinonStub<
+    [Service],
+    (
+      element: Element
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
+  >,
+  sinon.SinonStub<
+    [Element],
+    (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
+  >,
+  sinon.SinonStub<[ChangeControlValue], Promise<void | Error>>
+];
+
+export const mockOverrideSignOutElement =
+  (
+    serviceArg: Service,
+    elementArg: Element,
+    signoutChangeControlValueArg: ActionChangeControlValue
+  ) =>
+  (mockResult: void | Error): OverrideSignOutElementStub => {
+    const anyProgressReporter = sinon.match.any;
+    const withContentStub = sinon
+      .stub<
+        [changeControlValue: ActionChangeControlValue],
+        Promise<void | Error>
+      >()
+      .withArgs(signoutChangeControlValueArg)
+      .returns(Promise.resolve(mockResult));
+    const withSignoutChangeControlValueStub = sinon
+      .stub<
+        [element: Element],
+        (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<void | Error>
+      >()
+      .withArgs(elementArg)
+      .returns(withContentStub);
+    const withServiceStub = sinon
+      .stub<
+        [Service],
+        (
+          element: Element
+        ) => (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<void | Error>
+      >()
+      .withArgs(serviceArg)
+      .returns(withSignoutChangeControlValueStub);
+    const generalFunctionStub = sinon
+      .stub(endevor, 'overrideSignOutElement')
+      .withArgs(anyProgressReporter)
+      .returns(withServiceStub);
+    return [
+      generalFunctionStub,
+      withServiceStub,
+      withSignoutChangeControlValueStub,
       withContentStub,
     ];
   };
@@ -462,47 +525,48 @@ type SignOutElementStub = [
       service: Service
     ) => (
       element: Element
-    ) => (signOutParams: SignOutParams) => Promise<void | Error>
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
   >,
   sinon.SinonStub<
     [Service],
     (
       element: Element
-    ) => (signOutParams: SignOutParams) => Promise<void | Error>
+    ) => (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
   >,
   sinon.SinonStub<
     [Element],
-    (signOutParams: SignOutParams) => Promise<void | Error>
+    (
+      signoutChangeControlValue: ActionChangeControlValue
+    ) => Promise<void | Error>
   >,
-  sinon.SinonStub<[SignOutParams], Promise<void | Error>>
+  sinon.SinonStub<[ChangeControlValue], Promise<void | Error>>
 ];
 
 export const mockSignOutElement =
-  (serviceArg: Service, elementArg: Element) =>
-  (signOutParamsArg: SignOutParams, signOutMockResult: void | Error) =>
   (
-    overrideSignOutParamsArg?: SignOutParams,
-    overrideSignOutMockResult?: void | Error
-  ): SignOutElementStub => {
+    serviceArg: Service,
+    elementArg: Element,
+    signoutChangeControlValueArg: ActionChangeControlValue
+  ) =>
+  (mockResult: void | Error): SignOutElementStub => {
     const anyProgressReporter = sinon.match.any;
-    const withContentStub = sinon.stub<
-      [signOutParams: SignOutParams],
-      Promise<void | Error>
-    >();
-    // stub withArgs for signout
-    withContentStub
-      .withArgs(signOutParamsArg)
-      .returns(Promise.resolve(signOutMockResult));
-    // stub withArgs for override signout if selected
-    if (overrideSignOutParamsArg) {
-      withContentStub
-        .withArgs(overrideSignOutParamsArg)
-        .returns(Promise.resolve(overrideSignOutMockResult));
-    }
-    const withSignoutParamsStub = sinon
+    const withContentStub = sinon
+      .stub<
+        [changeControlValue: ActionChangeControlValue],
+        Promise<void | Error>
+      >()
+      .withArgs(signoutChangeControlValueArg)
+      .returns(Promise.resolve(mockResult));
+    const withSignoutChangeControlValueStub = sinon
       .stub<
         [element: Element],
-        (signOutParams: SignOutParams) => Promise<void | Error>
+        (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<void | Error>
       >()
       .withArgs(elementArg)
       .returns(withContentStub);
@@ -511,10 +575,12 @@ export const mockSignOutElement =
         [Service],
         (
           element: Element
-        ) => (signOutParams: SignOutParams) => Promise<void | Error>
+        ) => (
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<void | Error>
       >()
       .withArgs(serviceArg)
-      .returns(withSignoutParamsStub);
+      .returns(withSignoutChangeControlValueStub);
     const generalFunctionStub = sinon
       .stub(endevor, 'signOutElement')
       .withArgs(anyProgressReporter)
@@ -522,7 +588,7 @@ export const mockSignOutElement =
     return [
       generalFunctionStub,
       withServiceStub,
-      withSignoutParamsStub,
+      withSignoutChangeControlValueStub,
       withContentStub,
     ];
   };
@@ -555,267 +621,49 @@ export const mockSignInElement =
     return [generalFunctionStub, withServiceStub, withContentStub];
   };
 
-type GenerateElementInPlaceStub = [
-  sinon.SinonStub<
-    [progress: ProgressReporter],
-    (
-      service: Service
-    ) => (
-      element: ElementMapPath
-    ) => (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error>
-  >,
-  sinon.SinonStub<
-    [Service],
-    (
-      element: ElementMapPath
-    ) => (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error>
-  >,
-  sinon.SinonStub<
-    [ElementMapPath],
-    (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error>
-  >,
-  sinon.SinonStub<
-    [ActionChangeControlValue],
-    (generateSignOutParams?: GenerateSignOutParams) => Promise<void | Error>
-  >,
-  sinon.SinonStub<
-    [generateSignOutParams?: GenerateSignOutParams],
-    Promise<void | Error>
-  >
-];
-
-export const mockGenerateElementInPlace =
+export const mockRetrieveElementWithOverrideSignout =
   (
     serviceArg: Service,
     elementArg: Element,
-    changeControlValueArg: ActionChangeControlValue
+    signoutChangeControlValueArg: ActionChangeControlValue
   ) =>
-  (
-    mockResults: ReadonlyArray<{
-      signoutArg?: GenerateSignOutParams;
-      mockResult: void | Error | ProcessorStepMaxRcExceededError | SignoutError;
-    }>
-  ): GenerateElementInPlaceStub => {
+  (mockResult: ElementContent | Error): RetrieveElementWithSignoutStub => {
     const anyProgressReporter = sinon.match.any;
-    const withContentStub = sinon.stub<
-      [generateSignOutParams?: GenerateSignOutParams],
-      Promise<void | Error>
-    >();
-    mockResults.forEach(({ signoutArg, mockResult }) => {
-      if (signoutArg) {
-        withContentStub
-          .withArgs(signoutArg)
-          .returns(Promise.resolve(mockResult));
-      } else {
-        withContentStub.returns(Promise.resolve(mockResult));
-      }
-    });
-    const withSignOutParamsStub = sinon
+    const withContentStub = sinon
       .stub<
-        [generateChangeControlValue: ActionChangeControlValue],
-        (generateSignOutParams?: GenerateSignOutParams) => Promise<void | Error>
+        [changeControlValue: ActionChangeControlValue],
+        Promise<ElementContent | Error>
       >()
-      .withArgs(changeControlValueArg)
-      .returns(withContentStub);
-    const withChangeControlValueStub = sinon
+      .withArgs(signoutChangeControlValueArg)
+      .returns(Promise.resolve(mockResult));
+    const withSignoutChangeControlValueStub = sinon
       .stub<
-        [element: ElementMapPath],
+        [element: Element],
         (
-          generateChangeControlValue: ActionChangeControlValue
-        ) => (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<void | Error>
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<ElementContent | Error>
       >()
       .withArgs(elementArg)
-      .returns(withSignOutParamsStub);
+      .returns(withContentStub);
     const withServiceStub = sinon
       .stub<
         [Service],
         (
-          element: ElementMapPath
+          element: Element
         ) => (
-          generateChangeControlValue: ActionChangeControlValue
-        ) => (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<void | Error>
+          signoutChangeControlValue: ActionChangeControlValue
+        ) => Promise<ElementContent | Error>
       >()
       .withArgs(serviceArg)
-      .returns(withChangeControlValueStub);
+      .returns(withSignoutChangeControlValueStub);
     const generalFunctionStub = sinon
-      .stub(endevor, 'generateElementInPlace')
+      .stub(endevor, 'retrieveElementWithOverrideSignout')
       .withArgs(anyProgressReporter)
       .returns(withServiceStub);
     return [
       generalFunctionStub,
       withServiceStub,
-      withChangeControlValueStub,
-      withSignOutParamsStub,
-      withContentStub,
-    ];
-  };
-
-type GenerateElementWithCopyBackStub = [
-  sinon.SinonStub<
-    [progress: ProgressReporter],
-    (
-      service: Service
-    ) => (
-      element: ElementMapPath
-    ) => (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateCopyBackParams?: GenerateWithCopyBackParams
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >,
-  sinon.SinonStub<
-    [Service],
-    (
-      element: ElementMapPath
-    ) => (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateCopyBackParams?: GenerateWithCopyBackParams
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >,
-  sinon.SinonStub<
-    [ElementMapPath],
-    (
-      generateChangeControlValue: ActionChangeControlValue
-    ) => (
-      generateCopyBackParams?: GenerateWithCopyBackParams
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >,
-  sinon.SinonStub<
-    [ChangeControlValue],
-    (
-      generateCopyBackParams?: GenerateWithCopyBackParams
-    ) => (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >,
-  sinon.SinonStub<
-    [generateCopyBackParams?: GenerateWithCopyBackParams],
-    (
-      generateSignOutParams?: GenerateSignOutParams
-    ) => Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >,
-  sinon.SinonStub<
-    [generateSignOutParams?: GenerateSignOutParams],
-    Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-  >
-];
-
-export const mockGenerateElementWithCopyBack =
-  (
-    serviceArg: Service,
-    elementArg: Element,
-    changeControlValueArg: ActionChangeControlValue,
-    copyBackParamsArg: GenerateWithCopyBackParams
-  ) =>
-  (
-    mockResults: ReadonlyArray<{
-      signoutArg?: GenerateSignOutParams;
-      mockResult: void | Error | ProcessorStepMaxRcExceededError | SignoutError;
-    }>
-  ): GenerateElementWithCopyBackStub => {
-    const anyProgressReporter = sinon.match.any;
-    const withContentStub = sinon.stub<
-      [generateSignOutParams?: GenerateSignOutParams],
-      Promise<void | Error | ProcessorStepMaxRcExceededError | SignoutError>
-    >();
-    mockResults.forEach(({ signoutArg, mockResult }) => {
-      if (signoutArg) {
-        withContentStub
-          .withArgs(signoutArg)
-          .returns(Promise.resolve(mockResult));
-      } else {
-        withContentStub.returns(Promise.resolve(mockResult));
-      }
-    });
-    const withSignOutParamsStub = sinon
-      .stub<
-        [generateCopyBackParams?: GenerateWithCopyBackParams],
-        (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<
-          void | Error | ProcessorStepMaxRcExceededError | SignoutError
-        >
-      >()
-      .withArgs(copyBackParamsArg)
-      .returns(withContentStub);
-    const withCopyBackParamsStub = sinon
-      .stub<
-        [generateChangeControlValue: ActionChangeControlValue],
-        (
-          copyBackParams?: GenerateWithCopyBackParams
-        ) => (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<
-          void | Error | ProcessorStepMaxRcExceededError | SignoutError
-        >
-      >()
-      .withArgs(changeControlValueArg)
-      .returns(withSignOutParamsStub);
-    const withChangeControlValueStub = sinon
-      .stub<
-        [element: ElementMapPath],
-        (
-          generateChangeControlValue: ActionChangeControlValue
-        ) => (
-          copyBackParams?: GenerateWithCopyBackParams
-        ) => (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<
-          void | Error | ProcessorStepMaxRcExceededError | SignoutError
-        >
-      >()
-      .withArgs(elementArg)
-      .returns(withCopyBackParamsStub);
-    const withServiceStub = sinon
-      .stub<
-        [Service],
-        (
-          element: ElementMapPath
-        ) => (
-          generateChangeControlValue: ActionChangeControlValue
-        ) => (
-          copyBackParams?: GenerateWithCopyBackParams
-        ) => (
-          generateSignOutParams?: GenerateSignOutParams
-        ) => Promise<
-          void | Error | ProcessorStepMaxRcExceededError | SignoutError
-        >
-      >()
-      .withArgs(serviceArg)
-      .returns(withChangeControlValueStub);
-    const generalFunctionStub = sinon
-      .stub(endevor, 'generateElementWithCopyBack')
-      .withArgs(anyProgressReporter)
-      .returns(withServiceStub);
-    return [
-      generalFunctionStub,
-      withServiceStub,
-      withChangeControlValueStub,
-      withCopyBackParamsStub,
-      withSignOutParamsStub,
+      withSignoutChangeControlValueStub,
       withContentStub,
     ];
   };

@@ -53,10 +53,6 @@ import {
   Value,
   SubSystem,
   System,
-  SignOutParams,
-  GenerateParams,
-  GenerateWithCopyBackParams,
-  GenerateSignOutParams,
 } from './_doc/Endevor';
 import {
   Session,
@@ -78,6 +74,7 @@ import {
   SuccessRetrieveResponse,
   SuccessListRepositoriesResponse,
   UpdateResponse,
+  GenerateResponse,
   SignInResponse,
   AddResponse,
   BaseResponse,
@@ -97,7 +94,6 @@ import {
   SignoutError,
   FingerprintMismatchError,
   DuplicateElementError,
-  ProcessorStepMaxRcExceededError,
 } from './_doc/Error';
 
 export const getInstanceNames =
@@ -826,7 +822,6 @@ export const retrieveElementWithFingerprint =
           `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
         );
       }
-      // TODO move messages processing to some util function
       // add extra \n in the beginning of the messages line
       const errorResponseAsString = [
         '',
@@ -878,16 +873,30 @@ export const retrieveElementWithSignout =
   (progress: ProgressReporter) =>
   (service: Service) =>
   (element: Element) =>
-  async ({
-    signoutChangeControlValue,
-    overrideSignOut,
-  }: SignOutParams): Promise<ElementContent | SignoutError | Error> => {
+  async (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<ElementContent | SignoutError | Error> => {
     const elementContent = await retrieveElementWithFingerprint(logger)(
       progress
-    )(service)(element)(
-      signoutChangeControlValue,
-      overrideSignOut ? overrideSignOut : false
-    );
+    )(service)(element)(signoutChangeControlValue);
+    if (isError(elementContent)) {
+      const error = elementContent;
+      return error;
+    }
+    return elementContent.content;
+  };
+
+export const retrieveElementWithOverrideSignout =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (element: Element) =>
+  async (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<ElementContent | SignoutError | Error> => {
+    const elementContent = await retrieveElementWithFingerprint(logger)(
+      progress
+    )(service)(element)(signoutChangeControlValue, true);
     if (isError(elementContent)) {
       const error = elementContent;
       return error;
@@ -902,16 +911,28 @@ export const signOutElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   (element: Element) =>
-  async ({
-    signoutChangeControlValue,
-    overrideSignOut,
-  }: SignOutParams): Promise<void | SignoutError | Error> => {
+  async (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<void | SignoutError | Error> => {
     const elementContent = await retrieveElementWithFingerprint(logger)(
       progress
-    )(service)(element)(
-      signoutChangeControlValue,
-      overrideSignOut ? overrideSignOut : false
-    );
+    )(service)(element)(signoutChangeControlValue);
+    if (isError(elementContent)) {
+      return elementContent;
+    }
+  };
+
+export const overrideSignOutElement =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (element: Element) =>
+  async (
+    signoutChangeControlValue: ActionChangeControlValue
+  ): Promise<void | SignoutError | Error> => {
+    const elementContent = await retrieveElementWithFingerprint(logger)(
+      progress
+    )(service)(element)(signoutChangeControlValue, true);
     if (isError(elementContent)) {
       return elementContent;
     }
@@ -992,18 +1013,18 @@ const retrieveElementWithDependencies =
   (serviceInstance: ServiceInstance) =>
   (element: Element): retrieveElementWithDependencies =>
   async (
-    signoutChangeControlValue?: ActionChangeControlValue
+    signoutControlValue?: ActionChangeControlValue
   ): Promise<ElementWithDependenciesWithSignout | SignoutError | Error> => {
     const elementProgressRatio = 4;
     let elementContent: string | Error;
-    if (!isDefined(signoutChangeControlValue)) {
+    if (!isDefined(signoutControlValue)) {
       elementContent = await retrieveElementWithoutSignout(logger)(
         toSeveralTasksProgress(progressReporter)(elementProgressRatio)
       )(serviceInstance.service)(element);
     } else {
       elementContent = await retrieveElementWithSignout(logger)(
         toSeveralTasksProgress(progressReporter)(elementProgressRatio)
-      )(serviceInstance.service)(element)({ signoutChangeControlValue });
+      )(serviceInstance.service)(element)(signoutControlValue);
     }
     if (isError(elementContent)) {
       const error = elementContent;
@@ -1051,52 +1072,54 @@ export const retrieveElementWithDependenciesWithSignout =
   (progressReporter: ProgressReporter) =>
   (serviceInstance: ServiceInstance) =>
   (element: Element) =>
-  async ({
-    signoutChangeControlValue,
-    overrideSignOut,
-  }: SignOutParams): Promise<
-    ElementWithDependenciesWithSignout | SignoutError | Error
-  > => {
-    if (overrideSignOut) {
-      const elementContent = await retrieveElementWithFingerprint(logger)(
-        progressReporter
-      )(serviceInstance.service)(element)(signoutChangeControlValue, true);
-      if (isError(elementContent)) {
-        const error = elementContent;
-        return error;
-      }
-      const dependenciesRequestProgressRatio = 4;
-      const dependentElements = await retrieveDependentElements(logger)(
-        toSeveralTasksProgress(progressReporter)(
-          dependenciesRequestProgressRatio
-        )
-      )(serviceInstance.service)(element);
-      if (isError(dependentElements)) {
-        const error = dependentElements;
-        logger.trace(`${error.message}.`);
-        return {
-          content: elementContent.content,
-          dependencies: [],
-        };
-      }
-      logger.trace(
-        `Element ${element.name} has dependencies: ${JSON.stringify(
-          dependentElements
-        )}.`
-      );
-      const dependenciesProgressRatio = 2;
-      const dependencies = await retrieveElementDependencies(logger)(undefined)(
-        toSeveralTasksProgress(progressReporter)(dependenciesProgressRatio)
-      )(serviceInstance)(dependentElements);
+  (
+    signoutControlValue: ActionChangeControlValue
+  ): Promise<ElementWithDependenciesWithSignout | SignoutError | Error> => {
+    return retrieveElementWithDependencies(logger)(progressReporter)(
+      serviceInstance
+    )(element)(signoutControlValue);
+  };
+
+export const retrieveElementWithDependenciesOverrideSignout =
+  (logger: Logger) =>
+  (progressReporter: ProgressReporter) =>
+  (serviceInstance: ServiceInstance) =>
+  (element: Element) =>
+  async (
+    signoutControlValue: ActionChangeControlValue
+  ): Promise<ElementWithDependenciesWithSignout | SignoutError | Error> => {
+    const elementContent = await retrieveElementWithFingerprint(logger)(
+      progressReporter
+    )(serviceInstance.service)(element)(signoutControlValue, true);
+    if (isError(elementContent)) {
+      const error = elementContent;
+      return error;
+    }
+    const dependenciesRequestProgressRatio = 4;
+    const dependentElements = await retrieveDependentElements(logger)(
+      toSeveralTasksProgress(progressReporter)(dependenciesRequestProgressRatio)
+    )(serviceInstance.service)(element);
+    if (isError(dependentElements)) {
+      const error = dependentElements;
+      logger.trace(`${error.message}.`);
       return {
         content: elementContent.content,
-        dependencies,
+        dependencies: [],
       };
-    } else {
-      return retrieveElementWithDependencies(logger)(progressReporter)(
-        serviceInstance
-      )(element)(signoutChangeControlValue);
     }
+    logger.trace(
+      `Element ${element.name} has dependencies: ${JSON.stringify(
+        dependentElements
+      )}.`
+    );
+    const dependenciesProgressRatio = 2;
+    const dependencies = await retrieveElementDependencies(logger)(undefined)(
+      toSeveralTasksProgress(progressReporter)(dependenciesProgressRatio)
+    )(serviceInstance)(dependentElements);
+    return {
+      content: elementContent.content,
+      dependencies,
+    };
   };
 
 const retrieveDependentElements =
@@ -1212,7 +1235,7 @@ const retrieveDependentElements =
 
 const retrieveElementDependencies =
   (logger: Logger) =>
-  (signoutChangeControlValue: ActionChangeControlValue | undefined) =>
+  (controlValue: ActionChangeControlValue | undefined) =>
   (progressReporter: ProgressReporter) =>
   ({ service, requestPoolMaxSize }: ServiceInstance) =>
   async (
@@ -1224,7 +1247,7 @@ const retrieveElementDependencies =
     const dependenciesReporter: ProgressReporter =
       toSeveralTasksProgress(progressReporter)(dependenciesNumber);
     let contents: (string | Error)[];
-    if (!isDefined(signoutChangeControlValue)) {
+    if (!isDefined(controlValue)) {
       contents = await new PromisePool(
         dependencies
           .filter((dependency) => dependency.name.trim()) // endevor can return name with space inside
@@ -1264,7 +1287,7 @@ const retrieveElementDependencies =
                   instance: dependency.instance,
                   extension: dependency.extension,
                 }
-              )({ signoutChangeControlValue })
+              )(controlValue)
           ),
         {
           concurrency: requestPoolMaxSize,
@@ -1278,7 +1301,7 @@ const retrieveElementDependencies =
     });
   };
 
-const generateElement =
+export const generateElement =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
@@ -1290,15 +1313,9 @@ const generateElement =
     subSystem,
     type,
     name,
-  }: ElementMapPath) =>
+  }: Element) =>
   ({ ccid: actionCcid, comment }: ActionChangeControlValue) =>
-  async ({
-    copyBack,
-    noSource,
-    overrideSignOut,
-  }: GenerateParams): Promise<
-    void | SignoutError | ProcessorStepMaxRcExceededError | Error
-  > => {
+  async (copyBack: boolean): Promise<void | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestParms: ElmSpecDictionary & GenerateElmDictionary = {
       element: name,
@@ -1307,21 +1324,16 @@ const generateElement =
       system,
       subsystem: subSystem,
       type,
-      // copy-back + search and nosource options are mutually exclusive according to the Endevor documentation
-      search: copyBack && !noSource,
-      'copy-back': copyBack && !noSource,
-      nosource: noSource,
-      'override-signout': overrideSignOut,
+      'copy-back': copyBack,
       ccid: actionCcid,
       comment,
     };
     progress.report({ increment: 30 });
-    let response: BaseResponse;
+    let response;
     try {
       response = await EndevorClient.generateElement(session)(instance)(
         requestParms
       );
-      response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
@@ -1329,79 +1341,30 @@ const generateElement =
       );
     }
     progress.report({ increment: 50 });
-    let parsedResponse: ErrorResponse;
-    if (response.body.returnCode) {
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (error) {
-        logger.trace(
-          `Unable to provide a failed response reason because of error ${
-            error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode}`
-        );
-      }
-      // TODO move messages processing to some util function
-      // add extra \n in the beginning of the messages line
-      const errorResponseAsString = [
-        '',
-        ...parsedResponse.body.messages.map((message) => message.trim()),
-      ].join('\n');
-      const errorMessage = `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode} with reason:${errorResponseAsString}`;
-      const typedError = getTypedErrorFromEndevorError(
-        {
-          elementName: name,
-          endevorMessage: errorResponseAsString,
-        },
-        errorMessage
+    let parsedResponse: GenerateResponse;
+    try {
+      parsedResponse = parseToType(GenerateResponse, response);
+    } catch (e) {
+      logger.trace(
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of error ${
+          e.message
+        } in the incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
-      return typedError;
+      return new Error(
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
+      );
+    }
+    if (parsedResponse.body.returnCode) {
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${
+          parsedResponse.body.returnCode
+        } with reason\n${parsedResponse.body.messages.join('\n').trim()}`
+      );
     }
     progress.report({ increment: 20 });
   };
-
-export const generateElementInPlace =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  (elementToGenerate: ElementMapPath) =>
-  (actionChangeControlValue: ActionChangeControlValue) =>
-  async (
-    signOutParams?: GenerateSignOutParams
-  ): Promise<void | SignoutError | ProcessorStepMaxRcExceededError | Error> =>
-    generateElement(logger)(progress)(service)(elementToGenerate)(
-      actionChangeControlValue
-    )({
-      copyBack: false,
-      noSource: false,
-      overrideSignOut: signOutParams?.overrideSignOut
-        ? signOutParams.overrideSignOut
-        : false,
-    });
-
-export const generateElementWithCopyBack =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  (targetElementLocation: ElementMapPath) =>
-  (actionChangeControlValue: ActionChangeControlValue) =>
-  (copyBackParams?: GenerateWithCopyBackParams) =>
-  (
-    signOutParams?: GenerateSignOutParams
-  ): Promise<void | SignoutError | ProcessorStepMaxRcExceededError | Error> =>
-    generateElement(logger)(progress)(service)(targetElementLocation)(
-      actionChangeControlValue
-    )({
-      copyBack: true,
-      noSource: copyBackParams?.noSource ? copyBackParams.noSource : false,
-      overrideSignOut: signOutParams?.overrideSignOut
-        ? signOutParams.overrideSignOut
-        : false,
-    });
 
 export const updateElement =
   (logger: Logger) =>
@@ -1476,13 +1439,12 @@ export const updateElement =
     }
     const updateReturnCode = parsedResponse.body.returnCode;
     if (updateReturnCode) {
-      // TODO move messages processing to some util function
       // add an extra \n in the beginning of the Endevor messages line
       const errorResponseAsString = [
         '',
         ...parsedResponse.body.messages.map((message) => message.trim()),
       ].join('\n');
-      const errorMessage = `Unable to update the element ${system}/${subSystem}/${type}/${name} because of response code ${updateReturnCode} with reason:${errorResponseAsString}`;
+      const errorMessage = `Unable to update the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`;
       const typedError = getTypedErrorFromEndevorError(
         {
           elementName: name,
@@ -1492,10 +1454,11 @@ export const updateElement =
       );
       if (isChangeRegressionError(typedError)) {
         // if the expected regression info message appeared, just leave a trace and update successfully
-        logger.trace(
-          `An element ${system}/${subSystem}/${type}/${name} was updated, but got a response code ${updateReturnCode} with reason:${errorResponseAsString}.`
-        );
+        logger.trace(`${errorMessage}.`);
       } else {
+        logger.trace(
+          `Update element was updated, but got a response code ${updateReturnCode} with reason ${errorResponseAsString}.`
+        );
         progress.report({ increment: 100 });
         return typedError;
       }
@@ -1592,20 +1555,16 @@ export const addElement =
       );
     }
     if (parsedResponse.body.returnCode) {
-      // TODO move messages processing to some util function
-      // add an extra \n in the beginning of the Endevor messages line
-      const errorResponseAsString = [
-        '',
-        ...parsedResponse.body.messages.map((message) => message.trim()),
-      ].join('\n');
-      const errorMessage = `Unable to add the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:${errorResponseAsString}`;
+      const errorResponseAsString = ['', ...parsedResponse.body.messages]
+        .join('\n')
+        .trim();
       progress.report({ increment: 100 });
       return getTypedErrorFromEndevorError(
         {
           elementName: name,
           endevorMessage: errorResponseAsString,
         },
-        errorMessage
+        `Unable to add the element because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`
       );
     }
     progress.report({ increment: 20 });

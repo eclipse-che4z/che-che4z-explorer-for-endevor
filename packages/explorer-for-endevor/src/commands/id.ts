@@ -27,8 +27,6 @@ export const CommandId = {
   RETRIEVE_WITH_DEPENDENCIES: `${COMMAND_PREFIX}.retrieveElementWithDependencies`,
   QUICK_EDIT_ELEMENT: `${COMMAND_PREFIX}.editElement`,
   GENERATE_ELEMENT: `${COMMAND_PREFIX}.generateElement`,
-  GENERATE_ELEMENT_WITH_COPY_BACK: `${COMMAND_PREFIX}.generateElementWithCopyBack`,
-  GENERATE_ELEMENT_WITH_NO_SOURCE: `${COMMAND_PREFIX}.generateElementWithNoSource`,
   UPLOAD_ELEMENT: `${COMMAND_PREFIX}.uploadElement`,
   DISCARD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.discardChanges`,
   UPLOAD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.acceptChanges`,
