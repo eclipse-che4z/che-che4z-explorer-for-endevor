@@ -48,6 +48,23 @@ export const toTreeElementUri =
 type FragmentType = {
   fragment: string;
 };
+
+export const withNewUniqueFragment =
+  (treeElementUri: Uri) =>
+  (uniqueFragment: string): Uri | Error => {
+    // TODO: replace with validation in separated function
+    const expectedScheme = Schemas.TREE_ELEMENT;
+    const actualScheme = treeElementUri.scheme;
+    if (actualScheme === expectedScheme) {
+      return treeElementUri.with({
+        fragment: uniqueFragment,
+      });
+    }
+    return new Error(
+      `Uri scheme is incorrect: ${actualScheme}, but should be: ${expectedScheme}`
+    );
+  };
+
 export const fromTreeElementUri = (
   uri: Uri
 ): (TreeElementUriQuery & FragmentType) | Error => {

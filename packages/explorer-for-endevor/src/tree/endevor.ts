@@ -23,6 +23,7 @@ import {
 } from '../_doc/ElementTree';
 import {
   Element,
+  ElementMapPath,
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
@@ -46,7 +47,7 @@ import {
 export const toElementId =
   (service: EndevorServiceName) =>
   (searchLocation: ElementLocationName) =>
-  (element: Element): string => {
+  (element: ElementMapPath): string => {
     return `${service}/${searchLocation}/${element.instance}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
   };
 
@@ -151,6 +152,7 @@ export const buildTree =
         const node: SubSystemNode = systemNode.children.get(name) ?? {
           type: 'SUB',
           name,
+          parent: systemNode,
           children: new Map(),
         };
         systemNode.children.set(name, node);
@@ -168,6 +170,7 @@ export const buildTree =
         const node: TypeNode = subsystemNode.children.get(name) ?? {
           type: 'TYPE',
           name,
+          parent: subsystemNode,
           elements: new Map(),
           map: {
             type: 'MAP',
@@ -181,12 +184,13 @@ export const buildTree =
       };
     const addElementInPlace = (elementInPlace: CachedElement): void => {
       const element = elementInPlace.element;
-      const elementNode = toElementNode(
+      const typeNode = addTypeNode()()(element);
+      const elementNode = toInPlaceElementNode(
         serviceName,
         service,
         searchLocationName,
         elementsSearchLocation
-      )(elementInPlace)();
+      )(elementInPlace)(typeNode)();
       if (isError(elementNode)) {
         const error = elementNode;
         logger.trace(
@@ -194,7 +198,6 @@ export const buildTree =
         );
         return;
       }
-      const typeNode = addTypeNode()()(element);
       typeNode.elements.set(elementNode.name, elementNode);
     };
     elementsInPlace.forEach(addElementInPlace);
@@ -249,22 +252,6 @@ export const buildTree =
       elementUpTheMap: CachedElement
     ): Promise<void> => {
       const endevorElement = elementUpTheMap.element;
-      const nodeName =
-        endevorElement.name +
-        ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
-      const elementNode = toElementNode(
-        serviceName,
-        service,
-        searchLocationName,
-        elementsSearchLocation
-      )(elementUpTheMap)(nodeName);
-      if (isError(elementNode)) {
-        const error = elementNode;
-        logger.trace(
-          `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
-        );
-        return;
-      }
       const elementMapPath = toSubsystemMapPathId(endevorElement);
       [...addedSubsystemsInPlace, ...skippedSubsystemsInPlace].forEach(
         (subsystemInPlace) => {
@@ -283,6 +270,22 @@ export const buildTree =
             }).length;
             if (isElementUpTheMap) {
               const typeNode = addTypeNode()(subsystemNode)(endevorElement);
+              const nodeName =
+                endevorElement.name +
+                ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
+              const elementNode = toUpTheMapElementNode(
+                serviceName,
+                service,
+                searchLocationName,
+                elementsSearchLocation
+              )(elementUpTheMap)(typeNode)(nodeName);
+              if (isError(elementNode)) {
+                const error = elementNode;
+                logger.trace(
+                  `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
+                );
+                return;
+              }
               typeNode.map.elements.set(nodeName, elementNode);
               return;
             }
@@ -309,6 +312,22 @@ export const buildTree =
                 system: subsystemInPlace.system,
                 subSystem: subsystemInPlace.subSystem,
               });
+              const nodeName =
+                endevorElement.name +
+                ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
+              const elementNode = toUpTheMapElementNode(
+                serviceName,
+                service,
+                searchLocationName,
+                elementsSearchLocation
+              )(elementUpTheMap)(typeNode)(nodeName);
+              if (isError(elementNode)) {
+                const error = elementNode;
+                logger.trace(
+                  `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
+                );
+                return;
+              }
               typeNode.map.elements.set(nodeName, elementNode);
               return;
             }
@@ -333,7 +352,7 @@ export const buildTree =
     return Array.from(tree.values());
   };
 
-const toElementNode =
+const toInPlaceElementNode =
   (
     serviceName: EndevorServiceName,
     service: Service,
@@ -341,6 +360,7 @@ const toElementNode =
     elementsSearchLocation: ElementSearchLocation
   ) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
+  (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
     const serializedUri = toTreeElementUri({
       serviceName,
@@ -355,8 +375,39 @@ const toElementNode =
     }
     return {
       searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
-      type: 'ELEMENT',
+      type: 'ELEMENT_IN_PLACE',
       name: nodeName ?? element.name,
       uri: serializedUri,
+      parent,
+    };
+  };
+
+const toUpTheMapElementNode =
+  (
+    serviceName: EndevorServiceName,
+    service: Service,
+    searchLocationName: ElementLocationName,
+    elementsSearchLocation: ElementSearchLocation
+  ) =>
+  ({ element, lastRefreshTimestamp }: CachedElement) =>
+  (parent: TypeNode) =>
+  (nodeName?: string): ElementNode | Error => {
+    const serializedUri = toTreeElementUri({
+      serviceName,
+      searchLocationName,
+      service,
+      element,
+      searchLocation: elementsSearchLocation,
+    })(lastRefreshTimestamp.toString());
+    if (isError(serializedUri)) {
+      const error = serializedUri;
+      return error;
+    }
+    return {
+      searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+      type: 'ELEMENT_UP_THE_MAP',
+      name: nodeName ?? element.name,
+      uri: serializedUri,
+      parent,
     };
   };

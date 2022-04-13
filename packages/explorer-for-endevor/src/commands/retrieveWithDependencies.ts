@@ -44,7 +44,6 @@ import {
 import {
   retrieveElementWithDependenciesWithoutSignout,
   retrieveElementWithDependenciesWithSignout,
-  retrieveElementWithDependenciesOverrideSignout,
 } from '../endevor';
 import { askToOverrideSignOutForElements } from '../dialogs/change-control/signOutDialogs';
 import {
@@ -436,7 +435,7 @@ const retrieveSingleElementWithSignout =
       return retrieveElementWithDependenciesWithSignout(progressReporter)({
         service,
         requestPoolMaxSize,
-      })(element)(signoutChangeControlValue);
+      })(element)({ signoutChangeControlValue });
     });
   };
 
@@ -447,10 +446,10 @@ const retrieveSingleElementWithOverrideSignout =
     return withNotificationProgress(
       `Retrieving element and its dependencies with override signout : ${element.name}`
     )(async (progressReporter) => {
-      return retrieveElementWithDependenciesOverrideSignout(progressReporter)({
+      return retrieveElementWithDependenciesWithSignout(progressReporter)({
         service,
         requestPoolMaxSize,
-      })(element)(signoutChangeControlValue);
+      })(element)({ signoutChangeControlValue, overrideSignOut: true });
     });
   };
 
@@ -1513,7 +1512,7 @@ const retrieveMultipleElementsWithSignout =
               )({
                 service: serviceInstance.service,
                 requestPoolMaxSize: serviceInstance.requestPoolMaxSize,
-              })(element)(signoutChangeControlValue);
+              })(element)({ signoutChangeControlValue });
             };
           }),
           {
@@ -1544,14 +1543,14 @@ const retrieveMultipleElementsWithOverrideSignout =
         return new PromisePool(
           validElementUris.map(({ serviceInstance, element }) => {
             return async () => {
-              return retrieveElementWithDependenciesOverrideSignout(
+              return retrieveElementWithDependenciesWithSignout(
                 toSeveralTasksProgress(progressReporter)(
                   validElementUris.length
                 )
               )({
                 service: serviceInstance.service,
                 requestPoolMaxSize: serviceInstance.requestPoolMaxSize,
-              })(element)(signoutChangeControlValue);
+              })(element)({ signoutChangeControlValue, overrideSignOut: true });
             };
           }),
           {
@@ -1618,7 +1617,7 @@ const updateTreeAfterSuccessfulSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (actionPayload: SignedOutElementsPayload): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       ...actionPayload,
     });
   };

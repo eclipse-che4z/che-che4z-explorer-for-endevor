@@ -18,6 +18,7 @@ import {
   ChangeRegressionError,
   SignoutError,
   DuplicateElementError,
+  ProcessorStepMaxRcExceededError,
 } from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
@@ -110,6 +111,12 @@ export const isChangeRegressionError = <T>(
   value: T | ChangeRegressionError
 ): value is ChangeRegressionError => {
   return value instanceof ChangeRegressionError;
+};
+
+export const isProcessorStepMaxRcExceededError = <T>(
+  value: T | ProcessorStepMaxRcExceededError
+): value is ProcessorStepMaxRcExceededError => {
+  return value instanceof ProcessorStepMaxRcExceededError;
 };
 
 export const toSeveralTasksProgress =

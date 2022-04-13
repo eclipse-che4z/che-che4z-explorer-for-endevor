@@ -17,6 +17,8 @@ import {
   FINGERPRINT_SIGNOUT_ERROR,
   NOT_SIGNOUT_ERROR,
   CHANGE_REGRESSION_INFO,
+  PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR,
+  PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE,
 } from '../const';
 
 type EndevorErrorContext = {
@@ -34,6 +36,7 @@ export function getTypedErrorFromEndevorError(
   | SignoutError
   | DuplicateElementError
   | ChangeRegressionError
+  | ProcessorStepMaxRcExceededError
   | GeneralError {
   switch (true) {
     case endevorMessage.includes(FINGERPRINT_MISMATCH_ERROR):
@@ -42,10 +45,6 @@ export function getTypedErrorFromEndevorError(
           `Fingerprint provided does not match record in Endevor for element ${elementName}: ${endevorMessage}`
       );
     case endevorMessage.includes(FINGERPRINT_SIGNOUT_ERROR):
-      return new SignoutError(
-        errorMessage ||
-          `Unable to signout element ${elementName}: ${endevorMessage}`
-      );
     case endevorMessage.includes(NOT_SIGNOUT_ERROR):
       return new SignoutError(
         errorMessage ||
@@ -60,6 +59,12 @@ export function getTypedErrorFromEndevorError(
       return new ChangeRegressionError(
         errorMessage ||
           `Regression on prior level of element ${elementName}: ${endevorMessage}`
+      );
+    case endevorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR):
+    case endevorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE):
+      return new ProcessorStepMaxRcExceededError(
+        errorMessage ||
+          `Processor step return code exceeds the max value for the element ${elementName}: ${endevorMessage}`
       );
     default:
       return new Error(
@@ -76,3 +81,5 @@ export class SignoutError extends Error {}
 export class DuplicateElementError extends Error {}
 
 export class ChangeRegressionError extends Error {}
+
+export class ProcessorStepMaxRcExceededError extends Error {}

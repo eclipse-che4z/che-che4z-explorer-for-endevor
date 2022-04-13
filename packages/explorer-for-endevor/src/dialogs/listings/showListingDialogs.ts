@@ -14,12 +14,16 @@
 import { showMessageWithOptions } from '@local/vscode-wrapper/window';
 import { logger } from '../../globals';
 
-export const askToShowListing = async (): Promise<boolean> => {
+export const askToShowListing = async (
+  elements: ReadonlyArray<string>
+): Promise<boolean> => {
   logger.trace('Prompt user to show element listing.');
   const showListingOption = 'Show listing';
   const cancelOption = 'Cancel';
   const dialogResult = await showMessageWithOptions({
-    message: `Would you like to see the listing?`,
+    message: `Successfully generated the elements: ${elements.join(
+      ', '
+    )}. Would you like to see the listing?`,
     options: [showListingOption, cancelOption],
   });
   const notificationWasClosed = dialogResult === undefined;
