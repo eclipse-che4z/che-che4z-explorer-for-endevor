@@ -11,37 +11,51 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import {
+  ChangeControlValue,
+  Element,
+  ElementMapPath,
+  ElementSearchLocation,
+  Service,
+  SubSystemMapPath,
+} from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
+import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 import { ComparedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
 
-type SerializedValue = ComparedElementUriQuery & {
+type SerializedValue = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  service: Service;
+  elementTreePath: SubSystemMapPath;
+  overallSearchLocation: ElementSearchLocation;
+  element: Element;
+  fingerprint: string;
+  uploadChangeControlValue: ChangeControlValue;
+  uploadTargetLocation: ElementMapPath;
+  remoteVersionTempFilePath: string;
+}> & {
   type: QueryTypes;
 };
 
 export const toComparedElementUri =
   (elementFileSystemPath: string) =>
-  ({
-    element,
-    service,
-    serviceName,
-    fingerprint,
-    searchLocation,
-    searchLocationName,
-    remoteVersionTempFilePath,
-    uploadChangeControlValue,
-  }: ComparedElementUriQuery): Uri | Error => {
+  (uriQuery: ComparedElementUriQuery): Uri | Error => {
     try {
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
         type: QueryTypes.COMPARED_ELEMENT,
-        service,
-        serviceName,
-        element,
-        fingerprint,
-        searchLocation,
-        searchLocationName,
-        remoteVersionTempFilePath,
-        uploadChangeControlValue,
+        serviceName: uriQuery.initialSearchContext.serviceName,
+        searchLocationName: uriQuery.initialSearchContext.searchLocationName,
+        service: uriQuery.endevorConnectionDetails,
+        element: uriQuery.element,
+        fingerprint: uriQuery.fingerprint,
+        uploadChangeControlValue: uriQuery.uploadChangeControlValue,
+        uploadTargetLocation: uriQuery.uploadTargetLocation,
+        elementTreePath: uriQuery.initialSearchContext.initialSearchLocation,
+        overallSearchLocation:
+          uriQuery.initialSearchContext.overallSearchLocation,
+        remoteVersionTempFilePath: uriQuery.remoteVersionTempFilePath,
       };
       return emptyUri.with({
         scheme: Schemas.FILE,
@@ -95,7 +109,23 @@ export const fromComparedElementUri = (
 ): ComparedElementUriQuery | Error => {
   const uriValidationResult = isComparedElementUri(uri);
   if (uriValidationResult.valid) {
-    return JSON.parse(decodeURIComponent(uri.query));
+    const serializedValue: SerializedValue = JSON.parse(
+      decodeURIComponent(uri.query)
+    );
+    return {
+      element: serializedValue.element,
+      fingerprint: serializedValue.fingerprint,
+      remoteVersionTempFilePath: serializedValue.remoteVersionTempFilePath,
+      uploadChangeControlValue: serializedValue.uploadChangeControlValue,
+      uploadTargetLocation: serializedValue.uploadTargetLocation,
+      endevorConnectionDetails: serializedValue.service,
+      initialSearchContext: {
+        serviceName: serializedValue.serviceName,
+        searchLocationName: serializedValue.searchLocationName,
+        overallSearchLocation: serializedValue.overallSearchLocation,
+        initialSearchLocation: serializedValue.elementTreePath,
+      },
+    };
   }
   return new Error(uriValidationResult.message);
 };

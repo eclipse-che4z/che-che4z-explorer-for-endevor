@@ -85,9 +85,9 @@ const signOutSingleElement =
     const signOutResult = await withNotificationProgress(
       `Signing out the element: ${element.name}`
     )((progressReporter) =>
-      signOutElement(progressReporter)(service)(element)(
-        signoutChangeControlValue
-      )
+      signOutElement(progressReporter)(service)(element)({
+        signoutChangeControlValue,
+      })
     );
     if (isError(signOutResult)) {
       const error = signOutResult;
@@ -129,7 +129,7 @@ const updateTreeAfterSuccessfulSignout =
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
-      type: Actions.ELEMENT_SIGNEDOUT,
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       service,
       searchLocationName,

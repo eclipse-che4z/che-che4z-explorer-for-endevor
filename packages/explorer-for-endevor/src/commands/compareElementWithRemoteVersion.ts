@@ -16,6 +16,8 @@ import {
   ChangeControlValue,
   Element,
   ElementSearchLocation,
+  ElementMapPath,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import {
   withNotificationProgress,
@@ -36,12 +38,15 @@ import {
 } from '../_doc/Telemetry';
 
 export const compareElementWithRemoteVersion =
-  (service: Service, searchLocation: ElementSearchLocation) =>
-  (uploadChangeControlValue: ChangeControlValue) =>
+  (service: Service, searchLocation: ElementSearchLocation, element: Element) =>
   (
-    element: Element,
+    uploadChangeControlValue: ChangeControlValue,
+    uploadTargetLocation: ElementMapPath
+  ) =>
+  (
     serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName
+    searchLocationName: ElementLocationName,
+    initialSearchLocation: SubSystemMapPath
   ) =>
   async (localVersionElementTempFilePath: string): Promise<void | Error> => {
     reporter.sendTelemetryEvent({
@@ -56,7 +61,10 @@ export const compareElementWithRemoteVersion =
     const tempFolderUri = Uri.file(tempFolder);
     const savedRemoteElementVersion = await retrieveRemoteVersionIntoFolder(
       service
-    )(element)(tempFolderUri);
+    )({
+      ...uploadTargetLocation,
+      extension: element.extension,
+    })(tempFolderUri);
     if (isError(savedRemoteElementVersion)) {
       const error = savedRemoteElementVersion;
       reporter.sendTelemetryEvent({
@@ -73,8 +81,9 @@ export const compareElementWithRemoteVersion =
     const remoteVersionTempFilePath = savedRemoteVersionUri.fsPath;
     const localElementVersionUploadableUri = toUploadableDiffEditorUri(
       service,
-      searchLocation
-    )(uploadChangeControlValue)(
+      searchLocation,
+      initialSearchLocation
+    )(uploadChangeControlValue, uploadTargetLocation)(
       element,
       serviceName,
       searchLocationName
@@ -85,7 +94,7 @@ export const compareElementWithRemoteVersion =
     if (isError(localElementVersionUploadableUri)) {
       const error = localElementVersionUploadableUri;
       return new Error(
-        `Unable to open a local version of the element ${element.name} to compare because of error ${error.message}`
+        `Unable to open a local version of the element ${uploadTargetLocation.name} to compare because of error ${error.message}`
       );
     }
     const remoteElementVersionReadonlyUri = savedRemoteVersionUri.with({
@@ -154,8 +163,15 @@ const retrieveRemoteVersionIntoFolder =
   };
 
 const toUploadableDiffEditorUri =
-  (service: Service, searchLocation: ElementSearchLocation) =>
-  (uploadChangeControlValue: ChangeControlValue) =>
+  (
+    service: Service,
+    searchLocation: ElementSearchLocation,
+    initialSearchLocation: SubSystemMapPath
+  ) =>
+  (
+    uploadChangeControlValue: ChangeControlValue,
+    uploadTargetLocation: ElementMapPath
+  ) =>
   (
     element: Element,
     serviceName: EndevorServiceName,
@@ -164,13 +180,17 @@ const toUploadableDiffEditorUri =
   (remoteVersionTempFilePath: string, remoteVersionFingerprint: string) =>
   (localVersionTempFilePath: string) => {
     return toComparedElementUri(localVersionTempFilePath)({
-      service,
-      serviceName,
       element,
       fingerprint: remoteVersionFingerprint,
-      searchLocation,
-      searchLocationName,
-      uploadChangeControlValue,
       remoteVersionTempFilePath,
+      uploadChangeControlValue,
+      uploadTargetLocation,
+      endevorConnectionDetails: service,
+      initialSearchContext: {
+        serviceName,
+        searchLocationName,
+        overallSearchLocation: searchLocation,
+        initialSearchLocation,
+      },
     });
   };

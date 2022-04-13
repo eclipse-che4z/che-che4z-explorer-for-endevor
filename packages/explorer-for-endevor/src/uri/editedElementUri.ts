@@ -11,30 +11,49 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import {
+  Element,
+  ElementSearchLocation,
+  Service,
+  SubSystemMapPath,
+} from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
+import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 import { EditedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
 
-type SerializedValue = EditedElementUriQuery & {
+type SerializedValue = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  service: Service;
+  element: Element;
+  searchLocation: ElementSearchLocation;
+  treePath: SubSystemMapPath;
+  fingerprint: string;
+}> & {
   type: QueryTypes;
 };
 
 export const toEditedElementUri =
   (elementFileSystemPath: string) =>
   ({
-    serviceName,
     element,
-    service,
-    searchLocation,
-    searchLocationName,
     fingerprint,
+    endevorConnectionDetails,
+    searchContext: {
+      serviceName,
+      searchLocationName,
+      initialSearchLocation,
+      overallSearchLocation,
+    },
   }: EditedElementUriQuery): Uri | Error => {
     try {
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
         serviceName,
-        service,
+        service: endevorConnectionDetails,
         element,
-        searchLocation,
+        searchLocation: overallSearchLocation,
+        treePath: initialSearchLocation,
         searchLocationName,
         type: QueryTypes.EDITED_ELEMENT,
         fingerprint,
@@ -91,7 +110,20 @@ export const fromEditedElementUri = (
 ): EditedElementUriQuery | Error => {
   const uriValidationResult = isEditedElementUri(uri);
   if (uriValidationResult.valid) {
-    return JSON.parse(decodeURIComponent(uri.query));
+    const serializedValue: SerializedValue = JSON.parse(
+      decodeURIComponent(uri.query)
+    );
+    return {
+      element: serializedValue.element,
+      fingerprint: serializedValue.fingerprint,
+      endevorConnectionDetails: serializedValue.service,
+      searchContext: {
+        serviceName: serializedValue.serviceName,
+        searchLocationName: serializedValue.searchLocationName,
+        initialSearchLocation: serializedValue.treePath,
+        overallSearchLocation: serializedValue.searchLocation,
+      },
+    };
   }
   return new Error(uriValidationResult.message);
 };

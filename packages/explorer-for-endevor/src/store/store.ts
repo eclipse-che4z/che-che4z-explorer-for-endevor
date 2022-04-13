@@ -13,7 +13,11 @@
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { BaseCredential } from '@local/endevor/_doc/Credential';
-import { ElementSearchLocation, Service } from '@local/endevor/_doc/Endevor';
+import {
+  ElementSearchLocation,
+  Service,
+  Element,
+} from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { searchForElements } from '../endevor';
 import { logger, reporter } from '../globals';
@@ -30,14 +34,16 @@ import {
   EndevorCredentialAdded,
   LocationConfigChanged,
   ElementAdded,
-  ElementUpdated,
-  ElementGenerated,
+  ElementUpdatedInPlace,
   ElementSignedin,
   ElementSignedout,
   EndevorMapBuilt,
+  ElementGeneratedInPlace,
+  ElementGeneratedWithCopyBack,
+  ElementUpdatedFromUpTheMap,
 } from '../_doc/Actions';
 import { Node } from '../_doc/ElementTree';
-import { EndevorMap } from '../_doc/Endevor';
+import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
 import {
   ElementLocationName,
   EndevorServiceName,
@@ -99,23 +105,37 @@ export const make = (
         refreshTree(state);
         break;
       }
-      case Actions.ELEMENT_UPDATED: {
+      case Actions.ELEMENT_UPDATED_IN_PLACE: {
         state = smartElementReducer(state, action);
         refreshTree(state);
         break;
       }
-      case Actions.ELEMENT_GENERATED: {
+      case Actions.ELEMENT_SIGNED_IN: {
         state = smartElementReducer(state, action);
         refreshTree(state);
         break;
       }
-      case Actions.ELEMENT_SIGNEDIN: {
+      case Actions.ELEMENT_SIGNED_OUT: {
         state = smartElementReducer(state, action);
         refreshTree(state);
         break;
       }
-      case Actions.ELEMENT_SIGNEDOUT: {
+      case Actions.ELEMENT_GENERATED_IN_PLACE: {
         state = smartElementReducer(state, action);
+        refreshTree(state);
+        break;
+      }
+      case Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP:
+      case Actions.ELEMENT_GENERATED_WITH_COPY_BACK: {
+        state = addedElementFromTheMapReducer(state, action);
+        refreshTree(state);
+        state = await fetchingElementsReducer(state)(
+          action.treePath.serviceName,
+          action.fetchElementsArgs.service
+        )(
+          action.treePath.searchLocationName,
+          action.fetchElementsArgs.searchLocation
+        );
         refreshTree(state);
         break;
       }
@@ -218,6 +238,71 @@ const endevorMapBuiltReducer =
       updatedItem
     );
   };
+
+const addedElementFromTheMapReducer = (
+  initialState: State,
+  elementAddedAction: ElementGeneratedWithCopyBack | ElementUpdatedFromUpTheMap
+): State => {
+  const existingItem = initialState.find((stateItem) => {
+    return stateItem.serviceName === elementAddedAction.treePath.serviceName;
+  });
+  if (!existingItem) return initialState;
+  const existingCache = existingItem.cachedElements.find(
+    (element) =>
+      element.searchLocation === elementAddedAction.treePath.searchLocationName
+  );
+  if (!existingCache) return initialState;
+  const oldElementId = toElementId(elementAddedAction.treePath.serviceName)(
+    elementAddedAction.treePath.searchLocationName
+  )(elementAddedAction.pathUpTheMap);
+  const searchLocationEntry = toSubsystemMapPathId(
+    elementAddedAction.treePath.searchLocation
+  );
+  const existingRoute = existingCache.endevorMap[searchLocationEntry];
+  if (!existingRoute) return initialState;
+  const treeLocation = [searchLocationEntry, ...existingRoute].find(
+    (route) => route === toSubsystemMapPathId(elementAddedAction.targetLocation)
+  );
+  if (!treeLocation) return initialState;
+  const oldELement = existingCache.elements[oldElementId];
+  if (!oldELement) return initialState;
+  const { [oldElementId]: matchingCashedElement, ...existingCachedElements } =
+    existingCache.elements;
+  const newElement: Element = {
+    ...elementAddedAction.targetLocation,
+    extension: oldELement.element.extension,
+    name: oldELement.element.name,
+  };
+  const newElementId = toElementId(elementAddedAction.treePath.serviceName)(
+    elementAddedAction.treePath.searchLocationName
+  )(newElement);
+  const updatedCachedElements: CachedElements = {
+    ...existingCachedElements,
+    [newElementId]: {
+      element: newElement,
+      lastRefreshTimestamp: Date.now(),
+    },
+  };
+  const updatedCacheItem = {
+    searchLocation: existingCache.searchLocation,
+    endevorMap: existingCache.endevorMap,
+    elements: updatedCachedElements,
+  };
+  const updatedItem = {
+    serviceName: existingItem.serviceName,
+    credential: existingItem.credential,
+    cachedElements: replaceWith(existingItem.cachedElements)(
+      (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
+        value1.searchLocation === value2.searchLocation,
+      updatedCacheItem
+    ),
+  };
+  return replaceWith(initialState)(
+    (value1: StateItem, value2: StateItem) =>
+      value1.serviceName === value2.serviceName,
+    updatedItem
+  );
+};
 
 const addedElementReducer = (
   initialState: State,
@@ -323,7 +408,11 @@ const smartElementReducer = (
     serviceName,
     searchLocationName,
     elements,
-  }: ElementUpdated | ElementGenerated | ElementSignedout | ElementSignedin
+  }:
+    | ElementUpdatedInPlace
+    | ElementGeneratedInPlace
+    | ElementSignedout
+    | ElementSignedin
 ): State => {
   const existingStateItem = initialState.find((existingItem) => {
     return existingItem.serviceName === serviceName;

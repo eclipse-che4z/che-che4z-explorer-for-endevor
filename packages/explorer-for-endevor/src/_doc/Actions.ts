@@ -16,6 +16,8 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ElementMapPath,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { EndevorMap } from './Endevor';
 import {
@@ -31,10 +33,12 @@ export const enum Actions {
   ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
   REFRESH = 'REFRESH',
   ELEMENT_ADDED = 'ELEMENT_ADDED',
-  ELEMENT_UPDATED = 'ELEMENT_UPDATED',
-  ELEMENT_GENERATED = 'ELEMENT_GENERATED',
-  ELEMENT_SIGNEDOUT = 'ELEMENT_SIGNEDOUT',
-  ELEMENT_SIGNEDIN = 'ELEMENT_SIGNEDIN',
+  ELEMENT_UPDATED_IN_PLACE = 'ELEMENT_UPDATED_IN_PLACE',
+  ELEMENT_UPDATED_FROM_UP_THE_MAP = 'ELEMENT_UPDATED_FROM_UP_THE_MAP',
+  ELEMENT_SIGNED_OUT = 'ELEMENT_SIGNED_OUT',
+  ELEMENT_SIGNED_IN = 'ELEMENT_SIGNED_IN',
+  ELEMENT_GENERATED_IN_PLACE = 'ELEMENT_GENERATED_IN_PLACE',
+  ELEMENT_GENERATED_WITH_COPY_BACK = 'ELEMENT_GENERATED_WITH_COPY_BACK',
 }
 
 export interface EndevorCredentialAdded {
@@ -75,8 +79,8 @@ export interface ElementAdded {
   element: Element;
 }
 
-export interface ElementUpdated {
-  type: Actions.ELEMENT_UPDATED;
+export interface ElementUpdatedInPlace {
+  type: Actions.ELEMENT_UPDATED_IN_PLACE;
   serviceName: EndevorServiceName;
   service: Service;
   searchLocationName: ElementLocationName;
@@ -84,13 +88,40 @@ export interface ElementUpdated {
   elements: ReadonlyArray<Element>;
 }
 
-export interface ElementGenerated {
-  type: Actions.ELEMENT_GENERATED;
+export interface ElementGeneratedInPlace {
+  type: Actions.ELEMENT_GENERATED_IN_PLACE;
   serviceName: EndevorServiceName;
   service: Service;
   searchLocationName: ElementLocationName;
   searchLocation: ElementSearchLocation;
   elements: ReadonlyArray<Element>;
+}
+
+type FetchElementsArguments = Readonly<{
+  service: Service;
+  searchLocation: ElementSearchLocation;
+}>;
+
+type ElementTreePath = Readonly<{
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  searchLocation: SubSystemMapPath;
+}>;
+
+export interface ElementGeneratedWithCopyBack {
+  type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK;
+  fetchElementsArgs: FetchElementsArguments;
+  targetLocation: ElementMapPath;
+  pathUpTheMap: ElementMapPath;
+  treePath: ElementTreePath;
+}
+
+export interface ElementUpdatedFromUpTheMap {
+  type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP;
+  fetchElementsArgs: FetchElementsArguments;
+  targetLocation: ElementMapPath;
+  pathUpTheMap: ElementMapPath;
+  treePath: ElementTreePath;
 }
 
 export type SignedOutElementsPayload = {
@@ -102,11 +133,11 @@ export type SignedOutElementsPayload = {
 };
 
 export type ElementSignedout = {
-  type: Actions.ELEMENT_SIGNEDOUT;
+  type: Actions.ELEMENT_SIGNED_OUT;
 } & SignedOutElementsPayload;
 
 export interface ElementSignedin {
-  type: Actions.ELEMENT_SIGNEDIN;
+  type: Actions.ELEMENT_SIGNED_IN;
   serviceName: EndevorServiceName;
   service: Service;
   searchLocationName: ElementLocationName;
@@ -120,8 +151,10 @@ export type Action =
   | EndevorMapBuilt
   | ElementsUpdated
   | Refresh
-  | ElementUpdated
+  | ElementUpdatedInPlace
+  | ElementUpdatedFromUpTheMap
   | ElementAdded
-  | ElementGenerated
   | ElementSignedout
+  | ElementGeneratedInPlace
+  | ElementGeneratedWithCopyBack
   | ElementSignedin;

@@ -12,32 +12,28 @@
  */
 
 import { toSeveralTasksProgress } from '@local/endevor/utils';
+import { SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import { PromisePool } from 'promise-pool-tool';
-import * as vscode from 'vscode';
 import { MAX_PARALLEL_REQUESTS_DEFAULT } from '../../constants';
 import { retrieveElementWithFingerprint } from '../../endevor';
 import { logger, reporter } from '../../globals';
 import { getMaxParallelRequests } from '../../settings/settings';
+import { toEditedElementUri } from '../../uri/editedElementUri';
 import { fromTreeElementUri } from '../../uri/treeElementUri';
 import { isDefined, isError } from '../../utils';
+import { ElementNode } from '../../_doc/ElementTree';
 import {
   TreeElementCommandArguments,
   EditElementCommandCompletedStatus,
   TelemetryEvents,
 } from '../../_doc/Telemetry';
-import {
-  saveIntoEditFolder,
-  withUploadOptions,
-  showElementToEdit,
-} from './common';
+import { TreeElementUriQuery } from '../../_doc/Uri';
+import { saveIntoEditFolder, showElementToEdit } from './common';
 
 export const editSingleElement = async (
-  element: Readonly<{
-    name: string;
-    uri: vscode.Uri;
-  }>
+  element: ElementNode
 ): Promise<void> => {
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
@@ -108,11 +104,32 @@ export const editSingleElement = async (
     });
     return;
   }
-  const uploadableElementUri = withUploadOptions(saveResult)({
-    ...elementUri,
+  const uploadableElementUri = toEditedElementUri(saveResult.fsPath)({
+    element: elementUri.element,
     fingerprint: retrieveResult.fingerprint,
+    endevorConnectionDetails: elementUri.service,
+    searchContext: {
+      serviceName: elementUri.serviceName,
+      searchLocationName: elementUri.searchLocationName,
+      overallSearchLocation: elementUri.searchLocation,
+      initialSearchLocation: {
+        subSystem: element.parent.parent.name,
+        system: element.parent.parent.parent.name,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        stageNumber: elementUri.searchLocation.stageNumber!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        environment: elementUri.searchLocation.environment!,
+      },
+    },
   });
-  if (!uploadableElementUri) return;
+  if (isError(uploadableElementUri)) {
+    const error = uploadableElementUri;
+    logger.error(
+      `Unable to open the element ${element.name} for editing.`,
+      `Unable to open the element ${element.name} because of error ${error.message}.`
+    );
+    return;
+  }
   const showResult = await showElementToEdit(uploadableElementUri);
   if (isError(showResult)) {
     const error = showResult;
@@ -136,10 +153,7 @@ export const editSingleElement = async (
 
 // TODO: think about pipe implementation or something like this
 export const editMultipleElements = async (
-  elements: ReadonlyArray<{
-    name: string;
-    uri: vscode.Uri;
-  }>
+  elements: ReadonlyArray<ElementNode>
 ): Promise<void> => {
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
@@ -173,22 +187,37 @@ export const editMultipleElements = async (
     );
     endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
   }
-  const elementUris = elements.map((element) => {
-    const elementsUploadOptions = fromTreeElementUri(element.uri);
-    if (isError(elementsUploadOptions)) {
-      const error = elementsUploadOptions;
+  type UploadOptions = TreeElementUriQuery &
+    Readonly<{
+      initialSearchLocation: SubSystemMapPath;
+    }>;
+  const elementUploadOptions = elements.map((element) => {
+    const elementsUriParams = fromTreeElementUri(element.uri);
+    if (isError(elementsUriParams)) {
+      const error = elementsUriParams;
       return new Error(
         `Unable to edit the element ${element.name} because of an error ${error.message}`
       );
     }
-    return elementsUploadOptions;
+    const uploadOptions: UploadOptions = {
+      ...elementsUriParams,
+      initialSearchLocation: {
+        subSystem: element.parent.parent.name,
+        system: element.parent.parent.parent.name,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        stageNumber: elementsUriParams.searchLocation.stageNumber!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        environment: elementsUriParams.searchLocation.environment!,
+      },
+    };
+    return uploadOptions;
   });
   const elementsNumber = elements.length;
   const retrievedContents = await withNotificationProgress(
     `Retrieving elements: ${elements.map((element) => element.name).join(', ')}`
   )((progressReporter) => {
     return new PromisePool(
-      elementUris.map((element) => {
+      elementUploadOptions.map((element) => {
         if (isError(element)) {
           const error = element;
           return () => Promise.resolve(error);
@@ -203,7 +232,7 @@ export const editMultipleElements = async (
       }
     ).start();
   });
-  const retrieveResults = elementUris.map((elementUri, index) => {
+  const retrieveResults = elementUploadOptions.map((elementUri, index) => {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const retrievedContent = retrievedContents[index]!;
     if (isError(elementUri)) {
@@ -245,12 +274,25 @@ export const editMultipleElements = async (
         });
         return error;
       }
-      return withUploadOptions(saveResult)({
-        ...result.element,
+      const uploadableElementUri = toEditedElementUri(saveResult.fsPath)({
+        element: result.element.element,
         fingerprint: result.content.fingerprint,
-        serviceName: result.element.serviceName,
-        searchLocationName: result.element.searchLocationName,
+        endevorConnectionDetails: result.element.service,
+        searchContext: {
+          serviceName: result.element.serviceName,
+          searchLocationName: result.element.searchLocationName,
+          overallSearchLocation: result.element.searchLocation,
+          initialSearchLocation: result.element.initialSearchLocation,
+        },
       });
+      if (isError(uploadableElementUri)) {
+        const error = uploadableElementUri;
+        logger.trace(
+          `Unable to open the element ${result.element.element.name} because of error ${error.message}.`
+        );
+        return;
+      }
+      return uploadableElementUri;
     })
   );
   // show text editors only in sequential order (concurrency: 1)
