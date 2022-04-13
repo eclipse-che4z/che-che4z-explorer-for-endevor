@@ -20,6 +20,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  SignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { signOutElementCommand } from '../commands/signOutElement';
@@ -94,13 +95,15 @@ describe('signout element', () => {
       ccid: '111',
       comment: 'aaa',
     };
+    const expectedSignOutParams: SignOutParams = {
+      signoutChangeControlValue,
+    };
     mockAskingForChangeControlValue(signoutChangeControlValue);
     const signOutSuccessResult = undefined;
-    const retrieveElementStub = mockSignOutElement(
-      service,
-      element,
-      signoutChangeControlValue
-    )(signOutSuccessResult);
+    const signOutElementStub = mockSignOutElement(service, element)(
+      expectedSignOutParams,
+      signOutSuccessResult
+    )();
     const dispatchSignoutAction = sinon.spy();
     // act
     try {
@@ -116,15 +119,15 @@ describe('signout element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     const [
       generalFunctionStub,
       withServiceStub,
       withContentStub,
-      withAskChangeControlValueStub,
-    ] = retrieveElementStub;
+      withSignOutParamsStub,
+    ] = signOutElementStub;
     assert.ok(generalFunctionStub.called, 'Signout element was not called');
     const actualService = withServiceStub.args[0]?.[0];
     assert.deepStrictEqual(
@@ -142,21 +145,21 @@ describe('signout element', () => {
         element
       )}, it was called with ${JSON.stringify(actualElement)}`
     );
-    const actualChangeControlValue = withAskChangeControlValueStub.args[0]?.[0];
+    const actualSignOutParamsValue = withSignOutParamsStub.args[0]?.[0];
     assert.deepStrictEqual(
-      actualChangeControlValue,
-      signoutChangeControlValue,
+      actualSignOutParamsValue,
+      expectedSignOutParams,
       `Signout element was not called with expected ${JSON.stringify(
-        signoutChangeControlValue
-      )}, it was called with ${JSON.stringify(actualChangeControlValue)}`
+        expectedSignOutParams
+      )}, it was called with ${JSON.stringify(actualSignOutParamsValue)}`
     );
     assert.deepStrictEqual(
       dispatchSignoutAction.called,
       true,
       'Dispatch for signout element was not called'
     );
-    const expextedSignoutAction = {
-      type: Actions.ELEMENT_SIGNEDOUT,
+    const expectedSignoutAction = {
+      type: Actions.ELEMENT_SIGNED_OUT,
       serviceName,
       searchLocationName,
       service,
@@ -164,10 +167,10 @@ describe('signout element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
-      expextedSignoutAction,
+      expectedSignoutAction,
       dispatchSignoutAction.args[0]?.[0],
-      `Expexted dispatch for signout element to have been called with ${JSON.stringify(
-        expextedSignoutAction
+      `Expected dispatch for signout element to have been called with ${JSON.stringify(
+        expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchSignoutAction.args[0]?.[0]
       )}`
