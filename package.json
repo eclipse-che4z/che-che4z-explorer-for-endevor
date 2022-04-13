@@ -28,7 +28,7 @@
     "**/lodash": "4.17.21",
     "**/ansi-regex": "5.0.1",
     "**/json-schema": "0.4.0",
-    "**/@zowe/imperative": "4.17.5"
+    "**/@zowe/imperative": "4.18.2"
   },
   "devDependencies": {
     "@types/chai": "^4.2.18",
