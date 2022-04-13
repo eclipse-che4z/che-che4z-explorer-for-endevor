@@ -70,7 +70,7 @@ Create an Endevor profile and inventory location profile and review use cases to
 
 ### Create Endevor Profile
 
-Explorer for Endevor uses `endevor` and `endevor-location` profiles for Endevor Plug-in for Zowe CLI to access Endevor inventory locations on the mainframe and work with elements. If you already have a Endevor plug-in Zowe CLI profile, you can access inventory locations immediately, using your profile in the tree.
+Explorer for Endevor uses the Endevor Plug-in for Zowe CLI `endevor` and `endevor-location` profiles to access Endevor inventory locations on the mainframe and work with elements. If you already have an Endevor plug-in Zowe CLI profile, you can access inventory locations immediately, using your profile in the tree.
 
 If you do not have a profile, you can create one in Explorer for Endevor.
 
@@ -86,7 +86,7 @@ If you do not have a profile, you can create one in Explorer for Endevor.
    **Notes**:
 
    - If your profile does not include credentials during the first session of Explorer for Endevor, you are prompted to provide credentials.
-   - Passwords with 9 or more characters are treated as a _passsphrase_ by the server and are case sensitive.
+   - Passwords with 9 or more characters are treated as a _passsphrase_ by the server and are case-sensitive.
 
 5. Select one of the options that either accept or reject connections with self-signed certificates.
 
@@ -243,20 +243,39 @@ You successfully edited, saved, uploaded the element.
 
 #### Generate
 
-The **Generate** action creates an executable form of the element, together with any associated outputs such as listings. You can use the **Generate** option to run the Endevor Generate action for a selected element.
+The **Generate** action creates an executable form of the element, together with any associated outputs such as listings, and has the following available options:
+
+- **Generate in Place** enables you to generate the selected element in the same location where the element resides.
+
+- **Generate with Copyback** enables you to copy the selected element back from up the map to the target location first and then generate the element in that location.
+
+- **Generate with No Source** enables you to generate an element in the target location, using the source of the selected element from up the map. In this case, the source is not fetched to the target location and the sourceless element is created.
+
+You can use the **Generate in Place**, **Generate with Copyback**, or **Generate with No Source** context menu options to perform the Endevor Generate action for a selected element.
 
 **Follow these steps:**
 
-1. Right-click an element.
-2. Select the **Generate** option.
+1. Select one of the following options:
 
-   The successful Generate call shows a pop-up with two options **Print listing** and **Cancel** and the following message:
+   - Right-click an element and select the **Generate in Place** option.
+
+     ![Generate in Place](packages/explorer-for-endevor/images/E4E-Generate-in-Place.gif?raw=true 'Generate in Place')
+     <br /><br />
+
+   - Right-click an element from up the map and select the **Generate with Copy back** option.
+
+     ![Generate with Copy back](packages/explorer-for-endevor/images/E4E-Generate-Copyback.gif?raw=true 'Generate with Copy back')
+     <br /><br />
+
+   - Right-click an element from up the map and select the **Generate with No Source** option.
+
+   A successfully-performed Generate action shows a notification pop-up with the **Print listing** and **Cancel** options and the following message:
 
    ```text
-   Generate successful! Would you like to see the listing?
+   Successfully generated the elements: ... Would you like to see the listing?
    ```
 
-3. (Optional) Click **Print listing** to see the Generate output.
+2. (Optional) Click **Print listing** to see the Generate output.
 
    Alternatively, click **Cancel**.
 
@@ -264,10 +283,7 @@ The **Generate** action creates an executable form of the element, together with
 
 You successfully performed the Generate action.
 
-If Generate is not successful, the listing is displayed automatically.
-
-![Generate](packages/explorer-for-endevor/images/E4E-Generate.gif?raw=true 'Generate')
-<br /><br />
+If Generate fails to process an element, a listing is displayed automatically.
 
 #### Print Listing
 
@@ -334,9 +350,9 @@ You can perform the following actions to manage your profiles:
 
 - **Edit a profile**: You can edit a profile or update your credentials, using the Zowe CLI and the `zowe profiles update endevor-profile <profileName>` and `zowe profiles update endevor-location-profile <profileName>` command. The commands enable you to update the details of existing profiles. If you use the CLI commands to update your profile, ensure that you click the refresh button in the extension so that the changes take effect.
 
-- **Hide a profile**: If you do not want to have some of your profiles in the tree, you can hide such profiles. To hide a profile, right-click the profile and select **Remove Profile** option.
+- **Hide a profile**: If you do not want to have some of your profiles in the tree, you can hide such profiles. To hide a profile, right-click the profile and select **Hide a Profile** option.
 
-  **Note:** The **Remove Profile** action does not permanently delete the profile.
+  **Note:** The **Hide a Profile** action does not permanently delete the profile.
 
 - **Delete a profile**: You can permanently delete your profile from the extension. To delete a profile, issue the CLI command `zowe profiles delete endevor-profile <profilename>`.
 
