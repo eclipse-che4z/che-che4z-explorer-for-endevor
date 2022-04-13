@@ -42,7 +42,7 @@ This project leverages the following third party content.
 - License: MIT
 - Project: https://www.npmjs.com/package/@vscode/extension-telemetry
 
-@zowe/imperative (4.17.5)
+@zowe/imperative (4.18.2)
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/imperative
@@ -142,7 +142,7 @@ decamelize (1.2.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/decamelize
 
-deepmerge (4.2.2)
+deepmerge (3.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/deepmerge
@@ -151,26 +151,6 @@ delayed-stream (1.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/delayed-stream
-
-dom-serializer (1.3.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/dom-serializer
-
-domelementtype (2.2.0)
-
-- License: BSD-2-Clause
-- Project: https://www.npmjs.com/package/domelementtype
-
-domhandler (4.2.2)
-
-- License: BSD-2-Clause
-- Project: https://www.npmjs.com/package/domhandler
-
-domutils (2.8.0)
-
-- License: BSD-2-Clause
-- Project: https://www.npmjs.com/package/domutils
 
 emoji-regex (8.0.0)
 
@@ -182,7 +162,7 @@ entities (2.1.0)
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/entities
 
-escape-string-regexp (4.0.0)
+escape-string-regexp (1.0.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/escape-string-regexp
@@ -247,11 +227,6 @@ has-flag (4.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/has-flag
 
-htmlparser2 (6.1.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/htmlparser2
-
 inflight (1.0.6)
 
 - License: ISC
@@ -272,11 +247,6 @@ is-fullwidth-code-point (3.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/is-fullwidth-code-point
 
-is-plain-object (5.0.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/is-plain-object
-
 js-yaml (3.14.1)
 
 - License: MIT
@@ -291,11 +261,6 @@ jsonschema (1.1.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/jsonschema
-
-klona (2.0.5)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/klona
 
 linkify-it (3.0.3)
 
@@ -347,7 +312,7 @@ minimatch (3.0.4)
 - License: ISC
 - Project: https://www.npmjs.com/package/minimatch
 
-moment (2.20.1)
+moment (2.29.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/moment
@@ -361,11 +326,6 @@ mustache (2.3.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mustache
-
-nanoid (3.2.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/nanoid
 
 node-diff3 (2.1.2)
 
@@ -397,11 +357,6 @@ p-try (1.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/p-try
 
-parse-srcset (1.0.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/parse-srcset
-
 path-exists (3.0.0)
 
 - License: MIT
@@ -412,20 +367,10 @@ path-is-absolute (1.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/path-is-absolute
 
-picocolors (1.0.0)
-
-- License: ISC
-- Project: https://www.npmjs.com/package/picocolors
-
 pkg-up (2.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/pkg-up
-
-postcss (8.4.5)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/postcss
 
 prettyjson (1.2.2)
 
@@ -467,11 +412,6 @@ rimraf (2.6.3)
 - License: ISC
 - Project: https://www.npmjs.com/package/rimraf
 
-sanitize-html (2.3.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/sanitize-html
-
 semver (5.7.0)
 
 - License: ISC
@@ -481,11 +421,6 @@ set-blocking (2.0.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/set-blocking
-
-source-map-js (1.0.2)
-
-- License: BSD-3-Clause
-- Project: https://www.npmjs.com/package/source-map-js
 
 stack-trace (0.0.10)
 
