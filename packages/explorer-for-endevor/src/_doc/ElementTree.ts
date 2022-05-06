@@ -94,7 +94,7 @@ export type ElementLocationNode =
   | ElementNode;
 
 export type EmptyMapNode = Readonly<{
-  type: 'EMPY_MAP_NODE';
+  type: 'EMPTY_MAP_NODE';
 }>;
 
 export type Node =

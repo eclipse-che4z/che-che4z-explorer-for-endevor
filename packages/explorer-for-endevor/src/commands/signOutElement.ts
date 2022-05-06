@@ -31,9 +31,11 @@ import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 import {
   SignOutElementCommandCompletedStatus,
   TelemetryEvents,
-  TreeElementCommandArguments,
-} from '../_doc/Telemetry';
+  SignoutErrorRecoverCommandCompletedStatus,
+} from '../_doc/telemetry/v2/Telemetry';
+import { TreeElementCommandArguments } from '../_doc/Telemetry';
 import { isSignoutError } from '@local/endevor/utils';
+import { askToOverrideSignOutForElements } from '../dialogs/change-control/signOutDialogs';
 
 type SelectedElementNode = ElementNode;
 
@@ -89,6 +91,68 @@ const signOutSingleElement =
         signoutChangeControlValue,
       })
     );
+    if (isSignoutError(signOutResult)) {
+      logger.warn(
+        `Element ${element.name} cannot be signed out because the element is signed out to somebody else.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+        context: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
+      });
+      const overrideSignout = await askToOverrideSignOutForElements([
+        element.name,
+      ]);
+      if (!overrideSignout) {
+        logger.trace(
+          `Override signout option was not chosen, ${element.name} was not signed out.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+          context: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.CANCELLED,
+        });
+        return;
+      }
+      logger.trace(
+        `Override signout option was chosen for ${element.name}. Elements sign out will be overriden`
+      );
+      const overrideSignOutResult = await withNotificationProgress(
+        `Overriding sign out of the element: ${element.name}`
+      )((progressReporter) =>
+        signOutElement(progressReporter)(service)(element)({
+          signoutChangeControlValue,
+          overrideSignOut: true,
+        })
+      );
+      if (isError(overrideSignOutResult)) {
+        const error = overrideSignOutResult;
+        logger.error(
+          `Unable to override sign out for the element ${element.name}.`,
+          `${error.message}.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+          status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
+          error,
+        });
+        return;
+      }
+      await updateTreeAfterSuccessfulSignout(dispatch)(
+        serviceName,
+        service,
+        searchLocationName,
+        searchLocation,
+        [element]
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
+        context: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
+        status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
+      });
+      logger.info(`Element ${element.name} was signed out successfully!`);
+      return;
+    }
     if (isError(signOutResult)) {
       const error = signOutResult;
       logger.error(
@@ -98,9 +162,7 @@ const signOutSingleElement =
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
-        status: isSignoutError(signOutResult)
-          ? SignOutElementCommandCompletedStatus.SIGN_OUT_ERROR
-          : SignOutElementCommandCompletedStatus.GENERIC_ERROR,
+        status: SignOutElementCommandCompletedStatus.GENERIC_ERROR,
         error: signOutResult,
       });
       return;

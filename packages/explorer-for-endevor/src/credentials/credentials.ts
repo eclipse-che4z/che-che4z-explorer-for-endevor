@@ -11,41 +11,78 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Credential } from '@local/endevor/_doc/Credential';
+import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  getDefaultBaseProfile,
+  getServiceProfileByName,
+} from '@local/profiles/profiles';
+import {
+  BaseProfile,
+  EndevorServiceProfile,
+} from '@local/profiles/_ext/Profile';
 import { askForCredentialWithDefaultPasswordPolicy } from '../dialogs/credentials/endevorCredentialDialogs';
 import { logger, reporter } from '../globals';
-import { Action, Actions } from '../_doc/Actions';
 import { TelemetryEvents } from '../_doc/Telemetry';
 
-export const resolveCredential =
-  (
-    serviceName: string,
-    getCredentialFromStore: (name: string) => Credential | undefined,
-    dispatch: (action: Action) => Promise<void>
-  ) =>
-  async (
-    credentialFromProfile: Credential | undefined
-  ): Promise<Credential | undefined> => {
-    let credential: Credential | undefined =
-      getCredentialFromStore(serviceName) ?? credentialFromProfile;
-    if (!credential) {
-      logger.warn(
-        `No saved Endevor credentials found for the service: ${serviceName}, please, provide them in the dialog, they will be saved in the current session only.`
-      );
+const getEndevorCredentialFromProfiles = (
+  serviceProfile: EndevorServiceProfile,
+  baseProfile: BaseProfile
+): Credential | undefined => {
+  const user = serviceProfile.user || baseProfile.user;
+  const password = serviceProfile.password || baseProfile.password;
+  if (user && password) {
+    return {
+      type: CredentialType.BASE,
+      user,
+      password,
+    };
+  }
+  const tokenType = baseProfile.tokenType;
+  const tokenValue = baseProfile.tokenValue;
+  if (tokenType && tokenValue) {
+    logger.error('Tokens from default base profile are not supported');
+    return undefined;
+  }
+  return undefined;
+};
+
+export const getCredentialsByServiceName = async (
+  serviceName: string
+): Promise<Credential | undefined> => {
+  const [serviceProfile, defaultBaseProfile] = await Promise.all([
+    getServiceProfileByName(logger)(serviceName),
+    getDefaultBaseProfile(logger)(),
+  ]);
+  return getEndevorCredentialFromProfiles(serviceProfile, defaultBaseProfile);
+};
+
+export type GetCredentials = (name: string) => Promise<Credential | undefined>;
+export const resolveCredentials =
+  (credsGetter: ReadonlyArray<GetCredentials>) =>
+  async (serviceName: string): Promise<Credential | undefined> => {
+    for (const getCredentials of credsGetter) {
+      const credentials = await getCredentials(serviceName);
+      if (credentials) return credentials;
+    }
+    return undefined;
+  };
+
+export const defineCredentialsResolutionOrder = () => {
+  return [
+    async (serviceName: string) => {
+      return getCredentialsByServiceName(serviceName);
+    },
+    async (_: string) => {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED,
       });
-      credential = await askForCredentialWithDefaultPasswordPolicy();
+      const credential = await askForCredentialWithDefaultPasswordPolicy();
       if (credential) {
-        await dispatch({
-          type: Actions.ENDEVOR_CREDENTIAL_ADDED,
-          serviceName,
-          credential,
-        });
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
         });
       }
-    }
-    return credential;
-  };
+      return credential;
+    },
+  ];
+};

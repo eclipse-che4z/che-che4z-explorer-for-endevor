@@ -131,6 +131,10 @@ const getTelemetryEventTypeProperties = (
         typesInPlace: event.elementsInPlace.types.toString(),
         elementsUpTheMap: event.elementsUpTheMap.elements.toString(),
       };
+    case V1TelemetryEvents.SERVICE_PROFILE_FETCHED:
+      return {
+        apiVersion: event.apiVersion,
+      };
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED:
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
     case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED:
@@ -138,7 +142,7 @@ const getTelemetryEventTypeProperties = (
     case V1TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED:
+    case V2TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED:
     case V1TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED:
     case V1TelemetryEvents.SERVICE_HIDED:
     case V1TelemetryEvents.SEARCH_LOCATION_HIDED:
@@ -147,18 +151,20 @@ const getTelemetryEventTypeProperties = (
     case V1TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED:
     case V1TelemetryEvents.REFRESH_COMMAND_CALLED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED:
+    case V1TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED:
       return undefined;
     case V1TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED:
     case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED:
+    case V2TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED:
     case V1TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED:
     case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED:
     case V1TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER:
     case V1TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED:
+    case V2TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED:
     case V1TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED:
+    case V1TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_COMPLETED:
       return {
         status: event.status,
       };
@@ -177,6 +183,7 @@ const getTelemetryEventTypeProperties = (
     case V2TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED:
     case V1TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL:
     case V1TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL:
+    case V2TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALL:
       return {
         context: event.context,
       };
@@ -187,6 +194,17 @@ const getTelemetryEventTypeProperties = (
       return {
         status: event.status,
         context: event.context,
+      };
+    case V1TelemetryEvents.SERVICE_CONNECTION_TEST_COMPLETED:
+      return {
+        status: event.status,
+        context: event.context,
+        apiVersion: event.apiVersion,
+      };
+    case V1TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED:
+      return {
+        context: event.context,
+        rejectUnauthorized: event.rejectUnauthorized.toString(),
       };
     case V1TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT:
     case V1TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
@@ -202,7 +220,7 @@ const getTelemetryEventTypeProperties = (
         autoSignOut: event.autoSignOut.toString(),
       };
     case V1TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED:
-    case V1TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED:
+    case V2TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_PRINT_LISTING_CALLED:
       return {

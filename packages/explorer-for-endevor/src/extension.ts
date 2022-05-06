@@ -20,7 +20,7 @@ import {
 } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
-import { make as makeStore, getCredential, toState } from './store/store';
+import { make as makeStore, toState } from './store/store';
 import {
   watchForLocations,
   getLocations,
@@ -69,6 +69,14 @@ import { discardEditedElementChanges } from './commands/discardEditedElementChan
 import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/addElementFromFileSystem';
 import { TelemetryEvents } from './_doc/Telemetry';
+import {
+  resolveService,
+  defineServiceResolutionOrder,
+} from './services/services';
+import {
+  defineSearchLocationResolutionOrder,
+  resolveSearchLocation,
+} from './element-locations/elementLocations';
 
 const cleanTempDirectory = async (): Promise<void> => {
   const workspace = await getWorkspaceUri();
@@ -157,12 +165,23 @@ export const activate: Extension['activate'] = async (context) => {
     treeChangeEmitter.fire(node ?? null);
   };
   const getState = () => stateForTree;
-  const selectCredential = (name: string) => getCredential(stateForTree)(name);
 
   const dispatch = makeStore(toState(getInitialLocations()), refreshTree);
+
+  const searchLocationResolver = resolveSearchLocation(
+    defineSearchLocationResolutionOrder(getState, dispatch)
+  );
+  const serviceResolver = resolveService(
+    defineServiceResolutionOrder(getState, dispatch)
+  );
+
   const elmTreeProvider = makeElmTreeProvider(
     treeChangeEmitter,
-    { getState },
+    {
+      getState,
+      getService: serviceResolver,
+      getSearchLocation: searchLocationResolver,
+    },
     dispatch
   );
 
@@ -223,7 +242,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.ADD_NEW_ELEMENT_LOCATION,
       (serviceNode: ServiceNode) => {
         return withErrorLogging(CommandId.ADD_NEW_ELEMENT_LOCATION)(
-          addNewElementLocation(selectCredential, dispatch)(serviceNode)
+          addNewElementLocation(serviceResolver)(serviceNode)
         );
       },
     ],
@@ -247,7 +266,12 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
       (parentNode: LocationNode) => {
         return withErrorLogging(CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM)(
-          addElementFromFileSystem(selectCredential, dispatch, parentNode)
+          addElementFromFileSystem(
+            serviceResolver,
+            searchLocationResolver,
+            dispatch,
+            parentNode
+          )
         );
       },
     ],

@@ -16,7 +16,7 @@
  * That's why typescript compiler errors on instantiation of this class.
  */
 export class UnreachableCaseError extends Error {
-  constructor(value: never) {
+  constructor(value: unknown) {
     super(`Unreachable case: ${value}`);
   }
 }

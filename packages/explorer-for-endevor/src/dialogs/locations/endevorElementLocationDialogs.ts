@@ -22,6 +22,7 @@ import {
   StageNumber,
 } from '@local/endevor/_doc/Endevor';
 import { ANY_VALUE } from '@local/endevor/const';
+import { isError } from '../../utils';
 
 type ChosenLocationName = string;
 type CreatedLocation = {
@@ -49,7 +50,7 @@ export const askForElementLocationOrCreateNew =
     allLocations: ReadonlyArray<string>;
   }) =>
   async (
-    getInstanceNames: () => Promise<ReadonlyArray<string>>
+    getInstanceNames: () => Promise<ReadonlyArray<string> | Error>
   ): Promise<DialogResult> => {
     const createNewLocationItem: QuickPickItem = {
       label: '+ Create a New Endevor location Profile',
@@ -73,8 +74,20 @@ export const askForElementLocationOrCreateNew =
         return undefined;
       }
       const existingInstances = await getInstanceNames();
+      if (isError(existingInstances)) {
+        const error = existingInstances;
+        logger.error(
+          'Unable to fetch the list instances.',
+          `${error.message}.`
+        );
+        logger.trace('Operation cancelled.');
+        return undefined;
+      }
       if (!existingInstances.length) {
-        logger.error(`Unable to fetch the list instances.`);
+        logger.error(
+          'Unable to fetch the list instances.',
+          'The list of instances is empty.'
+        );
         logger.trace('Operation cancelled.');
         return undefined;
       }
