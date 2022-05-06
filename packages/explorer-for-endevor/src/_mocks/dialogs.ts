@@ -22,6 +22,7 @@ import * as changeControlValueDialogs from '../dialogs/change-control/endevorCha
 import * as signoutDialogs from '../dialogs/change-control/signOutDialogs';
 import * as uploadLocationDialogs from '../dialogs/locations/endevorUploadLocationDialogs';
 import * as printListingDialogs from '../dialogs/listings/showListingDialogs';
+import * as endevorServiceDialogs from '../dialogs/locations/endevorServiceDialogs';
 
 type PrefilledDialogValue = {
   ccid?: string;
@@ -109,4 +110,38 @@ export const mockAskingForPrintListing = (
     .stub(printListingDialogs, 'askToShowListing')
     .withArgs(sinon.match.any)
     .resolves(mockResult);
+};
+
+type AskForUsernameStub = sinon.SinonStub<[], Promise<string | undefined>>;
+
+type AskForPasswordStub = sinon.SinonStub<[], Promise<string | undefined>>;
+
+type AskForUrlStub = sinon.SinonStub<
+  [value?: string],
+  Promise<string | undefined>
+>;
+
+type AskForUnauthorizedConnectionsStub = sinon.SinonStub<
+  [],
+  Promise<boolean | undefined>
+>;
+
+export const mockAskForUsername = (userName: string): AskForUsernameStub => {
+  return sinon.stub(endevorServiceDialogs, 'askForUsername').resolves(userName);
+};
+
+export const mockAskPassword = (password: string): AskForPasswordStub => {
+  return sinon.stub(endevorServiceDialogs, 'askForPassword').resolves(password);
+};
+
+export const mockAskForUrl = (Url: string): AskForUrlStub => {
+  return sinon.stub(endevorServiceDialogs, 'askForUrl').resolves(Url);
+};
+
+export const mockAskForRejectUnauthorizedConnections = (
+  resolve: boolean
+): AskForUnauthorizedConnectionsStub => {
+  return sinon
+    .stub(endevorServiceDialogs, 'askForRejectUnauthorizedConnections')
+    .resolves(resolve);
 };

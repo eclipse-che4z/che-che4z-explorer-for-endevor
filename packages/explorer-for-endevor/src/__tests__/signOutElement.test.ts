@@ -20,18 +20,22 @@ import {
   Element,
   ElementSearchLocation,
   Service,
-  SignOutParams,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { signOutElementCommand } from '../commands/signOutElement';
 import { mockSignOutElement } from '../_mocks/endevor';
 import * as sinon from 'sinon';
 import { toTreeElementUri } from '../uri/treeElementUri';
-import { mockAskingForChangeControlValue } from '../_mocks/dialogs';
+import {
+  mockAskingForChangeControlValue,
+  mockAskingForOverrideSignout,
+} from '../_mocks/dialogs';
 import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
 import { Actions } from '../_doc/Actions';
+import { SignoutError } from '@local/endevor/_doc/Error';
 
-describe('signout element', () => {
+describe('signout an element', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.SIGN_OUT_ELEMENT,
@@ -45,65 +49,71 @@ describe('signout element', () => {
     sinon.restore();
   });
 
-  it('should call signout element properly', async () => {
+  const serviceName = 'serviceName';
+  const service: Service = {
+    location: {
+      port: 1234,
+      protocol: 'http',
+      hostname: 'anything',
+      basePath: 'anythingx2',
+    },
+    credential: {
+      type: CredentialType.BASE,
+      user: 'test',
+      password: 'something',
+    },
+    rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
+  };
+  const searchLocationName = 'searchLocationName';
+  const searchLocation: ElementSearchLocation = {
+    instance: 'ANY-INSTANCE',
+    ccid: 'test',
+    comment: 'test',
+  };
+  const element: Element = {
+    instance: 'ANY',
+    environment: 'ENV',
+    system: 'SYS',
+    subSystem: 'SUBSYS',
+    stageNumber: '1',
+    type: 'TYP',
+    name: 'ELM',
+    extension: 'ext',
+  };
+  const elementUri = toTreeElementUri({
+    serviceName,
+    searchLocationName,
+    service,
+    element,
+    searchLocation,
+  })(UNIQUE_ELEMENT_FRAGMENT);
+  if (isError(elementUri)) {
+    const error = elementUri;
+    assert.fail(
+      `Uri was not built correctly for tests because of: ${error.message}`
+    );
+  }
+  const signoutChangeControlValue = {
+    ccid: '111',
+    comment: 'aaa',
+  };
+
+  it('should signout an element', async () => {
     // arrange
-    const serviceName = 'serviceName';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-    };
-    const searchLocationName = 'searchLocationName';
-    const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
-      ccid: '',
-      comment: '',
-    };
-    const element: Element = {
-      instance: 'ANY',
-      environment: 'ENV',
-      system: 'SYS',
-      subSystem: 'SUBSYS',
-      stageNumber: '1',
-      type: 'TYP',
-      name: 'ELM',
-      extension: 'ext',
-    };
-    const elementUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
-      service,
-      element,
-      searchLocation,
-    })(UNIQUE_ELEMENT_FRAGMENT);
-    if (isError(elementUri)) {
-      const error = elementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const signoutChangeControlValue = {
-      ccid: '111',
-      comment: 'aaa',
-    };
-    const expectedSignOutParams: SignOutParams = {
-      signoutChangeControlValue,
-    };
     mockAskingForChangeControlValue(signoutChangeControlValue);
     const signOutSuccessResult = undefined;
-    const signOutElementStub = mockSignOutElement(service, element)(
-      expectedSignOutParams,
-      signOutSuccessResult
-    )();
+    const signOutElementStub = mockSignOutElement(
+      service,
+      element
+    )([
+      {
+        signoutArg: {
+          signoutChangeControlValue,
+        },
+        result: signOutSuccessResult,
+      },
+    ]);
     const dispatchSignoutAction = sinon.spy();
     // act
     try {
@@ -114,48 +124,17 @@ describe('signout element', () => {
           type: 'TYP',
           name: 'ELM',
           uri: elementUri,
-        },
-        undefined
+        }
       );
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
-    const [
-      generalFunctionStub,
-      withServiceStub,
-      withContentStub,
-      withSignOutParamsStub,
-    ] = signOutElementStub;
+    const [generalFunctionStub] = signOutElementStub;
     assert.ok(generalFunctionStub.called, 'Signout element was not called');
-    const actualService = withServiceStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualService,
-      service,
-      `Signout element was not called with expected ${JSON.stringify(
-        service
-      )}, it was called with ${JSON.stringify(actualService)}`
-    );
-    const actualElement = withContentStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualElement,
-      element,
-      `Signout element was not called with expected ${JSON.stringify(
-        element
-      )}, it was called with ${JSON.stringify(actualElement)}`
-    );
-    const actualSignOutParamsValue = withSignOutParamsStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualSignOutParamsValue,
-      expectedSignOutParams,
-      `Signout element was not called with expected ${JSON.stringify(
-        expectedSignOutParams
-      )}, it was called with ${JSON.stringify(actualSignOutParamsValue)}`
-    );
-    assert.deepStrictEqual(
+    assert.ok(
       dispatchSignoutAction.called,
-      true,
       'Dispatch for signout element was not called'
     );
     const expectedSignoutAction = {
@@ -167,13 +146,161 @@ describe('signout element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
-      expectedSignoutAction,
       dispatchSignoutAction.args[0]?.[0],
+      expectedSignoutAction,
       `Expected dispatch for signout element to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchSignoutAction.args[0]?.[0]
       )}`
+    );
+  });
+  it('should not signout an element in case of a generic error', async () => {
+    // arrange
+    mockAskingForChangeControlValue(signoutChangeControlValue);
+    const genericError = new Error('Error');
+    const signOutElementStub = mockSignOutElement(
+      service,
+      element
+    )([
+      {
+        signoutArg: {
+          signoutChangeControlValue,
+        },
+        result: genericError,
+      },
+    ]);
+    const dispatchSignoutAction = sinon.spy();
+    // act
+    try {
+      await vscode.commands.executeCommand(
+        CommandId.SIGN_OUT_ELEMENT,
+        dispatchSignoutAction,
+        {
+          type: 'TYP',
+          name: 'ELM',
+          uri: elementUri,
+        }
+      );
+    } catch (e) {
+      assert.fail(
+        `Test failed because of uncaught error inside command: ${e.message}`
+      );
+    }
+    const [generalFunctionStub] = signOutElementStub;
+    assert.ok(generalFunctionStub.calledOnce, 'Signout element was not called');
+    assert.ok(
+      dispatchSignoutAction.notCalled,
+      'Dispatch for signout element was called'
+    );
+  });
+  it('should signout an element with an override signout', async () => {
+    // arrange
+    mockAskingForChangeControlValue(signoutChangeControlValue);
+    mockAskingForOverrideSignout([element.name])(true);
+    const signOutErrorResult = new SignoutError('some error');
+    Object.setPrototypeOf(signOutErrorResult, SignoutError.prototype);
+    const signOutElementStub = mockSignOutElement(
+      service,
+      element
+    )([
+      {
+        signoutArg: {
+          signoutChangeControlValue,
+        },
+        result: signOutErrorResult,
+      },
+      {
+        signoutArg: {
+          signoutChangeControlValue,
+          overrideSignOut: true,
+        },
+        result: undefined,
+      },
+    ]);
+    const dispatchSignoutAction = sinon.spy();
+    // act
+    try {
+      await vscode.commands.executeCommand(
+        CommandId.SIGN_OUT_ELEMENT,
+        dispatchSignoutAction,
+        {
+          type: 'TYP',
+          name: 'ELM',
+          uri: elementUri,
+        }
+      );
+    } catch (e) {
+      assert.fail(
+        `Test failed because of uncaught error inside command: ${e.message}`
+      );
+    }
+    const [generalFunctionStub] = signOutElementStub;
+    assert.ok(
+      generalFunctionStub.calledTwice,
+      'Signout element was not called twice'
+    );
+    assert.ok(
+      dispatchSignoutAction.called,
+      'Dispatch for signout element was not called'
+    );
+    const expectedSignoutAction = {
+      type: Actions.ELEMENT_SIGNED_OUT,
+      serviceName,
+      searchLocationName,
+      service,
+      searchLocation,
+      elements: [element],
+    };
+    assert.deepStrictEqual(
+      dispatchSignoutAction.args[0]?.[0],
+      expectedSignoutAction,
+      `Expected dispatch for signout element to have been called with ${JSON.stringify(
+        expectedSignoutAction
+      )}, but it was called with ${JSON.stringify(
+        dispatchSignoutAction.args[0]?.[0]
+      )}`
+    );
+  });
+  it('should not signout an element after the cancellation of an override signout', async () => {
+    // arrange
+    mockAskingForChangeControlValue(signoutChangeControlValue);
+    mockAskingForOverrideSignout([element.name])(false);
+    const signOutErrorResult = new SignoutError('some error');
+    Object.setPrototypeOf(signOutErrorResult, SignoutError.prototype);
+    const signOutElementStub = mockSignOutElement(
+      service,
+      element
+    )([
+      {
+        signoutArg: {
+          signoutChangeControlValue,
+        },
+        result: signOutErrorResult,
+      },
+    ]);
+    const dispatchSignoutAction = sinon.spy();
+    // act
+    try {
+      await vscode.commands.executeCommand(
+        CommandId.SIGN_OUT_ELEMENT,
+        dispatchSignoutAction,
+        {
+          type: 'TYP',
+          name: 'ELM',
+          uri: elementUri,
+        }
+      );
+    } catch (e) {
+      assert.fail(
+        `Test failed because of uncaught error inside command: ${e.message}`
+      );
+    }
+    const [generalFunctionStub] = signOutElementStub;
+    assert.ok(generalFunctionStub.calledOnce, 'Signout element was not called');
+    assert.ok(
+      dispatchSignoutAction.notCalled,
+      'Dispatch for signout element was called'
     );
   });
 });

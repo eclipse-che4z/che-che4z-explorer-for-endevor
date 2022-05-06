@@ -19,6 +19,9 @@ export interface MockRequest<T> {
   headers: {
     [key: string]: string;
   };
+  params?: {
+    [key: string]: string;
+  };
   body: T;
 }
 export interface MockResponse<T> {

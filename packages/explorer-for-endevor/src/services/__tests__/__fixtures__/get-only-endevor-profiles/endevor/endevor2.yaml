@@ -1,6 +1,0 @@
-host: endevor2.example.com
-port: 12345
-user: endevorUser2
-password: endevorPassword2
-rejectUnauthorized: false
-protocol: http

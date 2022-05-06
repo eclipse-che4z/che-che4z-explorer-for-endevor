@@ -26,6 +26,7 @@ import {
   ElementMapPath,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
   SignOutParams,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
@@ -115,6 +116,7 @@ describe('uploading an edited element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationName = 'searchLocationName';
   const vagueSearchLocation: ElementSearchLocation = {
@@ -715,7 +717,12 @@ describe('uploading an edited element', () => {
     const [signoutElementStub] = mockSignOutElement(
       service,
       uploadLocation
-    )(uploadSignOutParams)();
+    )([
+      {
+        signoutArg: uploadSignOutParams,
+        result: undefined,
+      },
+    ]);
     const dispatchActions = sinon.spy();
     // act
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
@@ -826,10 +833,19 @@ describe('uploading an edited element', () => {
     });
     const signoutError = uploadError;
     mockAskingForOverrideSignout([uploadLocation.name])(true);
-    const [signoutElementStub] = mockSignOutElement(service, uploadLocation)(
-      uploadSignOutParams,
-      signoutError
-    )(uploadOverrideSignOutParams);
+    const [signoutElementStub] = mockSignOutElement(
+      service,
+      uploadLocation
+    )([
+      {
+        signoutArg: uploadSignOutParams,
+        result: signoutError,
+      },
+      {
+        signoutArg: uploadOverrideSignOutParams,
+        result: undefined,
+      },
+    ]);
     const dispatchActions = sinon.spy();
     // act
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
@@ -950,10 +966,19 @@ describe('uploading an edited element', () => {
     });
     const signoutError = uploadError;
     mockAskingForOverrideSignout([existingLocationDownTheMap.name])(true);
-    const [signoutElementStub] = mockSignOutElement(service, element)(
-      uploadSignOutParams,
-      signoutError
-    )(uploadOverrideSignOutParams);
+    const [signoutElementStub] = mockSignOutElement(
+      service,
+      element
+    )([
+      {
+        signoutArg: uploadSignOutParams,
+        result: signoutError,
+      },
+      {
+        signoutArg: uploadOverrideSignOutParams,
+        result: undefined,
+      },
+    ]);
     const dispatchActions = sinon.spy();
     // act
     const editedElementUri = toEditedElementUri(editedElementFilePath)({

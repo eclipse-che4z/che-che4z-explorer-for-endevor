@@ -20,6 +20,7 @@ import {
   Element,
   Service,
   ElementSearchLocation,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toComparedElementUri } from '../uri/comparedElementUri';
@@ -71,6 +72,7 @@ describe('discarding local changes in compared element', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
       instance: 'ANY',
@@ -146,7 +148,7 @@ describe('discarding local changes in compared element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert

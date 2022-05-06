@@ -21,6 +21,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { generateElementInPlaceCommand } from '../commands/generateElementInPlace';
@@ -67,6 +68,7 @@ describe('generating an element in place', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocation: ElementSearchLocation = {

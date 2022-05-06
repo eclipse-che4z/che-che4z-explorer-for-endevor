@@ -26,6 +26,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toTreeElementUri } from '../uri/treeElementUri';
@@ -99,6 +100,7 @@ describe('starting edit session for element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
   };
   const element: Element = {
     instance: 'ANY',

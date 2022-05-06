@@ -20,6 +20,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { signInElementCommand } from '../commands/signInElement';
@@ -59,6 +60,7 @@ describe('sign in element', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
@@ -109,30 +111,30 @@ describe('sign in element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     const [generalFunctionStub, withServiceStub, withContentStub] =
       signInElementStub;
-    assert.ok(generalFunctionStub.called, 'Signin element was not called');
+    assert.ok(generalFunctionStub.called, 'Sign in element was not called');
     const actualService = withServiceStub.args[0]?.[0];
     assert.deepStrictEqual(
       actualService,
       service,
-      `Signin element was not called with expected ${service}, it was called with ${actualService}`
+      `Sign in element was not called with expected ${service}, it was called with ${actualService}`
     );
     const actualElement = withContentStub.args[0]?.[0];
     assert.deepStrictEqual(
       actualElement,
       element,
-      `Signin element was not called with expected ${element}, it was called with ${actualElement}`
+      `Sign in element was not called with expected ${element}, it was called with ${actualElement}`
     );
     assert.deepStrictEqual(
       dispatchSignInAction.called,
       true,
-      'Dispatch for signin element was not called'
+      'Dispatch for sign in element was not called'
     );
-    const expextedSignInAction = {
+    const expectedSignInAction = {
       type: Actions.ELEMENT_SIGNED_IN,
       serviceName,
       searchLocationName,
@@ -141,10 +143,10 @@ describe('sign in element', () => {
       elements: [element],
     };
     assert.deepStrictEqual(
-      expextedSignInAction,
+      expectedSignInAction,
       dispatchSignInAction.args[0]?.[0],
-      `Expexted dispatch for signin element to have been called with ${JSON.stringify(
-        expextedSignInAction
+      `Expected dispatch for sign in element to have been called with ${JSON.stringify(
+        expectedSignInAction
       )}, but it was called with ${JSON.stringify(
         dispatchSignInAction.args[0]?.[0]
       )}`
