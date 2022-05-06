@@ -20,7 +20,7 @@ The Explorer for Endevor VS Code extension modernizes the way you interact with 
 - Perform a Generate action
 - Print a listing
 
-Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including the [HLASM Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.hlasm-language-support), [COBOL Language Support](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.cobol-language-support), [Zowe Explorer](https://marketplace.visualstudio.com/items?itemName=Zowe.vscode-extension-for-zowe), [COBOL Control Flow](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.ccf) and [Debugger for Mainframe](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.debugger-for-mainframe) extensions.
+Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including extensions for language support, data editing, testing, and source code management.
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -56,41 +56,54 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 **Client-side prerequisites**:
 
-- Access to Endevor
+- Access to Endevor.
+- Install Visual Studio Code version 1.58 or higher.
 
 **Host-side prerequisites**:
 
-- Endevor version 18.1 with the SO15978 PTF.
-
-**Note:** Explorer for Endevor only works with v2 of the REST API
+- Install either Endevor version 18.0.12 with the SO09580 and SO09581 PTFs or Endevor version 18.1 with the SO15978 PTF.
+- Install Endevor Web Services.
 
 ## Getting Started
 
 Create an Endevor profile and inventory location profile and review use cases to see how you can use the full potential of Explorer for Endevor.
 
-### Create Endevor Profile
+### Add an Endevor Profile to the Endevor tree
 
-Explorer for Endevor uses the Endevor Plug-in for Zowe CLI `endevor` and `endevor-location` profiles to access Endevor inventory locations on the mainframe and work with elements. If you already have an Endevor plug-in Zowe CLI profile, you can access inventory locations immediately, using your profile in the tree.
+Explorer for Endevor uses the Endevor Plug-in for Zowe CLI `endevor` and `endevor-location` profiles to access Endevor inventory locations on the mainframe and work with elements. If you already have an Endevor plug-in Zowe CLI profile, you can add it to the Endevor tree.
+
+**Follow these steps:**
+
+1. Click the **Add a New Profile** button to add an Endevor profile.
+2. Select one of the existing profiles listed in the menu.
+
+Your Zowe CLI profile is now available in the Endevor tree.
 
 If you do not have a profile, you can create one in Explorer for Endevor.
 
 **Follow these steps:**
 
 1. Click the **Add a New Profile** button to add a new Endevor profile.
-2. Enter a name for your profile.
-3. Enter your Endevor URL in the `https://host:port` format.
-4. (Optional) Enter your username and password to add your mainframe credentials to the profile.
+2. Select **Create a new Endevor Profile**.
+3. Enter a name for your profile.
+4. Enter your Endevor URL in the `http(s)://host:port/basePath` format.
+
+   **Notes**:
+
+   - Depending on the Endevor services you use, your can inlcude `EndevorService/api/v1`, `EndevorService/rest` or `EndevorService/api/v2` in `basePath`. If `basePath` is omitted the default is `EndevorService/api/v2`.
+   - Explorer for Endevor checks if the specified URL is accessible. If not, you will be prompted to either change the specified value or proceed without changing the value.
+   - You might be prompted to either accept or reject connections with self-signed certificates if the extension encounters an issue with the server certificate issuer validation in the connection testing phase. If no issues are found, the prompt does not appear and the value is set to `reject`.
+
+5. (Optional) Enter your username and password to add your mainframe credentials to the profile.
 
    Adding your credentials to your profile lets you access different Endevor locations without having to enter your credentials more than once.
 
    **Notes**:
 
    - If your profile does not include credentials during the first session of Explorer for Endevor, you are prompted to provide credentials.
-   - Passwords with 9 or more characters are treated as a _passsphrase_ by the server and are case-sensitive.
+   - Passwords with 9 or more characters are treated as a _passphrase_ by the server and are case-sensitive.
 
-5. Select one of the options that either accept or reject connections with self-signed certificates.
-
-Your profile is now available in the tree. You can also reuse the same Endevor profile in Zowe CLI directly.
+Your new profile is now available in the tree. You can also reuse the same Endevor profile in Zowe CLI.
 
 #### Create Endevor Location Profile
 

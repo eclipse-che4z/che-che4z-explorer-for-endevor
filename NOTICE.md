@@ -32,9 +32,9 @@ The project maintains the following source code repositories:
 
 This project leverages the following third party content.
 
-@broadcom/endevor-for-zowe-cli (6.4.0)
+@broadcom/endevor-for-zowe-cli (6.5.0)
 
-- License: Broadcom Internal
+- License: SEE LICENSE IN LICENSE
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @vscode/extension-telemetry (0.4.7)
