@@ -20,14 +20,87 @@ import {
   SuccessPrintResponse,
   SuccessRetrieveResponse,
   UpdateResponse,
-  SignInResponse,
   BaseResponse,
   SuccessListEnvironmentStagesResponse,
   SuccessListSystemsResponse,
   SuccessListSubSystemsResponse,
+  V1ApiVersionResponse,
+  V2ApiVersionResponse,
 } from '../_ext/Endevor';
 
 describe('Endevor responses type parsing', () => {
+  describe('Endevor API v1 response type parsing', () => {
+    it('should parse a response with version header', () => {
+      // arrange
+      const response = {
+        headers: {
+          'api-version': '1.1',
+        },
+      };
+      // act
+      const parsedResponse = parseToType(V1ApiVersionResponse, response);
+      // assert
+      expect(parsedResponse).toMatchSnapshot();
+    });
+    it('should throw an error for a response without version header', () => {
+      // arrange
+      const response = {
+        headers: {},
+      };
+      // act && assert
+      expect(() =>
+        parseToType(V1ApiVersionResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a response with incorrect version header', () => {
+      // arrange
+      const response = {
+        headers: {
+          'api-version': 1.1,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(V1ApiVersionResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+  });
+  describe('Endevor API v2 response type parsing', () => {
+    it('should parse a response with version header', () => {
+      // arrange
+      const response = {
+        headers: {
+          version: '2.5',
+        },
+      };
+      // act
+      const parsedResponse = parseToType(V2ApiVersionResponse, response);
+      // assert
+      expect(parsedResponse).toMatchSnapshot();
+    });
+    it('should throw an error for a response without version header', () => {
+      // arrange
+      const response = {
+        headers: {},
+      };
+      // act && assert
+      expect(() =>
+        parseToType(V2ApiVersionResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a response with incorrect version header', () => {
+      // arrange
+      const response = {
+        headers: {
+          version: 2.5,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(V2ApiVersionResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+  });
   describe('Endevor repositories response type parsing', () => {
     it('should parse a response with any data and correct return code', () => {
       // arrange
@@ -82,7 +155,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListRepositoriesResponse, response)
       ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response with incorrect return code', () => {
@@ -105,7 +178,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListRepositoriesResponse, response)
       ).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response with only return code', () => {
@@ -119,7 +192,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListRepositoriesResponse, response)
       ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<unknown> } }/body: { returnCode: number, data: Array<unknown> }/data: Array<unknown>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/data: Array<unknown>'
       );
     });
   });
@@ -150,17 +223,31 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(BaseResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number } }/body: { returnCode: number }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode } }/body: { returnCode: ReturnCode }/returnCode: ReturnCode'
+      );
+    });
+    it('should throw an error for a response with nullable return code', () => {
+      // arrange
+      const response = {
+        body: {
+          returnCode: null,
+        },
+      };
+      // act && assert
+      expect(() => parseToType(BaseResponse, response)).toThrowError(
+        'Invalid value null supplied to : { body: { returnCode: ReturnCode } }/body: { returnCode: ReturnCode }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without return code', () => {
       // arrange
       const response = {
-        body: {},
+        body: {
+          returnCode: undefined,
+        },
       };
       // act && assert
       expect(() => parseToType(BaseResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number } }/body: { returnCode: number }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode } }/body: { returnCode: ReturnCode }/returnCode: ReturnCode'
       );
     });
   });
@@ -338,7 +425,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessPrintResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<string> } }/body: { returnCode: number, data: Array<string> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<string> } }/body: { returnCode: ReturnCode, data: Array<string> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without data', () => {
@@ -351,7 +438,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessPrintResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<string> } }/body: { returnCode: number, data: Array<string> }/data: Array<string>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<string> } }/body: { returnCode: ReturnCode, data: Array<string> }/data: Array<string>'
       );
     });
     it('should throw an error for a response with incorrect data', () => {
@@ -369,7 +456,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessPrintResponse, response)).toThrowError(
-        'Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { body: { returnCode: number, data: Array<string> } }/body: { returnCode: number, data: Array<string> }/data: Array<string>/0: string'
+        'Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { body: { returnCode: ReturnCode, data: Array<string> } }/body: { returnCode: ReturnCode, data: Array<string> }/data: Array<string>/0: string'
       );
     });
     it('should throw an error for a response with incorrect return code', () => {
@@ -388,7 +475,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessPrintResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, data: Array<string> } }/body: { returnCode: number, data: Array<string> }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode, data: Array<string> } }/body: { returnCode: ReturnCode, data: Array<string> }/returnCode: ReturnCode'
       );
     });
   });
@@ -435,7 +522,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessRetrieveResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: number, data: Array<Buffer> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: ReturnCode, data: Array<Buffer> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without data', () => {
@@ -452,7 +539,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessRetrieveResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: number, data: Array<Buffer> }/data: Array<Buffer>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: ReturnCode, data: Array<Buffer> }/data: Array<Buffer>'
       );
     });
     it('should throw an error for a response without fingerprint', () => {
@@ -468,7 +555,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessRetrieveResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<Buffer> }, headers: { fingerprint: string } }/headers: { fingerprint: string }/fingerprint: string'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<Buffer> }, headers: { fingerprint: string } }/headers: { fingerprint: string }/fingerprint: string'
       );
     });
     it('should throw an error for a response with incorrect data', () => {
@@ -490,7 +577,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessRetrieveResponse, response)).toThrowError(
-        'Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { body: { returnCode: number, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: number, data: Array<Buffer> }/data: Array<Buffer>/0: Buffer'
+        'Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { body: { returnCode: ReturnCode, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: ReturnCode, data: Array<Buffer> }/data: Array<Buffer>/0: Buffer'
       );
     });
     it('should throw an error for a response with incorrect return code', () => {
@@ -509,7 +596,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(SuccessRetrieveResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: number, data: Array<Buffer> }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode, data: Array<Buffer> }, headers: { fingerprint: string } }/body: { returnCode: ReturnCode, data: Array<Buffer> }/returnCode: ReturnCode'
       );
     });
   });
@@ -578,7 +665,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListDependenciesResponse, response)
       ).toThrowError(
-        'Invalid value "12" supplied to : { body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> }/returnCode: number'
+        'Invalid value "12" supplied to : { body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without return code', () => {
@@ -606,7 +693,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListDependenciesResponse, response)
       ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without data', () => {
@@ -621,7 +708,7 @@ describe('Endevor responses type parsing', () => {
       expect(() =>
         parseToType(SuccessListDependenciesResponse, response)
       ).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: number, data: Array<{ components: (Array<unknown> | undefined) }> }/data: Array<{ components: (Array<unknown> | undefined) }>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> } }/body: { returnCode: ReturnCode, data: Array<{ components: (Array<unknown> | undefined) }> }/data: Array<{ components: (Array<unknown> | undefined) }>'
       );
     });
   });
@@ -657,7 +744,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(UpdateResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response with incorrect return code', () => {
@@ -672,7 +759,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(UpdateResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without messages', () => {
@@ -685,7 +772,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(UpdateResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>'
       );
     });
     it('should throw an error for a response with incorrect messages', () => {
@@ -700,7 +787,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(UpdateResponse, response)).toThrowError(
-        'Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+        'Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>'
       );
     });
   });
@@ -736,7 +823,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(ErrorResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response with incorrect return code', () => {
@@ -751,7 +838,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(ErrorResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
+        'Invalid value "8" supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode'
       );
     });
     it('should throw an error for a response without messages', () => {
@@ -764,7 +851,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(ErrorResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+        'Invalid value undefined supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>'
       );
     });
     it('should throw an error for a response with incorrect messages', () => {
@@ -783,86 +870,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(ErrorResponse, response)).toThrowError(
-        'Invalid value {"value":"Oops, I did it again!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>/0: string'
-      );
-    });
-  });
-  describe('Endevor sign in response type parsing', () => {
-    it('should parse a proper response', () => {
-      // arrange
-      const returnCode = 0;
-      const messages = ['Relax, everything will be fine!'];
-      const response = {
-        body: {
-          returnCode,
-          messages,
-        },
-      };
-      // act
-      const parsedResponse = parseToType(SignInResponse, response);
-      // assert
-      const expectedResponse: SignInResponse = {
-        body: {
-          returnCode,
-          messages,
-        },
-      };
-      expect(parsedResponse).toStrictEqual(expectedResponse);
-    });
-    it('should throw an error for a response without return code', () => {
-      // arrange
-      const messages = ['Relax, everything will be fine!'];
-      const response = {
-        body: {
-          messages,
-        },
-      };
-      // act && assert
-      expect(() => parseToType(SignInResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
-      );
-    });
-    it('should throw an error for a response with incorrect return code', () => {
-      // arrange
-      const returnCode = '8';
-      const messages = ['Relax, everything will be fine!'];
-      const response = {
-        body: {
-          returnCode,
-          messages,
-        },
-      };
-      // act && assert
-      expect(() => parseToType(SignInResponse, response)).toThrowError(
-        'Invalid value "8" supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/returnCode: number'
-      );
-    });
-    it('should throw an error for a response without messages', () => {
-      // arrange
-      const returnCode = 0;
-      const response = {
-        body: {
-          returnCode,
-        },
-      };
-      // act && assert
-      expect(() => parseToType(SignInResponse, response)).toThrowError(
-        'Invalid value undefined supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
-      );
-    });
-    it('should throw an error for a response with incorrect messages', () => {
-      // arrange
-      const returnCode = 8;
-      const messages = { messageValue: 'Relax, everything will be fine!' };
-      const response = {
-        body: {
-          returnCode,
-          messages,
-        },
-      };
-      // act && assert
-      expect(() => parseToType(SignInResponse, response)).toThrowError(
-        'Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { returnCode: number, messages: Array<string> } }/body: { returnCode: number, messages: Array<string> }/messages: Array<string>'
+        'Invalid value {"value":"Oops, I did it again!"} supplied to : { body: { returnCode: ReturnCode, messages: Array<string> } }/body: { returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>/0: string'
       );
     });
   });

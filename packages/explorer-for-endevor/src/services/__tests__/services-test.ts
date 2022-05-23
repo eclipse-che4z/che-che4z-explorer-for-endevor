@@ -11,11 +11,14 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
-import { Service } from '@local/endevor/_doc/Endevor';
+import { CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  Service,
+  ServiceApiVersion,
+  ServiceBasePath,
+} from '@local/endevor/_doc/Endevor';
 import { EndevorServiceProfile } from '@local/profiles/_ext/Profile';
 import path = require('path');
-import { ENDEVOR_V2_BASE_PATH } from '../../constants';
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 
@@ -27,10 +30,6 @@ const setupGlobals = (profilesDir: string) => {
   jest.doMock('@local/profiles/globals', () => ({
     __esModule: true,
     getProfilesDir: () => path.join(__dirname, profilesDir),
-  }));
-  jest.doMock('../../dialogs/credentials/endevorCredentialDialogs', () => ({
-    __esModule: true,
-    askForCredentialWithDefaultPasswordPolicy: () => Promise.resolve(undefined),
   }));
 };
 
@@ -47,145 +46,302 @@ jest.mock(
   { virtual: true }
 );
 
-describe('Endevor services fetching', () => {
-  // please, pay attention, these values can be used as defaults
-  const defaultBasePath = ENDEVOR_V2_BASE_PATH;
-  const defaultProtocol = 'http';
-  const defaultRejectUnauthorized = true;
+describe('services fetching', () => {
+  describe('fetching a list of services', () => {
+    it('should return a list of services', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualServices = await services.getEndevorServiceNames();
+      // assert
+      const expectedServices = [
+        'full-profile',
+        'no-base-path',
+        'no-credentials',
+        'no-hostname',
+        'no-port',
+        'no-protocol',
+        'no-reject',
+      ];
+      expect(actualServices).toEqual(expectedServices);
+    });
 
-  const resolveCredential = async (
-    credential: Credential | undefined
-  ): Promise<Credential | undefined> => credential;
-
-  it('should return list of services', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/get-only-endevor-profiles');
-    const services = await import('../services');
-    // act
-    const actualServices = await services.getEndevorServiceNames();
-    // assert
-    const expectedServices = ['endevor1', 'endevor2', 'endevor3'];
-    expect(actualServices).toEqual(expectedServices);
+    it('should return an empty list if no service existed', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/no-profiles');
+      const services = await import('../services');
+      // act
+      const actualServices = await services.getEndevorServiceNames();
+      // assert
+      expect(actualServices).toEqual([]);
+    });
   });
 
-  it('should return empty list if no service existed', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/no-default-profiles');
-    const services = await import('../services');
-    // act
-    const actualServices = await services.getEndevorServiceNames();
-    // assert
-    expect(actualServices).toEqual([]);
-  });
-
-  it('should return service', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/base-profile-no-host');
-    const services = await import('../services');
-    // act
-    const actualService = await services.getEndevorServiceByName(
-      'endevor1',
-      resolveCredential
-    );
-    // assert
-    expect(actualService).toEqual({
-      location: {
+  describe('fetching a service location from service profiles', () => {
+    it('should return a service location from a service profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'full-profile'
+      );
+      // assert
+      expect(actualLocation).toEqual({
         hostname: 'endevor1.example.com',
         port: 12345,
         protocol: 'http',
-        basePath: defaultBasePath,
-      },
-      credential: {
+        basePath: '/EndevorService/api/v2/',
+      });
+    });
+    it('should return a service location from a service profile with a default base path', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'no-base-path'
+      );
+      // assert
+      expect(actualLocation).toEqual({
+        hostname: 'endevor2.example.com',
+        port: 12345,
+        protocol: 'http',
+        basePath: ServiceBasePath.V2,
+      });
+    });
+    it('should return a service location from a service profile with a default protocol', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'no-protocol'
+      );
+      // assert
+      const defaultProtocol = 'http';
+      expect(actualLocation).toEqual({
+        hostname: 'endevor1.example.com',
+        port: 12345,
+        protocol: defaultProtocol,
+        basePath: '/EndevorService/api/v2/',
+      });
+    });
+    it('should return an undefined with a service profile without a hostname', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'no-hostname'
+      );
+      // assert
+      expect(actualLocation).toBeUndefined();
+    });
+    it('should return an undefined with a service profile without a port', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'no-port'
+      );
+      // assert
+      expect(actualLocation).toBeUndefined();
+    });
+    it('should return an undefined for a non existing service profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'nonexisting-profile'
+      );
+      // assert
+      expect(actualLocation).toBeUndefined();
+    });
+  });
+  describe('fetching a service location from service profiles with a default base profile', () => {
+    it('should return a service location from a default base profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/with-default-base-profile');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'empty-profile'
+      );
+      const baseProfileLocation = {
+        hostname: 'endevor1.example.com',
+        port: 12345,
+        protocol: 'http',
+        basePath: ServiceBasePath.V2,
+      };
+      // assert
+      expect(actualLocation).toEqual(baseProfileLocation);
+    });
+    it('should return a service location from a default base profile for a non existing service profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/with-default-base-profile');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'nonexisting-profile'
+      );
+      const baseProfileLocation = {
+        hostname: 'endevor1.example.com',
+        port: 12345,
+        protocol: 'http',
+        basePath: ServiceBasePath.V2,
+      };
+      // assert
+      expect(actualLocation).toEqual(baseProfileLocation);
+    });
+    it('should return a service location with a hostname from a default base profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/with-default-base-profile');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'no-hostname'
+      );
+      const baseProfileHostname = 'endevor1.example.com';
+      // assert
+      expect(actualLocation).toEqual({
+        hostname: baseProfileHostname,
+        port: 12345,
+        protocol: 'http',
+        basePath: '/EndevorService/api/v2/',
+      });
+    });
+    it('should return an undefined for a non existing default base profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/no-profiles');
+      const services = await import('../services');
+      // act
+      const actualLocation = await services.getServiceLocationByServiceName(
+        'nonexisting-profile'
+      );
+      // assert
+      expect(actualLocation).toBeUndefined();
+    });
+  });
+  describe('fetching a reject unauthorized value from a service profile', () => {
+    it('should return a value from a service profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualValue = await services.getRejectUnauthorizedByServiceName(
+        'full-profile'
+      );
+      // assert
+      expect(actualValue).toEqual(false);
+    });
+    it('should return a default value', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualValue = await services.getRejectUnauthorizedByServiceName(
+        'no-reject'
+      );
+      // assert
+      const defaultValue = true;
+      expect(actualValue).toEqual(defaultValue);
+    });
+    it('should return a default value for a non existing profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const services = await import('../services');
+      // act
+      const actualValue = await services.getRejectUnauthorizedByServiceName(
+        'non-existing-profile'
+      );
+      // assert
+      const defaultValue = true;
+      expect(actualValue).toEqual(defaultValue);
+    });
+    it('should return a default value for a non existing default base profile', async () => {
+      // arrange
+      setupGlobals('./__fixtures__/no-profiles');
+      const services = await import('../services');
+      // act
+      const actualValue = await services.getRejectUnauthorizedByServiceName(
+        'non-existing-profile'
+      );
+      // assert
+      const defaultValue = true;
+      expect(actualValue).toEqual(defaultValue);
+    });
+  });
+  describe('fetching a credentials from a service profile', () => {
+    it('should return credentials from a service profile', async () => {
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const credentials = await import('../../credentials/credentials');
+      // act
+      const actualCredentials = await credentials.getCredentialsByServiceName(
+        'full-profile'
+      );
+      // assert
+      expect(actualCredentials).toEqual({
         type: CredentialType.BASE,
         user: 'endevorUser1',
         password: 'endevorPassword1',
-      },
-      rejectUnauthorized: false,
+      });
+    });
+    it('should return undefined for a service profile without username/password', async () => {
+      setupGlobals('./__fixtures__/only-endevor-profiles');
+      const credentials = await import('../../credentials/credentials');
+      // act
+      const actualCredentials = await credentials.getCredentialsByServiceName(
+        'no-credentials'
+      );
+      // assert
+      expect(actualCredentials).toBeUndefined();
+    });
+    it('should return undefined for a non existing service profile', async () => {
+      setupGlobals('./__fixtures__/no-profiles');
+      const credentials = await import('../../credentials/credentials');
+      // act
+      const actualCredentials = await credentials.getCredentialsByServiceName(
+        'nonexisting-profile'
+      );
+      // assert
+      expect(actualCredentials).toBeUndefined();
     });
   });
-
-  it('should return service with location from default base profile', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/endevor-profile-no-location');
-    const services = await import('../services');
-    // act
-    const actualService = await services.getEndevorServiceByName(
-      'endevor1',
-      resolveCredential
-    );
-    // assert
-    expect(actualService).toEqual({
-      location: {
-        hostname: 'baseHost',
-        port: 123,
-        protocol: defaultProtocol,
-        basePath: defaultBasePath,
-      },
-      credential: {
+  describe('fetching a credentials from service profiles with a default base profile', () => {
+    it('should return credentials from a default base profile', async () => {
+      setupGlobals('./__fixtures__/with-default-base-profile');
+      const credentials = await import('../../credentials/credentials');
+      // act
+      const actualCredentials = await credentials.getCredentialsByServiceName(
+        'empty-profile'
+      );
+      // assert
+      expect(actualCredentials).toEqual({
         type: CredentialType.BASE,
-        user: 'user',
-        password: 'pass',
-      },
-      rejectUnauthorized: defaultRejectUnauthorized,
+        user: 'endevorUser1',
+        password: 'endevorPassword1',
+      });
     });
-  });
-
-  it('should return service with credential from default base profile', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/endevor-profile-no-credential');
-    const services = await import('../services');
-    // act
-    const actualService = await services.getEndevorServiceByName(
-      'endevor1',
-      resolveCredential
-    );
-    // assert
-    expect(actualService).toEqual({
-      location: {
-        hostname: 'localhost',
-        port: 123,
-        protocol: 'http',
-        basePath: defaultBasePath,
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'baseUser',
-        password: 'basePass',
-      },
-      rejectUnauthorized: false,
+    it('should return undefined for a non existing default base profile', async () => {
+      setupGlobals('./__fixtures__/no-profiles');
+      const credentials = await import('../../credentials/credentials');
+      // act
+      const actualCredentials = await credentials.getCredentialsByServiceName(
+        'nonexisting-profile'
+      );
+      // assert
+      expect(actualCredentials).toBeUndefined();
     });
-  });
-
-  it('should return undefined if no location was found in service and default base profiles', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/endevor-and-base-profiles-no-location');
-    const services = await import('../services');
-    // act
-    const actualService = await services.getEndevorServiceByName(
-      'endevor1',
-      resolveCredential
-    );
-    // assert
-    expect(actualService).toBeUndefined();
-  });
-
-  it('should return undefined if no credential was found in service and default base profiles', async () => {
-    // arrange
-    setupGlobals('./__fixtures__/endevor-and-base-profiles-no-credential');
-    const services = await import('../services');
-    // act
-    const actualService = await services.getEndevorServiceByName(
-      'endevor1',
-      resolveCredential
-    );
-    // assert
-    expect(actualService).toBeUndefined();
   });
 });
 
-describe('Create endevor service', () => {
+describe('creating an endevor service', () => {
   let services: typeof import('../services');
-  const profileRootDir = './__fixtures__/create-endevor-profile';
+  const profileRootDir = './__fixtures__/only-endevor-profiles';
   beforeAll(async () => {
     setupGlobals(profileRootDir);
     services = await import('../services');
@@ -226,6 +382,7 @@ describe('Create endevor service', () => {
         basePath: '/some',
       },
       rejectUnauthorized: true,
+      apiVersion: ServiceApiVersion.V2,
     };
     // act
     await services.createEndevorService(newServiceName, newService);
@@ -244,7 +401,7 @@ describe('Create endevor service', () => {
   });
   it('should fail to overwrite an existing service', async () => {
     // arrange
-    const existingServiceName = 'existing-endevor-profile';
+    const existingServiceName = 'full-profile';
     const existingServicePath = path.join(
       __dirname,
       profileRootDir,
@@ -267,6 +424,7 @@ describe('Create endevor service', () => {
           basePath: '/some',
         },
         rejectUnauthorized: true,
+        apiVersion: ServiceApiVersion.V2,
       })
     ).toBe(undefined);
     // assert
@@ -276,8 +434,13 @@ describe('Create endevor service', () => {
     );
     const decodedService = yaml.load(serviceOnDisk);
     const existingService: EndevorServiceProfile = {
-      user: 'existing-endevor-user',
-      password: 'existing-endevor-password',
+      host: 'endevor1.example.com',
+      port: 12345,
+      user: 'endevorUser1',
+      password: 'endevorPassword1',
+      rejectUnauthorized: false,
+      protocol: 'http',
+      basePath: '/EndevorService/api/v2/',
     };
     expect(decodedService).toEqual(existingService);
   });

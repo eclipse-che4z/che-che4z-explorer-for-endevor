@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { CredentialType, Credential } from '@local/endevor/_doc/Credential';
+import { CredentialType } from '@local/endevor/_doc/Credential';
 import {
   createProfile,
   getDefaultBaseProfile,
@@ -23,16 +23,27 @@ import {
   EndevorServiceProfile,
   ProfileTypes,
 } from '@local/profiles/_ext/Profile';
-import { ENDEVOR_V2_BASE_PATH } from '../constants';
-import { logger } from '../globals';
+import { logger, reporter } from '../globals';
 import { isDefined } from '../utils';
 import {
   Service,
+  ServiceApiVersion,
+  ServiceBasePath,
   ServiceLocation,
   ServiceProtocol,
 } from '@local/endevor/_doc/Endevor';
 import { stringifyWithHiddenCredential } from '@local/endevor/utils';
 import { isError } from '@local/profiles/utils';
+import { State } from '../_doc/Store';
+import { Action, Actions } from '../_doc/Actions';
+import {
+  defineCredentialsResolutionOrder,
+  resolveCredentials,
+} from '../credentials/credentials';
+import { getService as getServiceFromStore } from '../store/store';
+import { getApiVersion } from '../endevor';
+import { withNotificationProgress } from '@local/vscode-wrapper/window';
+import { TelemetryEvents } from '../_doc/Telemetry';
 
 export const createEndevorService = async (
   name: string,
@@ -67,59 +78,14 @@ export const getEndevorServiceNames = async (): Promise<string[] | Error> => {
     .filter(isDefined);
 };
 
-export const getEndevorServiceByName = async (
-  name: string,
-  resolveCredential: (
-    credential: Credential | undefined
-  ) => Promise<Credential | undefined>
-): Promise<Service | undefined> => {
+export const getServiceLocationByServiceName = async (
+  name: string
+): Promise<ServiceLocation | undefined> => {
   const [serviceProfile, defaultBaseProfile] = await Promise.all([
     getServiceProfileByName(logger)(name),
     getDefaultBaseProfile(logger)(),
   ]);
-  const location = getEndevorLocationFromProfiles(
-    serviceProfile,
-    defaultBaseProfile
-  );
-  if (!location) {
-    return undefined;
-  }
-  const credentialFromProfile = getEndevorCredentialFromProfiles(
-    serviceProfile,
-    defaultBaseProfile
-  );
-  const credential = await resolveCredential(credentialFromProfile);
-  if (!credential) {
-    return undefined;
-  }
-  const rejectUnauthorized = getRejectUnauthorizedFromProfile(serviceProfile);
-  return {
-    credential,
-    location,
-    rejectUnauthorized,
-  };
-};
-
-const getEndevorCredentialFromProfiles = (
-  serviceProfile: EndevorServiceProfile,
-  baseProfile: BaseProfile
-): Credential | undefined => {
-  const user = serviceProfile.user || baseProfile.user;
-  const password = serviceProfile.password || baseProfile.password;
-  if (user && password) {
-    return {
-      type: CredentialType.BASE,
-      user,
-      password,
-    };
-  }
-  const tokenType = baseProfile.tokenType;
-  const tokenValue = baseProfile.tokenValue;
-  if (tokenType && tokenValue) {
-    logger.error('Tokens from default base profile are not supported');
-    return undefined;
-  }
-  return undefined;
+  return getEndevorLocationFromProfiles(serviceProfile, defaultBaseProfile);
 };
 
 const getEndevorLocationFromProfiles = (
@@ -156,7 +122,7 @@ const getEndevorLocationFromProfiles = (
   }
   let basePath: string;
   if (!serviceProfile.basePath) {
-    const defaultBasePath = ENDEVOR_V2_BASE_PATH;
+    const defaultBasePath = ServiceBasePath.V2;
     logger.trace(
       `There is no base path in the Endevor profile, default value: ${defaultBasePath} will be used instead`
     );
@@ -172,9 +138,29 @@ const getEndevorLocationFromProfiles = (
   };
 };
 
-const getRejectUnauthorizedFromProfile = (
-  serviceProfile: EndevorServiceProfile
-): boolean => {
+const getEndevorApiVersion = async (
+  serviceLocation: ServiceLocation,
+  rejectUnauthorized: boolean
+): Promise<ServiceApiVersion | undefined> => {
+  const serviceApiVersion = await withNotificationProgress(
+    'Fetching Endevor API version'
+  )((progress) => getApiVersion(progress)(serviceLocation)(rejectUnauthorized));
+  if (isError(serviceApiVersion)) {
+    const error = serviceApiVersion;
+    logger.error('Unable to fetch Endevor API version', `${error.message}.`);
+    return;
+  }
+  return serviceApiVersion;
+};
+
+export const getRejectUnauthorizedByServiceName = async (
+  name: string
+): Promise<boolean> => {
+  const [serviceProfile] = await Promise.all([
+    getServiceProfileByName(logger)(name),
+    // TODO: add support for the base profiles reading
+    // getDefaultBaseProfile(logger)(),
+  ]);
   const defaultValue = true;
   if (serviceProfile.rejectUnauthorized === undefined) {
     logger.warn(
@@ -183,4 +169,56 @@ const getRejectUnauthorizedFromProfile = (
     return defaultValue;
   }
   return serviceProfile.rejectUnauthorized;
+};
+
+export type GetService = (name: string) => Promise<Service | undefined>;
+export const resolveService =
+  (serviceGetter: ReadonlyArray<GetService>) =>
+  async (serviceName: string): Promise<Service | undefined> => {
+    for (const getService of serviceGetter) {
+      const service = await getService(serviceName);
+      if (service) return service;
+    }
+    return undefined;
+  };
+
+export const defineServiceResolutionOrder = (
+  getState: () => State,
+  dispatch: (action: Action) => Promise<void>
+): ReadonlyArray<GetService> => {
+  return [
+    async (name: string) => {
+      return getServiceFromStore(getState())(name);
+    },
+    async (name: string) => {
+      const location = await getServiceLocationByServiceName(name);
+      if (!location) return;
+      const rejectUnauthorized = await getRejectUnauthorizedByServiceName(name);
+      const apiVersion = await getEndevorApiVersion(
+        location,
+        rejectUnauthorized
+      );
+      if (!apiVersion) return;
+      const credential = await resolveCredentials(
+        defineCredentialsResolutionOrder()
+      )(name);
+      if (!credential) return;
+      const service: Service = {
+        location,
+        credential,
+        rejectUnauthorized,
+        apiVersion,
+      };
+      await dispatch({
+        type: Actions.ENDEVOR_SERVICE_CHANGED,
+        serviceName: name,
+        service,
+      });
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.SERVICE_PROFILE_FETCHED,
+        apiVersion,
+      });
+      return service;
+    },
+  ];
 };

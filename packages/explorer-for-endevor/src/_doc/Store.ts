@@ -11,8 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { BaseCredential } from '@local/endevor/_doc/Credential';
-import { Element } from '@local/endevor/_doc/Endevor';
+import {
+  Element,
+  ElementSearchLocation,
+  Service,
+} from '@local/endevor/_doc/Endevor';
 import { EndevorMap } from './Endevor';
 import { ElementLocationName, EndevorServiceName } from './settings';
 
@@ -26,14 +29,15 @@ export type CachedElements = Readonly<{
 }>;
 
 export type EndevorCacheItem = Readonly<{
-  searchLocation: ElementLocationName;
+  searchLocationName: ElementLocationName;
+  searchLocation?: ElementSearchLocation;
   endevorMap: EndevorMap;
   elements: CachedElements;
 }>;
 
 export type StateItem = {
   serviceName: EndevorServiceName;
-  credential?: BaseCredential;
+  service?: Service;
   cachedElements: ReadonlyArray<EndevorCacheItem>;
 };
 

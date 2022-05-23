@@ -22,6 +22,7 @@ import {
   ElementMapPath,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { generateElementWithCopyBackCommand } from '../commands/generateElementWithCopyBack';
@@ -74,6 +75,7 @@ describe('generating an element with copy back', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocation: ElementSearchLocation = {

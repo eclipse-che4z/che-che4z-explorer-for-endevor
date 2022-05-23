@@ -11,7 +11,6 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { BaseCredential } from '@local/endevor/_doc/Credential';
 import {
   Element,
   ElementSearchLocation,
@@ -27,7 +26,8 @@ import {
 } from './settings';
 
 export const enum Actions {
-  ENDEVOR_CREDENTIAL_ADDED = 'CREDENTIAL/ADDED',
+  ENDEVOR_SERVICE_CHANGED = 'ENDEVOR_SERVICE/CHANGED',
+  ENDEVOR_SEARCH_LOCATION_CHANGED = 'ENDEVOR_SEARCH_LOCATION/CHANGED',
   LOCATION_CONFIG_CHANGED = 'LOCATIONS/CHANGED',
   ENDEVOR_MAP_BUILT = 'ENDEVOR_MAP_BUILT',
   ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
@@ -41,10 +41,17 @@ export const enum Actions {
   ELEMENT_GENERATED_WITH_COPY_BACK = 'ELEMENT_GENERATED_WITH_COPY_BACK',
 }
 
-export interface EndevorCredentialAdded {
-  type: Actions.ENDEVOR_CREDENTIAL_ADDED;
+export interface EndevorServiceChanged {
+  type: Actions.ENDEVOR_SERVICE_CHANGED;
   serviceName: EndevorServiceName;
-  credential: BaseCredential;
+  service: Service;
+}
+
+export interface EndevorSearchLocationChanged {
+  type: Actions.ENDEVOR_SEARCH_LOCATION_CHANGED;
+  serviceName: EndevorServiceName;
+  searchLocationName: ElementLocationName;
+  searchLocation: ElementSearchLocation;
 }
 
 export interface LocationConfigChanged {
@@ -132,11 +139,11 @@ export type SignedOutElementsPayload = {
   elements: ReadonlyArray<Element>;
 };
 
-export type ElementSignedout = {
+export type ElementSignedOut = {
   type: Actions.ELEMENT_SIGNED_OUT;
 } & SignedOutElementsPayload;
 
-export interface ElementSignedin {
+export interface ElementSignedIn {
   type: Actions.ELEMENT_SIGNED_IN;
   serviceName: EndevorServiceName;
   service: Service;
@@ -146,7 +153,8 @@ export interface ElementSignedin {
 }
 
 export type Action =
-  | EndevorCredentialAdded
+  | EndevorServiceChanged
+  | EndevorSearchLocationChanged
   | LocationConfigChanged
   | EndevorMapBuilt
   | ElementsUpdated
@@ -154,7 +162,7 @@ export type Action =
   | ElementUpdatedInPlace
   | ElementUpdatedFromUpTheMap
   | ElementAdded
-  | ElementSignedout
+  | ElementSignedOut
   | ElementGeneratedInPlace
   | ElementGeneratedWithCopyBack
-  | ElementSignedin;
+  | ElementSignedIn;

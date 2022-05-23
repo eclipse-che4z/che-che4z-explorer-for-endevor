@@ -21,6 +21,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { printElement } from '../commands/printElement';
@@ -62,6 +63,7 @@ describe('printing element content', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
       instance: 'ANY',

@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Endevor responses type parsing Endevor API v1 response type parsing should parse a response with version header 1`] = `
+Object {
+  "headers": Object {
+    "api-version": "1.1",
+  },
+}
+`;
+
+exports[`Endevor responses type parsing Endevor API v1 response type parsing should throw an error for a response with incorrect version header 1`] = `"Invalid value 1.1 supplied to : { headers: { api-version: string } }/headers: { api-version: string }/api-version: string"`;
+
+exports[`Endevor responses type parsing Endevor API v1 response type parsing should throw an error for a response without version header 1`] = `"Invalid value undefined supplied to : { headers: { api-version: string } }/headers: { api-version: string }/api-version: string"`;
+
+exports[`Endevor responses type parsing Endevor API v2 response type parsing should parse a response with version header 1`] = `
+Object {
+  "headers": Object {
+    "version": "2.5",
+  },
+}
+`;
+
+exports[`Endevor responses type parsing Endevor API v2 response type parsing should throw an error for a response with incorrect version header 1`] = `"Invalid value 2.5 supplied to : { headers: { version: string } }/headers: { version: string }/version: string"`;
+
+exports[`Endevor responses type parsing Endevor API v2 response type parsing should throw an error for a response without version header 1`] = `"Invalid value undefined supplied to : { headers: { version: string } }/headers: { version: string }/version: string"`;

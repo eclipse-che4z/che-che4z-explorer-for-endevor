@@ -48,6 +48,10 @@ export type BaseResponseWithMessages = t.TypeOf<
   typeof BaseResponseWithMessages
 >;
 export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
+
+export type V1ApiVersionResponse = t.TypeOf<typeof V1ApiVersionResponse>;
+export type V2ApiVersionResponse = t.TypeOf<typeof V2ApiVersionResponse>;
+
 export type SuccessPrintResponse = t.TypeOf<typeof SuccessPrintResponse>;
 export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
 export type SuccessListElementsResponse = t.TypeOf<
@@ -70,8 +74,6 @@ export type SuccessListDependenciesResponse = t.TypeOf<
 >;
 export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
 
-export type SignInResponse = t.TypeOf<typeof SignInResponse>;
-
 export type AddResponse = t.TypeOf<typeof AddResponse>;
 
 export const Repository = t.type({
@@ -91,6 +93,23 @@ class StageNumberType extends t.Type<StageNumber> {
       // it will be already checked within type guard
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       (value) => toEndevorStageNumber(value)!
+    );
+  }
+}
+
+class ReturnCodeType extends t.Type<number> {
+  constructor() {
+    super(
+      'ReturnCode',
+      (value): value is number =>
+        value != null && typeof value !== 'string' && !isNaN(Number(value)),
+      (value, context) =>
+        this.is(value)
+          ? t.success(this.encode(value))
+          : t.failure(value, context),
+      // it will be already checked within type guard
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      (value) => value
     );
   }
 }
@@ -149,13 +168,13 @@ export const Content = t.string;
 // new type for general response parsing
 export const BaseResponse = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
   }),
 });
 
 export const BaseResponseWithMessages = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
     messages: t.array(t.string),
   }),
 });
@@ -168,9 +187,21 @@ export const BaseResponseWithUnknownData = t.type({
 
 export const ErrorResponse = BaseResponseWithMessages;
 
+export const V1ApiVersionResponse = t.type({
+  headers: t.type({
+    'api-version': t.string,
+  }),
+});
+
+export const V2ApiVersionResponse = t.type({
+  headers: t.type({
+    version: t.string,
+  }),
+});
+
 export const SuccessPrintResponse = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
     data: t.array(Content),
   }),
 });
@@ -188,7 +219,7 @@ class RetrieveContentType extends t.Type<Buffer> {
 
 export const SuccessRetrieveResponse = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
     data: t.array(new RetrieveContentType()),
   }),
   headers: t.type({
@@ -198,7 +229,7 @@ export const SuccessRetrieveResponse = t.type({
 
 export const SuccessListRepositoriesResponse = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
     data: t.array(t.unknown),
   }),
 });
@@ -210,7 +241,7 @@ export const SuccessListElementsResponse = BaseResponseWithUnknownData;
 
 export const SuccessListDependenciesResponse = t.type({
   body: t.type({
-    returnCode: t.number,
+    returnCode: new ReturnCodeType(),
     data: t.array(
       t.type({
         components: t.union([t.array(t.unknown), t.undefined]),
@@ -220,5 +251,4 @@ export const SuccessListDependenciesResponse = t.type({
 });
 
 export const UpdateResponse = BaseResponseWithMessages;
-export const SignInResponse = BaseResponseWithMessages;
 export const AddResponse = BaseResponseWithMessages;

@@ -19,6 +19,11 @@ import {
   CHANGE_REGRESSION_INFO,
   PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR,
   PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE,
+  OPENSSL_ERROR_CERT_SIGNATURE,
+  OPENSSL_ERROR_LOCAL_CERT_ISSUER,
+  OPENSSL_ERROR_DEPTH_ZERO_SELF_SIGNED_CERT,
+  OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN,
+  OPENSSL_ERROR_CERT_ISSUER,
 } from '../const';
 
 type EndevorErrorContext = {
@@ -83,3 +88,30 @@ export class DuplicateElementError extends Error {}
 export class ChangeRegressionError extends Error {}
 
 export class ProcessorStepMaxRcExceededError extends Error {}
+
+type HttpErrorContext = {
+  code: string;
+  message: string;
+};
+
+export function getTypedErrorFromHttpError(
+  { code, message }: HttpErrorContext,
+  errorMessage?: string
+): SelfSignedCertificateError | GeneralError {
+  switch (true) {
+    case code.includes(OPENSSL_ERROR_CERT_SIGNATURE):
+    case code.includes(OPENSSL_ERROR_CERT_ISSUER):
+    case code.includes(OPENSSL_ERROR_LOCAL_CERT_ISSUER):
+    case code.includes(OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN):
+    case code.includes(OPENSSL_ERROR_DEPTH_ZERO_SELF_SIGNED_CERT):
+      return new SelfSignedCertificateError(
+        errorMessage || `A problem with server certificate: ${message}`
+      );
+    default:
+      return new Error(
+        errorMessage || `Failed to connect with a code ${code}: ${message}`
+      );
+  }
+}
+
+export class SelfSignedCertificateError extends Error {}

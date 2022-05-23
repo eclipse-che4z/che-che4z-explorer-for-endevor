@@ -12,21 +12,61 @@
  */
 
 import { URL } from 'url';
-import { ServiceLocation, ServiceProtocol, StageNumber } from './_doc/Endevor';
+import { UnreachableCaseError } from './typeHelpers';
+import { ServiceProtocol, StageNumber } from './_doc/Endevor';
 import {
   FingerprintMismatchError,
   ChangeRegressionError,
   SignoutError,
   DuplicateElementError,
   ProcessorStepMaxRcExceededError,
+  SelfSignedCertificateError,
 } from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
-export const toVersion2Api = (basePath: string) =>
-  basePath.includes('EndevorService/rest') ||
-  basePath.includes('EndevorService/api/v1')
-    ? '/EndevorService/api/v2/'
-    : basePath;
+export const toUrlParms = (
+  urlString: string
+): Partial<{
+  protocol: ServiceProtocol;
+  hostname: string;
+  port: number;
+  pathname: string;
+}> => {
+  let urlParms;
+  try {
+    urlParms = new URL(urlString);
+  } catch (_e) {
+    return {};
+  }
+  const { protocol, hostname, port, pathname } = urlParms;
+  const resolvedProtocol = toEndevorProtocol(protocol);
+  let resolvedPort = undefined;
+  if (port) resolvedPort = parseInt(port);
+  else {
+    if (resolvedProtocol) {
+      switch (resolvedProtocol) {
+        case 'http': {
+          const defaultHttpPort = 80;
+          resolvedPort = defaultHttpPort;
+          break;
+        }
+        case 'https': {
+          const defaultHttpsPort = 443;
+          resolvedPort = defaultHttpsPort;
+          break;
+        }
+        default:
+          throw new UnreachableCaseError(resolvedProtocol);
+      }
+    }
+  }
+  return {
+    protocol: resolvedProtocol,
+    hostname,
+    port: resolvedPort,
+    pathname: pathname === '/' ? undefined : pathname,
+  };
+};
 
 export const toEndevorProtocol = (
   protocol: string
@@ -36,28 +76,6 @@ export const toEndevorProtocol = (
   if (protocol === 'https') return protocol;
   if (protocol === 'https:') return 'https';
   return undefined;
-};
-
-export const toBaseUrl = (endevorUrl: ServiceLocation): string => {
-  return (
-    endevorUrl.protocol +
-    '://' +
-    endevorUrl.hostname +
-    ':' +
-    endevorUrl.port +
-    endevorUrl.basePath
-  );
-};
-
-export const fromBaseUrl = (baseUrl: string): ServiceLocation => {
-  const { protocol, hostname, port, pathname } = new URL(baseUrl);
-  const defaultProtocol = 'http';
-  return {
-    protocol: toEndevorProtocol(protocol) ?? defaultProtocol,
-    hostname,
-    port: parseInt(port),
-    basePath: pathname,
-  };
 };
 
 export const toEndevorStageNumber = (
@@ -72,6 +90,10 @@ export const fromStageNumber = (value: StageNumber | undefined): number => {
   const defaultStageNumber = 1;
   return value ? parseInt(value) : defaultStageNumber;
 };
+
+// Endevor base path should contain no slash at the end
+export const toCorrectBasePathFormat = (basePath: string) =>
+  basePath.replace(/\/$/, '');
 
 export const isDefined = <T>(value: T | undefined): value is T => {
   return value !== undefined;
@@ -117,6 +139,12 @@ export const isProcessorStepMaxRcExceededError = <T>(
   value: T | ProcessorStepMaxRcExceededError
 ): value is ProcessorStepMaxRcExceededError => {
   return value instanceof ProcessorStepMaxRcExceededError;
+};
+
+export const isSelfSignedCertificateError = <T>(
+  value: T | SelfSignedCertificateError
+): value is SelfSignedCertificateError => {
+  return value instanceof SelfSignedCertificateError;
 };
 
 export const toSeveralTasksProgress =
