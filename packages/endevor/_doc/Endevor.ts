@@ -16,6 +16,11 @@ import * as fs from 'fs';
 import { SignoutError } from './Error';
 
 export type ServiceProtocol = 'http' | 'https';
+export const enum ServiceBasePath {
+  LEGACY = '/EndevorService/rest',
+  V1 = '/EndevorService/api/v1',
+  V2 = '/EndevorService/api/v2',
+}
 export type ServiceLocation = Readonly<{
   protocol: ServiceProtocol;
   port: number;
@@ -23,10 +28,16 @@ export type ServiceLocation = Readonly<{
   basePath: string;
 }>;
 
+export const enum ServiceApiVersion {
+  UNKNOWN = 'unknown',
+  V1 = 'v1',
+  V2 = 'v2',
+}
 export type Service = Readonly<{
   location: ServiceLocation;
   credential: Credential;
   rejectUnauthorized: boolean;
+  apiVersion: ServiceApiVersion;
 }>;
 
 export type ServiceInstance = Readonly<{

@@ -20,7 +20,11 @@ import {
   LocationNode,
   AddNewProfileNode,
 } from '../_doc/ElementTree';
-import { Element } from '@local/endevor/_doc/Endevor';
+import {
+  Element,
+  ElementSearchLocation,
+  Service,
+} from '@local/endevor/_doc/Endevor';
 import { addNewProfileButton } from './buttons';
 import {
   getAllEnvironmentStages,
@@ -29,21 +33,13 @@ import {
   searchForElements,
 } from '../endevor';
 import { buildTree, toServiceNodes } from './endevor';
-import { getEndevorServiceByName } from '../services/services';
-import { getElementLocationByName } from '../element-locations/elementLocations';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Action, Actions } from '../_doc/Actions';
-import { resolveCredential } from '../credentials/credentials';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
 import { isDefined, isError } from '../utils';
-import {
-  getCredential,
-  getElements,
-  getEndevorMap,
-  getLocations,
-} from '../store/store';
+import { getElements, getEndevorMap, getLocations } from '../store/store';
 import { State } from '../_doc/Store';
 import {
   ElementsFetchingStatus,
@@ -135,7 +131,7 @@ const toTreeItem = (node: Node): vscode.TreeItem => {
       }
       return elmNode;
     }
-    case 'EMPY_MAP_NODE':
+    case 'EMPTY_MAP_NODE':
       return new EmptyMapItem();
     default:
       throw new UnreachableCaseError(node);
@@ -144,11 +140,16 @@ const toTreeItem = (node: Node): vscode.TreeItem => {
 
 interface DataGetters {
   getState: () => State;
+  getService: (name: string) => Promise<Service | undefined>;
+  getSearchLocation: (
+    serviceName: string,
+    searchLocationName: string
+  ) => Promise<ElementSearchLocation | undefined>;
 }
 
 export const make = (
   treeChangeEmitter: vscode.EventEmitter<Node | null>,
-  { getState }: DataGetters,
+  { getState, getService, getSearchLocation }: DataGetters,
   dispatch: (action: Action) => Promise<void>
 ): vscode.TreeDataProvider<Node> => {
   const elmListProvider: vscode.TreeDataProvider<Node> = {
@@ -169,7 +170,7 @@ export const make = (
         node.type === 'ELEMENT_IN_PLACE' ||
         node.type === 'ELEMENT_UP_THE_MAP'
       ) {
-        return []; // elemetns are leaf nodes and have no children
+        return []; // elements are leaf nodes and have no children
       }
       if (node.type === 'BUTTON_ADD_PROFILE') {
         return []; // buttons are leaf nodes and root at the same time, they don't have any children
@@ -203,31 +204,25 @@ export const make = (
         if (mapArray.length == 0) {
           return [
             {
-              type: 'EMPY_MAP_NODE',
+              type: 'EMPTY_MAP_NODE',
             },
           ];
         }
         return mapArray;
       }
-      if (node.type === 'EMPY_MAP_NODE') {
+      if (node.type === 'EMPTY_MAP_NODE') {
         return [];
       }
       if (node.type === 'SERVICE') {
         return node.children.sort((l, r) => l.name.localeCompare(r.name));
       }
       if (node.type === 'LOCATION') {
-        const endevorService = await getEndevorServiceByName(
-          node.serviceName,
-          resolveCredential(
-            node.serviceName,
-            getCredential(getState()),
-            dispatch
-          )
-        );
+        const endevorService = await getService(node.serviceName);
         if (!endevorService) {
           return [];
         }
-        const elementsSearchLocation = await getElementLocationByName(
+        const elementsSearchLocation = await getSearchLocation(
+          node.serviceName,
           node.name
         );
         if (!elementsSearchLocation) {

@@ -20,36 +20,27 @@ import { logger, reporter } from '../globals';
 import { addElementLocation, getLocations } from '../settings/settings';
 import { getInstanceNames } from '../endevor';
 import { ServiceNode } from '../_doc/ElementTree';
-import { getEndevorServiceByName } from '../services/services';
 import {
   createEndevorElementLocation,
   getElementLocationNames,
 } from '../element-locations/elementLocations';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { Credential } from '@local/endevor/_doc/Credential';
-import { Action } from '../_doc/Actions';
-import { resolveCredential } from '../credentials/credentials';
 import { isError } from '@local/profiles/utils';
 import {
   CommandAddNewSearchLocationCompletedStatus,
   TelemetryEvents,
 } from '../_doc/Telemetry';
 import { isDefined, isUnique } from '../utils';
+import { Service } from '@local/endevor/_doc/Endevor';
 
 export const addNewElementLocation =
-  (
-    getCredentialFromStore: (name: string) => Credential | undefined,
-    dispatch: (action: Action) => Promise<void>
-  ) =>
+  (resolveService: (name: string) => Promise<Service | undefined>) =>
   async ({ name: serviceName }: ServiceNode): Promise<void> => {
     logger.trace('Add a New Location Profile was called.');
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED,
     });
-    const service = await getEndevorServiceByName(
-      serviceName,
-      resolveCredential(serviceName, getCredentialFromStore, dispatch)
-    );
+    const service = await resolveService(serviceName);
     if (!service) {
       logger.error(
         `Unable to fetch the existing service profile with name ${serviceName}.`

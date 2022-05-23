@@ -40,10 +40,6 @@ import {
   Element,
 } from '@local/endevor/_doc/Endevor';
 import { addElement } from '../endevor';
-import { getElementLocationByName } from '../element-locations/elementLocations';
-import { getEndevorServiceByName } from '../services/services';
-import { resolveCredential } from '../credentials/credentials';
-import { Credential } from '@local/endevor/_doc/Credential';
 import { Action, Actions } from '../_doc/Actions';
 import { TextDecoder } from 'util';
 import { Uri } from 'vscode';
@@ -55,7 +51,11 @@ import {
 } from '../_doc/Telemetry';
 
 export const addElementFromFileSystem = async (
-  getCredentialFromStore: (name: string) => Credential | undefined,
+  resolveService: (name: string) => Promise<Service | undefined>,
+  resolveElementLocation: (
+    serviceName: string,
+    name: string
+  ) => Promise<ElementSearchLocation | undefined>,
   dispatch: (action: Action) => Promise<void>,
   searchLocationNode: LocationNode
 ): Promise<void> => {
@@ -71,19 +71,13 @@ export const addElementFromFileSystem = async (
     logger.error(`Unable to add the element ${fileName}.`);
     return;
   }
-  const service = await getEndevorServiceByName(
-    searchLocationNode.serviceName,
-    resolveCredential(
-      searchLocationNode.serviceName,
-      getCredentialFromStore,
-      dispatch
-    )
-  );
+  const service = await resolveService(searchLocationNode.serviceName);
   if (!service) {
     logger.error(`Unable to add the element ${fileName}.`);
     return;
   }
-  const searchLocation = await getElementLocationByName(
+  const searchLocation = await resolveElementLocation(
+    searchLocationNode.serviceName,
     searchLocationNode.name
   );
   if (!searchLocation) {

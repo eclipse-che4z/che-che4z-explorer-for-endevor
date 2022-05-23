@@ -21,6 +21,7 @@ import {
   ElementSearchLocation,
   Service,
   Element,
+  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import * as assert from 'assert';
@@ -33,8 +34,6 @@ import {
   mockChooseFileUriFromFs,
 } from '../_mocks/dialogs';
 import { LocationNode } from '../_doc/ElementTree';
-import { mockGetEndevorServiceByName } from '../_mocks/services';
-import { mockGetElementLocationByName } from '../_mocks/elementLocations';
 import { toSearchLocationId } from '../tree/endevor';
 import { Actions } from '../_doc/Actions';
 import { parseFilePath } from '../utils';
@@ -67,6 +66,7 @@ describe('adding new element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationNodeName = 'LOC';
   const locationNode: LocationNode = {
@@ -80,15 +80,9 @@ describe('adding new element', () => {
 
   it('should add element to endevor', async () => {
     // arrange
-    mockGetEndevorServiceByName(locationNode.serviceName)({
-      location: service.location,
-      credential: service.credential,
-      rejectUnauthorized: false,
-    });
     const searchLocation: ElementSearchLocation = {
       instance: 'ANY-INSTANCE',
     };
-    mockGetElementLocationByName(locationNode.name)(searchLocation);
     mockChooseFileUriFromFs(Uri.file(uploadedElementFilePath));
     const elementContent =
       'everybody is on hackaton, and Im sitting alone, writing tests :(';
@@ -131,8 +125,10 @@ describe('adding new element', () => {
       await commands.executeCommand(
         CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
         () => {
-          // we don't have a store inside the tests
-          return;
+          return service;
+        },
+        () => {
+          return searchLocation;
         },
         dispatchAddedAction,
         locationNode

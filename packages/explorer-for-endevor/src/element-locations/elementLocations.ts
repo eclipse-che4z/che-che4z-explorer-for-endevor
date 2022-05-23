@@ -25,6 +25,9 @@ import {
 import { logger } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
 import { ANY_VALUE } from '@local/endevor/const';
+import { State } from '../_doc/Store';
+import { Action, Actions } from '../_doc/Actions';
+import { getSearchLocation as getSearchLocationFromStore } from '../store/store';
 
 export const createEndevorElementLocation = (
   name: string,
@@ -123,4 +126,47 @@ export const getElementLocationByName = async (
     )}`
   );
   return undefined;
+};
+
+export type GetSearchLocation = (
+  serviceName: string,
+  locationName: string
+) => Promise<ElementSearchLocation | undefined>;
+export const resolveSearchLocation =
+  (searchLocationGetters: ReadonlyArray<GetSearchLocation>) =>
+  async (
+    serviceName: string,
+    searchLocationName: string
+  ): Promise<ElementSearchLocation | undefined> => {
+    for (const getSearchLocation of searchLocationGetters) {
+      const searchLocation = await getSearchLocation(
+        serviceName,
+        searchLocationName
+      );
+      if (searchLocation) return searchLocation;
+    }
+    return undefined;
+  };
+
+export const defineSearchLocationResolutionOrder = (
+  getState: () => State,
+  dispatch: (action: Action) => Promise<void>
+): ReadonlyArray<GetSearchLocation> => {
+  return [
+    async (serviceName: string, locationName: string) => {
+      return getSearchLocationFromStore(getState())(serviceName)(locationName);
+    },
+    async (serviceName: string, locationName: string) => {
+      const searchLocation = await getElementLocationByName(locationName);
+      if (searchLocation) {
+        await dispatch({
+          type: Actions.ENDEVOR_SEARCH_LOCATION_CHANGED,
+          serviceName,
+          searchLocationName: locationName,
+          searchLocation,
+        });
+      }
+      return searchLocation;
+    },
+  ];
 };

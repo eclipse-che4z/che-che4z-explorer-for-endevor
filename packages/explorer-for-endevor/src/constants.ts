@@ -29,8 +29,6 @@ export const AUTOMATIC_SIGN_OUT_DEFAULT = false;
 export const MAX_PARALLEL_REQUESTS_SETTING = 'maxParallelRequests';
 export const MAX_PARALLEL_REQUESTS_DEFAULT = 4;
 
-export const ENDEVOR_V2_BASE_PATH = '/EndevorService/api/v2/';
-
 export const TREE_VIEW_ID = `${COMMAND_PREFIX}.elmTreeView`;
 
 export const ENCODING = 'UTF-8';

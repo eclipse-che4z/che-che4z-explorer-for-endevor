@@ -11,10 +11,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
+
 export const TELEMETRY_EVENTS_VERSION = '1';
 
 export const enum TelemetryEvents {
   ERROR = 'extension error',
+  SERVICE_PROFILE_FETCHED = 'service profile fetched',
   EXTENSION_ACTIVATED = 'extension activation completed',
   REFRESH_COMMAND_CALLED = 'refresh tree command called',
   ELEMENT_LOCATIONS_PROVIDED = 'element locations provided in the tree',
@@ -47,15 +50,11 @@ export const enum TelemetryEvents {
   SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
   COMMAND_RETRIEVE_ELEMENT_CALLED = 'retrieve element command called',
   COMMAND_RETRIEVE_ELEMENT_COMPLETED = 'retrieve element command completed',
-  COMMAND_SIGNOUT_ELEMENT_CALLED = 'signout element command called',
-  COMMAND_SIGNOUT_ELEMENT_COMPLETED = 'signout element command completed',
   COMMAND_SIGNIN_ELEMENT_CALLED = 'signin element command called',
   COMMAND_SIGNIN_ELEMENT_COMPLETED = 'signin element command completed',
   COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED = 'retrieve element with deps command called',
   COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED = 'retrieve element with deps command completed',
   ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED = 'element dependency was not fetched',
-  COMMAND_ADD_NEW_SERVICE_CALLED = 'add new service command called',
-  COMMAND_ADD_NEW_SERVICE_COMPLETED = 'add new service command completed',
   COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED = 'add new search location command called',
   COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED = 'add new search location command completed',
   COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL = 'discard edited element changes call performed',
@@ -64,6 +63,10 @@ export const enum TelemetryEvents {
   COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED = 'apply diff editor changes completed',
   SERVICE_HIDED = 'service hided from the tree',
   SEARCH_LOCATION_HIDED = 'search location hided from the tree',
+  DIALOG_SERVICE_INFO_COLLECTION_CALLED = 'service information collection dialog called',
+  DIALOG_SERVICE_INFO_COLLECTION_COMPLETED = 'service information collection dialog completed',
+  SERVICE_CONNECTION_TEST_COMPLETED = 'service connection test completed',
+  REJECT_UNAUTHORIZED_PROVIDED = 'reject unauthorized provided',
 }
 
 export type ExtensionActivatedEvent = {
@@ -130,6 +133,11 @@ export type ElementLocationsNotProvidedInTheTreeEvent = {
   errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED;
   status: 'GENERIC_ERROR';
   error: Error;
+};
+
+export type ServiceProfileFetchedEvent = {
+  type: TelemetryEvents.SERVICE_PROFILE_FETCHED;
+  apiVersion: ServiceApiVersion;
 };
 
 export type MissingCredentialsPromptCalledEvent = {
@@ -385,12 +393,6 @@ export type CommandUploadElementCompletedEvent =
       status: UploadElementCommandCompletedStatus.SUCCESS;
     };
 
-export type CommandSignOutElementCalledEvent = {
-  type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
-  context?: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED;
-};
-
 export type CommandSignInElementCalledEvent = {
   type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED;
   commandArguments: CommandArguments;
@@ -407,19 +409,6 @@ export const enum SignInElementCommandCompletedStatus {
   GENERIC_ERROR = 'GENERIC_ERROR',
 }
 
-export type CommandSignOutElementCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
-      status:
-        | SignOutElementCommandCompletedStatus.GENERIC_ERROR
-        | SignOutElementCommandCompletedStatus.SIGN_OUT_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED;
-      status: SignOutElementCommandCompletedStatus.SUCCESS;
-    };
 export type CommandSignInElementCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
@@ -469,30 +458,6 @@ export type ElementDependencyWasNotRetrievedEvent = {
   status: DependencyRetrievalCompletedStatus.GENERIC_ERROR;
   error: Error;
 };
-
-export type CommandAddNewServiceCalledEvent = {
-  type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED;
-};
-
-export const enum CommandAddNewServiceCompletedStatus {
-  EXISTING_SERVICE_CHOSEN = 'EXISTING_SERVICE_CHOSEN',
-  NEW_SERVICE_CREATED = 'NEW_SERVICE_CREATED',
-  GENERIC_ERROR = 'GENERIC_ERROR',
-}
-
-export type CommandAddNewServiceCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED;
-      status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED;
-      status:
-        | CommandAddNewServiceCompletedStatus.EXISTING_SERVICE_CHOSEN
-        | CommandAddNewServiceCompletedStatus.NEW_SERVICE_CREATED;
-    };
 
 export type CommandAddNewSearchLocationCalledEvent = {
   type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED;
@@ -577,6 +542,63 @@ export type CommandApplyDiffEditorChangesCompletedEvent = {
   error: Error;
 };
 
+export type DialogServiceInfoCollectionCalledEvent = {
+  type: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
+};
+
+export const enum DialogServiceInfoCollectionCompletedStatus {
+  CANCELLED = 'CANCELLED',
+  EXISTING_SERVICE_NAME_CHOSEN = 'EXISTING_SERVICE_NAME_CHOSEN',
+  NEW_SERVICE_INFO_COLLECTED = 'NEW_SERVICE_INFO_COLLECTED',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type DialogServiceInfoCollectionCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
+      status: DialogServiceInfoCollectionCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_COMPLETED;
+      status:
+        | DialogServiceInfoCollectionCompletedStatus.CANCELLED
+        | DialogServiceInfoCollectionCompletedStatus.EXISTING_SERVICE_NAME_CHOSEN
+        | DialogServiceInfoCollectionCompletedStatus.NEW_SERVICE_INFO_COLLECTED;
+    };
+
+export const enum ServiceConnectionTestCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CERT_ISSUER_VALIDATION_ERROR = 'CERT_ISSUER_VALIDATION_ERROR',
+  CONTINUE_WITH_ERROR = 'CONTINUE_WITH_ERROR',
+}
+
+export type ServiceConnectionTestCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
+      status:
+        | ServiceConnectionTestCompletedStatus.GENERIC_ERROR
+        | ServiceConnectionTestCompletedStatus.CERT_ISSUER_VALIDATION_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.SERVICE_CONNECTION_TEST_COMPLETED;
+      context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
+      status:
+        | ServiceConnectionTestCompletedStatus.SUCCESS
+        | ServiceConnectionTestCompletedStatus.CONTINUE_WITH_ERROR;
+      apiVersion: ServiceApiVersion;
+    };
+
+export type RejectUnauthorizedProvidedEvent = {
+  type: TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED;
+  context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
+  rejectUnauthorized: boolean;
+};
+
 export type TelemetryEvent =
   | ExtensionActivatedEvent
   | RefreshCommandCalledEvent
@@ -589,6 +611,7 @@ export type TelemetryEvent =
   | ElementLocationsNotProvidedInTheTreeEvent
   | MissingCredentialsPromptCalledEvent
   | MissingCredentialsProvidedEvent
+  | ServiceProfileFetchedEvent
   | CommandViewElementDetailsCalledEvent
   | CommandResolveConflictWithRemoteCallEvent
   | CommandPrintListingCalledEvent
@@ -604,17 +627,13 @@ export type TelemetryEvent =
   | CommandEditElementCompletedEvent
   | CommandRetrieveElementCalledEvent
   | CommandRetrieveElementCompletedEvent
-  | CommandSignOutElementCalledEvent
   | CommandSignInElementCalledEvent
-  | CommandSignOutElementCompletedEvent
   | CommandSignInElementCompletedEvent
   | CommandRetrieveElementWithDepsCalledEvent
   | CommandRetrieveElementWithDepsCompletedEvent
   | ElementDependencyWasNotRetrievedEvent
   | CommandUploadElementCompletedEvent
   | CommandUploadElementCalledEvent
-  | CommandAddNewServiceCalledEvent
-  | CommandAddNewServiceCompletedEvent
   | CommandAddNewSearchLocationCalledEvent
   | CommandAddNewSearchLocationCompletedEvent
   | ServiceHidedEvent
@@ -624,4 +643,8 @@ export type TelemetryEvent =
   | CommandApplyDiffEditorChangesCalledEvent
   | CommandDiscardEditedElementChangesCalledEvent
   | CommandDiscardEditedElementChangesCallEvent
-  | CommandApplyDiffEditorChangesCompletedEvent;
+  | CommandApplyDiffEditorChangesCompletedEvent
+  | DialogServiceInfoCollectionCalledEvent
+  | DialogServiceInfoCollectionCompletedEvent
+  | ServiceConnectionTestCompletedEvent
+  | RejectUnauthorizedProvidedEvent;

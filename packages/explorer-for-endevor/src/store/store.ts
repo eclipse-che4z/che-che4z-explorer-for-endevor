@@ -12,7 +12,6 @@
  */
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { BaseCredential } from '@local/endevor/_doc/Credential';
 import {
   ElementSearchLocation,
   Service,
@@ -21,26 +20,23 @@ import {
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { searchForElements } from '../endevor';
 import { logger, reporter } from '../globals';
-import {
-  toElementId,
-  toSearchLocationNode,
-  toServiceNode,
-} from '../tree/endevor';
+import { toElementId, toSearchLocationNode } from '../tree/endevor';
 import { isError, replaceWith } from '../utils';
 import {
   Action,
   Actions,
   ElementsUpdated,
-  EndevorCredentialAdded,
   LocationConfigChanged,
   ElementAdded,
   ElementUpdatedInPlace,
-  ElementSignedin,
-  ElementSignedout,
+  ElementSignedIn,
+  ElementSignedOut,
   EndevorMapBuilt,
   ElementGeneratedInPlace,
   ElementGeneratedWithCopyBack,
   ElementUpdatedFromUpTheMap,
+  EndevorServiceChanged,
+  EndevorSearchLocationChanged,
 } from '../_doc/Actions';
 import { Node } from '../_doc/ElementTree';
 import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
@@ -67,9 +63,14 @@ export const make = (
 
   const dispatch = async (action: Action): Promise<void> => {
     switch (action.type) {
-      case Actions.ENDEVOR_CREDENTIAL_ADDED: {
-        state = credentialReducer(state)(action);
-        refreshTree(state, toServiceNode(action.serviceName)([]));
+      case Actions.ENDEVOR_SERVICE_CHANGED: {
+        state = serviceReducer(state)(action);
+        refreshTree(state);
+        break;
+      }
+      case Actions.ENDEVOR_SEARCH_LOCATION_CHANGED: {
+        state = searchLocationReducer(state)(action);
+        refreshTree(state);
         break;
       }
       case Actions.LOCATION_CONFIG_CHANGED: {
@@ -91,7 +92,7 @@ export const make = (
         break;
       }
       case Actions.REFRESH: {
-        state = removingLocalElementsCacheReducer(state);
+        state = cleanupElementsAndProfilesCacheReducer(state);
         refreshTree(state);
         break;
       }
@@ -152,7 +153,7 @@ export const toState = (locations: ReadonlyArray<LocationConfig>): State => {
       serviceName: locationConfig.service,
       cachedElements: locationConfig.elementLocations.map((locationItem) => {
         return {
-          searchLocation: locationItem,
+          searchLocationName: locationItem,
           endevorMap: {},
           elements: {},
         };
@@ -162,17 +163,54 @@ export const toState = (locations: ReadonlyArray<LocationConfig>): State => {
   return result;
 };
 
-const credentialReducer =
+const serviceReducer =
   (initialState: State) =>
-  ({ serviceName, credential }: EndevorCredentialAdded): State => {
+  ({ serviceName, service }: EndevorServiceChanged): State => {
     const existingStateItem = initialState.find(
       (stateItem) => stateItem.serviceName === serviceName
     );
     if (!existingStateItem) return initialState;
-    const updatedItem = {
+    const updatedItem: StateItem = {
       cachedElements: existingStateItem.cachedElements,
       serviceName: existingStateItem.serviceName,
-      credential,
+      service,
+    };
+    return replaceWith(initialState)(
+      (value1: StateItem, value2: StateItem) =>
+        value1.serviceName === value2.serviceName,
+      updatedItem
+    );
+  };
+
+const searchLocationReducer =
+  (initialState: State) =>
+  ({
+    serviceName,
+    searchLocationName,
+    searchLocation,
+  }: EndevorSearchLocationChanged): State => {
+    const existingItem = initialState.find((stateItem) => {
+      return stateItem.serviceName === serviceName;
+    });
+    if (!existingItem) return initialState;
+    const existingCache = existingItem.cachedElements.find(
+      (element) => element.searchLocationName === searchLocationName
+    );
+    if (!existingCache) return initialState;
+    const updatedCacheItem: EndevorCacheItem = {
+      searchLocationName: existingCache.searchLocationName,
+      searchLocation,
+      endevorMap: existingCache.endevorMap,
+      elements: existingCache.elements,
+    };
+    const updatedItem: StateItem = {
+      serviceName: existingItem.serviceName,
+      service: existingItem.service,
+      cachedElements: replaceWith(existingItem.cachedElements)(
+        (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
+          value1.searchLocationName === value2.searchLocationName,
+        updatedCacheItem
+      ),
     };
     return replaceWith(initialState)(
       (value1: StateItem, value2: StateItem) =>
@@ -194,11 +232,12 @@ const locationsReducer =
       }
       return {
         serviceName: existingStateItem.serviceName,
-        credential: existingStateItem.credential,
+        service: existingStateItem.service,
         cachedElements: updatedLocation.cachedElements.map((updatedCache) => {
           const existingLocation = existingStateItem.cachedElements.find(
             (existingCache) =>
-              existingCache.searchLocation === updatedCache.searchLocation
+              existingCache.searchLocationName ===
+              updatedCache.searchLocationName
           );
           if (!existingLocation) return updatedCache;
           return existingLocation;
@@ -215,20 +254,21 @@ const endevorMapBuiltReducer =
     });
     if (!existingItem) return initialState;
     const existingCache = existingItem.cachedElements.find(
-      (element) => element.searchLocation === searchLocationName
+      (element) => element.searchLocationName === searchLocationName
     );
     if (!existingCache) return initialState;
-    const updatedCacheItem = {
+    const updatedCacheItem: EndevorCacheItem = {
+      searchLocationName: existingCache.searchLocationName,
       searchLocation: existingCache.searchLocation,
       endevorMap,
       elements: existingCache.elements,
     };
-    const updatedItem = {
+    const updatedItem: StateItem = {
       serviceName: existingItem.serviceName,
-      credential: existingItem.credential,
+      service: existingItem.service,
       cachedElements: replaceWith(existingItem.cachedElements)(
         (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
-          value1.searchLocation === value2.searchLocation,
+          value1.searchLocationName === value2.searchLocationName,
         updatedCacheItem
       ),
     };
@@ -249,7 +289,8 @@ const addedElementFromTheMapReducer = (
   if (!existingItem) return initialState;
   const existingCache = existingItem.cachedElements.find(
     (element) =>
-      element.searchLocation === elementAddedAction.treePath.searchLocationName
+      element.searchLocationName ===
+      elementAddedAction.treePath.searchLocationName
   );
   if (!existingCache) return initialState;
   const oldElementId = toElementId(elementAddedAction.treePath.serviceName)(
@@ -283,17 +324,18 @@ const addedElementFromTheMapReducer = (
       lastRefreshTimestamp: Date.now(),
     },
   };
-  const updatedCacheItem = {
+  const updatedCacheItem: EndevorCacheItem = {
+    searchLocationName: existingCache.searchLocationName,
     searchLocation: existingCache.searchLocation,
     endevorMap: existingCache.endevorMap,
     elements: updatedCachedElements,
   };
-  const updatedItem = {
+  const updatedItem: StateItem = {
     serviceName: existingItem.serviceName,
-    credential: existingItem.credential,
+    service: existingItem.service,
     cachedElements: replaceWith(existingItem.cachedElements)(
       (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
-        value1.searchLocation === value2.searchLocation,
+        value1.searchLocationName === value2.searchLocationName,
       updatedCacheItem
     ),
   };
@@ -314,7 +356,7 @@ const addedElementReducer = (
   if (!existingItem) return initialState;
   const existingCache = existingItem.cachedElements.find(
     (element) =>
-      element.searchLocation === elementAddedAction.searchLocationName
+      element.searchLocationName === elementAddedAction.searchLocationName
   );
   if (!existingCache) return initialState;
   const existingCachedElements = existingCache.elements;
@@ -328,17 +370,18 @@ const addedElementReducer = (
       lastRefreshTimestamp: Date.now(),
     },
   };
-  const updatedCacheItem = {
+  const updatedCacheItem: EndevorCacheItem = {
+    searchLocationName: existingCache.searchLocationName,
     searchLocation: existingCache.searchLocation,
     endevorMap: existingCache.endevorMap,
     elements: updatedCachedElements,
   };
-  const updatedItem = {
+  const updatedItem: StateItem = {
     serviceName: existingItem.serviceName,
-    credential: existingItem.credential,
+    service: existingItem.service,
     cachedElements: replaceWith(existingItem.cachedElements)(
       (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
-        value1.searchLocation === value2.searchLocation,
+        value1.searchLocationName === value2.searchLocationName,
       updatedCacheItem
     ),
   };
@@ -386,14 +429,13 @@ const fetchingElementsReducer =
     });
   };
 
-const removingLocalElementsCacheReducer = (initialState: State): State => {
+const cleanupElementsAndProfilesCacheReducer = (initialState: State): State => {
   return initialState.map((stateItem) => {
     return {
       serviceName: stateItem.serviceName,
-      credential: stateItem.credential,
       cachedElements: stateItem.cachedElements.map((element) => {
         return {
-          searchLocation: element.searchLocation,
+          searchLocationName: element.searchLocationName,
           endevorMap: element.endevorMap,
           elements: {},
         };
@@ -411,15 +453,15 @@ const smartElementReducer = (
   }:
     | ElementUpdatedInPlace
     | ElementGeneratedInPlace
-    | ElementSignedout
-    | ElementSignedin
+    | ElementSignedOut
+    | ElementSignedIn
 ): State => {
   const existingStateItem = initialState.find((existingItem) => {
     return existingItem.serviceName === serviceName;
   });
   if (!existingStateItem) return initialState;
   const existingCache = existingStateItem.cachedElements.find(
-    (existingCache) => existingCache.searchLocation === searchLocationName
+    (existingCache) => existingCache.searchLocationName === searchLocationName
   );
   if (!existingCache) return initialState;
   const cachedElements: CachedElements = {};
@@ -438,17 +480,18 @@ const smartElementReducer = (
       };
     }, cachedElements),
   };
-  const updatedCacheItem = {
+  const updatedCacheItem: EndevorCacheItem = {
+    searchLocationName: existingCache.searchLocationName,
     searchLocation: existingCache.searchLocation,
     endevorMap: existingCache.endevorMap,
     elements: updatedElements,
   };
-  const updatedStateItem = {
+  const updatedStateItem: StateItem = {
     serviceName: existingStateItem.serviceName,
-    credential: existingStateItem.credential,
+    service: existingStateItem.service,
     cachedElements: replaceWith(existingStateItem.cachedElements)(
       (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
-        value1.searchLocation === value2.searchLocation,
+        value1.searchLocationName === value2.searchLocationName,
       updatedCacheItem
     ),
   };
@@ -467,12 +510,13 @@ const replaceElementsReducer =
     });
     if (!existingStateItem) return initialState;
     const existingCache = existingStateItem.cachedElements.find(
-      (existingCache) => existingCache.searchLocation === searchLocationName
+      (existingCache) => existingCache.searchLocationName === searchLocationName
     );
     if (!existingCache) return initialState;
     const cachedElements: CachedElements = {};
     const latestElementVersion = Date.now();
-    const updatedCacheItem = {
+    const updatedCacheItem: EndevorCacheItem = {
+      searchLocationName: existingCache.searchLocationName,
       searchLocation: existingCache.searchLocation,
       endevorMap: existingCache.endevorMap,
       elements: elements.reduce((accum, element) => {
@@ -487,12 +531,12 @@ const replaceElementsReducer =
         };
       }, cachedElements),
     };
-    const updatedStateItem = {
+    const updatedStateItem: StateItem = {
       serviceName: existingStateItem.serviceName,
-      credential: existingStateItem.credential,
+      service: existingStateItem.service,
       cachedElements: replaceWith(existingStateItem.cachedElements)(
         (value1: EndevorCacheItem, value2: EndevorCacheItem) =>
-          value1.searchLocation === value2.searchLocation,
+          value1.searchLocationName === value2.searchLocationName,
         updatedCacheItem
       ),
     };
@@ -503,14 +547,34 @@ const replaceElementsReducer =
     );
   };
 
-export const getCredential =
+export const getService =
   (state: State) =>
-  (serviceName: EndevorServiceName): BaseCredential | undefined => {
+  (serviceName: EndevorServiceName): Service | undefined => {
     return state.find((stateItem) => {
       const serviceExists = stateItem.serviceName === serviceName;
       if (serviceExists) return true;
       return false;
-    })?.credential;
+    })?.service;
+  };
+
+export const getSearchLocation =
+  (state: State) =>
+  (serviceName: EndevorServiceName) =>
+  (
+    searchLocationName: ElementLocationName
+  ): ElementSearchLocation | undefined => {
+    const existingService = state.find((stateItem) => {
+      const serviceExists = stateItem.serviceName === serviceName;
+      return serviceExists;
+    });
+    if (!existingService) return undefined;
+    const existingLocation = existingService.cachedElements.find((element) => {
+      const searchLocationExists =
+        element.searchLocationName === searchLocationName;
+      return searchLocationExists;
+    });
+    if (!existingLocation) return undefined;
+    return existingLocation.searchLocation;
   };
 
 export const getLocations = (state: State): ReadonlyArray<LocationConfig> => {
@@ -518,7 +582,7 @@ export const getLocations = (state: State): ReadonlyArray<LocationConfig> => {
     return {
       service: stateItem.serviceName,
       elementLocations: stateItem.cachedElements.map(
-        (element) => element.searchLocation
+        (element) => element.searchLocationName
       ),
     };
   });
@@ -535,7 +599,7 @@ export const getElements =
     if (!existingService) return [];
     const existingLocation = existingService.cachedElements.find((element) => {
       const searchLocationExists =
-        element.searchLocation === searchLocationName;
+        element.searchLocationName === searchLocationName;
       return searchLocationExists;
     });
     if (!existingLocation) return [];
@@ -553,7 +617,7 @@ export const getEndevorMap =
     if (!existingService) return;
     const existingLocation = existingService.cachedElements.find((element) => {
       const searchLocationExists =
-        element.searchLocation === searchLocationName;
+        element.searchLocationName === searchLocationName;
       return searchLocationExists;
     });
     if (!existingLocation) return;

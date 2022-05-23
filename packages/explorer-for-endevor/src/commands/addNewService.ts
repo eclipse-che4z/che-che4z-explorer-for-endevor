@@ -12,11 +12,13 @@
  */
 
 import { isError } from '@local/profiles/utils';
+import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   askForServiceOrCreateNew,
   dialogCancelled,
   serviceChosen,
 } from '../dialogs/locations/endevorServiceDialogs';
+import { getApiVersion } from '../endevor';
 import { logger, reporter } from '../globals';
 import {
   createEndevorService,
@@ -29,7 +31,7 @@ import {
 import {
   CommandAddNewServiceCompletedStatus,
   TelemetryEvents,
-} from '../_doc/Telemetry';
+} from '../_doc/telemetry/v2/Telemetry';
 
 export const addNewService = async (): Promise<void> => {
   logger.trace('Add a New Profile called.');
@@ -45,46 +47,59 @@ export const addNewService = async (): Promise<void> => {
     );
     return;
   }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALL,
+    context: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
+  });
   const dialogResult = await askForServiceOrCreateNew({
     hiddenServices: filterForUnusedServices(allServices),
     allServices,
-  });
+  })((location, rejectUnauthorized) =>
+    withNotificationProgress('Testing Endevor connection')((progressReporter) =>
+      getApiVersion(progressReporter)(location)(rejectUnauthorized)
+    )
+  );
   if (dialogCancelled(dialogResult)) {
     logger.trace('No profile was selected or newly created.');
     return;
-  } else {
-    let serviceName;
-    if (serviceChosen(dialogResult)) {
-      serviceName = dialogResult;
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
-        status: CommandAddNewServiceCompletedStatus.EXISTING_SERVICE_CHOSEN,
-      });
-    } else {
-      const createdService = dialogResult;
-      serviceName = createdService.name;
-      try {
-        await createEndevorService(serviceName, createdService.value);
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
-          status: CommandAddNewServiceCompletedStatus.NEW_SERVICE_CREATED,
-        });
-      } catch (err) {
-        logger.error(
-          `Unable to save the profile ${serviceName}.`,
-          `Unable to save the profile ${serviceName} because of error ${err.message}.`
-        );
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
-          error: err,
-        });
-        return;
-      }
-    }
-    return addService(serviceName);
   }
+  let serviceName;
+  if (serviceChosen(dialogResult)) {
+    serviceName = dialogResult;
+  } else {
+    const createdService = dialogResult;
+    serviceName = createdService.name;
+    try {
+      await createEndevorService(serviceName, createdService.value);
+    } catch (error) {
+      logger.error(
+        `Unable to save the profile ${serviceName}.`,
+        `Unable to save the profile ${serviceName} because of error ${error.message}.`
+      );
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR,
+        errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
+        error,
+      });
+      return;
+    }
+  }
+  try {
+    await addService(serviceName);
+  } catch (error) {
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
+      error,
+    });
+    return;
+  }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
+    status: CommandAddNewServiceCompletedStatus.SUCCESS,
+  });
 };
 
 const filterForUnusedServices = (

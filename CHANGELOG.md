@@ -2,6 +2,18 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.1.1] &ndash; 2022-05-23
+
+### Added
+
+- Added the function that tests connections to Endevor services in the Endevor profiles creation step.
+- Support for v1 Endevor REST API (Endevor version 18.0).
+- Added the override signout capability for the signout feature.
+
+### Fixed
+
+- Fixed the issue that prevented you from using the default HTTPS port value in the Endevor profiles creation step.
+
 ## [1.1.0] &ndash; 2022-04-01
 
 ### Added

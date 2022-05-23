@@ -30,7 +30,9 @@ export const mockEndpoint =
       .thenReply(
         res.status,
         res.statusMessage,
-        typeof res.data == 'string' ? res.data : JSON.stringify(res.data),
+        typeof res.data == 'string' || Buffer.isBuffer(res.data)
+          ? res.data
+          : JSON.stringify(res.data),
         res.headers
       );
   };

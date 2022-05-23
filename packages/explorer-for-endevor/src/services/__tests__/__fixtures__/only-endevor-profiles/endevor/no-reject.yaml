@@ -1,0 +1,6 @@
+host: endevor1.example.com
+port: 12345
+user: endevorUser1
+password: endevorPassword1
+protocol: http
+basePath: /EndevorService/api/v2/

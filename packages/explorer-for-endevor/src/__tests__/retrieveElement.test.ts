@@ -21,6 +21,7 @@ import {
   Element,
   ElementSearchLocation,
   Service,
+  ServiceApiVersion,
   SignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
@@ -102,6 +103,7 @@ describe('retrieve element', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
       instance: 'ANY',
@@ -266,6 +268,7 @@ describe('retrieve element', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
       instance: 'ANY',
@@ -465,6 +468,7 @@ describe('retrieve element', () => {
         password: 'something',
       },
       rejectUnauthorized: false,
+      apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
       instance: 'ANY',
