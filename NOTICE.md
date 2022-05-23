@@ -34,7 +34,7 @@ This project leverages the following third party content.
 
 @broadcom/endevor-for-zowe-cli (6.5.0)
 
-- License: SEE LICENSE IN LICENSE
+- License: Broadcom Internal
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @vscode/extension-telemetry (0.4.7)
