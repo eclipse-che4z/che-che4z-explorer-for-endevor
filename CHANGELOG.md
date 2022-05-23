@@ -2,7 +2,7 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
-## [1.1.1] &ndash; 2022-05-03
+## [1.1.1] &ndash; 2022-05-23
 
 ### Added
 
