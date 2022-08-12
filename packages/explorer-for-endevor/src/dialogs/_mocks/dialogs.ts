@@ -18,11 +18,11 @@ import {
 import * as workspace from '@local/vscode-wrapper/workspace';
 import * as sinon from 'sinon';
 import { Uri } from 'vscode';
-import * as changeControlValueDialogs from '../dialogs/change-control/endevorChangeControlDialogs';
-import * as signoutDialogs from '../dialogs/change-control/signOutDialogs';
-import * as uploadLocationDialogs from '../dialogs/locations/endevorUploadLocationDialogs';
-import * as printListingDialogs from '../dialogs/listings/showListingDialogs';
-import * as endevorServiceDialogs from '../dialogs/locations/endevorServiceDialogs';
+import * as changeControlValueDialogs from '../change-control/endevorChangeControlDialogs';
+import * as signoutDialogs from '../change-control/signOutDialogs';
+import * as uploadLocationDialogs from '../locations/endevorUploadLocationDialogs';
+import * as printListingDialogs from '../listings/showListingDialogs';
+import * as endevorServiceDialogs from '../locations/endevorServiceDialogs';
 
 type PrefilledDialogValue = {
   ccid?: string;
@@ -112,9 +112,15 @@ export const mockAskingForPrintListing = (
     .resolves(mockResult);
 };
 
-type AskForUsernameStub = sinon.SinonStub<[], Promise<string | undefined>>;
+type AskForUsernameStub = sinon.SinonStub<
+  [value?: string],
+  Promise<string | undefined>
+>;
 
-type AskForPasswordStub = sinon.SinonStub<[], Promise<string | undefined>>;
+type AskForPasswordStub = sinon.SinonStub<
+  [value?: string],
+  Promise<string | undefined>
+>;
 
 type AskForUrlStub = sinon.SinonStub<
   [value?: string],

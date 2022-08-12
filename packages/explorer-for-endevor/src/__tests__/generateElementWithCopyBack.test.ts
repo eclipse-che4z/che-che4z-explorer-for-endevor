@@ -34,18 +34,20 @@ import {
   mockAskingForOverrideSignout,
   mockAskingForPrintListing,
   mockAskingForUploadLocation,
-} from '../_mocks/dialogs';
-import { TypeNode } from '../_doc/ElementTree';
+} from '../dialogs/_mocks/dialogs';
+import { TypeNode } from '../tree/_doc/ElementTree';
 import * as printListingCommand from '../commands/printListing';
 import {
   Actions,
   ElementGeneratedInPlace,
   ElementGeneratedWithCopyBack,
-} from '../_doc/Actions';
+} from '../store/_doc/Actions';
 import {
   ProcessorStepMaxRcExceededError,
   SignoutError,
 } from '@local/endevor/_doc/Error';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { Source } from '../store/storage/_doc/Storage';
 
 describe('generating an element with copy back', () => {
   before(() => {
@@ -62,6 +64,10 @@ describe('generating an element with copy back', () => {
   });
 
   const serviceName = 'serviceName';
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
   const service: Service = {
     location: {
       port: 1234,
@@ -78,11 +84,15 @@ describe('generating an element with copy back', () => {
     apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationName = 'searchLocationName';
+  const searchLocationId: EndevorId = {
+    name: searchLocationName,
+    source: Source.INTERNAL,
+  };
   const searchLocation: ElementSearchLocation = {
-    instance: 'ANY-INSTANCE',
+    configuration: 'ANY-CONFIG',
   };
   const element: Element = {
-    instance: 'ANY',
+    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
@@ -92,8 +102,8 @@ describe('generating an element with copy back', () => {
     extension: 'ext',
   };
   const elementUri = toTreeElementUri({
-    serviceName,
-    searchLocationName,
+    serviceId,
+    searchLocationId,
     element,
     service,
     searchLocation,
@@ -132,7 +142,7 @@ describe('generating an element with copy back', () => {
   it('should generate an element with copy back with printing an element listing afterwards', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
@@ -189,8 +199,8 @@ describe('generating an element with copy back', () => {
       pathUpTheMap: element,
       fetchElementsArgs: { service, searchLocation },
       treePath: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         searchLocation: {
           environment: targetLocation.environment,
           stageNumber: targetLocation.stageNumber,
@@ -221,7 +231,7 @@ describe('generating an element with copy back', () => {
   it('should generate an element with no source', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
@@ -278,8 +288,8 @@ describe('generating an element with copy back', () => {
       pathUpTheMap: element,
       fetchElementsArgs: { service, searchLocation },
       treePath: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         searchLocation: {
           environment: targetLocation.environment,
           stageNumber: targetLocation.stageNumber,
@@ -344,11 +354,9 @@ describe('generating an element with copy back', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedInPlace = {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -362,7 +370,7 @@ describe('generating an element with copy back', () => {
   it('should generate an element with overriding the element signout', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
@@ -431,8 +439,8 @@ describe('generating an element with copy back', () => {
       pathUpTheMap: element,
       fetchElementsArgs: { service, searchLocation },
       treePath: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         searchLocation: {
           environment: targetLocation.environment,
           stageNumber: targetLocation.stageNumber,
@@ -453,7 +461,7 @@ describe('generating an element with copy back', () => {
   it('should show an element listing for the generate processor error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
@@ -518,8 +526,8 @@ describe('generating an element with copy back', () => {
       pathUpTheMap: element,
       fetchElementsArgs: { service, searchLocation },
       treePath: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         searchLocation: {
           environment: targetLocation.environment,
           stageNumber: targetLocation.stageNumber,
@@ -544,7 +552,7 @@ describe('generating an element with copy back', () => {
   it('should cancel the command in case of signout error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
@@ -604,7 +612,7 @@ describe('generating an element with copy back', () => {
   it('should not show an element listing for the generic generate error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,

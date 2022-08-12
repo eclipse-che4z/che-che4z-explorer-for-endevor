@@ -18,8 +18,8 @@ import {
   SubSystemMapPath,
   EnvironmentStageMapPath,
 } from '@local/endevor/_doc/Endevor';
-import { toEndevorMap, toEndevorMapWithWildcards } from '../tree/endevorMap';
-import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
+import { toEndevorMap, toEndevorMapWithWildcards } from '../endevorMap';
+import { EndevorMap, toSubsystemMapPathId } from '../../_doc/Endevor';
 
 jest.mock('vscode', () => ({}), { virtual: true });
 

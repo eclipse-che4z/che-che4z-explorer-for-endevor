@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { askForServiceValue } from '../dialogs/locations/endevorServiceDialogs';
+import { askForServiceValue } from '../locations/endevorServiceDialogs';
 import {
   mockAskForUrl,
   mockAskPassword,
@@ -26,7 +26,7 @@ import * as sinon from 'sinon';
 
 jest.mock('vscode', () => ({}), { virtual: true });
 jest.mock(
-  '../globals',
+  '../../globals',
   () => ({
     logger: {
       trace: jest.fn(),

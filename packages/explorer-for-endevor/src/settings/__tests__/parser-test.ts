@@ -12,7 +12,8 @@
  */
 
 import { parseToType } from '@local/type-parser/parser';
-import { LocationConfig, LocationConfigs, AutoSignOut } from '../_ext/settings';
+import { AutoSignOut } from '../_ext/v2/Settings';
+import { LocationConfig, LocationConfigs } from '../_ext/Settings';
 
 describe('parseToType location configs', () => {
   it('should parse proper location config structure', () => {

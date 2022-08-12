@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration with incorrect description 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/description: string"`;
+
+exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration with incorrect name 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/name: string"`;
+
+exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration without description 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/description: string"`;
+
+exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration without name 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/name: string"`;

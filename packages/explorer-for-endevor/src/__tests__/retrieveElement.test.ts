@@ -39,6 +39,8 @@ import * as sinon from 'sinon';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
   ENDEVOR_CONFIGURATION,
+  FILE_EXT_RESOLUTION_DEFAULT,
+  FILE_EXT_RESOLUTION_SETTING,
   UNIQUE_ELEMENT_FRAGMENT,
 } from '../constants';
 import { ConfigurationTarget, workspace } from 'vscode';
@@ -47,13 +49,16 @@ import { mockShowingFileContentWith } from '../_mocks/window';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
-} from '../_mocks/dialogs';
+} from '../dialogs/_mocks/dialogs';
 import { SignoutError } from '@local/endevor/_doc/Error';
-import { Actions } from '../_doc/Actions';
+import { Actions } from '../store/_doc/Actions';
+import { Source } from '../store/storage/_doc/Storage';
+import { FileExtensionResolutions } from '../settings/_doc/v2/Settings';
 
 describe('retrieve element', () => {
   type NotDefined = undefined;
   let beforeTestsAutoSignOut: boolean | NotDefined;
+  let beforeTestsFileExtensionResolution: FileExtensionResolutions | NotDefined;
   before(() => {
     vscode.commands.registerCommand(
       CommandId.RETRIEVE_ELEMENT,
@@ -65,6 +70,16 @@ describe('retrieve element', () => {
     beforeTestsAutoSignOut = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(AUTOMATIC_SIGN_OUT_SETTING);
+    beforeTestsFileExtensionResolution = workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .get(FILE_EXT_RESOLUTION_SETTING);
+    await workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .update(
+        FILE_EXT_RESOLUTION_SETTING,
+        FILE_EXT_RESOLUTION_DEFAULT,
+        ConfigurationTarget.Global
+      );
   });
   afterEach(async () => {
     await workspace
@@ -72,6 +87,13 @@ describe('retrieve element', () => {
       .update(
         AUTOMATIC_SIGN_OUT_SETTING,
         beforeTestsAutoSignOut,
+        ConfigurationTarget.Global
+      );
+    await workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .update(
+        FILE_EXT_RESOLUTION_SETTING,
+        beforeTestsFileExtensionResolution,
         ConfigurationTarget.Global
       );
     // Sinon has some issues with cleaning up the environment after itself, so we have to do it
@@ -106,7 +128,7 @@ describe('retrieve element', () => {
       apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -116,12 +138,18 @@ describe('retrieve element', () => {
       extension: 'ext',
     };
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     const searchLocationName = 'searchLocationName';
     const elementUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
       element,
       service,
       searchLocation,
@@ -271,7 +299,7 @@ describe('retrieve element', () => {
       apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -282,11 +310,17 @@ describe('retrieve element', () => {
     };
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     const elementUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
       element,
       service,
       searchLocation,
@@ -427,10 +461,14 @@ describe('retrieve element', () => {
     );
     const expectedSignoutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
       elements: [element],
     };
     assert.deepStrictEqual(
@@ -471,7 +509,7 @@ describe('retrieve element', () => {
       apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -482,11 +520,17 @@ describe('retrieve element', () => {
     };
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     const elementUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
       element,
       service,
       searchLocation,
@@ -668,15 +712,19 @@ describe('retrieve element', () => {
     );
     const expectedSignoutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
       elements: [element],
     };
     assert.deepStrictEqual(
-      expectedSignoutAction,
       dispatchSignoutActions.args[0]?.[0],
+      expectedSignoutAction,
       `Expected dispatch for retrieve element with override signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
