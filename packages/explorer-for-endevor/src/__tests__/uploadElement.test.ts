@@ -16,7 +16,6 @@ import { CommandId } from '../commands/id';
 import { uploadElementCommand } from '../commands/uploadElement';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
-  EDIT_FOLDER_SETTING,
   ENDEVOR_CONFIGURATION,
 } from '../constants';
 import * as sinon from 'sinon';
@@ -37,7 +36,6 @@ import * as assert from 'assert';
 import {
   mockDeletingFileWith,
   mockGettingFileContentWith,
-  mockGettingWorkspaceUri,
   mockSavingFileIntoWorkspaceDirectory,
 } from '../_mocks/workspace';
 import { TextEncoder } from 'util';
@@ -51,19 +49,19 @@ import {
   mockAskingForOverrideSignout,
   mockAskingForSignout,
   mockAskingForUploadLocation,
-} from '../_mocks/dialogs';
+} from '../dialogs/_mocks/dialogs';
 import {
   FingerprintMismatchError,
   SignoutError,
 } from '@local/endevor/_doc/Error';
 import * as compareDialog from '../commands/compareElementWithRemoteVersion';
 import * as path from 'path';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 import {
   Actions,
   ElementAdded,
   ElementUpdatedFromUpTheMap,
-} from '../_doc/Actions';
+} from '../store/_doc/Actions';
+import { Id, Source } from '../store/storage/_doc/Storage';
 
 describe('uploading an edited element', () => {
   before(() => {
@@ -72,15 +70,11 @@ describe('uploading an edited element', () => {
 
   type NotDefined = undefined;
   let beforeTestsAutoSignOut: boolean | NotDefined;
-  let beforeTestsEditTempFolder: string | NotDefined;
 
   beforeEach(async () => {
     beforeTestsAutoSignOut = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(AUTOMATIC_SIGN_OUT_SETTING);
-    beforeTestsEditTempFolder = workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .get(EDIT_FOLDER_SETTING);
   });
   afterEach(async () => {
     await workspace
@@ -90,19 +84,12 @@ describe('uploading an edited element', () => {
         beforeTestsAutoSignOut,
         ConfigurationTarget.Global
       );
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        beforeTestsEditTempFolder,
-        ConfigurationTarget.Global
-      );
     // Sinon has some issues with cleaning up the environment after itself, so we have to do it
     // TODO: take a look into Fake API instead of Stub
     sinon.restore();
   });
 
-  const serviceName = 'serviceName';
+  const serviceId: Id = { name: 'serviceName', source: Source.INTERNAL };
   const service: Service = {
     location: {
       port: 1234,
@@ -118,14 +105,17 @@ describe('uploading an edited element', () => {
     rejectUnauthorized: false,
     apiVersion: ServiceApiVersion.V2,
   };
-  const searchLocationName = 'searchLocationName';
+  const searchLocationId: Id = {
+    name: 'searchLocationName',
+    source: Source.INTERNAL,
+  };
   const vagueSearchLocation: ElementSearchLocation = {
-    instance: 'ANY-INSTANCE',
+    configuration: 'ANY-CONFIG',
     environment: 'TEST',
     stageNumber: '1',
   };
   const preciseSearchLocation: ElementSearchLocation = {
-    instance: vagueSearchLocation.instance,
+    configuration: vagueSearchLocation.configuration,
     environment: vagueSearchLocation.environment,
     stageNumber: vagueSearchLocation.stageNumber,
     system: 'ANY-SYS',
@@ -142,7 +132,7 @@ describe('uploading an edited element', () => {
     subSystem: preciseSearchLocation.subsystem!,
   };
   const element: Element = {
-    instance: 'ANY',
+    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
@@ -163,7 +153,7 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
@@ -194,8 +184,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -219,7 +209,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert
@@ -236,20 +226,18 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.called,
       true,
-      `Expexted dispatch for upload element was not called.`
+      `Expected dispatch for upload element was not called.`
     );
     const expectedUpdatedElementAction = {
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
-      elements: [uploadLocation],
+      serviceId,
+      searchLocationId,
+      element: uploadLocation,
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
+      `Expected dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
         dispatchUpdatedElementAction.args[0]?.[0]
@@ -266,7 +254,7 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const newUploadLocation = {
       ...element,
@@ -302,8 +290,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -327,7 +315,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert
@@ -344,12 +332,12 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.called,
       true,
-      `Expexted dispatch for upload element was not called.`
+      `Expected dispatch for upload element was not called.`
     );
     const expectedUpdatedElementAction: ElementAdded = {
       type: Actions.ELEMENT_ADDED,
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       service,
       searchLocation: preciseSearchLocation,
       element: newUploadLocation,
@@ -357,7 +345,7 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
+      `Expected dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
         dispatchUpdatedElementAction.args[0]?.[0]
@@ -374,12 +362,12 @@ describe('uploading an edited element', () => {
       subsystem: vagueSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const existingLocationDownTheMap: ElementMapPath = {
       name: element.name,
       type: element.type,
-      instance: preciseSearchLocation.instance,
+      configuration: preciseSearchLocation.configuration,
       ...subsystemMapPathDownTheMap,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
@@ -412,8 +400,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: vagueSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -437,7 +425,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaugt error inside command: ${e.message}`
       );
     }
     // assert
@@ -454,7 +442,7 @@ describe('uploading an edited element', () => {
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.called,
       true,
-      `Expexted dispatch for upload element was not called.`
+      `Expected dispatch for upload element was not called.`
     );
     const expectedUpdatedElementAction: ElementUpdatedFromUpTheMap = {
       type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
@@ -462,15 +450,15 @@ describe('uploading an edited element', () => {
       targetLocation: existingLocationDownTheMap,
       pathUpTheMap: element,
       treePath: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         searchLocation: subsystemMapPathDownTheMap,
       },
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
+      `Expected dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
         dispatchUpdatedElementAction.args[0]?.[0]
@@ -487,7 +475,7 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
@@ -519,8 +507,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -532,16 +520,6 @@ describe('uploading an edited element', () => {
       );
     }
     // can be anything, but URI
-    const workspaceUri = editedElementUri;
-    mockGettingWorkspaceUri(workspaceUri);
-    const expectedElementDirectory = 'test-edit-folder';
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        expectedElementDirectory,
-        ConfigurationTarget.Global
-      );
     const editedElementTempDirectory = Uri.file(
       path.dirname(editedElementFilePath)
     );
@@ -560,8 +538,8 @@ describe('uploading an edited element', () => {
       uploadChangeControlValue,
       uploadLocation,
       element,
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       subsystemMapPathDownTheMap,
       localElementVersionTempFilePath
     )();
@@ -575,7 +553,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert
@@ -589,16 +567,14 @@ describe('uploading an edited element', () => {
     );
     const expectedUpdatedElementAction = {
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
-      elements: [uploadLocation],
+      serviceId,
+      searchLocationId,
+      element: uploadLocation,
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
       expectedUpdatedElementAction,
-      `Expexted dispatch for element update to have been called with ${JSON.stringify(
+      `Expected dispatch for element update to have been called with ${JSON.stringify(
         expectedUpdatedElementAction
       )}, but it was called with ${JSON.stringify(
         dispatchUpdatedElementAction.args[0]?.[0]
@@ -612,8 +588,8 @@ describe('uploading an edited element', () => {
       uploadChangeControlValue: ActionChangeControlValue,
       uploadTargetLocation: ElementMapPath
     ) => (
-      serviceName: EndevorServiceName,
-      searchLocationname: ElementLocationName,
+      serviceId: Id,
+      searchLocationId: Id,
       treePath: SubSystemMapPath
     ) => (localVersionElementTempFilePath: string) => Promise<void | Error>
   >;
@@ -625,8 +601,8 @@ describe('uploading an edited element', () => {
       uploadChangeControlValueArg: ActionChangeControlValue,
       uploadTargetLocationArg: ElementMapPath,
       elementArg: Element,
-      serviceNameArg: EndevorServiceName,
-      searchLocationnameArg: ElementLocationName,
+      serviceIdArg: Id,
+      searchLocationIdArg: Id,
       treePathArg: SubSystemMapPath,
       localVersionElementTempFilePathArg: string
     ) =>
@@ -640,14 +616,10 @@ describe('uploading an edited element', () => {
         .resolves(mockResult);
       const withElementStub = sinon
         .stub<
-          [
-            serviceName: EndevorServiceName,
-            searchLocationname: ElementLocationName,
-            treePath: SubSystemMapPath
-          ],
+          [serviceId: Id, searchLocationId: Id, treePath: SubSystemMapPath],
           (localVersionElementTempFilePath: string) => Promise<void | Error>
         >()
-        .withArgs(serviceNameArg, searchLocationnameArg, treePathArg)
+        .withArgs(serviceIdArg, searchLocationIdArg, treePathArg)
         .returns(withLocalVersionFileStub);
       const withChangeControlValueStub = sinon
         .stub<
@@ -656,8 +628,8 @@ describe('uploading an edited element', () => {
             uploadTargetLocation: ElementMapPath
           ],
           (
-            serviceName: EndevorServiceName,
-            searchLocationname: ElementLocationName,
+            serviceIdArg: Id,
+            searchLocationIdArg: Id,
             treePath: SubSystemMapPath
           ) => (
             localVersionElementTempFilePath: string
@@ -680,7 +652,7 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
@@ -730,8 +702,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -767,10 +739,8 @@ describe('uploading an edited element', () => {
     );
     const expectedSignOutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
+      serviceId,
+      searchLocationId,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
@@ -793,7 +763,7 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
@@ -853,8 +823,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -893,10 +863,8 @@ describe('uploading an edited element', () => {
     );
     const expectedSignOutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
+      serviceId,
+      searchLocationId,
       elements: [uploadLocation],
     };
     assert.deepStrictEqual(
@@ -919,12 +887,12 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      instance: element.instance,
+      configuration: element.configuration,
     };
     const existingLocationDownTheMap: ElementMapPath = {
       name: element.name,
       type: element.type,
-      instance: preciseSearchLocation.instance,
+      configuration: preciseSearchLocation.configuration,
       ...subsystemMapPathDownTheMap,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
@@ -986,8 +954,8 @@ describe('uploading an edited element', () => {
       fingerprint: elementFingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
@@ -1026,10 +994,8 @@ describe('uploading an edited element', () => {
     );
     const expectedSignOutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation: preciseSearchLocation,
+      serviceId,
+      searchLocationId,
       elements: [element],
     };
     assert.deepStrictEqual(

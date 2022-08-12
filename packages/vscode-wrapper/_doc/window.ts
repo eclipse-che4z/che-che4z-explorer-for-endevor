@@ -12,6 +12,12 @@
  */
 
 export type Choice = string;
+
+export const enum MessageLevel {
+  INFO = 'information',
+  WARN = 'warning',
+  ERROR = 'error',
+}
 export interface MessageWithOptions {
   message: string;
   options: ReadonlyArray<string>;

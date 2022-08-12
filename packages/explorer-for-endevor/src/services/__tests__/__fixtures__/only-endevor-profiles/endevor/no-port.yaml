@@ -1,6 +1,0 @@
-host: endevor2.example.com
-user: endevorUser1
-password: endevorPassword1
-rejectUnauthorized: false
-protocol: http
-basePath: /EndevorService/api/v2/

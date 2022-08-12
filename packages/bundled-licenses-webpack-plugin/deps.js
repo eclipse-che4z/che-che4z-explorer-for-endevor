@@ -37,8 +37,27 @@ async function bundleLicenses(compilation, options) {
 function getDependenciesLicenseInfo(compilation, override) {
   const filter = /(^.*[/\\]node_modules[/\\]((?:@[^/\\]+[/\\])?(?:[^/\\]+)))/;
   let licenses = getLicenseInformationForCompilation(compilation, filter);
-  licenses = overrideLicenses(licenses, override);
+  const overrideOverkill = duplicateLicenseObjectsForWindows(override);
+  licenses = overrideLicenses(licenses, overrideOverkill);
   return getSortedLicenseInformation(licenses);
+}
+
+/**
+ * Format override keys to Windows compliant keys by replacing slash (/) with double backslash (\\).
+ * Done to ensure an original override key or a formatted key will match a key collected by getLicenseInformationForCompilation() on any platform.
+ * @param override - the original override object.
+ * @returns - override object with both original and formatted Windows compliant keys, and duplicated values.
+ */
+function duplicateLicenseObjectsForWindows(override) {
+  return Object.entries(override).reduce(
+    (accum, [originalWebpackKey, duplicatedOverrideObject]) => {
+      accum[originalWebpackKey] = duplicatedOverrideObject;
+      const windowsComplientKey = originalWebpackKey.replace(/\//g, '\\');
+      accum[windowsComplientKey] = duplicatedOverrideObject;
+      return accum;
+    },
+    {}
+  );
 }
 
 async function writeNoticeFile(depsLicenses, noticeTemplateFilePath) {
@@ -64,12 +83,13 @@ async function writeLicenseFile(depsLicenses, licenseTemplateFilePath) {
   const header = licenseText;
   const separator = `${lineSeparator}${lineSeparator}---${lineSeparator}${lineSeparator}`;
   const depsContent = depsLicenses
-    .map(
-      (dep) =>
-        `${dep.licenseName}${lineSeparator}(${dep.name} ${
-          dep.version
-        })${lineSeparator}${lineSeparator}${dep.licenseText.trim()}`
-    )
+    .map((dep) => {
+      const depHeader = `${dep.licenseName}${lineSeparator}(${dep.name} ${dep.version})`;
+      if (dep.licenseText) {
+        return `${depHeader}${lineSeparator}${lineSeparator}${dep.licenseText.trim()}`;
+      }
+      return depHeader;
+    })
     .join(separator);
   const content = `${header}${separator}${depsContent}${lineSeparator}`;
   await writeFile('LICENSE', content);

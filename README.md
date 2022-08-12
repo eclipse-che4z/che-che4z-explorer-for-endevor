@@ -8,17 +8,17 @@
 
 </div>
 
-The Explorer for Endevor VS Code extension modernizes the way you interact with Endevor, offering a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
+The Explorer for Endevor VS Code extension modernizes the way you interact with Endevor and offers a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
 
+- Work with multiple Endevor inventory locations
 - Add an element
 - View an element
+- Edit an element
 - Retrieve an element with dependencies
 - View element details
-- Create Endevor profiles, including Endevor inventory location profiles
-- Use Zowe CLI base profiles
-- Perform an Edit action
 - Perform a Generate action
 - Print a listing
+- Read team configuration files and Zowe CLI profiles (including Zowe base profiles)
 
 Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including extensions for language support, data editing, testing, and source code management.
 
@@ -26,21 +26,11 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
 
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
-  - [Create Endevor Profile](#create-endevor-profile)
-    - [Create Endevor Location Profile](#create-endevor-location-profile)
+  - [Create an Endevor Connection](#create-an-endevor-connection)
   - [Use Cases](#use-cases)
-    - [Add an Element](#add-an-element)
-    - [View an Element](#view-an-element)
-    - [View Details](#view-details)
-    - [Retrieve an Element](#retrieve-an-element)
-    - [Retrieve an Element with Dependencies](#retrieve-an-element-with-dependencies)
-    - [Edit](#edit)
-    - [Generate](#generate)
-    - [Print Listing](#print-listing)
-    - [Sign Out](#sign-out)
-    - [Sign In](#sign-in)
   - [Base Profiles](#base-profiles)
-  - [Manage your Profiles](#manage-your-profiles)
+  - [Team Configuration File](#team-configuration-file)
+  - [Manage the Extension Tree](#manage-the-extension-tree)
   - [Environment Variables](#environment-variables)
   - [Configure Explorer for Endevor](#configure-explorer-for-endevor)
 - [List of Limitations](#list-of-limitations)
@@ -57,103 +47,92 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 **Client-side prerequisites**:
 
 - Access to Endevor.
-- Install Visual Studio Code version 1.58 or higher.
+- Visual Studio Code version 1.58 or higher.
 
 **Host-side prerequisites**:
 
-- Install either Endevor version 18.0.12 with the SO09580 and SO09581 PTFs or Endevor version 18.1 with the SO15978 PTF.
-- Install Endevor Web Services.
+- Either Endevor version 18.0.12 with the SO09580 and SO09581 PTFs or Endevor version 18.1 with the SO15978 PTF.
+- Endevor Web Services.
 
 ## Getting Started
 
-Create an Endevor profile and inventory location profile and review use cases to see how you can use the full potential of Explorer for Endevor.
+Create an Endevor connection and Endevor inventory location and review use cases to see how you can use the full potential of Explorer for Endevor. Alternatively, use your existing Zowe CLI Endevor profiles to get started.
 
-### Add an Endevor Profile to the Endevor tree
+With the 1.2.0 release, Explorer for Endevor introduces a new setting — **Profiles: Keep in Sync**. The setting enables you to use team configuration files. The profiles sync setting is enabled by default. With this setting enabled, the extension automatically reads available team configuration files or Endevor profiles and Endevor location profiles on startup. The default location of team config files and Endevor profiles is `~/.zowe` or `C:\Users\.zowe`. Learn more about team configuration files in the [Team Configuration File](#team-configuration-file) section. For more information about the new setting, see [Configure Explorer for Endevor](#configure-explorer-for-endevor) in this Readme.
 
-Explorer for Endevor uses the Endevor Plug-in for Zowe CLI `endevor` and `endevor-location` profiles to access Endevor inventory locations on the mainframe and work with elements. If you already have an Endevor plug-in Zowe CLI profile, you can add it to the Endevor tree.
+**Note**: The term `connection` has the same connotation as the term `profile` starting from the 1.2.0 release and pertains to all `profiles` that are created in the extension.
 
-**Follow these steps:**
+### Create an Endevor Connection
 
-1. Click the **Add a New Profile** button to add an Endevor profile.
-2. Select one of the existing profiles listed in the menu.
+Create an Endevor connection.
 
-Your Zowe CLI profile is now available in the Endevor tree.
+1. Click the **Add a New Endevor Connection** button to add an Endevor connection.
 
-If you do not have a profile, you can create one in Explorer for Endevor.
+   Alternatively, select your existing Endevor connections.
 
-**Follow these steps:**
+2. Select **Create a new Endevor Connection**.
+3. Enter a name for your connection.
+4. Enter your [Endevor Web Services URL](https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-software-change-manager/18-0/installing/how-to-enable-web-services/install-and-set-up-ca-endevor-scm-web-services/validate-web-services.html) in the `http(s)://host:port/basePath` format.
 
-1. Click the **Add a New Profile** button to add a new Endevor profile.
-2. Select **Create a new Endevor Profile**.
-3. Enter a name for your profile.
-4. Enter your Endevor URL in the `http(s)://host:port/basePath` format.
-
-   **Notes**:
-
-   - Depending on the Endevor services you use, your can inlcude `EndevorService/api/v1`, `EndevorService/rest` or `EndevorService/api/v2` in `basePath`. If `basePath` is omitted the default is `EndevorService/api/v2`.
-   - Explorer for Endevor checks if the specified URL is accessible. If not, you will be prompted to either change the specified value or proceed without changing the value.
+   - Depending on the Endevor connections you use, you can include `EndevorService/api/v1`, `EndevorService/rest` or `EndevorService/api/v2` in `basePath`. If `basePath` is omitted, the default is `EndevorService/api/v2`.
+   - Explorer for Endevor checks if the specified URL is accessible. If not, you are prompted to either change the specified value or proceed without changing the value.
    - You might be prompted to either accept or reject connections with self-signed certificates if the extension encounters an issue with the server certificate issuer validation in the connection testing phase. If no issues are found, the prompt does not appear and the value is set to `reject`.
 
-5. (Optional) Enter your username and password to add your mainframe credentials to the profile.
+5. (Optional) Enter your username and password to add your mainframe credentials to the connection.
 
-   Adding your credentials to your profile lets you access different Endevor locations without having to enter your credentials more than once.
+   Adding your credentials to your connection enables you to access different inventory locations without the need to enter your credentials more than once.
 
    **Notes**:
 
-   - If your profile does not include credentials during the first session of Explorer for Endevor, you are prompted to provide credentials.
+   - If your connection does not include credentials during the first session of Explorer for Endevor, you are prompted to enter credentials.
    - Passwords with 9 or more characters are treated as a _passphrase_ by the server and are case-sensitive.
 
-Your new profile is now available in the tree. You can also reuse the same Endevor profile in Zowe CLI.
+Your new connection is now available in the tree.
 
-#### Create Endevor Location Profile
+#### Create an Endevor Inventory Location
 
-Once you have an Endevor profile, you need to add an Endevor location profile. Endevor location profiles consist of Endevor instance, Endevor path that includes environment, system, subsystem, stage number, and element type, CCID, and Comment. Endevor location profiles let you view and work with elements of specified Endevor locations.
+Once you have an Endevor connection, you need to add an inventory location. An inventory location consists of an Endevor instance, Endevor path with environment, system, subsystem, stage number, element type, CCID, and Comment. Inventory locations enable you to view and work with elements of specified Endevor locations.
 
-**Follow these steps**:
-
-1. Click the **+** icon next to your Endevor profile to add a new location profile.
-2. Create a name for the Endevor location profile and press Enter.
+1. Click the **+** icon next to your Endevor connection to add a new inventory location.
+2. Create a name for the inventory location and press Enter.
 3. Select an instance from the drop-down menu and press Enter.
 4. Enter the Endevor path and press Enter.
 
    The path has the `environment/stagenumber/system/subsystem/type` format.
 
-   **Note**: If you are unsure about the system, subsystem, or type parameters, you can substitute any of these parameters with a \* wildcard.
-
-5. (Optional) Enter CCID and press Enter.
-6. (Optional) Enter comment and press Enter.
-
    **Notes**:
 
+   - If you are unsure about the system, subsystem, or type parameters, you can substitute any of these parameters with a `\*` wildcard.
+   - The elements search function is executed with the `Build using map` Endevor list option.
+
+5. (Optional) Enter CCID and press Enter.
+6. (Optional) Enter a comment and press Enter.
+
    - If you want to skip the CCID and/or comment step, you can leave the inputs blank by pressing Enter.
-   - You can cancel the creation of Endevor location profile at any step by pressing Escape.
+   - You can cancel the creation of Endevor inventory location at any step by pressing Escape.
 
-You successfully created an Endevor profile.
-
-If an existing `endevor-location` profile that you created in Zowe CLI does not have the instance, environment, and stage numbers parameters specified, the extension cannot reach the inventory location. In this case, recreate an inventory location profile with the entire location path so that Explorer for Endevor can access elements in the specified inventory.
+You successfully created an inventory location.
 
 ### Use Cases
 
 Review the following use cases to familiarize yourself with the basic Explorer for Endevor features:
 
-- [Add an element](#add-an-element): You can upload an element from your workstation to a chosen Endevor location.
-- [View an element](#view-an-element): You can view the contents, summary report, and source level information of the selected element.
-- [View details](#view-details): You can view the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
-- [Retrieve an element](#retrieve-an-element): You can download the selected element.
+- [Add an element](#add-an-element): Upload an element from your workstation to a chosen Endevor inventory location.
+- [View an element](#view-an-element): View the contents, summary report, and source level information of the selected element.
+- [View details](#view-details): View the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
+- [Retrieve an element](#retrieve-an-element): Download the selected element.
 - [Retrieve an element with dependencies](#retrieve-an-element-with-dependencies): You can download the selected element with dependencies.
-- [Edit](#edit): The Edit action enables you to download an element to your workspace, edit and upload the selected element step by step. All you need to do is edit an element and press CTRL+S or Command+S to upload the edited element back.
-- [Generate](#generate): You can call the Generate action for an element to invoke the Generate Processor that creates an executable form of the element.
-- [Print listing](#print-listing): You can reveal the output of the performed Generate action.
-- [Sign out](#sign-out): You can lock an Endevor element so that the element is only editable by you.
+- [Edit](#edit): The Edit action enables you to download an element to your workspace, edit, and upload the selected element step by step. Once you are done with editing the element, press CTRL+S or Command+S to upload the edited element back.
+- [Generate](#generate): Call the Generate action for an element to invoke the Generate Processor that creates an executable form of the element.
+- [Print a listing](#print-a-listing): Reveal the output of the performed Generate action.
+- [Sign out](#sign-out): Lock an Endevor element so that the element is only editable by you.
 - [Sign in](#sign-in): Let you unlock a locked element. You can only unlock the elements that were locked by you.
 
 #### Add an Element
 
-You can upload a new element to your Endevor location. The uploaded element appears under the selected type in the tree.
+You can upload a new element to your inventory location. The uploaded element appears under the selected type in the tree.
 
-**Follow these steps:**
-
-1. Hover over an Endevor location in the tree.
+1. Hover over an inventory location in the tree.
 
    The **Add an Element** icon appears on the right side of the panel.
 
@@ -166,11 +145,11 @@ You can upload a new element to your Endevor location. The uploaded element appe
 ![Add an Element](packages/explorer-for-endevor/images/E4E-add.gif?raw=true 'Add an Element')
 <br /><br />
 
+You successfully added the element.
+
 #### View an Element
 
 You can view the contents, summary, and source level information of an element by clicking on the element in the tree. The chosen element appears in the editor area. Viewing the contents of the element allows you to determine if you want to retrieve and work with the element.
-
-**Follow these steps:**
 
 1. Hover over an element that you want to view.
 2. Click the element to see the contents of the element.
@@ -182,9 +161,7 @@ You can view the contents, summary, and source level information of an element b
 
 #### View Details
 
-The details of an element you want to view appear in the editor area in a separate tab.
-
-**Follow these steps:**
+The inventory location details of an element you want to view appear in the editor area in a separate tab.
 
 1. Right-click an element.
 2. Select the **View Details** option.
@@ -197,8 +174,6 @@ The details of an element you want to view appear in the editor area in a separa
 #### Retrieve an Element
 
 You can download an element to your workspace and work with the element locally.
-
-**Follow these steps:**
 
 1. Right-click an element.
 2. Select the **Retrieve** option.
@@ -214,8 +189,6 @@ You successfully retrieved the element.
 
 You can download an element with dependencies to your workspace and work with the element and the dependencies locally.
 
-**Follow these steps:**
-
 1. Right-click an element.
 2. Select the **Retrieve with dependencies** option.
 
@@ -229,8 +202,6 @@ You successfully retrieved the element with dependencies.
 #### Edit
 
 The **Edit** action lets you download an element, edit, and upload the element back.
-
-**Follow these steps:**
 
 1. Right-click an element.
 2. Select the **Edit** option.
@@ -247,9 +218,9 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
    - The behavior of the conflict resolution feature differs in Theia.
 
-   - (Theia only) When you resolve a conflict, open the Command Palette by pressing **CTRL+SHIFT+P** or **CMD+SHIFT+P**, and use of the two commands: `Accept changes` or `Discard changes`.
+   - (Theia only) When you resolve a conflict, open the Command Palette by pressing **CTRL+SHIFT+P** or **CMD+SHIFT+P** and use one of the following commands: `Accept changes` or `Discard changes`.
 
-You successfully edited, saved, uploaded the element.
+You successfully edited, saved, and uploaded the element.
 
 ![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
@@ -266,8 +237,6 @@ The **Generate** action creates an executable form of the element, together with
 
 You can use the **Generate in Place**, **Generate with Copyback**, or **Generate with No Source** context menu options to perform the Endevor Generate action for a selected element.
 
-**Follow these steps:**
-
 1. Select one of the following options:
 
    - Right-click an element and select the **Generate in Place** option.
@@ -282,30 +251,26 @@ You can use the **Generate in Place**, **Generate with Copyback**, or **Generate
 
    - Right-click an element from up the map and select the **Generate with No Source** option.
 
-   A successfully-performed Generate action shows a notification pop-up with the **Print listing** and **Cancel** options and the following message:
+   A successfully-performed Generate action shows a notification pop-up with the **Print a listing** and **Cancel** options and the following message:
 
    ```text
    Successfully generated the elements: ... Would you like to see the listing?
    ```
 
-2. (Optional) Click **Print listing** to see the Generate output.
+2. (Optional) Click **Print a listing** to see the Generate output.
 
-   Alternatively, click **Cancel**.
-
-   **Note**: You can always review the Generate output by selecting the **Print listing** option.
+   **Note**: You can always review the Generate output by selecting the **Print a listing** option.
 
 You successfully performed the Generate action.
 
-If Generate fails to process an element, a listing is displayed automatically.
+If Generate fails to process an element, the listing is displayed automatically.
 
-#### Print Listing
+#### Print a Listing
 
-The **Print listing** option enables you to display the most recently created listing.
-
-**Follow these steps**:
+The **Print a listing** option enables you to display the most recently created listing.
 
 1. Right-click an element.
-2. Select the **Print listing** option.
+2. Select the **Print a listing** option.
 
    The contents of the listing appear in the editor area.
 
@@ -316,9 +281,7 @@ You successfully printed the listing.
 
 #### Sign Out
 
-The **Sign out** option enables you to lock an element, which prevents other user from editing the element.
-
-**Follow these steps**:
+The **Sign out** option enables you to lock an element, which prevents other users from editing the element.
 
 1. Right-click an element.
 2. Select the **Sign out** option.
@@ -334,8 +297,6 @@ You successfully signed out the element.
 
 The **Sign in** option enables you to unlock an element that earlier was signed out by you.
 
-**Follow these steps**:
-
 1. Right-click an element.
 2. Select the **Sign in** option.
 
@@ -343,53 +304,57 @@ You successfully signed in the element.
 
 ### Base Profiles
 
-You can use your Zowe CLI default base profile in Explorer for Endevor if you do not have an Endevor profile. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and rejectUnauthorized in the base profile. You can run the `zowe profiles list base-profiles --sc` in the CLI to check if you have a base profile that you can use. If you do not have a base profile and want to create one, run the following Zowe CLI command:
+Explorer for Endevor enables you to use Zowe CLI base profiles. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and rejectUnauthorized in the base profile. For more information, see [the Base Profile section](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#base-profiles) on Zowe Docs.
 
-```shell
-zowe profiles create base <baseprofileName> --user <myusername123> --password<mypassword123> --host <myhost> --port <portnumber> --reject-unauthorized false
-```
+### Team Configuration File
 
-Ensure that you set your newly-created base profile as the default base profile. To do so, run the following command:
+Explorer for Endevor supports reading a global team configuration (team config) file. A team configuration file enables you to manage your Endevor connection details efficiently in one location. You can use global team configs with your team members to share access to Endevor inventory locations. For more information about team config, see [Using Team Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-team-profiles) on Zowe Docs. The extension reads team configuration files only if the profile sync setting is enabled. To configure the setting, navigate to > **Settings** > **Extensions** > **Explorer for Endevor** > **Profiles: Keep in sync**.
 
-```shell
- zowe profiles set-default base-profile <baseprofileName>
-```
+As an application developer, you can obtain a shared global configuration file from your system administrator and use the file to access shared systems. As a system administrator, you need to have [Zowe CLI 7.2.1](https://docs.zowe.org/stable/user-guide/cli-installcli) or higher on your workstation before you create a team configuration file.
 
-For more information, see [the Base Profile section](https://docs.zowe.org/stable/user-guide/cli-usingcli.html#base-profiles) on Zowe Docs.
+> **Tip**: You can convert your existing Zowe CLI profiles into team configuration files with the `zowe config convert-profiles` command. For more information about team config conversion, see [Using Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#important-information-about-team-profiles) on Zowe Docs.
 
-### Manage your Profiles
+### Manage the Extension Tree
 
-You can perform the following actions to manage your profiles:
+You can perform the following actions to manage your connections and inventory locations in the extension tree:
 
-- **Edit a profile**: You can edit a profile or update your credentials, using the Zowe CLI and the `zowe profiles update endevor-profile <profileName>` and `zowe profiles update endevor-location-profile <profileName>` command. The commands enable you to update the details of existing profiles. If you use the CLI commands to update your profile, ensure that you click the refresh button in the extension so that the changes take effect.
+- **Delete a connection**: Delete your connection permanently by right-clicking a connection node and selecting the **Delete a connection** option.
 
-- **Hide a profile**: If you do not want to have some of your profiles in the tree, you can hide such profiles. To hide a profile, right-click the profile and select **Hide a Profile** option.
+- **Delete an inventory location**: Delete your inventory location permanently by right-clicking an inventory location node and selecting the **Delete an inventory location** option.
 
-  **Note:** The **Hide a Profile** action does not permanently delete the profile.
+- **Hide a connection**: If you do not want to list your connections in the tree, you can hide such connections. To hide a connection, right-click the connection node and select the **Hide a connection** option.
 
-- **Delete a profile**: You can permanently delete your profile from the extension. To delete a profile, issue the CLI command `zowe profiles delete endevor-profile <profilename>`.
+- **Hide an inventory location**: If you do not want to list your inventory locations in the tree, you can hide such locations. To hide an inventory location, right-click the location node and select the **Hide an inventory location** option.
 
-### Environment Variables
-
-You can define environment variables to execute Zowe CLI commands more efficiently. For more information, see [Using Environment Variables](https://docs.zowe.org/stable/user-guide/cli-usingcli.html#using-environment-variables) on Zowe Docs.
+  **Note:** The **Hide a connection** or **Hide an inventory location** actions do not permanently delete the information from the extension.
 
 ### Configure Explorer for Endevor
 
 You can configure the following settings of the extension:
 
-- The location where the Edit command stores elements locally
+- The number of parallel HTTP requests supported by Endevor.
 
-- Endevor locations that are loaded at startup
-
-- The number of parallel HTTP requests supported by Endevor
-
-- Automatic Signout. The signout function locks elements for you. If the option is enabled, retrieved or edited elements are signed out to you. If an element is signed out to somebody else, a notification asking whether to override the signout pops up. If the option is not enabled, the extension just retrieves or edits an element without signout.
+- Automatic Signout. The signout function locks elements for you. If the option is enabled, retrieved or edited elements are signed out to you. If an element is signed out to somebody else, a notification asking whether to override the signout pops up. If the option is disabled, the extension retrieves or edits an element without signout.
 
 - Telemetry level. You can disable or configure data that is collected by Telemetry in the VS Code Settings. Navigate to **Settings** > **Application** > **Telemetry** > **Telemetry Level** to do so. For more information, see [Disable Telemetry](https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting) in the VS Code documentation.
 
   **Note:** This setting applies not only to Explorer for Endevor but to all extensions in your VS Code.
 
-To access the Explorer for Endevor settings, click **Manage** (the cog icon on the activity bar) > **Settings** > **Extensions** > **Explorer for Endevor**.
+- Profiles: Keep in Sync. The option enables you to use a team configuration file that stores your pre-saved Endevor configuration or Zowe CLI Endevor profiles with Endevor locations in the extension. By default, the setting is enabled, meaning that the extension reads your team configuration files on startup and displays profile information in the explorer tree. If the option is disabled, the extension does not check the `.zowe` folder for available profiles.
+
+  **Notes**:
+
+  - You can use Endevor connections and inventory locations that are created in Explorer for Endevor in the extension only.
+
+- File extension resolution. The option enables you to choose between the following methods of file extension resolution for the locally saved elements.
+
+  - 'Element name only' method uses the element name to determine the file extension.
+
+  - 'Endevor type file extension only' method uses the Endevor defined file extension for the type.
+
+  - (Default) 'Endevor type file extension or type name' method uses the Endevor defined file extension for the type. The method also uses the Endevor type name as a fall-back option.
+
+Access the Explorer for Endevor settings by clicking **Settings** > **Extensions** > **Explorer for Endevor**.
 
 ## List of Limitations
 
@@ -399,38 +364,7 @@ This section lists notable limitations in the current version of Explorer for En
 
   You can search using the instance, environment, stageNumber, system, subsystem, and type parameters.
 
-- Zowe CLI Secure Credential Store is not supported.
-
-  If you have SCS-enabled Endevor profiles, you need to recreate the profiles to successfully use them in Explorer for Endevor.
-
 - Only the UTF-8 character encoding is currently supported.
-
-## Known Issues
-
-The following topics contain information that can help you troubleshoot problems when you encounter unexpected behavior while using Explorer for Endevor:
-
-**Topic 1** &mdash; Removed profile persists in the tree.
-
-**Symptoms**:
-
-The deleted profile does not disappear from the tree after the deletion.
-
-**Cause**:
-
-This behavior occurs if you use the CLI command to delete your profile but do not delete the profile from the Explorer for Endevor settings.json file.
-
-**Solution**:
-
-To permanently delete the profile from the tree, use the extension settings.
-
-**Follow these steps:**
-
-1. Navigate to the VS Code settings.
-2. Open Explorer for Endevor Settings and edit the settings.json file.
-3. Delete the `service` and `elementLocations` properties of the profile you want to delete from the tree.
-4. Save the settings.json file.
-
-You successfully deleted your profile from the extension.
 
 ## Contribute to Explorer for Endevor
 
@@ -454,7 +388,7 @@ The current release of Explorer for Endevor collects anonymous data for the foll
 - Build the tree view, refresh the tree view
 - Internal and Endevor errors
 
-**Note** Any sensitive information is filtered, so the extension gets only anonymous error messages and Endevor REST API error codes. The Endevor REST API error codes are collected for the purposes of determining errors in the extension lifecycle.
+**Note**: Any sensitive information is filtered, so the extension gets only anonymous error messages and Endevor REST API error codes. The Endevor REST API error codes are collected for the purposes of determining errors in the extension lifecycle.
 
 Each such event is logged with the following information:
 

@@ -1,6 +1,0 @@
-host: endevor1.example.com
-port: 12345
-user: endevorUser1
-password: endevorPassword1
-rejectUnauthorized: false
-basePath: /EndevorService/api/v2/

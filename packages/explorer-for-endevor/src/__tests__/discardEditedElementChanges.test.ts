@@ -32,6 +32,7 @@ import {
 import { mockDeletingFileWith } from '../_mocks/workspace';
 import * as sinon from 'sinon';
 import { join } from 'path';
+import { Source } from '../store/storage/_doc/Storage';
 
 describe('discarding local changes in compared element', () => {
   before(() => {
@@ -75,7 +76,7 @@ describe('discarding local changes in compared element', () => {
       apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -100,7 +101,7 @@ describe('discarding local changes in compared element', () => {
     const remoteElementVersionFingerprint = 'element_fingerprint';
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       element,
@@ -110,8 +111,14 @@ describe('discarding local changes in compared element', () => {
       uploadTargetLocation: element,
       remoteVersionTempFilePath: remoteElementVersionFsPath,
       initialSearchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId: {
+          name: serviceName,
+          source: Source.INTERNAL,
+        },
+        searchLocationId: {
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        },
         overallSearchLocation: searchLocation,
         initialSearchLocation: element,
       },

@@ -16,26 +16,43 @@ import pkgjson = require('../package.json');
 export const EXT_ID = `${pkgjson.publisher}.${pkgjson.name}`;
 export const EXT_VERSION = pkgjson.version;
 
+export const UNKNOWN_VERSION = '0.0.0';
+
 export const COMMAND_PREFIX = 'e4e';
 export const OUTPUT_CHANNEL_NAME = 'Explorer for Endevor';
 
 export const ENDEVOR_CONFIGURATION = 'endevor';
-export const LOCATIONS_SETTING = 'locations';
-export const LOCATIONS_DEFAULT = [];
-export const EDIT_FOLDER_SETTING = 'editDownloadFolder';
-export const EDIT_FOLDER_DEFAULT = '.e4e';
 export const AUTOMATIC_SIGN_OUT_SETTING = 'automaticSignOut';
 export const AUTOMATIC_SIGN_OUT_DEFAULT = false;
 export const MAX_PARALLEL_REQUESTS_SETTING = 'maxParallelRequests';
 export const MAX_PARALLEL_REQUESTS_DEFAULT = 4;
 
-export const TREE_VIEW_ID = `${COMMAND_PREFIX}.elmTreeView`;
+export const PROFILES_CONFIGURATION = 'profiles';
+export const SYNC_WITH_PROFILES_SETTING = 'keepInSync';
+export const SYNC_WITH_PROFILES_DEFAULT = true;
+
+export const TREE_VIEW_ID = `${COMMAND_PREFIX}.treeView`;
+
+export const FILE_EXT_RESOLUTION_SETTING = 'fileExtensionResolution';
+export const ELM_NAME_VALUE = 'Element name only';
+export const TYPE_EXT_VALUE = 'Endevor type file extension only';
+export const TYPE_EXT_OR_NAME_VALUE =
+  'Endevor type file extension or type name';
+export const FILE_EXT_RESOLUTION_DEFAULT = TYPE_EXT_OR_NAME_VALUE;
 
 export const ENCODING = 'UTF-8';
 
 export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;
 
 export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';
+
+export const EDIT_DIR = '.edit';
+
+export const EXTENSION_ISSUES_PAGE = pkgjson.bugs.url;
+
+export const ZE_API_MIN_VERSION = '2.2.1';
+export const ZOWE_PROFILE_DESCRIPTION = 'Zowe config';
+
 // ms
 // the same time, as VSCode uses to hide notification
 export const NOTIFICATION_TIMEOUT = 15000;

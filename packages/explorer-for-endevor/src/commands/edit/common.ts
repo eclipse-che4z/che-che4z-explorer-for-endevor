@@ -17,32 +17,29 @@ import {
   saveFileIntoWorkspaceFolder,
 } from '@local/vscode-wrapper/workspace';
 import * as vscode from 'vscode';
-import { getTempEditFolder } from '../../settings/settings';
+import { Id } from '../../store/storage/_doc/Storage';
 import {
   getEditFolderUri,
+  getElementExtension,
   isError,
+  parseFilePath,
   updateEditFoldersWhenContext,
 } from '../../utils';
 import { showSavedElementContent } from '../../workspace';
+import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import { getFileExtensionResoluton } from '../../settings/settings';
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 export const saveIntoEditFolder =
-  (workspaceUri: vscode.Uri) =>
-  (serviceName: string, locationName: string) =>
+  (tempEditFolderUri: vscode.Uri) =>
+  (serviceId: Id, searchLocationId: Id) =>
   async (
     element: Element,
     elementContent: string
   ): Promise<vscode.Uri | Error> => {
-    let editFolder: string;
-    try {
-      editFolder = getTempEditFolder();
-    } catch (error) {
-      return new Error(
-        `Unable to get the edit path from the settings because of error ${error.message}`
-      );
-    }
-    const editFolderUri = getEditFolderUri(workspaceUri)(editFolder)(
-      serviceName,
-      locationName
+    const editFolderUri = getEditFolderUri(tempEditFolderUri)(
+      serviceId,
+      searchLocationId
     )(element);
     let saveLocationUri;
     try {
@@ -54,10 +51,7 @@ export const saveIntoEditFolder =
     }
     try {
       const saveResult = await saveFileIntoWorkspaceFolder(saveLocationUri)(
-        {
-          fileName: element.name,
-          fileExtension: element.extension,
-        },
+        selectFileParams(element),
         elementContent
       );
       // update edit folders context variable to make sure all edited element paths are known
@@ -79,5 +73,35 @@ export const showElementToEdit = async (
     return new Error(
       `Unable to open the element ${fileUri.fsPath} because of error ${error.message}`
     );
+  }
+};
+
+const selectFileParams = (
+  element: Element
+): {
+  fileName: string;
+  fileExtension?: string;
+} => {
+  const fileExtResolution = getFileExtensionResoluton();
+  switch (fileExtResolution) {
+    case FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME:
+      return {
+        fileName: element.name,
+        fileExtension: getElementExtension(element),
+      };
+    case FileExtensionResolutions.FROM_TYPE_EXT:
+      return {
+        fileName: element.name,
+        fileExtension: element.extension,
+      };
+    case FileExtensionResolutions.FROM_NAME: {
+      const { fileName, fileExtension } = parseFilePath(element.name);
+      return {
+        fileName,
+        fileExtension,
+      };
+    }
+    default:
+      throw new UnreachableCaseError(fileExtResolution);
   }
 };

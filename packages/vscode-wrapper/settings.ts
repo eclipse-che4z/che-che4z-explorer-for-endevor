@@ -13,7 +13,7 @@
 
 import * as vscode from 'vscode';
 
-export const updateGlobalEndevorConfiguration =
+export const updateGlobalSettingsValue =
   (configurationKey: string) =>
   async <T>(
     settingsKey: string,
@@ -24,7 +24,7 @@ export const updateGlobalEndevorConfiguration =
       .update(settingsKey, newSettingsValue, vscode.ConfigurationTarget.Global);
   };
 
-export const getEndevorConfigurationValue =
+export const getSettingsValue =
   (configurationKey: string) =>
   <T>(settingsKey: string, defaultValue: Readonly<T>): Readonly<T> => {
     return vscode.workspace

@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Explorer for Endevor",
   "author": "Broadcom",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -29,7 +29,7 @@
     "zowe"
   ],
   "activationEvents": [
-    "onView:e4e.elmTreeView"
+    "onView:e4e.treeView"
   ],
   "main": "./dist/extension.bundle.js",
   "contributes": {
@@ -45,7 +45,7 @@
     "views": {
       "e4eExplorerContainer": [
         {
-          "id": "e4e.elmTreeView",
+          "id": "e4e.treeView",
           "name": "Explorer for Endevor"
         }
       ]
@@ -57,19 +57,27 @@
         "icon": {
           "light": "resources/light/refresh.svg",
           "dark": "resources/dark/refresh.svg"
-        }
+        },
+        "category": "Explorer for Endevor"
       },
       {
         "command": "e4e.addNewService",
-        "title": "Add a New Profile",
+        "title": "Add a new Endevor connection",
         "icon": {
           "light": "resources/light/add.svg",
           "dark": "resources/dark/add.svg"
-        }
+        },
+        "category": "Explorer for Endevor"
       },
       {
-        "command": "e4e.addNewElementLocation",
-        "title": "Add a New Location Profile",
+        "command": "e4e.submitIssue",
+        "title": "Submit an extension issue",
+        "icon": "$(feedback)",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.addNewSearchLocation",
+        "title": "Add a new inventory location",
         "icon": {
           "light": "resources/light/add.svg",
           "dark": "resources/dark/add.svg"
@@ -81,12 +89,22 @@
         "icon": "$(file-add)"
       },
       {
-        "command": "e4e.hideElementLocation",
-        "title": "Hide a Location Profile"
+        "command": "e4e.hideService",
+        "title": "Hide an Endevor connection",
+        "icon": "$(eye-closed)"
       },
       {
-        "command": "e4e.hideService",
-        "title": "Hide a Profile"
+        "command": "e4e.hideSearchLocation",
+        "title": "Hide an inventory location",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "e4e.deleteSearchLocation",
+        "title": "Delete an inventory location"
+      },
+      {
+        "command": "e4e.deleteService",
+        "title": "Delete an Endevor connection"
       },
       {
         "command": "e4e.viewElementDetails",
@@ -139,6 +157,16 @@
       {
         "command": "e4e.signInElement",
         "title": "Sign In"
+      },
+      {
+        "command": "e4e.cleanupStorage",
+        "title": "Cleanup configuration storage",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.migrateLocationsFromSettings",
+        "title": "Migrate connections/inventory locations from the previous version",
+        "category": "Explorer for Endevor"
       }
     ],
     "submenus": [
@@ -165,12 +193,17 @@
       "view/title": [
         {
           "command": "e4e.refreshTreeView",
-          "when": "view == e4e.elmTreeView",
+          "when": "view == e4e.treeView",
           "group": "navigation"
         },
         {
           "command": "e4e.addNewService",
-          "when": "view == e4e.elmTreeView",
+          "when": "view == e4e.treeView",
+          "group": "navigation"
+        },
+        {
+          "command": "e4e.submitIssue",
+          "when": "view == e4e.treeView",
           "group": "navigation"
         }
       ],
@@ -189,73 +222,93 @@
       "view/item/context": [
         {
           "command": "e4e.viewElementDetails",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "viewItem == ELEMENT_IN_PLACE || viewItem == ELEMENT_UP_THE_MAP",
           "group": "1_e4e_view_element_actions"
         },
         {
           "command": "e4e.editElement",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
           "group": "2_e4e_edit_element_actions@0"
         },
         {
           "submenu": "e4e.generateElementUpTheMap",
           "group": "2_e4e_generate_element_actions@0",
-          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP"
+          "when": "!listMultiSelection && viewItem == ELEMENT_UP_THE_MAP"
         },
         {
           "command": "e4e.generateElement",
-          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE",
           "group": "2_e4e_generate_element_actions@0"
         },
         {
           "command": "e4e.printListing",
-          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "!listMultiSelection&& viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
           "group": "2_e4e_generate_element_actions@1"
         },
         {
           "command": "e4e.retrieveElement",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "viewItem == ELEMENT_IN_PLACE || viewItem == ELEMENT_UP_THE_MAP",
           "group": "3_e4e_retrieve_actions@0"
         },
         {
           "command": "e4e.retrieveElementWithDependencies",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "viewItem == ELEMENT_IN_PLACE || viewItem == ELEMENT_UP_THE_MAP",
           "group": "3_e4e_retrieve_actions@1"
         },
         {
           "command": "e4e.signOutElement",
-          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
           "group": "4_e4e_sign_actions@0"
         },
         {
           "command": "e4e.signInElement",
-          "when": "!listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && view == e4e.elmTreeView && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
           "group": "4_e4e_sign_actions@1"
         },
         {
-          "command": "e4e.hideElementLocation",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_LOCATION",
-          "group": "e4e_element_location_actions"
+          "command": "e4e.hideSearchLocation",
+          "when": "viewItem == LOCATION_PROFILE/INVALID",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.hideSearchLocation",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION_PROFILE/INVALID",
+          "group": "e4e_search_location_actions@0"
+        },
+        {
+          "command": "e4e.deleteSearchLocation",
+          "when": "viewItem == LOCATION",
+          "group": "e4e_search_location_actions@1"
         },
         {
           "command": "e4e.addElementFromFileSystem",
-          "when": "view == e4e.elmTreeView && viewItem == ELEMENT_LOCATION",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE",
           "group": "inline"
         },
         {
           "command": "e4e.hideService",
-          "when": "view == e4e.elmTreeView && viewItem == ENDEVOR_SERVICE",
-          "group": "e4e_service_actions"
+          "when": "viewItem == SERVICE_PROFILE/INVALID",
+          "group": "inline"
         },
         {
-          "command": "e4e.addNewElementLocation",
-          "when": "view == e4e.elmTreeView && viewItem == ENDEVOR_SERVICE",
+          "command": "e4e.hideService",
+          "when": "viewItem == SERVICE || viewItem == SERVICE_PROFILE || viewItem == SERVICE_PROFILE/INVALID",
+          "group": "e4e_service_actions@0"
+        },
+        {
+          "command": "e4e.deleteService",
+          "when": "viewItem == SERVICE",
+          "group": "e4e_service_actions@1"
+        },
+        {
+          "command": "e4e.addNewSearchLocation",
+          "when": "viewItem == SERVICE || viewItem == SERVICE_PROFILE",
           "group": "inline"
         }
       ],
       "commandPalette": [
         {
-          "command": "e4e.addNewElementLocation",
+          "command": "e4e.addNewSearchLocation",
           "when": "false"
         },
         {
@@ -263,11 +316,19 @@
           "when": "false"
         },
         {
-          "command": "e4e.hideElementLocation",
+          "command": "e4e.hideSearchLocation",
           "when": "false"
         },
         {
           "command": "e4e.hideService",
+          "when": "false"
+        },
+        {
+          "command": "e4e.deleteSearchLocation",
+          "when": "false"
+        },
+        {
+          "command": "e4e.deleteService",
           "when": "false"
         },
         {
@@ -317,6 +378,10 @@
         {
           "command": "e4e.signInElement",
           "when": "false"
+        },
+        {
+          "command": "e4e.migrateLocationsFromSettings",
+          "when": "config.profiles.keepInSync"
         }
       ]
     },
@@ -324,9 +389,10 @@
       "title": "Explorer for Endevor",
       "properties": {
         "endevor.locations": {
+          "deprecationMessage": "Please, use the extension UI to modify the extension locations instead.",
           "type": "array",
           "title": "Endevor locations",
-          "description": "List of Endevor locations to work on extension startup",
+          "description": "List of Endevor locations to load on extension startup",
           "scope": "resource",
           "items": {
             "type": "object",
@@ -349,17 +415,10 @@
             ]
           }
         },
-        "endevor.editDownloadFolder": {
-          "type": "string",
-          "title": "Endevor edit temporary folder",
-          "description": "Workspace folder that stores elements downloaded with the (Endevor) Edit function",
-          "scope": "resource",
-          "default": ".e4e"
-        },
         "endevor.maxParallelRequests": {
           "type": "number",
           "title": "Endevor HTTP WebServices parallel requests amount",
-          "description": "Number of parallel HTTP requests supported by Endevor",
+          "description": "Number of parallel HTTP requests that are supported by Endevor",
           "scope": "resource",
           "default": 4
         },
@@ -369,6 +428,30 @@
           "title": "Automatic sign-out",
           "description": "Automatically sign elements out",
           "default": false
+        },
+        "endevor.fileExtensionResolution": {
+          "title": "File extension resolution",
+          "description": "Specifies the method of the file extension resolution for the locally saved elements",
+          "type": "string",
+          "enum": [
+            "Element name only",
+            "Endevor type file extension only",
+            "Endevor type file extension or type name"
+          ],
+          "enumDescriptions": [
+            "Uses the element name to determine the file extension",
+            "Uses the Endevor defined file extension for the type",
+            "Uses the Endevor defined file extension for the type or type name as a fall-back option"
+          ],
+          "default": "Endevor type file extension or type name",
+          "scope": "resource"
+        },
+        "profiles.keepInSync": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": true,
+          "title": "Keep in sync with Zowe CLI",
+          "description": "Keep Endevor configuration in sync with Zowe profiles or a Team Configuration file"
         }
       }
     }
@@ -394,8 +477,12 @@
   "dependencies": {
     "@local/endevor": "1.0.0",
     "@local/extension": "1.0.0",
-    "@local/profiles": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
-    "@zowe/imperative": "^4.15.1"
-  }
+    "@zowe/imperative": "^5.3.3",
+    "@zowe/zowe-explorer-api": "2.2.1",
+    "@local/type-parser": "1.0.0"
+  },
+  "extensionDependencies": [
+    "Zowe.vscode-extension-for-zowe"
+  ]
 }

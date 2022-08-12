@@ -25,9 +25,9 @@ import { generateElementWithCopyBack } from '../endevor';
 import { logger, reporter } from '../globals';
 import { fromTreeElementUri, toTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
-import { ElementNode } from '../_doc/ElementTree';
+import { ElementNode } from '../tree/_doc/ElementTree';
 import { printListingCommand } from './printListing';
-import { Action, Actions } from '../_doc/Actions';
+import { Action, Actions } from '../store/_doc/Actions';
 import {
   Element,
   ElementSearchLocation,
@@ -37,7 +37,6 @@ import {
   SubSystemMapPath,
   Service,
 } from '@local/endevor/_doc/Endevor';
-import { toSearchLocationId } from '../tree/endevor';
 import {
   TelemetryEvents,
   GenerateWithCopyBackCommandCompletedStatus,
@@ -49,6 +48,7 @@ import {
   isProcessorStepMaxRcExceededError,
   isSignoutError,
 } from '@local/endevor/utils';
+import { toElementTooltip } from '../tree/endevor';
 
 type SelectedElementNode = ElementNode;
 
@@ -80,13 +80,8 @@ const generateSingleElementWithCopyBack =
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
       noSource: noSource ? noSource : false,
     });
-    const {
-      serviceName,
-      searchLocationName,
-      service,
-      element,
-      searchLocation,
-    } = uriParams;
+    const { serviceId, searchLocationId, service, element, searchLocation } =
+      uriParams;
     const generateWithCopyBackValues = await askForGenerateWithCopyBackValues(
       searchLocation,
       element
@@ -109,9 +104,9 @@ const generateSingleElementWithCopyBack =
       system: elementNode.parent.parent.parent.name,
     };
     let updatedElementUri = toTreeElementUri({
-      serviceName,
+      serviceId,
       element: copiedBackElement,
-      searchLocationName,
+      searchLocationId,
       service,
       searchLocation,
     })(Date.now().toString());
@@ -124,13 +119,14 @@ const generateSingleElementWithCopyBack =
       updatedElementUri = elementNode.uri;
     }
     const generatedElementNode: SelectedElementNode = {
-      searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+      searchLocationId: elementNode.searchLocationId,
       type: isElementInSearchLocation(copiedBackElement)(treePath)
         ? 'ELEMENT_IN_PLACE'
         : 'ELEMENT_UP_THE_MAP',
       name: copiedBackElement.name,
       parent: elementNode.parent,
       uri: updatedElementUri,
+      tooltip: toElementTooltip(element),
     };
     const generateResult = await complexGenerateWithCopyBack(
       service,
@@ -150,8 +146,8 @@ const generateSingleElementWithCopyBack =
           targetLocation,
           pathUpTheMap: element,
           treePath: {
-            serviceName,
-            searchLocationName,
+            serviceId,
+            searchLocationId,
             searchLocation: treePath,
           },
         });
@@ -164,11 +160,9 @@ const generateSingleElementWithCopyBack =
       } else {
         await dispatch({
           type: Actions.ELEMENT_GENERATED_IN_PLACE,
-          searchLocationName,
-          serviceName,
-          searchLocation,
-          service,
-          elements: [element],
+          searchLocationId,
+          serviceId,
+          element,
         });
         await printListingCommand(generatedElementNode);
         reporter.sendTelemetryEvent({
@@ -201,8 +195,8 @@ const generateSingleElementWithCopyBack =
         targetLocation,
         pathUpTheMap: element,
         treePath: {
-          serviceName,
-          searchLocationName,
+          serviceId,
+          searchLocationId,
           searchLocation: treePath,
         },
       });
@@ -214,11 +208,10 @@ const generateSingleElementWithCopyBack =
     } else {
       await dispatch({
         type: Actions.ELEMENT_GENERATED_IN_PLACE,
-        searchLocationName,
-        serviceName,
-        searchLocation,
-        service,
-        elements: [element],
+        searchLocationId,
+        serviceId,
+
+        element,
       });
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
@@ -304,7 +297,7 @@ const askForGenerateWithCopyBackValues = async (
     subsystem: searchLocation.subsystem,
     type,
     element: element.name,
-    instance: element.instance,
+    configuration: element.configuration,
   });
   if (generateLocationCancelled(generateLocation)) {
     return new Error(

@@ -23,3 +23,9 @@ Object {
 exports[`Endevor responses type parsing Endevor API v2 response type parsing should throw an error for a response with incorrect version header 1`] = `"Invalid value 2.5 supplied to : { headers: { version: string } }/headers: { version: string }/version: string"`;
 
 exports[`Endevor responses type parsing Endevor API v2 response type parsing should throw an error for a response without version header 1`] = `"Invalid value undefined supplied to : { headers: { version: string } }/headers: { version: string }/version: string"`;
+
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response with incorrect return code 1`] = `"Invalid value \\"8\\" supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/returnCode: ReturnCode"`;
+
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response with only return code 1`] = `"Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/data: Array<unknown>"`;
+
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without return code 1`] = `"Invalid value undefined supplied to : { body: { returnCode: ReturnCode, data: Array<unknown> } }/body: { returnCode: ReturnCode, data: Array<unknown> }/returnCode: ReturnCode"`;

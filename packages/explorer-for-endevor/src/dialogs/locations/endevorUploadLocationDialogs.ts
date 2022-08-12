@@ -91,7 +91,7 @@ export const askForUploadLocation = async (
       return validationError;
     }
     const elementIndex = pathPartNames.indexOf('element');
-    const name = validateValue(
+    const name = validateElementName(
       pathParts[elementIndex],
       pathPartNames[elementIndex]
     );
@@ -106,7 +106,7 @@ export const askForUploadLocation = async (
       subSystem,
       type,
       name,
-      instance: defaultValue.instance,
+      configuration: defaultValue.configuration,
     };
   };
   const validateValue = (
@@ -120,6 +120,20 @@ export const askForUploadLocation = async (
     }
     return new Error(
       `${partName} is incorrect, should be defined (cannot be '*') and contain up to 8 symbols.`
+    );
+  };
+  const validateElementName = (
+    value: string | undefined,
+    partName: string | undefined
+  ): Result<string> => {
+    // * is a wildcard in Endevor
+    // check element name for UNIX path reserved characters
+    const validationPattern = '^[^/<>|:&?*]{1,255}$';
+    if (value && value.match(validationPattern) && value !== ANY_VALUE) {
+      return value;
+    }
+    return new Error(
+      `${partName} is incorrect, should be defined (cannot be '*') and contain up to 255 symbols.`
     );
   };
 

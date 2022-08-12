@@ -13,204 +13,87 @@
 
 import {
   ENDEVOR_CONFIGURATION,
-  LOCATIONS_SETTING,
-  EDIT_FOLDER_SETTING,
-  EDIT_FOLDER_DEFAULT,
   AUTOMATIC_SIGN_OUT_SETTING,
   AUTOMATIC_SIGN_OUT_DEFAULT,
   MAX_PARALLEL_REQUESTS_SETTING,
   MAX_PARALLEL_REQUESTS_DEFAULT,
-  LOCATIONS_DEFAULT,
+  PROFILES_CONFIGURATION,
+  SYNC_WITH_PROFILES_SETTING,
+  SYNC_WITH_PROFILES_DEFAULT,
+  FILE_EXT_RESOLUTION_DEFAULT,
+  FILE_EXT_RESOLUTION_SETTING,
+  ELM_NAME_VALUE,
+  TYPE_EXT_VALUE,
+  TYPE_EXT_OR_NAME_VALUE,
 } from '../constants';
 import { logger, reporter } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
 import {
-  getEndevorConfigurationValue,
-  updateGlobalEndevorConfiguration,
+  getSettingsValue,
+  updateGlobalSettingsValue,
 } from '@local/vscode-wrapper/settings';
 import * as vscode from 'vscode';
-import { Action, Actions } from '../_doc/Actions';
-import { LocationConfig } from '../_doc/settings';
+import { FileExtensionResolutions } from './_doc/v2/Settings';
 import {
-  LocationConfigs,
-  EditConfig,
   AutoSignOut,
+  FileExtensionsResolution,
   MaxParallelRequests,
-} from '../_ext/settings';
-import { replaceWith } from '../utils';
-import { TelemetryEvents, SettingChangedStatus } from '../_doc/Telemetry';
+  SyncWithProfiles,
+} from './_ext/v2/Settings';
+import {
+  TelemetryEvents,
+  SettingChangedStatus,
+} from '../_doc/telemetry/v2/Telemetry';
+import { reloadWindow } from '@local/vscode-wrapper/window';
+import { askToReloadWindowAfterSettingsChanged } from '../dialogs/settings/settingsDialogs';
 
-export const getLocations = (): ReadonlyArray<LocationConfig> => {
-  // please, pay attention: this call can be lazy
-  const locations = getEndevorConfigurationValue(ENDEVOR_CONFIGURATION)(
-    LOCATIONS_SETTING,
-    LOCATIONS_DEFAULT
-  );
-  return parseToType(LocationConfigs, locations);
-};
-
-export const getTempEditFolder = (): string => {
-  // please, pay attention: this call can be lazy
-  const downloadPath = getEndevorConfigurationValue(ENDEVOR_CONFIGURATION)(
-    EDIT_FOLDER_SETTING,
-    EDIT_FOLDER_DEFAULT
-  );
-  return parseToType(EditConfig, downloadPath);
-};
-
-export const isAutomaticSignOut = (): boolean => {
-  const autoSignOut = getEndevorConfigurationValue(ENDEVOR_CONFIGURATION)(
+export const getAutomaticSignOutSettingsValue = (): boolean => {
+  const autoSignOut = getSettingsValue(ENDEVOR_CONFIGURATION)(
     AUTOMATIC_SIGN_OUT_SETTING,
     AUTOMATIC_SIGN_OUT_DEFAULT
   );
   return parseToType(AutoSignOut, autoSignOut);
 };
 
-export const getMaxParallelRequests = (): number => {
+export const getSyncWithProfilesSettingValue = (): boolean => {
+  const syncWithProfiles = getSettingsValue(PROFILES_CONFIGURATION)(
+    SYNC_WITH_PROFILES_SETTING,
+    SYNC_WITH_PROFILES_DEFAULT
+  );
+  return parseToType(SyncWithProfiles, syncWithProfiles);
+};
+
+export const getMaxParallelRequestsSettingValue = (): number => {
   // please, pay attention: this call can be lazy
-  const parallelRequestsAmount = getEndevorConfigurationValue(
-    ENDEVOR_CONFIGURATION
-  )(MAX_PARALLEL_REQUESTS_SETTING, MAX_PARALLEL_REQUESTS_DEFAULT);
+  const parallelRequestsAmount = getSettingsValue(ENDEVOR_CONFIGURATION)(
+    MAX_PARALLEL_REQUESTS_SETTING,
+    MAX_PARALLEL_REQUESTS_DEFAULT
+  );
   return parseToType(MaxParallelRequests, parallelRequestsAmount);
 };
 
-export const addService = (service: string): Promise<void> => {
-  const updatedLocations = updateLocationsWithNewItem(getLocations(), {
-    service,
-    elementLocations: [],
-  });
-  return updateConfiguration(updatedLocations);
-};
-
-const updateLocationsWithNewItem = (
-  locations: ReadonlyArray<LocationConfig>,
-  updatedItem: LocationConfig
-): ReadonlyArray<LocationConfig> => {
-  const existingLocation = locations.find(
-    (existingItem) => existingItem.service === updatedItem.service
-  );
-  if (!existingLocation) {
-    return [...locations, updatedItem];
-  }
-  const result = replaceWith(locations)(
-    (item1: LocationConfig, item2: LocationConfig) =>
-      item1.service === item2.service,
-    updatedItem
-  );
-  return result;
-};
-
-const updateConfiguration = (
-  updatedLocations: ReadonlyArray<LocationConfig>
-): Promise<void> => {
-  logger.trace(
-    `Update configuration called for "${ENDEVOR_CONFIGURATION}.${LOCATIONS_SETTING}" with value: ${JSON.stringify(
-      updatedLocations,
-      null,
-      2
-    )}`
-  );
-  return updateGlobalEndevorConfiguration(ENDEVOR_CONFIGURATION)(
-    LOCATIONS_SETTING,
-    updatedLocations
-  );
-};
-
-export const addElementLocation = (
-  elementLocation: string,
-  service: string
-) => {
-  const allLocations = getLocations();
-  const updatedElementLocations = [
-    elementLocation,
-    ...getElementLocationsForService(allLocations, service),
-  ];
-  return updateConfiguration(
-    updateLocationsWithNewItem(allLocations, {
-      service,
-      elementLocations: updatedElementLocations,
-    })
-  );
-};
-
-const getElementLocationsForService = (
-  locations: ReadonlyArray<LocationConfig>,
-  serviceToFind: string
-): ReadonlyArray<string> => {
-  const foundService = locations.find(
-    (location) => location.service === serviceToFind
-  );
-  return foundService ? foundService.elementLocations : [];
-};
-
-export const removeService = (service: string): Promise<void> => {
-  const filteredLocations = getLocations().filter(
-    (existingLocation) => existingLocation.service !== service
-  );
-  return updateConfiguration(filteredLocations);
-};
-
-export const removeElementLocation = (
-  elementLocationToRemove: string,
-  service: string
-) => {
-  const allLocations = getLocations();
-  const filteredElementLocations = getElementLocationsForService(
-    allLocations,
-    service
-  ).filter((elementLocation) => elementLocation !== elementLocationToRemove);
-  return updateConfiguration(
-    updateLocationsWithNewItem(allLocations, {
-      service,
-      elementLocations: filteredElementLocations,
-    })
-  );
-};
-
-export const watchForLocations = (
-  dispatch: (action: Action) => Promise<void>
-) => {
-  return vscode.workspace.onDidChangeConfiguration(async (e) => {
-    if (
-      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${LOCATIONS_SETTING}`)
-    ) {
-      let updatedLocations;
-      try {
-        updatedLocations = getLocations();
-        logger.trace(
-          `Settings updated. Value: ${JSON.stringify(
-            updatedLocations,
-            null,
-            2
-          )}`
-        );
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
-          elementLocations: updatedLocations.map((location) => {
-            return {
-              elementLocationsAmount: location.elementLocations.length,
-            };
-          }),
-        });
-      } catch (e) {
-        logger.trace(`Error when reading settings: ${e.message}`);
-        updatedLocations = [];
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
-          status: 'GENERIC_ERROR',
-          error: e,
-        });
-      }
-      await dispatch({
-        type: Actions.LOCATION_CONFIG_CHANGED,
-        payload: updatedLocations,
-      });
+export const getFileExtensionResolutionSettingValue =
+  (): FileExtensionResolutions => {
+    const fileExtResolution = getSettingsValue(ENDEVOR_CONFIGURATION)(
+      FILE_EXT_RESOLUTION_SETTING,
+      FILE_EXT_RESOLUTION_DEFAULT
+    );
+    const parsedFileExtResolution = parseToType(
+      FileExtensionsResolution,
+      fileExtResolution
+    );
+    switch (parsedFileExtResolution) {
+      case ELM_NAME_VALUE:
+        return FileExtensionResolutions.FROM_NAME;
+      case TYPE_EXT_VALUE:
+        return FileExtensionResolutions.FROM_TYPE_EXT;
+      case TYPE_EXT_OR_NAME_VALUE:
+      default:
+        return FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME;
     }
-  });
-};
+  };
 
-export const watchForSettingChanges = () => {
+export const watchForAutoSignoutChanges = () => {
   return vscode.workspace.onDidChangeConfiguration(async (e) => {
     if (
       e.affectsConfiguration(
@@ -219,13 +102,9 @@ export const watchForSettingChanges = () => {
     ) {
       let updatedAutomaticSignout;
       try {
-        updatedAutomaticSignout = isAutomaticSignOut();
+        updatedAutomaticSignout = getAutomaticSignOutSettingsValue();
         logger.trace(
-          `Settings updated. Value: ${JSON.stringify(
-            updatedAutomaticSignout,
-            null,
-            2
-          )}`
+          `Setting ${AUTOMATIC_SIGN_OUT_SETTING} updated with the ${updatedAutomaticSignout} value.`
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT,
@@ -233,7 +112,9 @@ export const watchForSettingChanges = () => {
           value: updatedAutomaticSignout,
         });
       } catch (e) {
-        logger.trace(`Error when reading settings: ${e.message}`);
+        logger.trace(
+          `Setting ${AUTOMATIC_SIGN_OUT_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT,
@@ -242,29 +123,48 @@ export const watchForSettingChanges = () => {
         });
       }
     }
+  });
+};
+
+export const watchForSyncProfilesChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
     if (
-      e.affectsConfiguration(`${ENDEVOR_CONFIGURATION}.${EDIT_FOLDER_SETTING}`)
+      e.affectsConfiguration(
+        `${PROFILES_CONFIGURATION}.${SYNC_WITH_PROFILES_SETTING}`
+      )
     ) {
-      let tempEditFolder;
+      let updatedSyncWithProfiles;
       try {
-        tempEditFolder = getTempEditFolder();
+        updatedSyncWithProfiles = getSyncWithProfilesSettingValue();
         logger.trace(
-          `Settings updated. Value: ${JSON.stringify(tempEditFolder, null, 2)}`
+          `Setting ${SYNC_WITH_PROFILES_SETTING} updated with the ${updatedSyncWithProfiles} value.`
         );
         reporter.sendTelemetryEvent({
-          type: TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER,
+          type: TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES,
           status: SettingChangedStatus.SUCCESS,
+          value: updatedSyncWithProfiles,
         });
+        const reloadNow = await askToReloadWindowAfterSettingsChanged();
+        if (reloadNow) {
+          await reloadWindow();
+        }
       } catch (e) {
-        logger.trace(`Error when reading settings: ${e.message}`);
+        logger.trace(
+          `Setting ${SYNC_WITH_PROFILES_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER,
+          errorContext: TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES,
           error: e,
           status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
         });
       }
     }
+  });
+};
+
+export const watchForMaxEndevorRequestsChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
     if (
       e.affectsConfiguration(
         `${ENDEVOR_CONFIGURATION}.${MAX_PARALLEL_REQUESTS_SETTING}`
@@ -272,13 +172,9 @@ export const watchForSettingChanges = () => {
     ) {
       let maxParallelRequests;
       try {
-        maxParallelRequests = getMaxParallelRequests();
+        maxParallelRequests = getMaxParallelRequestsSettingValue();
         logger.trace(
-          `Settings updated. Value: ${JSON.stringify(
-            maxParallelRequests,
-            null,
-            2
-          )}`
+          `Setting ${MAX_PARALLEL_REQUESTS_SETTING} updated with the ${maxParallelRequests} value.`
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS,
@@ -286,7 +182,9 @@ export const watchForSettingChanges = () => {
           value: maxParallelRequests,
         });
       } catch (e) {
-        logger.trace(`Error when reading settings: ${e.message}`);
+        logger.trace(
+          `Setting ${MAX_PARALLEL_REQUESTS_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS,
@@ -298,9 +196,89 @@ export const watchForSettingChanges = () => {
   });
 };
 
+export const watchForFileExtensionResolutionChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration(
+        `${ENDEVOR_CONFIGURATION}.${FILE_EXT_RESOLUTION_SETTING}`
+      )
+    ) {
+      try {
+        const fileExtResolution = getFileExtensionResolutionSettingValue();
+        logger.trace(
+          `Setting ${FILE_EXT_RESOLUTION_SETTING} updated with the ${fileExtResolution} value.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION,
+          status: SettingChangedStatus.SUCCESS,
+          value: fileExtResolution,
+        });
+      } catch (e) {
+        logger.trace(
+          `Setting ${FILE_EXT_RESOLUTION_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
+    }
+  });
+};
+
 export const turnOnAutomaticSignOut = async (): Promise<void> => {
-  return updateGlobalEndevorConfiguration(ENDEVOR_CONFIGURATION)(
+  return updateGlobalSettingsValue(ENDEVOR_CONFIGURATION)(
     AUTOMATIC_SIGN_OUT_SETTING,
     true
   );
+};
+
+export const isAutomaticSignOut = (): boolean => {
+  try {
+    return getAutomaticSignOutSettingsValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for automatic signout, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return AUTOMATIC_SIGN_OUT_DEFAULT;
+  }
+};
+
+export const getMaxParallelRequests = (): number => {
+  try {
+    return getMaxParallelRequestsSettingValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for the Endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return MAX_PARALLEL_REQUESTS_DEFAULT;
+  }
+};
+
+export const isSyncWithProfiles = (): boolean => {
+  try {
+    return getSyncWithProfilesSettingValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings values for syncing with profiles, default: ${SYNC_WITH_PROFILES_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return SYNC_WITH_PROFILES_DEFAULT;
+  }
+};
+
+export const getFileExtensionResoluton = (): FileExtensionResolutions => {
+  try {
+    return getFileExtensionResolutionSettingValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for the file extensions resolution, default: ${FILE_EXT_RESOLUTION_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME;
+  }
 };

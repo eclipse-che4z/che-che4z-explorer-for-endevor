@@ -18,9 +18,7 @@ export const TELEMETRY_EVENTS_VERSION = '1';
 export const enum TelemetryEvents {
   ERROR = 'extension error',
   SERVICE_PROFILE_FETCHED = 'service profile fetched',
-  EXTENSION_ACTIVATED = 'extension activation completed',
   REFRESH_COMMAND_CALLED = 'refresh tree command called',
-  ELEMENT_LOCATIONS_PROVIDED = 'element locations provided in the tree',
   ELEMENTS_PROVIDED = 'elements provided in the tree',
   ELEMENTS_WERE_FETCHED = 'elements were fetched',
   ENDEVOR_MAP_STRUCTURE_BUILT = 'endevor map structure built',
@@ -45,9 +43,6 @@ export const enum TelemetryEvents {
   COMMAND_EDIT_ELEMENT_COMPLETED = 'edit element command completed',
   COMMAND_UPLOAD_ELEMENT_CALLED = 'upload element command called',
   COMMAND_UPLOAD_ELEMENT_COMPLETED = 'upload element command completed',
-  SETTING_CHANGED_AUTO_SIGN_OUT = 'automatic signout setting changed',
-  SETTING_CHANGED_EDIT_FOLDER = 'edit folder setting changed',
-  SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
   COMMAND_RETRIEVE_ELEMENT_CALLED = 'retrieve element command called',
   COMMAND_RETRIEVE_ELEMENT_COMPLETED = 'retrieve element command completed',
   COMMAND_SIGNIN_ELEMENT_CALLED = 'signin element command called',
@@ -55,26 +50,11 @@ export const enum TelemetryEvents {
   COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED = 'retrieve element with deps command called',
   COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED = 'retrieve element with deps command completed',
   ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED = 'element dependency was not fetched',
-  COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED = 'add new search location command called',
-  COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED = 'add new search location command completed',
   COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL = 'discard edited element changes call performed',
   COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALLED = 'discard edited element changes called',
   COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED = 'apply diff editor changes called',
   COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED = 'apply diff editor changes completed',
-  SERVICE_HIDED = 'service hided from the tree',
-  SEARCH_LOCATION_HIDED = 'search location hided from the tree',
-  DIALOG_SERVICE_INFO_COLLECTION_CALLED = 'service information collection dialog called',
-  DIALOG_SERVICE_INFO_COLLECTION_COMPLETED = 'service information collection dialog completed',
-  SERVICE_CONNECTION_TEST_COMPLETED = 'service connection test completed',
-  REJECT_UNAUTHORIZED_PROVIDED = 'reject unauthorized provided',
 }
-
-export type ExtensionActivatedEvent = {
-  type: TelemetryEvents.EXTENSION_ACTIVATED;
-  buildNumber: string;
-  autoSignOut: boolean;
-  maxParallelRequests: number;
-};
 
 export type RefreshCommandCalledEvent = {
   type: TelemetryEvents.REFRESH_COMMAND_CALLED;
@@ -118,20 +98,6 @@ export type EndevorMapNotBuiltEvent = {
   type: TelemetryEvents.ERROR;
   errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT;
   status: EndevorMapBuildingStatus.GENERIC_ERROR;
-  error: Error;
-};
-
-export type ElementLocationsProvidedInTheTreeEvent = {
-  type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED;
-  elementLocations: ReadonlyArray<{
-    elementLocationsAmount: number;
-  }>;
-};
-
-export type ElementLocationsNotProvidedInTheTreeEvent = {
-  type: TelemetryEvents.ERROR;
-  errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED;
-  status: 'GENERIC_ERROR';
   error: Error;
 };
 
@@ -306,9 +272,7 @@ export type CommandEditElementCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
       errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED;
-      status:
-        | EditElementCommandCompletedStatus.GENERIC_ERROR
-        | EditElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR;
+      status: EditElementCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
   | {
@@ -341,36 +305,6 @@ export type CommandRetrieveElementCompletedEvent =
       type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED;
       status: RetrieveElementCommandCompletedStatus.SUCCESS;
     };
-
-export type SettingChangedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext:
-        | TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT
-        | TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER
-        | TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS;
-      status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT;
-      status: SettingChangedStatus.SUCCESS;
-      value: boolean;
-    }
-  | {
-      type: TelemetryEvents.SETTING_CHANGED_EDIT_FOLDER;
-      status: SettingChangedStatus.SUCCESS;
-    }
-  | {
-      type: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS;
-      status: SettingChangedStatus.SUCCESS;
-      value: number;
-    };
-
-export const enum SettingChangedStatus {
-  SUCCESS = 'SUCCESS',
-  WRONG_SETTING_TYPE_ERROR = 'WRONG_SETTING_TYPE_ERROR',
-}
 
 export type CommandUploadElementCalledEvent = {
   type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED;
@@ -459,44 +393,6 @@ export type ElementDependencyWasNotRetrievedEvent = {
   error: Error;
 };
 
-export type CommandAddNewSearchLocationCalledEvent = {
-  type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED;
-};
-
-export const enum CommandAddNewSearchLocationCompletedStatus {
-  USED_EXISTING_LOCATION_CHOSEN = 'USED_EXISTING_LOCATION_CHOSEN',
-  UNUSED_EXISTING_LOCATION_CHOSEN = 'UNUSED_EXISTING_LOCATION_CHOSEN',
-  NEW_LOCATION_CREATED = 'NEW_LOCATION_CREATED',
-  GENERIC_ERROR = 'GENERIC_ERROR',
-}
-
-export type CommandAddNewSearchLocationCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED;
-      status: CommandAddNewSearchLocationCompletedStatus.GENERIC_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED;
-      status: CommandAddNewSearchLocationCompletedStatus.USED_EXISTING_LOCATION_CHOSEN;
-      inUseByServicesAmount: number;
-    }
-  | {
-      type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED;
-      status:
-        | CommandAddNewSearchLocationCompletedStatus.UNUSED_EXISTING_LOCATION_CHOSEN
-        | CommandAddNewSearchLocationCompletedStatus.NEW_LOCATION_CREATED;
-    };
-
-export type ServiceHidedEvent = {
-  type: TelemetryEvents.SERVICE_HIDED;
-};
-
-export type SearchLocationHidedEvent = {
-  type: TelemetryEvents.SEARCH_LOCATION_HIDED;
-};
-
 export type CommandResolveConflictWithRemoteCalledEvent = {
   type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED;
 };
@@ -542,73 +438,13 @@ export type CommandApplyDiffEditorChangesCompletedEvent = {
   error: Error;
 };
 
-export type DialogServiceInfoCollectionCalledEvent = {
-  type: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
-};
-
-export const enum DialogServiceInfoCollectionCompletedStatus {
-  CANCELLED = 'CANCELLED',
-  EXISTING_SERVICE_NAME_CHOSEN = 'EXISTING_SERVICE_NAME_CHOSEN',
-  NEW_SERVICE_INFO_COLLECTED = 'NEW_SERVICE_INFO_COLLECTED',
-  GENERIC_ERROR = 'GENERIC_ERROR',
-}
-
-export type DialogServiceInfoCollectionCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
-      status: DialogServiceInfoCollectionCompletedStatus.GENERIC_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_COMPLETED;
-      status:
-        | DialogServiceInfoCollectionCompletedStatus.CANCELLED
-        | DialogServiceInfoCollectionCompletedStatus.EXISTING_SERVICE_NAME_CHOSEN
-        | DialogServiceInfoCollectionCompletedStatus.NEW_SERVICE_INFO_COLLECTED;
-    };
-
-export const enum ServiceConnectionTestCompletedStatus {
-  SUCCESS = 'SUCCESS',
-  GENERIC_ERROR = 'GENERIC_ERROR',
-  CERT_ISSUER_VALIDATION_ERROR = 'CERT_ISSUER_VALIDATION_ERROR',
-  CONTINUE_WITH_ERROR = 'CONTINUE_WITH_ERROR',
-}
-
-export type ServiceConnectionTestCompletedEvent =
-  | {
-      type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
-      status:
-        | ServiceConnectionTestCompletedStatus.GENERIC_ERROR
-        | ServiceConnectionTestCompletedStatus.CERT_ISSUER_VALIDATION_ERROR;
-      error: Error;
-    }
-  | {
-      type: TelemetryEvents.SERVICE_CONNECTION_TEST_COMPLETED;
-      context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
-      status:
-        | ServiceConnectionTestCompletedStatus.SUCCESS
-        | ServiceConnectionTestCompletedStatus.CONTINUE_WITH_ERROR;
-      apiVersion: ServiceApiVersion;
-    };
-
-export type RejectUnauthorizedProvidedEvent = {
-  type: TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED;
-  context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED;
-  rejectUnauthorized: boolean;
-};
-
 export type TelemetryEvent =
-  | ExtensionActivatedEvent
   | RefreshCommandCalledEvent
   | CommandAddElementCalledEvent
   | CommandAddElementCompletedEvent
   | ElementsProvidedInTheTreeEvent
   | ElementsFetchedEvent
   | EndevorMapNotBuiltEvent
-  | ElementLocationsProvidedInTheTreeEvent
-  | ElementLocationsNotProvidedInTheTreeEvent
   | MissingCredentialsPromptCalledEvent
   | MissingCredentialsProvidedEvent
   | ServiceProfileFetchedEvent
@@ -620,7 +456,6 @@ export type TelemetryEvent =
   | ElementContentProviderCompletedEvent
   | ListingContentProviderCalledEvent
   | ListingContentProviderCompletedEvent
-  | SettingChangedEvent
   | CommandSignoutErrorRecoverCalledEvent
   | CommandSignoutErrorRecoverCompletedEvent
   | CommandEditElementCalledEvent
@@ -634,17 +469,9 @@ export type TelemetryEvent =
   | ElementDependencyWasNotRetrievedEvent
   | CommandUploadElementCompletedEvent
   | CommandUploadElementCalledEvent
-  | CommandAddNewSearchLocationCalledEvent
-  | CommandAddNewSearchLocationCompletedEvent
-  | ServiceHidedEvent
-  | SearchLocationHidedEvent
   | CommandResolveConflictWithRemoteCalledEvent
   | ResolveConflictWithRemoteCompletedEvent
   | CommandApplyDiffEditorChangesCalledEvent
   | CommandDiscardEditedElementChangesCalledEvent
   | CommandDiscardEditedElementChangesCallEvent
-  | CommandApplyDiffEditorChangesCompletedEvent
-  | DialogServiceInfoCollectionCalledEvent
-  | DialogServiceInfoCollectionCompletedEvent
-  | ServiceConnectionTestCompletedEvent
-  | RejectUnauthorizedProvidedEvent;
+  | CommandApplyDiffEditorChangesCompletedEvent;

@@ -12,7 +12,7 @@
   "dependencies": {
     "@local/extension": "1.0.0",
     "@local/type-parser": "1.0.0",
-    "@zowe/imperative": "^4.15.1"
+    "@zowe/imperative": "^5.3.3"
   },
   "license": "UNLICENSED"
 }

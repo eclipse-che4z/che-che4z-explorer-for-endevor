@@ -17,10 +17,7 @@ import {
   SubSystemNode,
   TypeNode,
   ElementNode,
-  Services,
-  ServiceNode,
-  LocationNode,
-} from '../_doc/ElementTree';
+} from './_doc/ElementTree';
 import {
   Element,
   ElementMapPath,
@@ -30,12 +27,7 @@ import {
 import { toTreeElementUri } from '../uri/treeElementUri';
 import { isDefined, isElementUpTheMap, isError, isTuple } from '../utils';
 import { logger, reporter } from '../globals';
-import { CachedElement } from '../_doc/Store';
-import {
-  ElementLocationName,
-  EndevorServiceName,
-  LocationConfig,
-} from '../_doc/settings';
+import { CachedElement, EndevorId } from '../store/_doc/v2/Store';
 import { TelemetryEvents } from '../_doc/Telemetry';
 import {
   EndevorMap,
@@ -43,67 +35,24 @@ import {
   mapSubsystems,
   toSubsystemMapPathId,
 } from '../_doc/Endevor';
+import { toServiceLocationCompositeKey } from '../store/utils';
 
-export const toElementId =
-  (service: EndevorServiceName) =>
-  (searchLocation: ElementLocationName) =>
-  (element: ElementMapPath): string => {
-    return `${service}/${searchLocation}/${element.instance}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
-  };
-
-export const toServiceId = (service: EndevorServiceName): string => {
-  return service;
+export const toElementTooltip = (element: ElementMapPath): string => {
+  const tooltip =
+    element.configuration && element
+      ? `${element.configuration}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}`
+      : '';
+  return tooltip;
 };
-
-export const toSearchLocationId =
-  (service: EndevorServiceName) =>
-  (searchLocation: ElementLocationName): string => {
-    return `${service}/${searchLocation}`;
-  };
-
-export const toServiceNodes = (
-  locations: ReadonlyArray<LocationConfig>
-): Services => {
-  return locations.map((location) =>
-    toServiceNode(location.service)(location.elementLocations)
-  );
-};
-
-export const toServiceNode =
-  (service: EndevorServiceName) =>
-  (searchLocations: ReadonlyArray<ElementLocationName>): ServiceNode => {
-    return {
-      id: toServiceId(service),
-      type: 'SERVICE',
-      name: service,
-      children: searchLocations.map((elementLocation) => ({
-        id: toSearchLocationId(service)(elementLocation),
-        type: 'LOCATION',
-        name: elementLocation,
-        serviceName: service,
-      })),
-    };
-  };
-
-export const toSearchLocationNode =
-  (service: EndevorServiceName) =>
-  (searchLocation: ElementLocationName): LocationNode => {
-    return {
-      id: toSearchLocationId(service)(searchLocation),
-      type: 'LOCATION',
-      name: searchLocation,
-      serviceName: service,
-    };
-  };
 
 /**
  * Converts list element result into a tree for tree view
  */
 export const buildTree =
   (
-    serviceName: EndevorServiceName,
+    serviceId: EndevorId,
     service: Service,
-    searchLocationName: ElementLocationName,
+    searchLocationId: EndevorId,
     elementsSearchLocation: ElementSearchLocation
   ) =>
   (endevorMap: EndevorMap) =>
@@ -186,9 +135,9 @@ export const buildTree =
       const element = elementInPlace.element;
       const typeNode = addTypeNode()()(element);
       const elementNode = toInPlaceElementNode(
-        serviceName,
+        serviceId,
         service,
-        searchLocationName,
+        searchLocationId,
         elementsSearchLocation
       )(elementInPlace)(typeNode)();
       if (isError(elementNode)) {
@@ -274,9 +223,9 @@ export const buildTree =
                 endevorElement.name +
                 ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
               const elementNode = toUpTheMapElementNode(
-                serviceName,
+                serviceId,
                 service,
-                searchLocationName,
+                searchLocationId,
                 elementsSearchLocation
               )(elementUpTheMap)(typeNode)(nodeName);
               if (isError(elementNode)) {
@@ -316,9 +265,9 @@ export const buildTree =
                 endevorElement.name +
                 ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
               const elementNode = toUpTheMapElementNode(
-                serviceName,
+                serviceId,
                 service,
-                searchLocationName,
+                searchLocationId,
                 elementsSearchLocation
               )(elementUpTheMap)(typeNode)(nodeName);
               if (isError(elementNode)) {
@@ -354,17 +303,17 @@ export const buildTree =
 
 const toInPlaceElementNode =
   (
-    serviceName: EndevorServiceName,
+    serviceId: EndevorId,
     service: Service,
-    searchLocationName: ElementLocationName,
+    searchLocationId: EndevorId,
     elementsSearchLocation: ElementSearchLocation
   ) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
     const serializedUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       service,
       element,
       searchLocation: elementsSearchLocation,
@@ -374,27 +323,29 @@ const toInPlaceElementNode =
       return error;
     }
     return {
-      searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+      searchLocationId:
+        toServiceLocationCompositeKey(serviceId)(searchLocationId),
       type: 'ELEMENT_IN_PLACE',
       name: nodeName ?? element.name,
       uri: serializedUri,
       parent,
+      tooltip: toElementTooltip(element),
     };
   };
 
 const toUpTheMapElementNode =
   (
-    serviceName: EndevorServiceName,
+    serviceId: EndevorId,
     service: Service,
-    searchLocationName: ElementLocationName,
+    searchLocationId: EndevorId,
     elementsSearchLocation: ElementSearchLocation
   ) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
     const serializedUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       service,
       element,
       searchLocation: elementsSearchLocation,
@@ -404,10 +355,12 @@ const toUpTheMapElementNode =
       return error;
     }
     return {
-      searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+      searchLocationId:
+        toServiceLocationCompositeKey(serviceId)(searchLocationId),
       type: 'ELEMENT_UP_THE_MAP',
       name: nodeName ?? element.name,
       uri: serializedUri,
       parent,
+      tooltip: toElementTooltip(element),
     };
   };

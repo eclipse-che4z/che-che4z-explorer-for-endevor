@@ -56,14 +56,14 @@ import {
 } from '../dialogs/change-control/signOutDialogs';
 import { turnOnAutomaticSignOut } from '../settings/settings';
 import * as path from 'path';
-import { Action, Actions } from '../_doc/Actions';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import { Action, Actions } from '../store/_doc/Actions';
 import {
   UploadElementCommandCompletedStatus,
   TelemetryEvents,
   SignoutErrorRecoverCommandCompletedStatus,
 } from '../_doc/Telemetry';
 import { showElementToEdit } from './edit/common';
+import { Id } from '../store/storage/_doc/Storage';
 
 export const uploadElementCommand = async (
   dispatch: (action: Action) => Promise<void>,
@@ -92,8 +92,8 @@ export const uploadElementCommand = async (
     fingerprint,
     endevorConnectionDetails: service,
     searchContext: {
-      searchLocationName,
-      serviceName,
+      searchLocationId,
+      serviceId,
       overallSearchLocation: searchLocation,
       initialSearchLocation,
     },
@@ -107,8 +107,8 @@ export const uploadElementCommand = async (
   const [uploadLocation, uploadChangeControlValue] = uploadValues;
   await closeEditSession(elementUri);
   const uploadResult = await uploadElement(dispatch)(
-    serviceName,
-    searchLocationName,
+    serviceId,
+    searchLocationId,
     initialSearchLocation
   )(service, searchLocation)(uploadChangeControlValue, uploadLocation)(
     element,
@@ -136,9 +136,9 @@ export const uploadElementCommand = async (
   if (isNewElementAdded) {
     await dispatch({
       type: Actions.ELEMENT_ADDED,
-      serviceName,
+      serviceId,
       service,
-      searchLocationName,
+      searchLocationId,
       searchLocation,
       element: {
         ...uploadLocation,
@@ -151,11 +151,9 @@ export const uploadElementCommand = async (
   if (isElementEditedInPlace) {
     await dispatch({
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     });
     return;
   }
@@ -163,8 +161,8 @@ export const uploadElementCommand = async (
     type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
     fetchElementsArgs: { service, searchLocation },
     treePath: {
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       searchLocation: initialSearchLocation,
     },
     pathUpTheMap: element,
@@ -184,7 +182,7 @@ const askForUploadValues = async (
     subsystem: searchLocation.subsystem,
     type: uploadType,
     element: element.name,
-    instance: element.instance,
+    configuration: element.configuration,
   });
   if (uploadLocationDialogCancelled(uploadLocation)) {
     return new Error(
@@ -205,11 +203,7 @@ const askForUploadValues = async (
 
 const uploadElement =
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName,
-    treePath: SubSystemMapPath
-  ) =>
+  (serviceId: Id, searchLocationId: Id, treePath: SubSystemMapPath) =>
   (service: Service, searchLocation: ElementSearchLocation) =>
   (
     uploadChangeControlValue: ChangeControlValue,
@@ -247,9 +241,8 @@ const uploadElement =
       );
       const signoutResult = await complexSignoutElement(dispatch)(
         service,
-        searchLocation,
-        serviceName,
-        searchLocationName
+        serviceId,
+        searchLocationId
       )(element)(uploadChangeControlValue);
       if (isError(signoutResult)) {
         const error = signoutResult;
@@ -261,7 +254,7 @@ const uploadElement =
         });
         return error;
       }
-      return uploadElement(dispatch)(serviceName, searchLocationName, treePath)(
+      return uploadElement(dispatch)(serviceId, searchLocationId, treePath)(
         service,
         searchLocation
       )(uploadChangeControlValue, uploadTargetLocation)(
@@ -301,8 +294,8 @@ const uploadElement =
         searchLocation,
         element
       )(uploadChangeControlValue, uploadTargetLocation)(
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         treePath
       )(savedLocalElementVersionUri.fsPath);
       if (isError(showCompareDialogResult)) {
@@ -345,12 +338,7 @@ const readEditedElementContent = async (
 
 const complexSignoutElement =
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    service: Service,
-    searchLocation: ElementSearchLocation,
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName
-  ) =>
+  (service: Service, serviceId: Id, searchLocationId: Id) =>
   (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
@@ -410,10 +398,8 @@ const complexSignoutElement =
         );
       }
       await updateTreeAfterSuccessfulSignout(dispatch)(
-        serviceName,
-        service,
-        searchLocationName,
-        searchLocation,
+        serviceId,
+        searchLocationId,
         [element]
       );
       reporter.sendTelemetryEvent({
@@ -430,10 +416,8 @@ const complexSignoutElement =
       );
     }
     await updateTreeAfterSuccessfulSignout(dispatch)(
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
+      serviceId,
+      searchLocationId,
       [element]
     );
     reporter.sendTelemetryEvent({
@@ -490,18 +474,14 @@ const safeRemoveUploadedElement = async (editedElementUri: Uri) => {
 const updateTreeAfterSuccessfulSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
+    serviceId: Id,
+    searchLocationId: Id,
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
+      serviceId,
+      searchLocationId,
       elements,
     });
   };

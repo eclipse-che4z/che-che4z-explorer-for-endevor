@@ -13,53 +13,40 @@
 
 import { assert } from 'chai';
 import {
-  EDIT_FOLDER_DEFAULT,
-  EDIT_FOLDER_SETTING,
   AUTOMATIC_SIGN_OUT_SETTING,
   AUTOMATIC_SIGN_OUT_DEFAULT,
   ENDEVOR_CONFIGURATION,
-  LOCATIONS_DEFAULT,
-  LOCATIONS_SETTING,
   MAX_PARALLEL_REQUESTS_DEFAULT,
   MAX_PARALLEL_REQUESTS_SETTING,
+  PROFILES_CONFIGURATION,
+  SYNC_WITH_PROFILES_SETTING,
+  SYNC_WITH_PROFILES_DEFAULT,
 } from '../../constants';
-import { updateGlobalEndevorConfiguration } from '@local/vscode-wrapper/settings';
-import { LocationConfig } from '../../_doc/settings';
+import { updateGlobalSettingsValue } from '@local/vscode-wrapper/settings';
 import {
-  addElementLocation,
-  addService,
-  getLocations,
-  getMaxParallelRequests,
-  getTempEditFolder,
-  isAutomaticSignOut,
-  removeElementLocation,
-  removeService,
+  getMaxParallelRequestsSettingValue,
+  getAutomaticSignOutSettingsValue,
+  getSyncWithProfilesSettingValue,
   turnOnAutomaticSignOut,
 } from '../settings';
 import { ConfigurationTarget, workspace } from 'vscode';
+import { SyncWithProfiles } from '../_ext/v2/Settings';
 
 describe('extension settings', () => {
   type NotDefined = undefined;
-  let beforeTestsLocations: ReadonlyArray<LocationConfig> | NotDefined;
   let beforeTestsRequestsAmount: number | NotDefined;
-  let beforeTestsEditFolder: string | NotDefined;
   let beforeTestsAutoSignOut: boolean | NotDefined;
+  let beforeTestsSyncWithProfiles: SyncWithProfiles | NotDefined;
   beforeEach(async () => {
-    beforeTestsLocations = workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .get(LOCATIONS_SETTING);
     beforeTestsRequestsAmount = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(MAX_PARALLEL_REQUESTS_SETTING);
-    beforeTestsEditFolder = workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .get(EDIT_FOLDER_SETTING);
     beforeTestsAutoSignOut = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(AUTOMATIC_SIGN_OUT_SETTING);
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(LOCATIONS_SETTING, LOCATIONS_DEFAULT, ConfigurationTarget.Global);
+    beforeTestsSyncWithProfiles = workspace
+      .getConfiguration(PROFILES_CONFIGURATION)
+      .get(SYNC_WITH_PROFILES_SETTING);
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
@@ -70,26 +57,19 @@ describe('extension settings', () => {
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
-        EDIT_FOLDER_SETTING,
-        EDIT_FOLDER_DEFAULT,
-        ConfigurationTarget.Global
-      );
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
         AUTOMATIC_SIGN_OUT_SETTING,
         AUTOMATIC_SIGN_OUT_DEFAULT,
         ConfigurationTarget.Global
       );
-  });
-  afterEach(async () => {
     await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .getConfiguration(PROFILES_CONFIGURATION)
       .update(
-        LOCATIONS_SETTING,
-        beforeTestsLocations,
+        SYNC_WITH_PROFILES_SETTING,
+        SYNC_WITH_PROFILES_DEFAULT,
         ConfigurationTarget.Global
       );
+  });
+  afterEach(async () => {
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
@@ -100,100 +80,49 @@ describe('extension settings', () => {
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
-        EDIT_FOLDER_SETTING,
-        beforeTestsEditFolder,
-        ConfigurationTarget.Global
-      );
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
         AUTOMATIC_SIGN_OUT_SETTING,
         beforeTestsAutoSignOut,
         ConfigurationTarget.Global
       );
+    await workspace
+      .getConfiguration(PROFILES_CONFIGURATION)
+      .update(
+        SYNC_WITH_PROFILES_SETTING,
+        beforeTestsSyncWithProfiles,
+        ConfigurationTarget.Global
+      );
   });
-
-  it('should add service name', async () => {
-    // arrange
-    const service = 'test';
-    // act
-    await addService(service);
-    // assert
-    assert.isDefined(findServiceFromSettingsByName(service));
-
-    await removeService(service);
-    assert.isUndefined(findServiceFromSettingsByName(service));
-  });
-
-  const findServiceFromSettingsByName = (
-    name: string
-  ): LocationConfig | undefined => {
-    return getLocations().find((location) => location.service === name);
-  };
-
-  it('should add element location for service', async () => {
-    // arrange
-    const service = 'service';
-    const elementLocation = 'element-location';
-    // act
-    await addElementLocation(elementLocation, service);
-    // assert
-    assert.isDefined(
-      findElementLocationFromService(
-        elementLocation,
-        findServiceFromSettingsByName(service)
-      )
-    );
-
-    await removeElementLocation(elementLocation, service);
-    assert.isUndefined(
-      findElementLocationFromService(
-        elementLocation,
-        findServiceFromSettingsByName(service)
-      )
-    );
-  });
-
-  const findElementLocationFromService = (
-    elementLocationToFind: string,
-    endevorService: LocationConfig | undefined
-  ): string | undefined => {
-    return endevorService?.elementLocations.find(
-      (location) => location === elementLocationToFind
-    );
-  };
 
   it('should return max Endevor parallel requests amount', async () => {
     // arrange
     const requestsAmount = 10;
-    await updateGlobalEndevorConfiguration(ENDEVOR_CONFIGURATION)(
+    await updateGlobalSettingsValue(ENDEVOR_CONFIGURATION)(
       MAX_PARALLEL_REQUESTS_SETTING,
       requestsAmount
     );
     // act
-    const actualRequestsAmount = getMaxParallelRequests();
+    const actualRequestsAmount = getMaxParallelRequestsSettingValue();
     // assert
     assert.equal(actualRequestsAmount, requestsAmount);
-  });
-
-  it('should return edit temp folder', async () => {
-    // arrange
-    const folderName = 'some_name';
-    await updateGlobalEndevorConfiguration(ENDEVOR_CONFIGURATION)(
-      EDIT_FOLDER_SETTING,
-      folderName
-    );
-    // act
-    const actualFolderName = getTempEditFolder();
-    // assert
-    assert.equal(actualFolderName, folderName);
   });
 
   it('should turn on auto signout', async () => {
     // act
     await turnOnAutomaticSignOut();
     // assert
-    const actualValue = isAutomaticSignOut();
+    const actualValue = getAutomaticSignOutSettingsValue();
     assert.isTrue(actualValue);
+  });
+  it('should return the profiles sync feature flag value', async () => {
+    // arrange
+    const syncWithProfiles = true;
+    await updateGlobalSettingsValue(PROFILES_CONFIGURATION)(
+      SYNC_WITH_PROFILES_SETTING,
+      syncWithProfiles
+    );
+    // act
+    const actualFlagValue = getSyncWithProfilesSettingValue();
+    // assert
+    assert.strictEqual(actualFlagValue, syncWithProfiles);
   });
 });

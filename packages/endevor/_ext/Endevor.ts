@@ -18,8 +18,8 @@ import { StageNumber } from '../_doc/Endevor';
 // "What makes io-ts uniquely valuable is that it simultaneously defines a runtime validator and a static type."
 // https://www.olioapps.com/blog/checking-types-real-world-typescript/
 
-export type Repository = t.TypeOf<typeof Repository>;
-export type Repositories = t.TypeOf<typeof Repositories>;
+export type Configuration = t.TypeOf<typeof Configuration>;
+export type Configurations = t.TypeOf<typeof Configurations>;
 
 export type EnvironmentStage = t.TypeOf<typeof EnvironmentStage>;
 
@@ -57,8 +57,8 @@ export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
 export type SuccessListElementsResponse = t.TypeOf<
   typeof SuccessListElementsResponse
 >;
-export type SuccessListRepositoriesResponse = t.TypeOf<
-  typeof SuccessListRepositoriesResponse
+export type SuccessListConfigurationsResponse = t.TypeOf<
+  typeof SuccessListConfigurationsResponse
 >;
 export type SuccessListEnvironmentStagesResponse = t.TypeOf<
   typeof SuccessListEnvironmentStagesResponse
@@ -76,10 +76,11 @@ export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
 
 export type AddResponse = t.TypeOf<typeof AddResponse>;
 
-export const Repository = t.type({
+export const Configuration = t.type({
   name: t.string,
+  description: t.string,
 });
-export const Repositories = t.array(Repository);
+export const Configurations = t.array(Configuration);
 
 class StageNumberType extends t.Type<StageNumber> {
   constructor() {
@@ -138,6 +139,7 @@ const Path = t.type({
   sbsName: t.string,
   typeName: t.string,
   elmName: t.string,
+  fullElmName: t.string,
 });
 
 export const EnvironmentStage = t.type({
@@ -227,7 +229,7 @@ export const SuccessRetrieveResponse = t.type({
   }),
 });
 
-export const SuccessListRepositoriesResponse = t.type({
+export const SuccessListConfigurationsResponse = t.type({
   body: t.type({
     returnCode: new ReturnCodeType(),
     data: t.array(t.unknown),

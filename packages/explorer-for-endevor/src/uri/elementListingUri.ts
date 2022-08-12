@@ -19,11 +19,10 @@ export const toElementListingUri =
   (uniqueFragment: string): Uri | Error => {
     try {
       const elementFragment = { fragment: uniqueFragment };
-      const elementExtension = `${element.extension}.${Extensions.ELEMENT_LISTING}`;
       const emptyUri = Uri.parse('');
       return emptyUri.with({
         scheme: Schemas.ELEMENT_LISTING,
-        path: `${element.name}.${elementExtension}`,
+        path: [element.name, Extensions.ELEMENT_LISTING].join('.'),
         query: encodeURIComponent(
           JSON.stringify({
             service,

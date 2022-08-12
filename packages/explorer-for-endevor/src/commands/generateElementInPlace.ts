@@ -21,17 +21,14 @@ import { generateElementInPlace } from '../endevor';
 import { logger, reporter } from '../globals';
 import { fromTreeElementUri, toTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
-import { ElementNode } from '../_doc/ElementTree';
+import { ElementNode } from '../tree/_doc/ElementTree';
 import { printListingCommand } from './printListing';
-import { Action, Actions } from '../_doc/Actions';
+import { Action, Actions } from '../store/_doc/Actions';
 import {
   ActionChangeControlValue,
   Element,
-  ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
-import { toSearchLocationId } from '../tree/endevor';
 import {
   GenerateElementInPlaceCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
@@ -42,6 +39,8 @@ import {
   isSignoutError,
 } from '@local/endevor/utils';
 import { askToOverrideSignOutForElements } from '../dialogs/change-control/signOutDialogs';
+import { toElementTooltip } from '../tree/endevor';
+import { EndevorId } from '../store/_doc/v2/Store';
 
 type SelectedElementNode = ElementNode;
 
@@ -68,13 +67,8 @@ const generateSingleElement =
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
     });
-    const {
-      serviceName,
-      searchLocationName,
-      service,
-      element,
-      searchLocation,
-    } = uriParams;
+    const { serviceId, searchLocationId, service, element, searchLocation } =
+      uriParams;
     const actionControlValue = await askForChangeControlValue({
       ccid: searchLocation.ccid,
       comment: searchLocation.comment,
@@ -86,9 +80,9 @@ const generateSingleElement =
       return;
     }
     let newElementUri = toTreeElementUri({
-      serviceName,
+      serviceId,
       element,
-      searchLocationName,
+      searchLocationId,
       service,
       searchLocation,
     })(Date.now().toString());
@@ -101,11 +95,12 @@ const generateSingleElement =
       newElementUri = elementNode.uri;
     }
     const updatedElementNode: SelectedElementNode = {
-      searchLocationId: toSearchLocationId(serviceName)(searchLocationName),
+      searchLocationId: elementNode.searchLocationId,
       type: elementNode.type,
       name: elementNode.name,
       parent: elementNode.parent,
       uri: newElementUri,
+      tooltip: toElementTooltip(element),
     };
     const generateResult = await complexGenerate(service)(element)(
       actionControlValue
@@ -117,11 +112,9 @@ const generateSingleElement =
         `${error.message}.`
       );
       await updateTreeAfterGenerate(dispatch)(
-        serviceName,
-        service,
-        searchLocationName,
-        searchLocation,
-        [element]
+        serviceId,
+        searchLocationId,
+        element
       );
       await printListingCommand(updatedElementNode);
       // consider errors in the element processing as a success too (a part of the expected developer workflow)
@@ -146,11 +139,9 @@ const generateSingleElement =
       return;
     }
     await updateTreeAfterGenerate(dispatch)(
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      [element]
+      serviceId,
+      searchLocationId,
+      element
     );
     if (await askToShowListing([elementNode.name])) {
       reporter.sendTelemetryEvent({
@@ -219,18 +210,14 @@ const complexGenerate =
 const updateTreeAfterGenerate =
   (dispatch: (action: Action) => Promise<void>) =>
   async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
-    elements: ReadonlyArray<Element>
+    serviceId: EndevorId,
+    searchLocationId: EndevorId,
+    element: Element
   ): Promise<void> => {
     await dispatch({
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      elements,
+      serviceId,
+      searchLocationId,
+      element,
     });
   };

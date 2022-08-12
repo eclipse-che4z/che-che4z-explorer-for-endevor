@@ -21,6 +21,7 @@ const BundledLicensesPlugin = require('@local/bundled-licenses-webpack-plugin');
 const webpack = require('webpack');
 const childProcess = require('child_process');
 const process = require('process');
+const { readFileSync } = require('fs');
 
 const distFolderPath = path.resolve(__dirname, 'dist');
 
@@ -32,14 +33,53 @@ var latestGitCommit = childProcess
 // receive an api key from pipeline env variable for prod builds
 var telemetryApiKey = process.env.E4E_TELEMETRY_KEY || '';
 
+const noticeText = readFileSync(path.resolve(__dirname, 'license-template.txt'))
+  .toString('utf-8')
+  .trim();
+
+const zoweCommonLicense = noticeText;
+
 /**@type {import('webpack').Configuration}*/
 const config = {
   mode: 'production',
   plugins: [
     new BundledLicensesPlugin({
       override: {
-        '@broadcom/endevor-for-zowe-cli@6.5.0': {
+        '@broadcom/endevor-for-zowe-cli@7.2.3': {
           licenseName: 'Broadcom Internal',
+        },
+        '@zowe/cli@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/core-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/provisioning-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-console-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-files-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-jobs-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-tso-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-uss-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zos-workflows-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zosmf-for-zowe-sdk@7.2.3': {
+          licenseText: zoweCommonLicense,
+        },
+        '@zowe/zowe-explorer-api@2.2.1': {
+          licenseText: zoweCommonLicense,
         },
         'promise-pool-tool@1.3.3': {
           licenseText: `
@@ -84,6 +124,7 @@ THIS SOFTWARE.`,
     // Add modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     keytar: 'commonjs keytar',
+    'cpu-features': 'commonjs cpu-features',
   },
   resolve: {
     // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader

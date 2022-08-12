@@ -45,13 +45,13 @@ import {
   ElementMapPath,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
-import { Action, Actions } from '../_doc/Actions';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import { Action, Actions } from '../store/_doc/Actions';
 import {
   TelemetryEvents,
   ApplyDiffEditorChangesCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
 } from '../_doc/Telemetry';
+import { EndevorId } from '../store/_doc/v2/Store';
 
 export const applyDiffEditorChanges = async (
   dispatch: (action: Action) => Promise<void>,
@@ -91,8 +91,8 @@ export const applyDiffEditorChanges = async (
     element,
     endevorConnectionDetails: service,
     initialSearchContext: {
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       overallSearchLocation,
       initialSearchLocation,
     },
@@ -113,8 +113,8 @@ export const applyDiffEditorChanges = async (
     return;
   }
   const uploadResult = await uploadElement(dispatch)(
-    uriParms.initialSearchContext.serviceName,
-    uriParms.initialSearchContext.searchLocationName,
+    uriParms.initialSearchContext.serviceId,
+    uriParms.initialSearchContext.searchLocationId,
     uriParms.initialSearchContext.initialSearchLocation
   )(
     uriParms.endevorConnectionDetails,
@@ -140,9 +140,9 @@ export const applyDiffEditorChanges = async (
   if (isNewElementAdded) {
     await dispatch({
       type: Actions.ELEMENT_ADDED,
-      serviceName,
+      serviceId,
       service,
-      searchLocationName,
+      searchLocationId,
       searchLocation: overallSearchLocation,
       element: {
         ...uploadTargetLocation,
@@ -156,11 +156,9 @@ export const applyDiffEditorChanges = async (
   if (isElementEditedInPlace) {
     await dispatch({
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation: overallSearchLocation,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     });
     return;
   }
@@ -168,8 +166,8 @@ export const applyDiffEditorChanges = async (
     type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
     fetchElementsArgs: { service, searchLocation: overallSearchLocation },
     treePath: {
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       searchLocation: initialSearchLocation,
     },
     pathUpTheMap: element,
@@ -230,8 +228,8 @@ const readComparedElementContent = async (): Promise<string | Error> => {
 const uploadElement =
   (dispatch: (action: Action) => Promise<void>) =>
   (
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName,
+    serviceId: EndevorId,
+    searchLocationId: EndevorId,
     initialSearchLocation: SubSystemMapPath
   ) =>
   (
@@ -260,9 +258,8 @@ const uploadElement =
       );
       const signOutResult = await complexSignoutElement(dispatch)(
         endevorConnectionDetails,
-        overallSearchLocation,
-        serviceName,
-        searchLocationName
+        serviceId,
+        searchLocationId
       )(element)(uploadChangeControlValue);
       if (isError(signOutResult)) {
         const error = signOutResult;
@@ -275,8 +272,8 @@ const uploadElement =
         return error;
       }
       return uploadElement(dispatch)(
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         initialSearchLocation
       )(endevorConnectionDetails, overallSearchLocation)(
         uploadChangeControlValue,
@@ -298,8 +295,8 @@ const uploadElement =
         overallSearchLocation,
         element
       )(uploadChangeControlValue, uploadTargetLocation)(
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         initialSearchLocation
       )(elementUri.fsPath);
       if (isError(showCompareDialogResult)) {
@@ -322,12 +319,7 @@ const uploadElement =
 
 const complexSignoutElement =
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    service: Service,
-    searchLocation: ElementSearchLocation,
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName
-  ) =>
+  (service: Service, serviceId: EndevorId, searchLocationId: EndevorId) =>
   (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
@@ -386,10 +378,8 @@ const complexSignoutElement =
         );
       }
       await updateTreeAfterSuccessfulSignout(dispatch)(
-        serviceName,
-        service,
-        searchLocationName,
-        searchLocation,
+        serviceId,
+        searchLocationId,
         [element]
       );
       reporter.sendTelemetryEvent({
@@ -406,10 +396,8 @@ const complexSignoutElement =
       );
     }
     await updateTreeAfterSuccessfulSignout(dispatch)(
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
+      serviceId,
+      searchLocationId,
       [element]
     );
     reporter.sendTelemetryEvent({
@@ -422,18 +410,14 @@ const complexSignoutElement =
 const updateTreeAfterSuccessfulSignout =
   (dispatch: (action: Action) => Promise<void>) =>
   async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
+    serviceId: EndevorId,
+    searchLocationId: EndevorId,
     elements: ReadonlyArray<Element>
   ): Promise<void> => {
     await dispatch({
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
+      serviceId,
+      searchLocationId,
       elements,
     });
   };

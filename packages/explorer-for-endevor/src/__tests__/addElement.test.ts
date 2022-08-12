@@ -32,11 +32,12 @@ import {
   mockAskingForChangeControlValue,
   mockAskingForUploadLocation,
   mockChooseFileUriFromFs,
-} from '../_mocks/dialogs';
-import { LocationNode } from '../_doc/ElementTree';
-import { toSearchLocationId } from '../tree/endevor';
-import { Actions } from '../_doc/Actions';
-import { parseFilePath } from '../utils';
+} from '../dialogs/_mocks/dialogs';
+import { LocationNode } from '../tree/_doc/ServiceLocationTree';
+import { Actions } from '../store/_doc/Actions';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { Source } from '../store/storage/_doc/Storage';
+import { toServiceLocationCompositeKey } from '../store/utils';
 
 describe('adding new element', () => {
   before(() => {
@@ -53,6 +54,10 @@ describe('adding new element', () => {
   });
 
   const serviceName = 'GenU';
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
   const service: Service = {
     location: {
       port: 1234,
@@ -69,11 +74,19 @@ describe('adding new element', () => {
     apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationNodeName = 'LOC';
+  const searchLocationNodeId: EndevorId = {
+    name: searchLocationNodeName,
+    source: Source.INTERNAL,
+  };
   const locationNode: LocationNode = {
-    id: toSearchLocationId(serviceName)(searchLocationNodeName),
+    id: toServiceLocationCompositeKey(serviceId)(searchLocationNodeId),
     type: 'LOCATION',
     name: searchLocationNodeName,
+    source: searchLocationNodeId.source,
     serviceName,
+    serviceSource: serviceId.source,
+    tooltip: 'FAKETOOLTIP',
+    duplicated: false,
   };
 
   const uploadedElementFilePath = '/some/temp/element.cbl';
@@ -81,7 +94,7 @@ describe('adding new element', () => {
   it('should add element to endevor', async () => {
     // arrange
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     mockChooseFileUriFromFs(Uri.file(uploadedElementFilePath));
     const elementContent =
@@ -90,7 +103,7 @@ describe('adding new element', () => {
       Promise.resolve(new TextEncoder().encode(elementContent))
     );
     const addLocation: ElementMapPath = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -105,7 +118,7 @@ describe('adding new element', () => {
       subsystem: addLocation.subSystem,
       type: addLocation.type,
       element: addLocation.name,
-      instance: searchLocation.instance,
+      configuration: searchLocation.configuration,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(addLocation);
     const addChangeControlValue: ActionChangeControlValue = {
@@ -135,7 +148,7 @@ describe('adding new element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert
@@ -147,30 +160,27 @@ describe('adding new element', () => {
       'Dispatch for add element was not called'
     );
     const addedElement: Element = {
-      instance: addLocation.instance,
+      configuration: addLocation.configuration,
       environment: addLocation.environment,
       system: addLocation.system,
       subSystem: addLocation.subSystem,
       stageNumber: addLocation.stageNumber,
       type: addLocation.type,
       name: addLocation.name,
-      // we know, that there will be an extension for sure
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      extension: parseFilePath(uploadedElementFilePath).fileExtension!,
     };
-    const expextedAddedElementAction = {
+    const expectedAddedElementAction = {
       type: Actions.ELEMENT_ADDED,
-      serviceName: locationNode.serviceName,
+      serviceId,
       service,
-      searchLocationName: locationNode.name,
+      searchLocationId: searchLocationNodeId,
       searchLocation,
       element: addedElement,
     };
     assert.deepStrictEqual(
-      expextedAddedElementAction,
+      expectedAddedElementAction,
       dispatchAddedAction.args[0]?.[0],
-      `Expexted dispatch for add element to have been called with ${JSON.stringify(
-        expextedAddedElementAction
+      `Expected dispatch for add element to have been called with ${JSON.stringify(
+        expectedAddedElementAction
       )}, but it was called with ${JSON.stringify(
         dispatchAddedAction.args[0]?.[0]
       )}`
@@ -179,7 +189,7 @@ describe('adding new element', () => {
     assert.deepStrictEqual(
       dispatchAddedAction.callCount,
       expectedNumberOfCalls,
-      `Expexted dispatch for add element to have been called ${expectedNumberOfCalls} times, but it was called ${dispatchAddedAction.callCount} times.`
+      `Expected dispatch for add element to have been called ${expectedNumberOfCalls} times, but it was called ${dispatchAddedAction.callCount} times.`
     );
   });
 });

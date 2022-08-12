@@ -18,7 +18,7 @@ import {
   isError,
   groupBySearchLocationId,
 } from '../utils';
-import { ElementNode } from '../_doc/ElementTree';
+import { ElementNode } from '../tree/_doc/ElementTree';
 import * as vscode from 'vscode';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
@@ -29,13 +29,9 @@ import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { PromisePool } from 'promise-pool-tool';
 import { isSignoutError, toSeveralTasksProgress } from '@local/endevor/utils';
 import {
-  getMaxParallelRequests,
   isAutomaticSignOut,
+  getMaxParallelRequests,
 } from '../settings/settings';
-import {
-  MAX_PARALLEL_REQUESTS_DEFAULT,
-  AUTOMATIC_SIGN_OUT_DEFAULT,
-} from '../constants';
 import { fromTreeElementUri } from '../uri/treeElementUri';
 import {
   askForChangeControlValue,
@@ -56,8 +52,11 @@ import {
   ElementSearchLocation,
 } from '@local/endevor/_doc/Endevor';
 import { SignoutError } from '@local/endevor/_doc/Error';
-import { Action, Actions, SignedOutElementsPayload } from '../_doc/Actions';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import {
+  Action,
+  Actions,
+  SignedOutElementsPayload,
+} from '../store/_doc/Actions';
 import {
   DependencyRetrievalCompletedStatus,
   RetrieveElementWithDepsCommandCompletedStatus,
@@ -65,6 +64,7 @@ import {
   TelemetryEvents,
   TreeElementCommandArguments,
 } from '../_doc/Telemetry';
+import { Id } from '../store/storage/_doc/Storage';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = ElementNode[];
@@ -81,17 +81,7 @@ export const retrieveWithDependencies = async (
         .map((node) => node.name)
         .join(',')}.`
     );
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
-        `Reading settings error ${e.message}`
-      );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
+    if (isAutomaticSignOut()) {
       const groupedElementNodes = groupBySearchLocationId(elementNodes);
       for (const elementNodesGroup of Object.values(groupedElementNodes)) {
         await retrieveMultipleElementsWithDepsWithSignout(dispatch)(
@@ -106,17 +96,7 @@ export const retrieveWithDependencies = async (
     logger.trace(
       `Retrieve element command was called for ${elementNode.name}.`
     );
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
-        `Reading settings error ${e.message}`
-      );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
+    if (isAutomaticSignOut()) {
       await retrieveSingleElementWithDepsWithSignout(dispatch)(elementNode);
       return;
     }
@@ -157,16 +137,7 @@ const retrieveSingleElementWithDepsWithSignout =
       });
       return;
     }
-    let endevorMaxRequestsNumber: number;
-    try {
-      endevorMaxRequestsNumber = getMaxParallelRequests();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
-        `Reading settings error ${e.message}`
-      );
-      endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
-    }
+    const endevorMaxRequestsNumber = getMaxParallelRequests();
     const elementUri = fromTreeElementUri(element.uri);
     if (isError(elementUri)) {
       const error = elementUri;
@@ -193,8 +164,8 @@ const retrieveSingleElementWithDepsWithSignout =
       },
       elementUri.searchLocation
     )(
-      elementUri.serviceName,
-      elementUri.searchLocationName,
+      elementUri.serviceId,
+      elementUri.searchLocationId,
       elementUri.element
     )(signoutChangeControlValue);
     if (!retrieveResult) {
@@ -244,8 +215,8 @@ const retrieveSingleElementWithDepsWithSignout =
       });
     }
     const saveResult = await saveIntoWorkspaceWithDependencies(workspaceUri)(
-      elementUri.serviceName,
-      elementUri.searchLocationName
+      elementUri.serviceId.name,
+      elementUri.searchLocationId.name
     )({
       mainElement: {
         element: elementUri.element,
@@ -294,13 +265,9 @@ const complexRetrieve =
   (dispatch: (action: Action) => Promise<void>) =>
   (
     { service, requestPoolMaxSize }: ServiceInstance,
-    searchLocation: ElementSearchLocation
+    _searchLocation: ElementSearchLocation
   ) =>
-  (
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName,
-    element: Element
-  ) =>
+  (serviceId: Id, searchLocationId: Id, element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<ElementWithDependencies | undefined> => {
@@ -364,10 +331,8 @@ const complexRetrieve =
           status: SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS,
         });
         await updateTreeAfterSuccessfulSignout(dispatch)({
-          serviceName,
-          service,
-          searchLocationName,
-          searchLocation,
+          serviceId,
+          searchLocationId,
           elements: [element],
         });
         return retrieveWithOverrideSignoutResult;
@@ -416,10 +381,8 @@ const complexRetrieve =
       return;
     }
     await updateTreeAfterSuccessfulSignout(dispatch)({
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
+      serviceId,
+      searchLocationId,
       elements: [element],
     });
     return retrieveWithSignoutResult;
@@ -540,16 +503,7 @@ const retrieveSingleElementWithDeps = async (
     });
     return;
   }
-  let endevorMaxRequestsNumber: number;
-  try {
-    endevorMaxRequestsNumber = getMaxParallelRequests();
-  } catch (e) {
-    logger.warn(
-      `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
-      `Reading settings error: ${e.message}`
-    );
-    endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
-  }
+  const endevorMaxRequestsNumber = getMaxParallelRequests();
   const elementUri = fromTreeElementUri(element.uri);
   if (isError(elementUri)) {
     const error = elementUri;
@@ -621,8 +575,8 @@ const retrieveSingleElementWithDeps = async (
     });
   }
   const saveResult = await saveIntoWorkspaceWithDependencies(workspaceUri)(
-    elementUri.serviceName,
-    elementUri.searchLocationName
+    elementUri.serviceId.name,
+    elementUri.searchLocationId.name
   )({
     mainElement: {
       element: elementUri.element,
@@ -696,16 +650,7 @@ const retrieveMultipleElementsWithDeps = async (
     });
     return;
   }
-  let endevorMaxRequestsNumber: number;
-  try {
-    endevorMaxRequestsNumber = getMaxParallelRequests();
-  } catch (e) {
-    logger.warn(
-      `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
-      `Reading settings error ${e.message}`
-    );
-    endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
-  }
+  const endevorMaxRequestsNumber = getMaxParallelRequests();
   const validElementUris = elements
     .map((element) => {
       const uriParams = fromTreeElementUri(element.uri);
@@ -724,8 +669,8 @@ const retrieveMultipleElementsWithDeps = async (
   > = await retrieveMultipleElementCopies(
     validElementUris.map((uri) => {
       return {
-        serviceName: uri.serviceName,
-        searchLocationName: uri.searchLocationName,
+        serviceId: uri.serviceId,
+        searchLocationId: uri.searchLocationId,
         element: uri.element,
         serviceInstance: {
           service: uri.service,
@@ -802,8 +747,8 @@ const retrieveMultipleElementsWithDeps = async (
         const saveResult = await saveIntoWorkspaceWithDependencies(
           workspaceUri
         )(
-          elementDetails.serviceName,
-          elementDetails.searchLocationName
+          elementDetails.serviceId.name,
+          elementDetails.searchLocationId.name
         )({
           mainElement: {
             element: elementDetails.element,
@@ -984,16 +929,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
       });
       return;
     }
-    let endevorMaxRequestsNumber: number;
-    try {
-      endevorMaxRequestsNumber = getMaxParallelRequests();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for the Endevor pool size, the default ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead.`,
-        `Reading settings error: ${e.message}`
-      );
-      endevorMaxRequestsNumber = MAX_PARALLEL_REQUESTS_DEFAULT;
-    }
+    const endevorMaxRequestsNumber = getMaxParallelRequests();
     // we are 100% sure, that at least one element is selected
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const firstElementUriParams = fromTreeElementUri(elements[0]!.uri);
@@ -1032,8 +968,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
       validElementUris.map((uri) => {
         return {
           element: uri.element,
-          searchLocationName: uri.searchLocationName,
-          serviceName: uri.serviceName,
+          searchLocationId: uri.searchLocationId,
+          serviceId: uri.serviceId,
           serviceInstance: {
             service: uri.service,
             requestPoolMaxSize: endevorMaxRequestsNumber,
@@ -1110,8 +1046,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
           const saveResult = await saveIntoWorkspaceWithDependencies(
             workspaceUri
           )(
-            elementDetails.serviceName,
-            elementDetails.searchLocationName
+            elementDetails.serviceId.name,
+            elementDetails.searchLocationId.name
           )({
             mainElement: {
               element: elementDetails.element,
@@ -1228,8 +1164,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
   };
 
 type ElementDetails = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
+  serviceId: Id;
+  searchLocationId: Id;
   serviceInstance: ServiceInstance;
   element: Element;
   searchLocation: ElementSearchLocation;
@@ -1604,9 +1540,9 @@ const toSignedOutElementsPayload = (
   } as unknown as SignedOutElementsPayload;
   return signedOutElements.reduce((accum, signedOutElement) => {
     return {
-      serviceName: signedOutElement.serviceName,
+      serviceId: signedOutElement.serviceId,
       service: signedOutElement.serviceInstance.service,
-      searchLocationName: signedOutElement.searchLocationName,
+      searchLocationId: signedOutElement.searchLocationId,
       searchLocation: signedOutElement.searchLocation,
       elements: [...accum.elements, signedOutElement.element],
     };
