@@ -15,7 +15,7 @@ import { logger } from './globals';
 import * as endevor from '@local/endevor/endevor';
 
 export const getApiVersion = endevor.getApiVersion(logger);
-export const getInstanceNames = endevor.getInstanceNames(logger);
+export const getConfigurations = endevor.getConfigurations(logger);
 export const getAllEnvironmentStages = endevor.getAllEnvironmentStages(logger);
 export const getAllSystems = endevor.getAllSystems(logger);
 export const getAllSubSystems = endevor.getAllSubSystems(logger);

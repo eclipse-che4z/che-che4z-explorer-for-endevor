@@ -31,6 +31,8 @@ export const toUrlParms = (
   hostname: string;
   port: number;
   pathname: string;
+  username: string;
+  password: string;
 }> => {
   let urlParms;
   try {
@@ -38,7 +40,7 @@ export const toUrlParms = (
   } catch (_e) {
     return {};
   }
-  const { protocol, hostname, port, pathname } = urlParms;
+  const { protocol, hostname, port, pathname, username, password } = urlParms;
   const resolvedProtocol = toEndevorProtocol(protocol);
   let resolvedPort = undefined;
   if (port) resolvedPort = parseInt(port);
@@ -63,6 +65,8 @@ export const toUrlParms = (
   return {
     protocol: resolvedProtocol,
     hostname,
+    username,
+    password,
     port: resolvedPort,
     pathname: pathname === '/' ? undefined : pathname,
   };
@@ -163,11 +167,3 @@ export const toSeveralTasksProgress =
       },
     };
   };
-
-export const getElementExtension = (element: {
-  typeName: string;
-  fileExt?: string | null;
-}): string =>
-  element.fileExt
-    ? element.fileExt.toLowerCase()
-    : element.typeName.toLowerCase();

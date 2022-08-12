@@ -11,10 +11,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export type EndevorServiceName = string;
-export type ElementLocationName = string;
+import * as vscode from 'vscode';
+import { EXTENSION_ISSUES_PAGE } from '../constants';
 
-export type LocationConfig = Readonly<{
-  service: EndevorServiceName;
-  elementLocations: ReadonlyArray<ElementLocationName>;
-}>;
+export const submitExtensionIssue = () =>
+  vscode.env.openExternal(vscode.Uri.parse(EXTENSION_ISSUES_PAGE));

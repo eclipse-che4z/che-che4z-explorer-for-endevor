@@ -12,74 +12,34 @@
  */
 
 import { logger } from '../../globals';
-import { ElementNode, Node } from '../../_doc/ElementTree';
-import { filterElementNodes, groupBySearchLocationId } from '../../utils';
+import * as vscode from 'vscode';
+import { ElementNode } from '../../tree/_doc/ElementTree';
 import { isAutomaticSignOut } from '../../settings/settings';
-import { AUTOMATIC_SIGN_OUT_DEFAULT } from '../../constants';
-import {
-  editMultipleElementsWithSignout,
-  editSingleElementWithSignout,
-} from './editElementWithSignout';
-import { editMultipleElements, editSingleElement } from './editElement';
-import { Action } from '../../_doc/Actions';
+import { editSingleElementWithSignout } from './editElementWithSignout';
+import { editSingleElement } from './editElement';
+import { Action } from '../../store/_doc/Actions';
 
 type SelectedElementNode = ElementNode;
-type SelectedMultipleNodes = Node[];
 
-export const editElementCommand = async (
-  dispatch: (action: Action) => Promise<void>,
-  elementNode?: SelectedElementNode,
-  nodes?: SelectedMultipleNodes
-) => {
-  if (nodes && nodes.length) {
-    const elementNodes = filterElementNodes(nodes);
-    logger.trace(
-      `Edit element command was called for ${elementNodes
-        .map((node) => node.name)
-        .join(', ')}`
-    );
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
-        `Reading settings error ${e.message}.`
-      );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
-      const groupedElementNodes = groupBySearchLocationId(elementNodes);
-      for (const elementNodesGroup of Object.values(groupedElementNodes)) {
-        await editMultipleElementsWithSignout(dispatch)(elementNodesGroup);
-      }
-      return;
-    }
-    await editMultipleElements(elementNodes);
-    return;
-  } else if (elementNode) {
+export type CommandContext = Readonly<{
+  getTempEditFolderUri: () => vscode.Uri;
+  dispatch: (action: Action) => Promise<void>;
+}>;
+
+export const editElementCommand =
+  ({ getTempEditFolderUri, dispatch }: CommandContext) =>
+  async (elementNode: SelectedElementNode) => {
     logger.trace(`Edit element command was called for ${elementNode.name}`);
-    let autoSignOut: boolean;
-    try {
-      autoSignOut = isAutomaticSignOut();
-    } catch (e) {
-      logger.warn(
-        `Cannot read the settings value for automatic signout, the default ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead.`,
-        `Reading settings error: ${e.message}.`
+    if (isAutomaticSignOut()) {
+      await editSingleElementWithSignout(dispatch)(getTempEditFolderUri)(
+        elementNode
       );
-      autoSignOut = AUTOMATIC_SIGN_OUT_DEFAULT;
-    }
-    if (autoSignOut) {
-      await editSingleElementWithSignout(dispatch)(elementNode);
       return;
     }
     try {
-      await editSingleElement(elementNode);
+      await editSingleElement(getTempEditFolderUri)(elementNode);
     } catch (e) {
       return;
     }
     return;
-  } else {
-    return;
-  }
-};
+  };

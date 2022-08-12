@@ -14,13 +14,17 @@
 import { COMMAND_PREFIX } from '../constants';
 
 export const CommandId = {
+  CLEANUP_STORAGE: `${COMMAND_PREFIX}.cleanupStorage`,
+  SUBMIT_ISSUE: `${COMMAND_PREFIX}.submitIssue`,
   PRINT_ELEMENT: `${COMMAND_PREFIX}.printElement`,
   PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
   REFRESH_TREE_VIEW: `${COMMAND_PREFIX}.refreshTreeView`,
   ADD_NEW_SERVICE: `${COMMAND_PREFIX}.addNewService`,
-  ADD_NEW_ELEMENT_LOCATION: `${COMMAND_PREFIX}.addNewElementLocation`,
-  HIDE_ELEMENT_LOCATION: `${COMMAND_PREFIX}.hideElementLocation`,
+  ADD_NEW_SEARCH_LOCATION: `${COMMAND_PREFIX}.addNewSearchLocation`,
+  HIDE_SEARCH_LOCATION: `${COMMAND_PREFIX}.hideSearchLocation`,
   HIDE_SERVICE: `${COMMAND_PREFIX}.hideService`,
+  DELETE_SERVICE: `${COMMAND_PREFIX}.deleteService`,
+  DELETE_SEARCH_LOCATION: `${COMMAND_PREFIX}.deleteSearchLocation`,
   VIEW_ELEMENT_DETAILS: `${COMMAND_PREFIX}.viewElementDetails`,
   ADD_ELEMENT_FROM_FILE_SYSTEM: `${COMMAND_PREFIX}.addElementFromFileSystem`,
   RETRIEVE_ELEMENT: `${COMMAND_PREFIX}.retrieveElement`,
@@ -34,4 +38,5 @@ export const CommandId = {
   UPLOAD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.acceptChanges`,
   SIGN_OUT_ELEMENT: `${COMMAND_PREFIX}.signOutElement`,
   SIGN_IN_ELEMENT: `${COMMAND_PREFIX}.signInElement`,
+  MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
 };

@@ -20,7 +20,7 @@ import {
   Service,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
-import { ElementLocationName, EndevorServiceName } from './settings';
+import { EndevorId } from '../store/_doc/v2/Store';
 
 export const enum Schemas {
   TREE_ELEMENT = 'e4eElement',
@@ -40,8 +40,8 @@ export const enum Extensions {
 }
 
 export type TreeElementUriQuery = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
   service: Service;
   element: Element;
   searchLocation: ElementSearchLocation;
@@ -57,9 +57,9 @@ export type EditedElementUriQuery = Readonly<{
     // TODO: remove from the URI, not related to the element itself
     overallSearchLocation: ElementSearchLocation;
     // TODO: remove from the URI, not related to the element itself
-    serviceName: EndevorServiceName;
+    serviceId: EndevorId;
     // TODO: remove from the URI, not related to the element itself
-    searchLocationName: ElementLocationName;
+    searchLocationId: EndevorId;
   };
 }>;
 
@@ -74,9 +74,9 @@ export type ComparedElementUriQuery = Readonly<{
     // TODO: remove from the URI, not related to the element itself
     overallSearchLocation: ElementSearchLocation;
     // TODO: remove from the URI, not related to the element itself
-    serviceName: EndevorServiceName;
+    serviceId: EndevorId;
     // TODO: remove from the URI, not related to the element itself
-    searchLocationName: ElementLocationName;
+    searchLocationId: EndevorId;
   };
   uploadChangeControlValue: ChangeControlValue;
   uploadTargetLocation: ElementMapPath;

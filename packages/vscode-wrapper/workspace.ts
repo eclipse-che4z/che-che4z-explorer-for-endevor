@@ -93,7 +93,12 @@ const toFileInWorkspaceFolderUri =
     const { fsPath } = folderUri;
     if (file.fileExtension) {
       return vscode.Uri.file(
-        path.join(fsPath, `${file.fileName}.${file.fileExtension}`)
+        path.join(
+          fsPath,
+          `${file.fileName}${file.fileExtension.startsWith('.') ? '' : '.'}${
+            file.fileExtension
+          }`
+        )
       );
     } else {
       return vscode.Uri.file(path.join(fsPath, file.fileName));

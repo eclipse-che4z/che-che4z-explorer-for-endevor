@@ -31,11 +31,11 @@ import { reporter } from '../globals';
 import { toComparedElementUri } from '../uri/comparedElementUri';
 import { isError } from '../utils';
 import { Schemas } from '../_doc/Uri';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
 import {
   TelemetryEvents,
   ResolveConflictWithRemoteCompletedStatus,
 } from '../_doc/Telemetry';
+import { EndevorId } from '../store/_doc/v2/Store';
 
 export const compareElementWithRemoteVersion =
   (service: Service, searchLocation: ElementSearchLocation, element: Element) =>
@@ -44,8 +44,8 @@ export const compareElementWithRemoteVersion =
     uploadTargetLocation: ElementMapPath
   ) =>
   (
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName,
+    serviceId: EndevorId,
+    searchLocationId: EndevorId,
     initialSearchLocation: SubSystemMapPath
   ) =>
   async (localVersionElementTempFilePath: string): Promise<void | Error> => {
@@ -85,8 +85,8 @@ export const compareElementWithRemoteVersion =
       initialSearchLocation
     )(uploadChangeControlValue, uploadTargetLocation)(
       element,
-      serviceName,
-      searchLocationName
+      serviceId,
+      searchLocationId
     )(
       remoteVersionTempFilePath,
       remoteVersionFingerprint
@@ -172,11 +172,7 @@ const toUploadableDiffEditorUri =
     uploadChangeControlValue: ChangeControlValue,
     uploadTargetLocation: ElementMapPath
   ) =>
-  (
-    element: Element,
-    serviceName: EndevorServiceName,
-    searchLocationName: ElementLocationName
-  ) =>
+  (element: Element, serviceId: EndevorId, searchLocationId: EndevorId) =>
   (remoteVersionTempFilePath: string, remoteVersionFingerprint: string) =>
   (localVersionTempFilePath: string) => {
     return toComparedElementUri(localVersionTempFilePath)({
@@ -187,8 +183,8 @@ const toUploadableDiffEditorUri =
       uploadTargetLocation,
       endevorConnectionDetails: service,
       initialSearchContext: {
-        serviceName,
-        searchLocationName,
+        serviceId,
+        searchLocationId,
         overallSearchLocation: searchLocation,
         initialSearchLocation,
       },

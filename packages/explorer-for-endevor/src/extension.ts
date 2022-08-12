@@ -14,20 +14,32 @@
 import { logger, reporter } from './globals'; // this import has to be first, it initializes global state
 import * as vscode from 'vscode';
 import {
-  AUTOMATIC_SIGN_OUT_DEFAULT,
-  MAX_PARALLEL_REQUESTS_DEFAULT,
+  EDIT_DIR,
   TREE_VIEW_ID,
+  EXT_VERSION,
+  UNKNOWN_VERSION,
+  ZE_API_MIN_VERSION,
 } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
-import { make as makeStore, toState } from './store/store';
 import {
-  watchForLocations,
-  getLocations,
-  getTempEditFolder,
-  watchForSettingChanges,
+  getAllServiceLocations,
+  make as makeStore,
+  getService,
+  getValidUnusedSearchLocationDescriptionsForService,
+  getValidUnusedServiceDescriptions,
+  getAllServiceDescriptionsBySearchLocationId,
+  getAllServiceNames,
+  getAllSearchLocationNames,
+} from './store/store';
+import {
+  watchForAutoSignoutChanges,
+  watchForMaxEndevorRequestsChanges,
+  watchForSyncProfilesChanges,
   isAutomaticSignOut,
   getMaxParallelRequests,
+  isSyncWithProfiles,
+  watchForFileExtensionResolutionChanges,
 } from './settings/settings';
 import {
   Extension,
@@ -37,14 +49,9 @@ import { CommandId } from './commands/id';
 import { printElement } from './commands/printElement';
 import { printListingCommand } from './commands/printListing';
 import { addNewService } from './commands/addNewService';
-import {
-  ElementNode,
-  LocationNode,
-  Node,
-  ServiceNode,
-} from './_doc/ElementTree';
-import { addNewElementLocation } from './commands/addNewElementLocation';
-import { hideElementLocation } from './commands/hideElementLocation';
+import { ElementNode } from './tree/_doc/ElementTree';
+import { addNewSearchLocation } from './commands/addNewSearchLocation';
+import { hideSearchLocation } from './commands/hideSearchLocation';
 import { hideService } from './commands/hideService';
 import { viewElementDetails } from './commands/viewElementDetails';
 import { retrieveElementCommand } from './commands/retrieveElement';
@@ -53,137 +60,225 @@ import { editElementCommand } from './commands/edit/editElementCommand';
 import { uploadElementCommand } from './commands/uploadElement';
 import { signOutElementCommand } from './commands/signOutElement';
 import { signInElementCommand } from './commands/signInElement';
-import { cleanTempEditDirectory } from './workspace';
-import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import { isError } from './utils';
+import { isError, joinUri } from './utils';
 import { generateElementInPlaceCommand } from './commands/generateElementInPlace';
 import { generateElementWithCopyBackCommand } from './commands/generateElementWithCopyBack';
 import { listingContentProvider } from './view/listingContentProvider';
-import { Actions } from './_doc/Actions';
-import { State } from './_doc/Store';
-import { LocationConfig } from './_doc/settings';
+import { Actions } from './store/_doc/Actions';
+import { State } from './store/_doc/v2/Store';
 import { Schemas } from './_doc/Uri';
 import { readOnlyFileContentProvider } from './view/readOnlyFileContentProvider';
 import { isEditedElementUri } from './uri/editedElementUri';
 import { discardEditedElementChanges } from './commands/discardEditedElementChanges';
 import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/addElementFromFileSystem';
-import { TelemetryEvents } from './_doc/Telemetry';
+import { TelemetryEvents as V2TelemetryEvents } from './_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents as V1TelemetryEvents } from './_doc/Telemetry';
+import { deleteDirectoryWithContent } from '@local/vscode-wrapper/workspace';
 import {
-  resolveService,
-  defineServiceResolutionOrder,
-} from './services/services';
+  createConnectionLocationsStorage,
+  createConnectionsStorage,
+  createCredentialsStorage,
+  createInventoryLocationsStorage,
+  createSettingsStorage,
+} from './store/storage/storage';
 import {
+  ConnectionLocationsStorage,
+  SettingsStorage,
+} from './store/storage/_doc/Storage';
+import {
+  defineEndevorCacheResolver,
   defineSearchLocationResolutionOrder,
+  defineServiceResolutionOrder,
+  resolveEndevorCache,
   resolveSearchLocation,
-} from './element-locations/elementLocations';
+  resolveService,
+} from './store/resolvers';
+import {
+  LocationNode,
+  ServiceNode,
+  Node,
+} from './tree/_doc/ServiceLocationTree';
+import { migrateConnectionLocationsFromSettings } from './store/storage/migrate';
+import { deleteSearchLocation } from './commands/deleteSearchLocation';
+import { deleteService } from './commands/deleteService';
+import { submitExtensionIssue } from './commands/submitExtensionIssue';
+import { ProfileStore } from './store/profiles/_doc/ProfileStore';
+import { ProfileTypes } from './store/profiles/_ext/Profile';
+import { isProfileStoreError } from './store/profiles/_doc/Error';
+import { profilesStoreFromZoweExplorer } from './store/profiles/profiles';
 
-const cleanTempDirectory = async (): Promise<void> => {
-  const workspace = await getWorkspaceUri();
-  if (workspace) {
-    let tempEditFolder;
-    try {
-      tempEditFolder = getTempEditFolder();
-    } catch (e) {
-      logger.warn(
-        `Unable to get edit folder path from settings.`,
-        `Error when reading settings: ${e.message}.`
-      );
-      return;
-    }
-    const result = await cleanTempEditDirectory(workspace)(tempEditFolder);
-    if (isError(result)) {
-      const error = result;
-      logger.trace(
-        `Cleaning edit files local directory: ${tempEditFolder} error: ${error.message}.`
-      );
-    }
-  }
-};
-
-const getInitialLocations = () => {
-  let locations: ReadonlyArray<LocationConfig>;
+const cleanTempDirectory = async (
+  tempEditFolderUri: vscode.Uri
+): Promise<void> => {
   try {
-    locations = [...getLocations()];
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
-      elementLocations: locations.map((location) => {
-        return {
-          elementLocationsAmount: location.elementLocations.length,
-        };
-      }),
-    });
+    await deleteDirectoryWithContent(tempEditFolderUri);
   } catch (error) {
-    locations = [];
-    logger.warn(
-      `Unable to get valid Endevor locations from the settings.`,
-      `Error when reading settings: ${error.message}.`
+    logger.trace(
+      `Unable to clean edit files temp directory because of error: ${error.message}.`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      status: 'GENERIC_ERROR',
-      errorContext: TelemetryEvents.ELEMENT_LOCATIONS_PROVIDED,
-      error,
-    });
-  }
-  return locations;
-};
-
-const getInitialAutoSignoutSetting = (): boolean => {
-  try {
-    return isAutomaticSignOut();
-  } catch (e) {
-    logger.warn(
-      `Cannot read settings value for automatic sign out, default: ${AUTOMATIC_SIGN_OUT_DEFAULT} will be used instead`,
-      `Reading settings error: ${e.message}`
-    );
-    return AUTOMATIC_SIGN_OUT_DEFAULT;
   }
 };
 
-const getInitialMaxRequestsSetting = (): number => {
-  try {
-    return getMaxParallelRequests();
-  } catch (e) {
-    logger.warn(
-      `Cannot read settings value for endevor pool size, default: ${MAX_PARALLEL_REQUESTS_DEFAULT} will be used instead`,
-      `Reading settings error: ${e.message}`
+const getExtensionVersionFromSettings = async (
+  getSettingsStorage: () => SettingsStorage
+) => {
+  const settings = await getSettingsStorage().get();
+  if (isError(settings)) {
+    const error = settings;
+    logger.error(
+      `Unable to retrieve the extension version.`,
+      `Unable to get the extension version from the settings storage because of: ${error.message}.`
     );
-    return MAX_PARALLEL_REQUESTS_DEFAULT;
+    return error;
   }
+  if (settings.version !== EXT_VERSION) {
+    const storeResult = getSettingsStorage().store({ version: EXT_VERSION });
+    if (isError(storeResult)) {
+      const error = storeResult;
+      logger.warn(
+        'Unable to store the latest extension version to the settings.',
+        `Unable to store the latest extension version to the settings storage because of: ${error.message}.`
+      );
+    }
+  }
+  return settings.version;
+};
+
+export const migrateConnectionLocations =
+  (getConnectionLocationsStorage: () => ConnectionLocationsStorage) =>
+  async (extensionVersion: string): Promise<void | Error> => {
+    if (extensionVersion !== UNKNOWN_VERSION) return;
+    const profilesMigrationResult =
+      await migrateConnectionLocationsFromSettings(
+        getConnectionLocationsStorage
+      );
+    if (isError(profilesMigrationResult)) {
+      const error = profilesMigrationResult;
+      logger.error(
+        `Unable to migrate settings from previous version. Use 'Migrate services/search locations from previous version' command from the Command Palette to retry.`,
+        `Unable to merge the previous settings into the internal storage because of ${error.message}.`
+      );
+    }
+    return;
+  };
+
+export const initializeProfilesStore = async (): Promise<
+  ProfileStore | undefined
+> => {
+  if (!isSyncWithProfiles()) return;
+  const profilesStore = await profilesStoreFromZoweExplorer([
+    ProfileTypes.ENDEVOR,
+    ProfileTypes.ENDEVOR_LOCATION,
+  ])(ZE_API_MIN_VERSION);
+  if (isProfileStoreError(profilesStore)) {
+    const error = profilesStore;
+    logger.error(
+      'Unable to initialize Zowe API. Zowe profiles will not be available in this session.',
+      `${error.message}.`
+    );
+    return;
+  }
+  return profilesStore;
 };
 
 export const activate: Extension['activate'] = async (context) => {
   logger.trace(
     `${context.extension.id} extension with the build number: ${__E4E_BUILD_NUMBER__} will be activated.`
   );
-  await cleanTempDirectory();
+  logger.trace(vscode.env.machineId);
+
+  const tempEditFolderUri = joinUri(context.globalStorageUri)(EDIT_DIR);
+  await cleanTempDirectory(tempEditFolderUri);
+  const getTempEditFolderUri = () => tempEditFolderUri;
+
   const treeChangeEmitter = new vscode.EventEmitter<Node | null>();
-  let stateForTree: State = [];
-  const refreshTree = (state: State, node?: Node) => {
-    stateForTree = state;
-    treeChangeEmitter.fire(node ?? null);
+  let stateForTree: State = {
+    caches: {},
+    services: {},
+    sessions: {},
+    searchLocations: {},
+    serviceLocations: {},
   };
+  const refreshTree = (_node?: Node) => treeChangeEmitter.fire(null);
+
   const getState = () => stateForTree;
 
-  const dispatch = makeStore(toState(getInitialLocations()), refreshTree);
+  // use global storages to store the settings for now
+  const stateStorage = context.globalState;
+  const secretStorage = context.secrets;
 
-  const searchLocationResolver = resolveSearchLocation(
-    defineSearchLocationResolutionOrder(getState, dispatch)
+  const profilesStore = await initializeProfilesStore();
+
+  const connectionLocationsStorage =
+    createConnectionLocationsStorage(stateStorage);
+  const getConnectionLocationsStorage = () => connectionLocationsStorage;
+
+  const connectionsStorage = await createConnectionsStorage(stateStorage)(
+    profilesStore
   );
+  const getConnectionsStorage = () => connectionsStorage;
+
+  const inventoryLocationsStorage = await createInventoryLocationsStorage(
+    stateStorage
+  )(profilesStore);
+  const getInventoryLocationsStorage = () => inventoryLocationsStorage;
+
+  const credentialsStorage = await createCredentialsStorage(secretStorage)(
+    profilesStore
+  );
+  const getCredentialsStorage = () => credentialsStorage;
+
+  const settingsStorage = createSettingsStorage(stateStorage);
+  const getSettingsStorage = () => settingsStorage;
+
+  const extensionVersion = await getExtensionVersionFromSettings(
+    getSettingsStorage
+  );
+  if (!isError(extensionVersion)) {
+    await migrateConnectionLocations(() => connectionLocationsStorage)(
+      extensionVersion
+    );
+  }
+
+  const dispatch = await makeStore({
+    getConnectionLocationsStorage,
+    getConnectionsStorage,
+    getInventoryLocationsStorage,
+    getCredentialsStorage,
+  })(
+    () => stateForTree,
+    refreshTree,
+    (state) => {
+      stateForTree = state;
+      return;
+    }
+  );
+
   const serviceResolver = resolveService(
     defineServiceResolutionOrder(getState, dispatch)
   );
-
-  const elmTreeProvider = makeElmTreeProvider(
-    treeChangeEmitter,
-    {
-      getState,
-      getService: serviceResolver,
-      getSearchLocation: searchLocationResolver,
-    },
-    dispatch
+  const searchLocationResolver = resolveSearchLocation(
+    defineSearchLocationResolutionOrder(getState)
   );
+
+  const cacheResolver = resolveEndevorCache(
+    defineEndevorCacheResolver(
+      getState,
+      serviceResolver,
+      (serviceId) => (searchLocationId) =>
+        searchLocationResolver(serviceId, searchLocationId),
+      dispatch
+    )
+  );
+  const treeProvider = makeElmTreeProvider(treeChangeEmitter, {
+    getServiceLocations: () => getAllServiceLocations(getState),
+    getService: serviceResolver,
+    getSearchLocation: (serviceId) => (searchLocationId) =>
+      searchLocationResolver(serviceId, searchLocationId),
+    getEndevorCache: (serviceId) => (searchLocationId) =>
+      cacheResolver(serviceId, searchLocationId),
+  });
 
   const withErrorLogging =
     (commandId: string) =>
@@ -201,12 +296,17 @@ export const activate: Extension['activate'] = async (context) => {
 
   const refresh = async () => {
     reporter.sendTelemetryEvent({
-      type: TelemetryEvents.REFRESH_COMMAND_CALLED,
+      type: V1TelemetryEvents.REFRESH_COMMAND_CALLED,
     });
     await dispatch({
       type: Actions.REFRESH,
     });
   };
+
+  const editElement = editElementCommand({
+    dispatch,
+    getTempEditFolderUri,
+  });
 
   const commands = [
     [
@@ -225,32 +325,46 @@ export const activate: Extension['activate'] = async (context) => {
         );
       },
     ],
-    [
-      CommandId.REFRESH_TREE_VIEW,
-      refresh,
-      () => {
-        return withErrorLogging(CommandId.REFRESH_TREE_VIEW)(refresh());
-      },
-    ],
+    [CommandId.REFRESH_TREE_VIEW, refresh],
+    [CommandId.SUBMIT_ISSUE, submitExtensionIssue],
     [
       CommandId.ADD_NEW_SERVICE,
       () => {
-        return withErrorLogging(CommandId.ADD_NEW_SERVICE)(addNewService());
-      },
-    ],
-    [
-      CommandId.ADD_NEW_ELEMENT_LOCATION,
-      (serviceNode: ServiceNode) => {
-        return withErrorLogging(CommandId.ADD_NEW_ELEMENT_LOCATION)(
-          addNewElementLocation(serviceResolver)(serviceNode)
+        return withErrorLogging(CommandId.ADD_NEW_SERVICE)(
+          addNewService(
+            {
+              getValidUnusedServiceDescriptions: () =>
+                getValidUnusedServiceDescriptions(getState),
+              getAllServiceNames: () => getAllServiceNames(getState),
+            },
+            dispatch
+          )
         );
       },
     ],
     [
-      CommandId.HIDE_ELEMENT_LOCATION,
+      CommandId.ADD_NEW_SEARCH_LOCATION,
+      (serviceNode: ServiceNode) => {
+        return withErrorLogging(CommandId.ADD_NEW_SEARCH_LOCATION)(
+          addNewSearchLocation(
+            {
+              getSearchLocationNames: () => getAllSearchLocationNames(getState),
+              getValidUnusedSearchLocationDescriptionsForService:
+                getValidUnusedSearchLocationDescriptionsForService(getState),
+              getServiceDescriptionsBySearchLocationId:
+                getAllServiceDescriptionsBySearchLocationId(getState),
+              getServiceById: getService(getState),
+            },
+            dispatch
+          )(serviceNode)
+        );
+      },
+    ],
+    [
+      CommandId.HIDE_SEARCH_LOCATION,
       (locationNode: LocationNode) => {
-        return withErrorLogging(CommandId.HIDE_ELEMENT_LOCATION)(
-          hideElementLocation(locationNode)
+        return withErrorLogging(CommandId.HIDE_SEARCH_LOCATION)(
+          hideSearchLocation(dispatch)(locationNode)
         );
       },
     ],
@@ -258,7 +372,29 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.HIDE_SERVICE,
       (serviceNode: ServiceNode) => {
         return withErrorLogging(CommandId.HIDE_SERVICE)(
-          hideService(serviceNode)
+          hideService(dispatch)(serviceNode)
+        );
+      },
+    ],
+    [
+      CommandId.DELETE_SEARCH_LOCATION,
+      (locationNode: LocationNode) => {
+        return withErrorLogging(CommandId.DELETE_SEARCH_LOCATION)(
+          deleteSearchLocation(
+            {
+              getServiceDescriptionsBySearchLocationId:
+                getAllServiceDescriptionsBySearchLocationId(getState),
+            },
+            dispatch
+          )(locationNode)
+        );
+      },
+    ],
+    [
+      CommandId.DELETE_SERVICE,
+      (serviceNode: ServiceNode) => {
+        return withErrorLogging(CommandId.DELETE_SERVICE)(
+          deleteService(dispatch)(serviceNode)
         );
       },
     ],
@@ -325,9 +461,9 @@ export const activate: Extension['activate'] = async (context) => {
     ],
     [
       CommandId.QUICK_EDIT_ELEMENT,
-      (elementNode?: ElementNode, nodes?: Node[]) => {
+      (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.QUICK_EDIT_ELEMENT)(
-          editElementCommand(dispatch, elementNode, nodes)
+          editElement(elementNode)
         );
       },
     ],
@@ -351,7 +487,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.SIGN_OUT_ELEMENT,
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.SIGN_OUT_ELEMENT)(
-          signOutElementCommand(dispatch, elementNode)
+          signOutElementCommand(dispatch)(elementNode)
         );
       },
     ],
@@ -360,6 +496,43 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.SIGN_IN_ELEMENT)(
           signInElementCommand(dispatch, elementNode)
+        );
+      },
+    ],
+    [
+      CommandId.CLEANUP_STORAGE,
+      () => {
+        return withErrorLogging(CommandId.CLEANUP_STORAGE)(
+          (async () => {
+            logger.trace(`Cleanup persistence storage command was called.`);
+            const connections = await getConnectionsStorage().get();
+            if (!isError(connections)) {
+              Object.values(connections).forEach(async (connection) => {
+                await getCredentialsStorage().delete(connection.id);
+              });
+            }
+            await getConnectionLocationsStorage().delete();
+            await getConnectionsStorage().delete();
+            await getInventoryLocationsStorage().delete();
+            await getSettingsStorage().delete();
+            dispatch({
+              type: Actions.REFRESH,
+            });
+          })()
+        );
+      },
+    ],
+    [
+      CommandId.MIGRATE_LOCATIONS,
+      () => {
+        return withErrorLogging(CommandId.MIGRATE_LOCATIONS)(
+          (async () => {
+            logger.trace(`Location migration command was called.`);
+            await migrateConnectionLocations(() => connectionLocationsStorage)(
+              UNKNOWN_VERSION
+            );
+            dispatch({ type: Actions.REFRESH });
+          })()
         );
       },
     ],
@@ -385,7 +558,7 @@ export const activate: Extension['activate'] = async (context) => {
   context.subscriptions.push(
     reporter,
     vscode.window.createTreeView(TREE_VIEW_ID, {
-      treeDataProvider: elmTreeProvider,
+      treeDataProvider: treeProvider,
       canSelectMany: true,
     }),
     vscode.workspace.registerTextDocumentContentProvider(
@@ -404,8 +577,10 @@ export const activate: Extension['activate'] = async (context) => {
     ...commands.map(([id, command]) =>
       vscode.commands.registerCommand(id, command)
     ),
-    watchForLocations(dispatch),
-    watchForSettingChanges(),
+    watchForAutoSignoutChanges(),
+    watchForMaxEndevorRequestsChanges(),
+    watchForSyncProfilesChanges(),
+    watchForFileExtensionResolutionChanges(),
     vscode.workspace.onDidSaveTextDocument((document) =>
       textDocumentSavedHandlers
         .filter((handler) => handler.isApplicable(document))
@@ -415,10 +590,11 @@ export const activate: Extension['activate'] = async (context) => {
     )
   );
   reporter.sendTelemetryEvent({
-    type: TelemetryEvents.EXTENSION_ACTIVATED,
+    type: V2TelemetryEvents.EXTENSION_ACTIVATED,
     buildNumber: __E4E_BUILD_NUMBER__,
-    autoSignOut: getInitialAutoSignoutSetting(),
-    maxParallelRequests: getInitialMaxRequestsSetting(),
+    autoSignOut: isAutomaticSignOut(),
+    maxParallelRequests: getMaxParallelRequests(),
+    syncWithProfiles: isSyncWithProfiles(),
   });
 };
 

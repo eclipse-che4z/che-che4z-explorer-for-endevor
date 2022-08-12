@@ -12,7 +12,7 @@
  */
 
 import { logger, reporter } from '../globals';
-import { ElementNode } from '../_doc/ElementTree';
+import { ElementNode } from '../tree/_doc/ElementTree';
 import { window } from 'vscode';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '@local/endevor/utils';

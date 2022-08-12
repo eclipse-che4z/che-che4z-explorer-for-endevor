@@ -12,38 +12,11 @@
  */
 
 import { Uri } from 'vscode';
-import { ElementLocationName, EndevorServiceName } from './settings';
-
-export type Services = ServiceNode[];
-export type Locations = LocationNode[];
 
 export type Systems = Map<string, SystemNode>;
 export type SubSystems = Map<string, SubSystemNode>;
 export type Types = Map<string, TypeNode>;
 export type Elements = Map<string, ElementNode>;
-
-export type AddNewProfileNode = Readonly<{
-  type: 'BUTTON_ADD_PROFILE';
-  label: string;
-  command: {
-    command: string;
-    title: string;
-  };
-}>;
-
-export type ServiceNode = Readonly<{
-  id: string;
-  type: 'SERVICE';
-  name: string;
-  children: Locations;
-}>;
-export type LocationNode = Readonly<{
-  id: string;
-  type: 'LOCATION';
-  name: string;
-  serviceName: string;
-  // baseUrl: EndevorUrl;
-}>;
 
 export type SystemNode = Readonly<{
   type: 'SYS';
@@ -75,6 +48,7 @@ type ElementInPlaceNode = Readonly<{
   name: string;
   uri: Uri;
   parent: TypeNode;
+  tooltip: string;
 }>;
 
 type ElementUpTheMapNode = Readonly<{
@@ -83,30 +57,19 @@ type ElementUpTheMapNode = Readonly<{
   name: string;
   uri: Uri;
   parent: TypeNode;
+  tooltip: string;
 }>;
 
 export type ElementNode = ElementInPlaceNode | ElementUpTheMapNode;
-
-export type ElementLocationNode =
-  | SystemNode
-  | SubSystemNode
-  | TypeNode
-  | ElementNode;
 
 export type EmptyMapNode = Readonly<{
   type: 'EMPTY_MAP_NODE';
 }>;
 
-export type Node =
-  | AddNewProfileNode
-  | ServiceNode
-  | LocationNode
+export type ElementLocationNode =
+  | SystemNode
+  | SubSystemNode
+  | TypeNode
+  | ElementNode
   | EndevorMapNode
-  | ElementLocationNode
   | EmptyMapNode;
-
-export interface ElementTree {
-  serviceName: EndevorServiceName;
-  locationName: ElementLocationName;
-  systems: SystemNode[];
-}

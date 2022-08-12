@@ -17,24 +17,25 @@ import * as path from 'path';
 
 export const toTreeElementUri =
   ({
-    serviceName,
+    serviceId,
     element,
-    searchLocationName,
+    searchLocationId,
     service,
     searchLocation,
   }: TreeElementUriQuery) =>
   (uniqueFragment: string): Uri | Error => {
     try {
-      const elementExtension = `${element.extension}.${Extensions.TREE_ELEMENT}`;
       const emptyUri = Uri.parse('');
       return emptyUri.with({
         scheme: Schemas.TREE_ELEMENT,
-        path: path.resolve(`/${element.name}.${elementExtension}`),
+        path: path.resolve(
+          `/${[element.name, Extensions.TREE_ELEMENT].join('.')}`
+        ),
         query: encodeURIComponent(
           JSON.stringify({
-            serviceName,
+            serviceId,
             service,
-            searchLocationName,
+            searchLocationId,
             element,
             searchLocation,
           })

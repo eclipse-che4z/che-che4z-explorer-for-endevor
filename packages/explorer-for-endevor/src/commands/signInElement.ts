@@ -16,14 +16,8 @@ import { signInElement } from '../endevor';
 import { logger, reporter } from '../globals';
 import { fromTreeElementUri } from '../uri/treeElementUri';
 import { isError } from '../utils';
-import { ElementNode } from '../_doc/ElementTree';
-import { Action, Actions } from '../_doc/Actions';
-import {
-  Element,
-  ElementSearchLocation,
-  Service,
-} from '@local/endevor/_doc/Endevor';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import { ElementNode } from '../tree/_doc/ElementTree';
+import { Action, Actions } from '../store/_doc/Actions';
 import {
   SignInElementCommandCompletedStatus,
   TelemetryEvents,
@@ -37,80 +31,48 @@ export const signInElementCommand = async (
   elementNode: SelectedElementNode
 ) => {
   logger.trace(`Signin command was called for ${elementNode.name}.`);
-  await signInSingleElement(dispatch)(elementNode);
-};
-
-const signInSingleElement =
-  (dispatch: (action: Action) => Promise<void>) =>
-  async (elementNode: ElementNode): Promise<void> => {
-    const uriParams = fromTreeElementUri(elementNode.uri);
-    if (isError(uriParams)) {
-      const error = uriParams;
-      logger.error(
-        `Unable to sign in the element ${elementNode.name}.`,
-        `Unable to sign in the element ${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
-      );
-      return;
-    }
-    const {
-      serviceName,
-      searchLocationName,
-      service,
-      element,
-      searchLocation,
-    } = uriParams;
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
-    });
-    const signInResult = await withNotificationProgress(
-      `Signing in the element: ${element.name}`
-    )((progressReporter) => signInElement(progressReporter)(service)(element));
-    if (isError(signInResult)) {
-      const error = signInResult;
-      logger.error(
-        `Unable to sign in the element ${elementNode.name}.`,
-        `${error.message}.`
-      );
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
-        status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
-        error,
-      });
-      return;
-    }
-    await updateTreeAfterSuccessfulSignin(dispatch)(
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      [element]
+  const uriParams = fromTreeElementUri(elementNode.uri);
+  if (isError(uriParams)) {
+    const error = uriParams;
+    logger.error(
+      `Unable to sign in the element ${elementNode.name}.`,
+      `Unable to sign in the element ${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
+    );
+    return;
+  }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+    commandArguments: {
+      type: TreeElementCommandArguments.SINGLE_ELEMENT,
+    },
+  });
+  const { serviceId, searchLocationId, service, element } = uriParams;
+  const signInResult = await withNotificationProgress(
+    `Signing in the element: ${element.name}`
+  )((progressReporter) => signInElement(progressReporter)(service)(element));
+  if (isError(signInResult)) {
+    const error = signInResult;
+    logger.error(
+      `Unable to sign in the element ${elementNode.name}.`,
+      `${error.message}.`
     );
     reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
-      status: SignInElementCommandCompletedStatus.SUCCESS,
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+      status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
+      error,
     });
-    logger.info(`Element ${element.name} was signed in successfully!`);
-  };
-
-const updateTreeAfterSuccessfulSignin =
-  (dispatch: (action: Action) => Promise<void>) =>
-  async (
-    serviceName: EndevorServiceName,
-    service: Service,
-    searchLocationName: ElementLocationName,
-    searchLocation: ElementSearchLocation,
-    elements: ReadonlyArray<Element>
-  ): Promise<void> => {
-    await dispatch({
-      type: Actions.ELEMENT_SIGNED_IN,
-      serviceName,
-      service,
-      searchLocationName,
-      searchLocation,
-      elements,
-    });
-  };
+    return;
+  }
+  dispatch({
+    type: Actions.ELEMENT_SIGNED_IN,
+    serviceId,
+    searchLocationId,
+    element,
+  });
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
+    status: SignInElementCommandCompletedStatus.SUCCESS,
+  });
+  logger.info(`Element ${element.name} was signed in successfully!`);
+};
