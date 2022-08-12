@@ -1,7 +1,6 @@
 dist
 .env
--n README.md
+README.md
 CHANGELOG.md
 LICENSE
 NOTICE.md
-
