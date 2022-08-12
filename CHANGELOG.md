@@ -2,6 +2,35 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.2.0] &ndash; 2022-08-12
+
+### Added
+
+- Added the functionality to create Endevor connections that work independently from Zowe profiles
+- Added the compatibility with the Zowe Secure Credential Store.
+- Added the functionality that reads the Zowe Global Team and User Configuration files.
+- Added the **Add an Inventory Location** button to the extension tree.
+- Added the extension tree nodes tooltips based on their real values.
+- Added the dialogs descriptions about the real connection and inventory location values.
+- Added the UI option to submit the extension issue.
+- Added the **Cancel** button to the Endevor Web Services URL and Endevor configurations validation.
+- Added the extension setting that resolves the retrieved file extension based on the different strategies.
+- Added more telemetry events.
+
+### Fixed
+
+- Fixed the performance issue with the long list of elements that are fetched from Endevor.
+- Fixed the issue with ignoring the rejectUnauthorized value from the Zowe Base profiles.
+- Fixed the issue with displaying non-existing Zowe profiles in the extension tree.
+- Fixed the issue that causes the refreshing of the extension tree after errors.
+- Fixed the issue that causes invalid Zowe profiles be accessible in the extension tree.
+
+### Changed
+
+- Changed the edited elements file system path to an internal one.
+- Changed the dialogs with an option to create an Endevor connection or inventory location right away.
+- Changed the extension tree to show full element names.
+
 ## [1.1.1] &ndash; 2022-05-23
 
 ### Added

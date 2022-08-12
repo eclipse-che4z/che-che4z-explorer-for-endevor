@@ -12,22 +12,23 @@
  */
 
 import { logger, reporter } from '../globals';
-import { removeService } from '../settings/settings';
-import { ServiceNode } from '../_doc/ElementTree';
-import { TelemetryEvents } from '../_doc/Telemetry';
+import { Action, Actions } from '../store/_doc/Actions';
+import { ServiceNode } from '../tree/_doc/ServiceLocationTree';
+import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
 
-export const hideService = async ({ name }: ServiceNode): Promise<void> => {
-  logger.trace(`Remove Profile called for profile ${name}.`);
-  try {
-    await removeService(name);
-    logger.trace(`Service profile ${name} was removed from settings.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SERVICE_HIDED,
+export const hideService =
+  (dispatch: (action: Action) => Promise<void>) =>
+  async ({ name, source }: ServiceNode): Promise<void> => {
+    logger.trace(`Hide ${source} Endevor connection ${name} called.`);
+    dispatch({
+      type: Actions.ENDEVOR_SERVICE_HIDDEN,
+      serviceId: {
+        name,
+        source,
+      },
     });
-  } catch (error) {
-    logger.error(
-      `Profile with the name ${name} was not removed from settings.`,
-      `Service profile ${name} was not removed from settings because of error ${error}`
-    );
-  }
-};
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.SERVICE_HIDDEN,
+      source,
+    });
+  };

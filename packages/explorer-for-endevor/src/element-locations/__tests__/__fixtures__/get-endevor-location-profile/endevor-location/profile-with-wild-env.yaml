@@ -1,5 +1,0 @@
-instance: 'test'
-environment: '*'
-stageNumber: '1'
-system: 'sys'
-subsystem: 'sbs'

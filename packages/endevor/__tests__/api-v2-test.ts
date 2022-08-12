@@ -18,7 +18,6 @@ import { join } from 'path';
 import { URL } from 'url';
 import { ANY_VALUE } from '../const';
 import {
-  getInstanceNames,
   printElement,
   printListing,
   searchForElements,
@@ -33,6 +32,7 @@ import {
   retrieveElementWithFingerprint,
   retrieveElementWithDependenciesWithoutSignout,
   getApiVersion,
+  getConfigurations,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import {
@@ -174,7 +174,9 @@ describe('endevor public API v2', () => {
       expect(isError(actualApiVersion)).toEqual(true);
     });
 
-    it('should return an error if something went wrong in Endevor side', async () => {
+    // TODO: EndevorClient's weird behavior when no valid version header is provided
+    // eslint-disable-next-line jest/no-disabled-tests
+    it.skip('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const response: MockResponse<unknown> = {
         status: 200,
@@ -202,7 +204,7 @@ describe('endevor public API v2', () => {
     });
   });
 
-  describe('fetching instances', () => {
+  describe('fetching configurations', () => {
     const request: MockRequest<null> = {
       method: 'GET',
       path: `${basePath}/`,
@@ -210,10 +212,22 @@ describe('endevor public API v2', () => {
       body: null,
     };
 
-    it('should return filtered instances', async () => {
+    it('should return filtered configurations', async () => {
       // arrange
-      const invalidInstances = ['INST3'];
-      const validInstances = ['INST1', 'INST2'];
+      const invalidConfigurationNames = ['INST3'];
+      const invalidConfigurations = invalidConfigurationNames.map(
+        (invalidConfigurationName) => ({
+          naMe: invalidConfigurationName,
+          description: 'invalid configuration',
+        })
+      );
+      const validConfigurationNames = ['INST1', 'INST2'];
+      const validConfigurations = validConfigurationNames.map(
+        (validConfigurationName) => ({
+          name: validConfigurationName,
+          description: 'valid configuration',
+        })
+      );
       const response: MockResponse<unknown> = {
         status: 200,
         statusMessage: 'OK',
@@ -221,27 +235,14 @@ describe('endevor public API v2', () => {
           version: '2.5',
           'content-type': 'application/json',
         },
-        data: [
-          ...validInstances.map((instanceName) => {
-            const repository = {
-              name: instanceName,
-            };
-            return repository;
-          }),
-          ...invalidInstances.map((instanceName) => {
-            const invalidRepo = {
-              naMe: instanceName,
-            };
-            return invalidRepo;
-          }),
-        ],
+        data: [...validConfigurations, ...invalidConfigurations],
       };
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const serviceLocation = toServiceLocation(
         mockServer.urlFor(request.path)
       );
       // act
-      const actualInstances = await getInstanceNames(logger)(progress)(
+      const actualConfigurations = await getConfigurations(logger)(progress)(
         serviceLocation
       )(rejectUnauthorized);
       // assert
@@ -249,18 +250,18 @@ describe('endevor public API v2', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(actualInstances).toEqual(validInstances);
+      expect(actualConfigurations).toEqual(validConfigurations);
     });
 
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const incorrectServiceLocation = toServiceLocation(nonExistingServerURL);
       // act
-      const actualInstances = await getInstanceNames(logger)(progress)(
+      const actualConfigurations = await getConfigurations(logger)(progress)(
         incorrectServiceLocation
       )(rejectUnauthorized);
       // assert
-      expect(isError(actualInstances)).toEqual(true);
+      expect(isError(actualConfigurations)).toEqual(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
@@ -272,16 +273,14 @@ describe('endevor public API v2', () => {
           version: '2.5',
           'content-type': 'application/json',
         },
-        data: {
-          realData: ["I'm not sure it is real data, but I'm okay here"],
-        },
+        data: "I'm not sure it is real data, but I'm okay here",
       };
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const serviceLocation = toServiceLocation(
         mockServer.urlFor(request.path)
       );
       // act
-      const actualInstances = await getInstanceNames(logger)(progress)(
+      const actualConfigurations = await getConfigurations(logger)(progress)(
         serviceLocation
       )(rejectUnauthorized);
       // assert
@@ -289,23 +288,30 @@ describe('endevor public API v2', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualInstances)).toEqual(true);
+      expect(isError(actualConfigurations)).toEqual(true);
     });
   });
 
   describe('fetching all environment stages', () => {
-    const instance = 'TEST-INST';
+    const configuration = 'TEST-CONFIG';
     const toRequestPath =
       (basePath: string) =>
-      (instance: string): string => {
-        return join(basePath, instance, 'env', ANY_VALUE, 'stgnum', ANY_VALUE);
+      (configuration: string): string => {
+        return join(
+          basePath,
+          configuration,
+          'env',
+          ANY_VALUE,
+          'stgnum',
+          ANY_VALUE
+        );
       };
 
     it('should return filtered environment stages', async () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -384,7 +390,7 @@ describe('endevor public API v2', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(instance);
+      )(service)(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -405,11 +411,11 @@ describe('endevor public API v2', () => {
       expect(actualEnvironments).toEqual(expectedEnvironments);
     });
 
-    it('should return an error in case of an incorrect (nonexisting) instance', async () => {
+    it('should return an error in case of an incorrect (nonexisting) configuration', async () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -428,7 +434,7 @@ describe('endevor public API v2', () => {
           reasonCode: 0,
           reports: null,
           messages: [
-            `EWS1101E Configuration ${instance} is not defined or is invalid`,
+            `EWS1101E Configuration ${configuration} is not defined or is invalid`,
           ],
           data: null,
         },
@@ -438,7 +444,7 @@ describe('endevor public API v2', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(instance);
+      )(service)(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -453,7 +459,7 @@ describe('endevor public API v2', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(nonExistingService)(instance);
+      )(nonExistingService)(configuration);
       // assert
       expect(isError(actualEnvironments)).toBe(true);
     });
@@ -462,7 +468,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -489,7 +495,7 @@ describe('endevor public API v2', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(instance);
+      )(service)(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -502,7 +508,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -529,7 +535,7 @@ describe('endevor public API v2', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(instance);
+      )(service)(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -540,13 +546,13 @@ describe('endevor public API v2', () => {
   });
 
   describe('fetching all systems', () => {
-    const instance = 'TEST-INST';
+    const configuration = 'TEST-CONFIG';
     const toRequestPath =
       (basePath: string) =>
-      (instance: string): string => {
+      (configuration: string): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           ANY_VALUE,
           'stgnum',
@@ -560,7 +566,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -626,7 +632,7 @@ describe('endevor public API v2', () => {
       const service = toService(mockServer.urlFor(request.path));
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
-        instance
+        configuration
       );
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
@@ -636,12 +642,12 @@ describe('endevor public API v2', () => {
       expect(actualSystems).toEqual(validSystems);
     });
 
-    it('should return an error in case of incorrect (nonexisting) instance', async () => {
+    it('should return an error in case of incorrect (nonexisting) configuration', async () => {
       // arrange
-      const nonExistingInstance = 'TEST';
+      const nonExistingConfiguration = 'TEST';
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(nonExistingInstance),
+        path: toRequestPath(basePath)(nonExistingConfiguration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -660,7 +666,7 @@ describe('endevor public API v2', () => {
           reasonCode: 0,
           reports: null,
           messages: [
-            `EWS1101E Configuration ${nonExistingInstance} is not defined or is invalid`,
+            `EWS1101E Configuration ${nonExistingConfiguration} is not defined or is invalid`,
           ],
           data: null,
         },
@@ -669,7 +675,7 @@ describe('endevor public API v2', () => {
       const service = toService(mockServer.urlFor(request.path));
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
-        nonExistingInstance
+        nonExistingConfiguration
       );
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
@@ -683,7 +689,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -709,7 +715,7 @@ describe('endevor public API v2', () => {
       const service = toService(mockServer.urlFor(request.path));
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
-        instance
+        configuration
       );
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
@@ -721,12 +727,12 @@ describe('endevor public API v2', () => {
 
     it('should return an error in case of incorrect connection details', async () => {
       // arrange
-      const instanceName = 'TEST';
+      const configurationName = 'TEST';
       const nonExistingService = toService(nonExistingServerURL);
       // act
       const actualSystems = await getAllSystems(logger)(progress)(
         nonExistingService
-      )(instanceName);
+      )(configurationName);
       // assert
       expect(isError(actualSystems)).toBe(true);
     });
@@ -735,7 +741,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -761,7 +767,7 @@ describe('endevor public API v2', () => {
       const service = toService(mockServer.urlFor(request.path));
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
-        instance
+        configuration
       );
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
@@ -773,13 +779,13 @@ describe('endevor public API v2', () => {
   });
 
   describe('fetching all subsystems', () => {
-    const instance = 'TEST-INST';
+    const configuration = 'TEST-CONFIG';
     const toRequestPath =
       (basePath: string) =>
-      (instance: string): string => {
+      (configuration: string): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           ANY_VALUE,
           'stgnum',
@@ -795,7 +801,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -860,7 +866,7 @@ describe('endevor public API v2', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(instance);
+      )(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -869,12 +875,12 @@ describe('endevor public API v2', () => {
       expect(actualSubSystems).toEqual(validSubSystems);
     });
 
-    it('should return an error in case of incorrect (nonexisting) instance', async () => {
+    it('should return an error in case of incorrect (nonexisting) configuration', async () => {
       // arrange
-      const nonExistingInstance = 'TEST';
+      const nonExistingConfiguration = 'TEST';
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(nonExistingInstance),
+        path: toRequestPath(basePath)(nonExistingConfiguration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -893,7 +899,7 @@ describe('endevor public API v2', () => {
           reasonCode: 0,
           reports: null,
           messages: [
-            `EWS1101E Configuration ${nonExistingInstance} is not defined or is invalid`,
+            `EWS1101E Configuration ${nonExistingConfiguration} is not defined or is invalid`,
           ],
           data: null,
         },
@@ -903,7 +909,7 @@ describe('endevor public API v2', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(nonExistingInstance);
+      )(nonExistingConfiguration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -916,7 +922,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -943,7 +949,7 @@ describe('endevor public API v2', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(instance);
+      )(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -958,7 +964,7 @@ describe('endevor public API v2', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         nonExistingService
-      )(instance);
+      )(configuration);
       // assert
       expect(isError(actualSubSystems)).toBe(true);
     });
@@ -967,7 +973,7 @@ describe('endevor public API v2', () => {
       // arrange
       const request: MockRequest<null> = {
         method: 'GET',
-        path: toRequestPath(basePath)(instance),
+        path: toRequestPath(basePath)(configuration),
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
@@ -994,7 +1000,7 @@ describe('endevor public API v2', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(instance);
+      )(configuration);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1008,7 +1014,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -1018,7 +1024,7 @@ describe('endevor public API v2', () => {
       }: ElementSearchLocation): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment ?? ANY_VALUE,
           'stgnum',
@@ -1037,7 +1043,7 @@ describe('endevor public API v2', () => {
     it('should return filtered elements', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1064,7 +1070,7 @@ describe('endevor public API v2', () => {
           type: 'TEST-TYPE',
           stageNumber: '1',
           extension: 'ext',
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -1076,7 +1082,7 @@ describe('endevor public API v2', () => {
           type: 'TEST-TYPE',
           stageNumber: '1',
           extension: 'ext',
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -1101,6 +1107,7 @@ describe('endevor public API v2', () => {
                 typeName: element.type,
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
+                fullElmName: element.name,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1135,7 +1142,7 @@ describe('endevor public API v2', () => {
     it('should return filtered elements for partially specified search location', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         // system: 'TEST-SYS',
@@ -1162,7 +1169,7 @@ describe('endevor public API v2', () => {
           type: 'TEST-TYPE',
           stageNumber: '1',
           extension: 'ext',
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -1174,7 +1181,7 @@ describe('endevor public API v2', () => {
           type: 'TEST-TYPE',
           stageNumber: '1',
           extension: 'ext',
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -1199,6 +1206,7 @@ describe('endevor public API v2', () => {
                 typeName: element.type,
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
+                fullElmName: element.name,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1230,131 +1238,12 @@ describe('endevor public API v2', () => {
       expect(actualElements).toEqual(validElements);
     });
 
-    it('should return elements with proper extensions', async () => {
-      // arrange
-      const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
-        environment: 'TEST-ENV',
-        stageNumber: '1',
-        system: 'TEST-SYS',
-        subsystem: 'TEST-SBS',
-        type: 'TEST-TYPE',
-      };
-      const requestQuery = '?data=BAS&search=yes&return=FIR';
-      const request: MockRequest<null> = {
-        method: 'GET',
-        path: toRequestPath(basePath)(searchLocation),
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Basic ${toBase64(credential)}`,
-        },
-        body: null,
-        query: requestQuery,
-      };
-      const elementsWithEndevorExtension: ReadonlyArray<Element> = [
-        {
-          environment: 'TEST-ENV',
-          system: 'TEST-SYS',
-          subSystem: 'TEST-SBS',
-          name: 'TEST-EL1',
-          type: 'TEST-TYPE',
-          stageNumber: '1',
-          extension: 'test-ext1',
-          instance: 'TEST-INST',
-        },
-        {
-          environment: 'TEST-ENV',
-          system: 'TEST-SYS',
-          subSystem: 'TEST-SBS',
-          name: 'TEST-EL2',
-          type: 'TEST-TYPE',
-          stageNumber: '1',
-          extension: 'test-ext2',
-          instance: 'TEST-INST',
-        },
-      ];
-      const elementsWithTypeExtension: ReadonlyArray<Element> = [
-        {
-          environment: 'TEST-ENV',
-          system: 'TEST-SYS',
-          subSystem: 'TEST-SBS',
-          name: 'TEST-EL1',
-          type: 'TEST-TYPE1',
-          stageNumber: '1',
-          extension: 'test-type1',
-          instance: 'TEST-INST',
-        },
-        {
-          environment: 'TEST-ENV',
-          system: 'TEST-SYS',
-          subSystem: 'TEST-SBS',
-          name: 'TEST-EL2',
-          type: 'TEST-TYPE2',
-          stageNumber: '1',
-          extension: 'test-type2',
-          instance: 'TEST-INST',
-        },
-      ];
-      const expectedElements = elementsWithEndevorExtension.concat(
-        elementsWithTypeExtension
-      );
-      const response: MockResponse<unknown> = {
-        status: 200,
-        statusMessage: 'OK',
-        headers: {
-          version: '2.5',
-          'content-type': 'application/json',
-        },
-        data: {
-          returnCode: 0,
-          reasonCode: 0,
-          reports: {},
-          messages: [],
-          data: [
-            ...elementsWithEndevorExtension.map((element) => {
-              return {
-                envName: element.environment,
-                sysName: element.system,
-                sbsName: element.subSystem,
-                elmName: element.name,
-                typeName: element.type,
-                stgNum: element.stageNumber,
-                fileExt: element.extension.toUpperCase(),
-              };
-            }),
-            ...elementsWithTypeExtension.map((element) => {
-              return {
-                envName: element.environment,
-                sysName: element.system,
-                sbsName: element.subSystem,
-                elmName: element.name,
-                typeName: element.type,
-                stgNum: element.stageNumber,
-              };
-            }),
-          ],
-        },
-      };
-      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
-      const service = toService(mockServer.urlFor(request.path));
-      // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
-      // assert
-      const seenRequests = await endevorEndpoint.getSeenRequests();
-      const calledOnce = seenRequests.length === 1;
-      expect(calledOnce).toBe(true);
-
-      expect(actualElements).toEqual(expectedElements);
-    });
-
     // TODO
     // it('should return filtered elements for search location with any environment', async () => {});
     it('should return an error for incorrect search location', async () => {
       // arrange
       const wrongLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1405,7 +1294,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1424,7 +1313,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect base credentials', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1474,7 +1363,7 @@ describe('endevor public API v2', () => {
     it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1526,7 +1415,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -1536,7 +1425,7 @@ describe('endevor public API v2', () => {
       }: Element): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -1555,7 +1444,7 @@ describe('endevor public API v2', () => {
     it('should return element content with history', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1600,7 +1489,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1621,7 +1510,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect base credentials', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1671,7 +1560,7 @@ describe('endevor public API v2', () => {
     it('should return an error for partially specified element location', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -1723,7 +1612,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect element location', async () => {
       // arrange
       const invalidElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'SYS',
@@ -1777,7 +1666,7 @@ describe('endevor public API v2', () => {
     it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -1825,7 +1714,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -1835,7 +1724,7 @@ describe('endevor public API v2', () => {
       }: Element): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -1854,7 +1743,7 @@ describe('endevor public API v2', () => {
     it('should return element listing', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1901,7 +1790,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1922,7 +1811,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect base credentials', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -1974,7 +1863,7 @@ describe('endevor public API v2', () => {
     it('should return an error for partially specified element location', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -2028,7 +1917,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect element location', async () => {
       // arrange
       const invalidElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'SYS',
@@ -2084,7 +1973,7 @@ describe('endevor public API v2', () => {
     it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -2132,7 +2021,7 @@ describe('endevor public API v2', () => {
 
   describe('signing in an element', () => {
     const element: ElementMapPath = {
-      instance: 'TEST-INST',
+      configuration: 'TEST-CONFIG',
       environment: 'TEST-ENV',
       stageNumber: '1',
       system: 'TEST-SYS',
@@ -2143,7 +2032,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -2153,7 +2042,7 @@ describe('endevor public API v2', () => {
       }: ElementMapPath): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -2311,7 +2200,7 @@ describe('endevor public API v2', () => {
     it('should return error for partially specified element location', async () => {
       // arrange
       const invalidElementPath: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -2362,7 +2251,7 @@ describe('endevor public API v2', () => {
     it('should return error for incorrect element location', async () => {
       // arrange
       const invalidElementPath: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'SYS',
@@ -2413,7 +2302,7 @@ describe('endevor public API v2', () => {
     it('should return error if something goes wrong in Endevor side', async () => {
       // arrange
       const invalidElementPath: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -2460,7 +2349,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -2470,7 +2359,7 @@ describe('endevor public API v2', () => {
       }: ElementMapPath): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -2499,7 +2388,7 @@ describe('endevor public API v2', () => {
       it('should generate an element in place', async () => {
         // arrange
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2562,7 +2451,7 @@ describe('endevor public API v2', () => {
       it('should return an error for incorrect connection details', async () => {
         // arrange
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2586,7 +2475,7 @@ describe('endevor public API v2', () => {
       it('should return an error for incorrect base credentials', async () => {
         // arrange
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2649,7 +2538,7 @@ describe('endevor public API v2', () => {
       it('should return an error if the element location is incorrect', async () => {
         // arrange
         const incorrectElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2714,7 +2603,7 @@ describe('endevor public API v2', () => {
       it('should return a signout error if the element is signed out to somebody else', async () => {
         // arrange
         const signedOutElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2779,7 +2668,7 @@ describe('endevor public API v2', () => {
       it('should return a generate error in case of an incorrect element processor generation', async () => {
         // arrange
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2858,7 +2747,7 @@ describe('endevor public API v2', () => {
           }
         );
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2884,7 +2773,7 @@ describe('endevor public API v2', () => {
       it('should generate an element with copy back', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -2952,7 +2841,7 @@ describe('endevor public API v2', () => {
       it('should generate an element with copy back even if the element exists in the target location', async () => {
         // arrange
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3021,7 +2910,7 @@ describe('endevor public API v2', () => {
       it('should generate an element with copy back and no source', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3089,7 +2978,7 @@ describe('endevor public API v2', () => {
       it('should return an error for incorrect connection details', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3118,7 +3007,7 @@ describe('endevor public API v2', () => {
       it('should return an error for incorrect base credentials', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3186,7 +3075,7 @@ describe('endevor public API v2', () => {
       it('should return a signout error if the element is signed out to somebody else', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3256,7 +3145,7 @@ describe('endevor public API v2', () => {
       it('should return an error if the element target location does not exist', async () => {
         // arrange
         const incorrectTargetLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3327,7 +3216,7 @@ describe('endevor public API v2', () => {
         // arrange
         const nonExistingElementName = 'NONEXIST';
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3397,7 +3286,7 @@ describe('endevor public API v2', () => {
       it('should return a generate error in case of an incorrect element processor generation', async () => {
         // arrange
         const targetElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3481,7 +3370,7 @@ describe('endevor public API v2', () => {
           }
         );
         const existingElementLocation: ElementMapPath = {
-          instance: 'TEST-INST',
+          configuration: 'TEST-CONFIG',
           environment: 'TEST-ENV',
           stageNumber: '1',
           system: 'TEST-SYS',
@@ -3534,7 +3423,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3580,7 +3469,7 @@ describe('endevor public API v2', () => {
         fingerprint: nonUsedFingerprint,
       };
       const newElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3629,7 +3518,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3659,7 +3548,7 @@ describe('endevor public API v2', () => {
         fingerprint: nonUsedFingerprint,
       };
       const newElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3705,7 +3594,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3751,7 +3640,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -3799,7 +3688,7 @@ describe('endevor public API v2', () => {
         fingerprint: outdatedFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3829,7 +3718,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3877,7 +3766,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3923,7 +3812,7 @@ describe('endevor public API v2', () => {
         fingerprint: existingFingerprint,
       };
       const existingElementLocation: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3966,7 +3855,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -3990,7 +3879,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect connection details', async () => {
       // arrange
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4030,7 +3919,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4070,7 +3959,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: '*',
@@ -4094,7 +3983,7 @@ describe('endevor public API v2', () => {
     it('should return an error for incorrect content', async () => {
       // arrange
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4136,7 +4025,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4177,7 +4066,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4217,7 +4106,7 @@ describe('endevor public API v2', () => {
         }
       );
       const element: ElementMapPath = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4243,7 +4132,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -4253,7 +4142,7 @@ describe('endevor public API v2', () => {
       }: Element): string =>
         join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -4271,7 +4160,7 @@ describe('endevor public API v2', () => {
     it('should return an element content with a fingerprint', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4319,7 +4208,7 @@ describe('endevor public API v2', () => {
     it('should return an element up the map content with a fingerprint if the element in place is sourceless', async () => {
       // arrange
       const sourcelessElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4368,7 +4257,7 @@ describe('endevor public API v2', () => {
     it('should return an element content in UTF-8 encoding with a fingerprint', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4419,7 +4308,7 @@ describe('endevor public API v2', () => {
     it('should return an element content with a fingerprint with signout', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4472,7 +4361,7 @@ describe('endevor public API v2', () => {
     it('should return an element content with a fingerprint with override signout', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4525,7 +4414,7 @@ describe('endevor public API v2', () => {
     it('should return an error if the element fingerprint is missing', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4568,7 +4457,7 @@ describe('endevor public API v2', () => {
     it('should return an error for the incorrect credentials', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4620,7 +4509,7 @@ describe('endevor public API v2', () => {
     it('should return an error for the incorrect connection details', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4640,7 +4529,7 @@ describe('endevor public API v2', () => {
     it('should return an error if the element does not exist', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4691,7 +4580,7 @@ describe('endevor public API v2', () => {
     it('should return a signout error for the element, signed out to somebody else', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4742,7 +4631,7 @@ describe('endevor public API v2', () => {
     it('should return an error if something went wrong on the Endevor side', async () => {
       // arrange
       const element: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4797,7 +4686,7 @@ describe('endevor public API v2', () => {
     const toRequestPath =
       (basePath: string) =>
       ({
-        instance,
+        configuration,
         environment,
         stageNumber,
         system,
@@ -4807,7 +4696,7 @@ describe('endevor public API v2', () => {
       }: Element): string => {
         return join(
           basePath,
-          instance,
+          configuration,
           'env',
           environment,
           'stgnum',
@@ -4830,7 +4719,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4875,7 +4764,7 @@ describe('endevor public API v2', () => {
         query: '?excCirculars=yes&excIndirect=yes&excRelated=yes',
       };
       const elementDependency: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -4906,6 +4795,7 @@ describe('endevor public API v2', () => {
                   typeName: elementDependency.type,
                   elmName: elementDependency.name,
                   fileExt: elementDependency.extension,
+                  fullElmName: elementDependency.name,
                 },
               ],
             },
@@ -4975,7 +4865,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5071,7 +4961,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5116,7 +5006,7 @@ describe('endevor public API v2', () => {
         query: '?excCirculars=yes&excIndirect=yes&excRelated=yes',
       };
       const elementDependency: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5147,6 +5037,7 @@ describe('endevor public API v2', () => {
                   typeName: elementDependency.type,
                   elmName: elementDependency.name,
                   fileExt: elementDependency.extension,
+                  fullElmName: elementDependency.name,
                 },
               ],
             },
@@ -5218,7 +5109,7 @@ describe('endevor public API v2', () => {
     it('should return an error in case of incorrect connection details', async () => {
       // arrange
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5246,7 +5137,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5307,7 +5198,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5370,7 +5261,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',
@@ -5434,7 +5325,7 @@ describe('endevor public API v2', () => {
         type: CredentialType.BASE,
       };
       const mainElement: Element = {
-        instance: 'TEST-INST',
+        configuration: 'TEST-CONFIG',
         environment: 'TEST-ENV',
         stageNumber: '1',
         system: 'TEST-SYS',

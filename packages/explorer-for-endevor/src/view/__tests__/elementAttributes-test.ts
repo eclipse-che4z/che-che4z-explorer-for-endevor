@@ -26,7 +26,7 @@ describe('renderElementAttributes', () => {
       type: 'ASMPGM',
       name: 'ELEMENT',
       extension: 'cbl',
-      instance: 'INS',
+      configuration: 'CFG',
     };
 
     // act

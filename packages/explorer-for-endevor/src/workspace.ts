@@ -13,16 +13,16 @@
 
 import {
   createNewWorkspaceDirectory,
-  deleteDirectoryWithContent,
-  getWorkspaceUri,
   saveFileIntoWorkspaceFolder,
 } from '@local/vscode-wrapper/workspace';
 import { Progress, ProgressLocation, Uri, window } from 'vscode';
 import * as path from 'path';
-import { getEditFolderUri, getEditRootFolderUri } from './utils';
 import { showFileContent } from '@local/vscode-wrapper/window';
-import { getTempEditFolder } from './settings/settings';
 import { Element } from '@local/endevor/_doc/Endevor';
+import { FileExtensionResolutions } from './settings/_doc/v2/Settings';
+import { getElementExtension, parseFilePath } from './utils';
+import { getFileExtensionResoluton } from './settings/settings';
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 export const saveElementIntoWorkspace =
   (workspaceUri: Uri) =>
@@ -53,11 +53,31 @@ const toFileDescription =
       element.subSystem,
       element.type
     );
-    return {
-      fileName: element.name,
-      fileExtension: element.extension,
-      workspaceDirectoryPath: elementDir,
-    };
+    const fileExtResolution = getFileExtensionResoluton();
+    switch (fileExtResolution) {
+      case FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME:
+        return {
+          fileName: element.name,
+          fileExtension: getElementExtension(element),
+          workspaceDirectoryPath: elementDir,
+        };
+      case FileExtensionResolutions.FROM_TYPE_EXT:
+        return {
+          fileName: element.name,
+          fileExtension: element.extension,
+          workspaceDirectoryPath: elementDir,
+        };
+      case FileExtensionResolutions.FROM_NAME: {
+        const { fileName, fileExtension } = parseFilePath(element.name);
+        return {
+          fileName,
+          fileExtension,
+          workspaceDirectoryPath: elementDir,
+        };
+      }
+      default:
+        throw new UnreachableCaseError(fileExtResolution);
+    }
   };
 
 export const showSavedElementContent = async (
@@ -69,18 +89,6 @@ export const showSavedElementContent = async (
     return e;
   }
 };
-
-export const cleanTempEditDirectory =
-  (workspaceUri: Uri) =>
-  async (tempEditFolder: string): Promise<void | Error> => {
-    try {
-      await deleteDirectoryWithContent(
-        getEditRootFolderUri(workspaceUri)(tempEditFolder)
-      );
-    } catch (e) {
-      return e;
-    }
-  };
 
 export type ProgressReport = {
   message?: string;
@@ -127,26 +135,3 @@ export const withProgress = async <T>(
     }
   );
 };
-
-export const getTempEditFolderUri =
-  (serviceName: string, locationName: string) =>
-  async (element: Element): Promise<Uri | Error> => {
-    const workspace = await getWorkspaceUri();
-    if (!workspace) {
-      return new Error(
-        `At least one workspace folder should be opened to work with elements.`
-      );
-    }
-    let tempFilesFolder;
-    try {
-      tempFilesFolder = getTempEditFolder();
-    } catch (error) {
-      return new Error(
-        `Error when reading edit folder name from settings because of ${error.message}.`
-      );
-    }
-    return getEditFolderUri(workspace)(tempFilesFolder)(
-      serviceName,
-      locationName
-    )(element);
-  };

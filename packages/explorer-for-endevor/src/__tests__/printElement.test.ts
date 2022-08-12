@@ -31,6 +31,8 @@ import { mockPrintingElementWith } from '../_mocks/endevor';
 import { mockShowingDocumentWith } from '../_mocks/window';
 import * as sinon from 'sinon';
 import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { Source } from '../store/storage/_doc/Storage';
 
 describe('printing element content', () => {
   before(() => {
@@ -50,6 +52,10 @@ describe('printing element content', () => {
   it('should show fetched element content', async () => {
     // arrange
     const serviceName = 'serviceName';
+    const serviceId: EndevorId = {
+      name: serviceName,
+      source: Source.INTERNAL,
+    };
     const service: Service = {
       location: {
         port: 1234,
@@ -66,7 +72,7 @@ describe('printing element content', () => {
       apiVersion: ServiceApiVersion.V2,
     };
     const element: Element = {
-      instance: 'ANY',
+      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
@@ -76,12 +82,16 @@ describe('printing element content', () => {
       extension: 'ext',
     };
     const searchLocationName = 'searchLocationName';
+    const searchLocationId: EndevorId = {
+      name: searchLocationName,
+      source: Source.INTERNAL,
+    };
     const searchLocation: ElementSearchLocation = {
-      instance: 'ANY-INSTANCE',
+      configuration: 'ANY-CONFIG',
     };
     const elementUri = toTreeElementUri({
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       element,
       service,
       searchLocation,
@@ -104,7 +114,7 @@ describe('printing element content', () => {
       await vscode.commands.executeCommand(CommandId.PRINT_ELEMENT, elementUri);
     } catch (e) {
       assert.fail(
-        `Test failed because of uncatched error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert

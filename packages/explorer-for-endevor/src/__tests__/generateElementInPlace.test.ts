@@ -32,13 +32,15 @@ import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
   mockAskingForPrintListing,
-} from '../_mocks/dialogs';
-import { Actions, ElementGeneratedInPlace } from '../_doc/Actions';
+} from '../dialogs/_mocks/dialogs';
+import { Actions, ElementGeneratedInPlace } from '../store/_doc/Actions';
 import * as printListingCommand from '../commands/printListing';
 import {
   ProcessorStepMaxRcExceededError,
   SignoutError,
 } from '@local/endevor/_doc/Error';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { Source } from '../store/storage/_doc/Storage';
 
 describe('generating an element in place', () => {
   before(() => {
@@ -55,6 +57,10 @@ describe('generating an element in place', () => {
   });
 
   const serviceName = 'serviceName';
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
   const service: Service = {
     location: {
       port: 1234,
@@ -71,11 +77,15 @@ describe('generating an element in place', () => {
     apiVersion: ServiceApiVersion.V2,
   };
   const searchLocationName = 'searchLocationName';
+  const searchLocationId: EndevorId = {
+    name: searchLocationName,
+    source: Source.INTERNAL,
+  };
   const searchLocation: ElementSearchLocation = {
-    instance: 'ANY-INSTANCE',
+    configuration: 'ANY-CONFIG',
   };
   const element: Element = {
-    instance: 'ANY',
+    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
@@ -85,8 +95,8 @@ describe('generating an element in place', () => {
     extension: 'ext',
   };
   const elementUri = toTreeElementUri({
-    serviceName,
-    searchLocationName,
+    serviceId,
+    searchLocationId,
     element,
     service,
     searchLocation,
@@ -146,11 +156,9 @@ describe('generating an element in place', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedInPlace = {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      searchLocation,
-      service,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -223,11 +231,9 @@ describe('generating an element in place', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedInPlace = {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      searchLocation,
-      service,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -296,11 +302,9 @@ describe('generating an element in place', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedInPlace = {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
-      serviceName,
-      searchLocationName,
-      searchLocation,
-      service,
-      elements: [element],
+      serviceId,
+      searchLocationId,
+      element,
     };
     assert.deepStrictEqual(
       actualDispatchAction,

@@ -11,11 +11,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { SessConstants } from '@zowe/imperative';
-
 export enum CredentialType {
   BASE = 'base-credential',
   TOKEN = 'token-credential',
+}
+
+// our own enum for token types not to expose imperative types
+export enum CredentialTokenType {
+  // SessConstants.TOKEN_TYPE_LTPA
+  LTPA = 'LtpaToken2',
+  // SessConstants.TOKEN_TYPE_JWT
+  JWT = 'jwtToken',
+  // SessConstants.TOKEN_TYPE_APIML
+  APIML = 'apimlAuthenticationToken',
 }
 
 export interface BaseCredential {
@@ -26,7 +34,7 @@ export interface BaseCredential {
 
 export interface TokenCredential {
   type: CredentialType.TOKEN;
-  readonly tokenType: SessConstants.TOKEN_TYPE_CHOICES;
+  readonly tokenType: CredentialTokenType;
   readonly tokenValue: string;
 }
 

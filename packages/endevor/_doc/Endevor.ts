@@ -29,7 +29,6 @@ export type ServiceLocation = Readonly<{
 }>;
 
 export const enum ServiceApiVersion {
-  UNKNOWN = 'unknown',
   V1 = 'v1',
   V2 = 'v2',
 }
@@ -37,7 +36,7 @@ export type Service = Readonly<{
   location: ServiceLocation;
   credential: Credential;
   rejectUnauthorized: boolean;
-  apiVersion: ServiceApiVersion;
+  apiVersion?: ServiceApiVersion;
 }>;
 
 export type ServiceInstance = Readonly<{
@@ -49,10 +48,15 @@ export type ServiceInstance = Readonly<{
 export type Value = string;
 export type StageNumber = '1' | '2';
 
+export type Configuration = Readonly<{
+  name: string;
+  description: string;
+}>;
+
 // We do not use wildcards as a values.
 // Every value is uppercased by default, except the instance.
-export type InstanceSearchPath = Readonly<{
-  instance: Value;
+type ConfigurationSearchPath = Readonly<{
+  configuration: Value;
 }> &
   Partial<
     Readonly<{
@@ -63,7 +67,7 @@ export type InstanceSearchPath = Readonly<{
       type: Value;
     }>
   >;
-export type ElementSearchPath = InstanceSearchPath &
+type ElementSearchPath = ConfigurationSearchPath &
   Partial<
     Readonly<{
       element: Value;
@@ -116,7 +120,7 @@ export type SubSystem = SubSystemMapPath &
   }>;
 
 export type ElementMapPath = Readonly<{
-  instance: Value;
+  configuration: Value;
 }> &
   SubSystemMapPath &
   Readonly<{
@@ -125,9 +129,11 @@ export type ElementMapPath = Readonly<{
   }>;
 
 export type Element = ElementMapPath &
-  Readonly<{
-    extension: Value;
-  }>;
+  Partial<
+    Readonly<{
+      extension: Value;
+    }>
+  >;
 export type ElementContent = string;
 
 export type Dependency = Element;

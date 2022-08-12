@@ -13,13 +13,14 @@
 
 import * as sinon from 'sinon';
 import * as assert from 'assert';
-import { commands, ConfigurationTarget, Uri, workspace } from 'vscode';
+import { ConfigurationTarget, Uri, workspace } from 'vscode';
 import { editElementCommand } from '../commands/edit/editElementCommand';
-import { CommandId } from '../commands/id';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
-  EDIT_FOLDER_SETTING,
+  EDIT_DIR,
   ENDEVOR_CONFIGURATION,
+  FILE_EXT_RESOLUTION_DEFAULT,
+  FILE_EXT_RESOLUTION_SETTING,
   UNIQUE_ELEMENT_FRAGMENT,
 } from '../constants';
 import {
@@ -30,10 +31,9 @@ import {
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toTreeElementUri } from '../uri/treeElementUri';
-import { getEditFolderUri, isError } from '../utils';
+import { getEditFolderUri, isError, joinUri } from '../utils';
 import {
   mockCreatingDirectory,
-  mockGettingWorkspaceUri,
   mockSavingFileIntoWorkspaceDirectory,
 } from '../_mocks/workspace';
 import { mockShowingFileContentWith } from '../_mocks/window';
@@ -43,28 +43,33 @@ import { EditedElementUriQuery } from '../_doc/Uri';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
-} from '../_mocks/dialogs';
+} from '../dialogs/_mocks/dialogs';
 import { SignoutError } from '@local/endevor/_doc/Error';
-import { Actions } from '../_doc/Actions';
-import { toElementId } from '../tree/endevor';
-import { TypeNode } from '../_doc/ElementTree';
+import { Actions } from '../store/_doc/Actions';
+import { TypeNode } from '../tree/_doc/ElementTree';
+import { Source } from '../store/storage/_doc/Storage';
+import { toServiceLocationCompositeKey } from '../store/utils';
+import { FileExtensionResolutions } from '../settings/_doc/v2/Settings';
 
 describe('starting edit session for element', () => {
-  before(() => {
-    commands.registerCommand(CommandId.QUICK_EDIT_ELEMENT, editElementCommand);
-  });
-
   type NotDefined = undefined;
   let beforeTestsAutoSignOut: boolean | NotDefined;
-  let beforeTestsEditTempFolder: string | NotDefined;
+  let beforeTestsFileExtensionResolution: FileExtensionResolutions | NotDefined;
 
   beforeEach(async () => {
     beforeTestsAutoSignOut = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .get(AUTOMATIC_SIGN_OUT_SETTING);
-    beforeTestsEditTempFolder = workspace
+    beforeTestsFileExtensionResolution = workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
-      .get(EDIT_FOLDER_SETTING);
+      .get(FILE_EXT_RESOLUTION_SETTING);
+    await workspace
+      .getConfiguration(ENDEVOR_CONFIGURATION)
+      .update(
+        FILE_EXT_RESOLUTION_SETTING,
+        FILE_EXT_RESOLUTION_DEFAULT,
+        ConfigurationTarget.Global
+      );
   });
   afterEach(async () => {
     await workspace
@@ -77,8 +82,8 @@ describe('starting edit session for element', () => {
     await workspace
       .getConfiguration(ENDEVOR_CONFIGURATION)
       .update(
-        EDIT_FOLDER_SETTING,
-        beforeTestsEditTempFolder,
+        FILE_EXT_RESOLUTION_SETTING,
+        beforeTestsFileExtensionResolution,
         ConfigurationTarget.Global
       );
     // Sinon has some issues with cleaning up the environment after itself, so we have to do it
@@ -103,7 +108,7 @@ describe('starting edit session for element', () => {
     apiVersion: ServiceApiVersion.V2,
   };
   const element: Element = {
-    instance: 'ANY',
+    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
@@ -113,15 +118,20 @@ describe('starting edit session for element', () => {
     extension: 'ext',
   };
   const searchLocationName = 'searchLocationName';
-  const elementId = toElementId(serviceName)(searchLocationName)(element);
   const searchLocation: ElementSearchLocation = {
-    instance: 'ANY-INSTANCE',
+    configuration: 'ANY-CONFIG',
     environment: 'ANY-ENV',
     stageNumber: '1',
   };
   const elementUri = toTreeElementUri({
-    serviceName,
-    searchLocationName,
+    serviceId: {
+      name: serviceName,
+      source: Source.INTERNAL,
+    },
+    searchLocationId: {
+      name: searchLocationName,
+      source: Source.INTERNAL,
+    },
     element,
     service,
     searchLocation,
@@ -157,21 +167,17 @@ describe('starting edit session for element', () => {
       },
     ]);
     // can be anything, but URI
-    const workspaceUri = elementUri;
-    mockGettingWorkspaceUri(workspaceUri);
-    const elementDirectory = 'test-edit-folder';
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        elementDirectory,
-        ConfigurationTarget.Global
-      );
-    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
-      elementDirectory
-    )(
-      serviceName,
-      searchLocationName
+    const storageUri = Uri.file(__dirname);
+    const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
+    const elementDirectoryUri = getEditFolderUri(tempEditFolderUri)(
+      {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      }
     )(element);
     const createElementDirectoryStub =
       mockCreatingDirectory()(elementDirectoryUri);
@@ -211,17 +217,23 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await commands.executeCommand(
-        CommandId.QUICK_EDIT_ELEMENT,
-        dispatchActions,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-          id: elementId,
-          parent,
-        }
-      );
+      await editElementCommand({
+        getTempEditFolderUri: () => tempEditFolderUri,
+        dispatch: dispatchActions,
+      })({
+        type: 'ELEMENT_UP_THE_MAP',
+        name: element.name,
+        uri: elementUri,
+        searchLocationId: toServiceLocationCompositeKey({
+          name: serviceName,
+          source: Source.INTERNAL,
+        })({
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        }),
+        parent,
+        tooltip: 'FAKETOOLTIP',
+      });
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
@@ -256,8 +268,14 @@ describe('starting edit session for element', () => {
       fingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        searchLocationName,
-        serviceName,
+        searchLocationId: {
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        },
+        serviceId: {
+          name: serviceName,
+          source: Source.INTERNAL,
+        },
         overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -317,21 +335,17 @@ describe('starting edit session for element', () => {
       },
     ]);
     // can be anything, but URI
-    const workspaceUri = elementUri;
-    mockGettingWorkspaceUri(workspaceUri);
-    const elementDirectory = 'test-edit-folder';
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        elementDirectory,
-        ConfigurationTarget.Global
-      );
-    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
-      elementDirectory
-    )(
-      serviceName,
-      searchLocationName
+    const storageUri = Uri.file(__dirname);
+    const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
+    const elementDirectoryUri = getEditFolderUri(tempEditFolderUri)(
+      {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      }
     )(element);
     const createElementDirectoryStub =
       mockCreatingDirectory()(elementDirectoryUri);
@@ -371,17 +385,23 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await commands.executeCommand(
-        CommandId.QUICK_EDIT_ELEMENT,
-        dispatchActions,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-          id: elementId,
-          parent,
-        }
-      );
+      await editElementCommand({
+        getTempEditFolderUri: () => tempEditFolderUri,
+        dispatch: dispatchActions,
+      })({
+        type: 'ELEMENT_UP_THE_MAP',
+        name: element.name,
+        uri: elementUri,
+        searchLocationId: toServiceLocationCompositeKey({
+          name: serviceName,
+          source: Source.INTERNAL,
+        })({
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        }),
+        parent,
+        tooltip: 'FAKETOOLTIP',
+      });
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
@@ -416,8 +436,14 @@ describe('starting edit session for element', () => {
       fingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        searchLocationName,
-        serviceName,
+        searchLocationId: {
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        },
+        serviceId: {
+          name: serviceName,
+          source: Source.INTERNAL,
+        },
         overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -445,16 +471,20 @@ describe('starting edit session for element', () => {
     );
     const expectedSignoutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
       elements: [element],
     };
     assert.deepStrictEqual(
       dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
+      `Expected dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchActions.args[0]?.[0]
@@ -505,21 +535,17 @@ describe('starting edit session for element', () => {
       element
     )([firstAttempt, secondAttempt]);
     // can be anything, but URI
-    const workspaceUri = elementUri;
-    mockGettingWorkspaceUri(workspaceUri);
-    const elementDirectory = 'test-edit-folder';
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        elementDirectory,
-        ConfigurationTarget.Global
-      );
-    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
-      elementDirectory
-    )(
-      serviceName,
-      searchLocationName
+    const storageUri = Uri.file(__dirname);
+    const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
+    const elementDirectoryUri = getEditFolderUri(tempEditFolderUri)(
+      {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      }
     )(element);
     const createElementDirectoryStub =
       mockCreatingDirectory()(elementDirectoryUri);
@@ -559,17 +585,23 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await commands.executeCommand(
-        CommandId.QUICK_EDIT_ELEMENT,
-        dispatchActions,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-          id: elementId,
-          parent,
-        }
-      );
+      await editElementCommand({
+        getTempEditFolderUri: () => tempEditFolderUri,
+        dispatch: dispatchActions,
+      })({
+        type: 'ELEMENT_UP_THE_MAP',
+        name: element.name,
+        uri: elementUri,
+        searchLocationId: toServiceLocationCompositeKey({
+          name: serviceName,
+          source: Source.INTERNAL,
+        })({
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        }),
+        parent,
+        tooltip: 'FAKETOOLTIP',
+      });
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
@@ -604,8 +636,14 @@ describe('starting edit session for element', () => {
       fingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        searchLocationName,
-        serviceName,
+        searchLocationId: {
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        },
+        serviceId: {
+          name: serviceName,
+          source: Source.INTERNAL,
+        },
         overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -633,16 +671,20 @@ describe('starting edit session for element', () => {
     );
     const expectedSignoutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
       elements: [element],
     };
     assert.deepStrictEqual(
       dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
+      `Expected dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchActions.args[0]?.[0]
@@ -689,21 +731,17 @@ describe('starting edit session for element', () => {
       element
     )([firstRetrieveAttempt, secondRetrieveAttempt]);
     // can be anything, but URI
-    const workspaceUri = elementUri;
-    mockGettingWorkspaceUri(workspaceUri);
-    const elementDirectory = 'test-edit-folder';
-    await workspace
-      .getConfiguration(ENDEVOR_CONFIGURATION)
-      .update(
-        EDIT_FOLDER_SETTING,
-        elementDirectory,
-        ConfigurationTarget.Global
-      );
-    const elementDirectoryUri = getEditFolderUri(workspaceUri)(
-      elementDirectory
-    )(
-      serviceName,
-      searchLocationName
+    const storageUri = Uri.file(__dirname);
+    const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
+    const elementDirectoryUri = getEditFolderUri(tempEditFolderUri)(
+      {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
+      {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      }
     )(element);
     const createElementDirectoryStub =
       mockCreatingDirectory()(elementDirectoryUri);
@@ -743,17 +781,23 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await commands.executeCommand(
-        CommandId.QUICK_EDIT_ELEMENT,
-        dispatchActions,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-          id: elementId,
-          parent,
-        }
-      );
+      await editElementCommand({
+        getTempEditFolderUri: () => tempEditFolderUri,
+        dispatch: dispatchActions,
+      })({
+        type: 'ELEMENT_UP_THE_MAP',
+        name: element.name,
+        uri: elementUri,
+        searchLocationId: toServiceLocationCompositeKey({
+          name: serviceName,
+          source: Source.INTERNAL,
+        })({
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        }),
+        parent,
+        tooltip: 'FAKETOOLTIP',
+      });
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
@@ -788,8 +832,14 @@ describe('starting edit session for element', () => {
       fingerprint,
       endevorConnectionDetails: service,
       searchContext: {
-        searchLocationName,
-        serviceName,
+        searchLocationId: {
+          name: searchLocationName,
+          source: Source.INTERNAL,
+        },
+        serviceId: {
+          name: serviceName,
+          source: Source.INTERNAL,
+        },
         overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -817,16 +867,20 @@ describe('starting edit session for element', () => {
     );
     const expectedSignoutAction = {
       type: Actions.ELEMENT_SIGNED_OUT,
-      serviceName,
-      searchLocationName,
-      service,
-      searchLocation,
+      searchLocationId: {
+        name: searchLocationName,
+        source: Source.INTERNAL,
+      },
+      serviceId: {
+        name: serviceName,
+        source: Source.INTERNAL,
+      },
       elements: [element],
     };
     assert.deepStrictEqual(
       dispatchActions.args[0]?.[0],
       expectedSignoutAction,
-      `Expexted dispatch for edit element signout to have been called with ${JSON.stringify(
+      `Expected dispatch for edit element signout to have been called with ${JSON.stringify(
         expectedSignoutAction
       )}, but it was called with ${JSON.stringify(
         dispatchActions.args[0]?.[0]

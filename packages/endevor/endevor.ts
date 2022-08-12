@@ -18,7 +18,6 @@ import {
   isDefined,
   isChangeRegressionError,
   toSeveralTasksProgress,
-  getElementExtension,
   toCorrectBasePathFormat,
 } from './utils';
 import {
@@ -58,6 +57,7 @@ import {
   GenerateWithCopyBackParams,
   GenerateSignOutParams,
   ServiceApiVersion,
+  Configuration,
 } from './_doc/Endevor';
 import {
   Session,
@@ -73,11 +73,11 @@ import {
   Element as ExternalElement,
   SuccessListDependenciesResponse,
   SuccessPrintResponse,
-  Repository,
+  Configuration as ExternalConfiguration,
   SuccessListElementsResponse,
   ErrorResponse,
   SuccessRetrieveResponse,
-  SuccessListRepositoriesResponse,
+  SuccessListConfigurationsResponse,
   UpdateResponse,
   AddResponse,
   BaseResponse,
@@ -162,13 +162,13 @@ export const getApiVersion =
     return apiVersion;
   };
 
-export const getInstanceNames =
+export const getConfigurations =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (serviceLocation: ServiceLocation) =>
   async (
     rejectUnauthorized: boolean
-  ): Promise<ReadonlyArray<string> | Error> => {
+  ): Promise<ReadonlyArray<Configuration> | Error> => {
     const session = toEndevorSession(serviceLocation)(rejectUnauthorized);
     progress.report({ increment: 30 });
     let response: BaseResponse;
@@ -178,7 +178,7 @@ export const getInstanceNames =
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the list of instances because of error ${error.message}`
+        `Unable to fetch the list of Endevor configurations because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -188,53 +188,56 @@ export const getInstanceNames =
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Unable to fetch the list of instances because of error ${
+          `Unable to fetch the list of Endevor configurations because of error ${
             e.message
           }\nof an incorrect response:\n${JSON.stringify(response, null, 2)}.`
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to fetch the list of instances because of response code ${response.body.returnCode}`
+          `Unable to fetch the list of Endevor configurations because of response code ${response.body.returnCode}`
         );
       }
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the list of instances because of response code ${
+        `Unable to fetch the list of Endevor configurations because of response code ${
           parsedResponse.body.returnCode
         } with reason \n${parsedResponse.body.messages.join('\n').trim()}.`
       );
     }
-    let parsedResponse: SuccessListRepositoriesResponse;
+    let parsedResponse: SuccessListConfigurationsResponse;
     try {
-      parsedResponse = parseToType(SuccessListRepositoriesResponse, response);
+      parsedResponse = parseToType(SuccessListConfigurationsResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to fetch the list of instances because of error ${
+        `Unable to fetch the list of Endevor configurations because of error ${
           error.message
         }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the list of instances because of incorrect response`
+        `Unable to fetch the list of Endevor configurations because of incorrect response`
       );
     }
-    const instances = parsedResponse.body.data
-      .map((repository) => {
+    const configurations = parsedResponse.body.data
+      .map((configuration) => {
         try {
-          return parseToType(Repository, repository);
+          return parseToType(ExternalConfiguration, configuration);
         } catch (e) {
           logger.trace(
-            `Unable to fetch the instance ${JSON.stringify(
-              repository
+            `Unable to fetch the Endevor configuration ${JSON.stringify(
+              configuration
             )} because of error ${e.message}.`
           );
           return;
         }
       })
       .filter(isDefined)
-      .map((repository) => repository.name);
+      .map((configuration) => ({
+        name: configuration.name,
+        description: configuration.description,
+      }));
     progress.report({ increment: 20 });
-    return instances;
+    return configurations;
   };
 
 const toEndevorSession =
@@ -254,7 +257,7 @@ export const getAllEnvironmentStages =
   (progress: ProgressReporter) =>
   (service: Service) =>
   async (
-    instance: string
+    configuration: string
   ): Promise<ReadonlyArray<EnvironmentStage> | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
@@ -264,12 +267,14 @@ export const getAllEnvironmentStages =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.listStage(session)(instance)(requestArgs);
+      response = await EndevorClient.listStage(session)(configuration)(
+        requestArgs
+      );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the environments stages for the instance ${instance} because of error ${error.message}`
+        `Unable to fetch the environments stages for the configuration ${configuration} because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -285,12 +290,12 @@ export const getAllEnvironmentStages =
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to fetch the environments stages for the instance ${instance} because of response code ${response.body.returnCode}`
+          `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
         );
       }
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the environments stages for the instance ${instance} because of response code ${
+        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of response code ${
           parsedResponse.body.returnCode
         } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
       );
@@ -302,13 +307,13 @@ export const getAllEnvironmentStages =
       );
     } catch (error) {
       logger.trace(
-        `Unable to fetch the environments stages for the instance ${instance} because of error ${
+        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of error ${
           error.message
         }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the environments stages for the instance ${instance} because of incorrect response`
+        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of incorrect response`
       );
     }
     const environments = parsedResponse.body.data
@@ -345,7 +350,7 @@ export const getAllSystems =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
-  async (instance: Value): Promise<ReadonlyArray<System> | Error> => {
+  async (configuration: Value): Promise<ReadonlyArray<System> | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestArgs: ElmSpecDictionary = {
       environment: ANY_VALUE,
@@ -355,12 +360,14 @@ export const getAllSystems =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.listSystem(session)(instance)(requestArgs);
+      response = await EndevorClient.listSystem(session)(configuration)(
+        requestArgs
+      );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the systems from ${instance} because of error ${error.message}`
+        `Unable to fetch the systems from the Endevor configuration ${configuration} because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -376,12 +383,12 @@ export const getAllSystems =
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to fetch the systems from ${instance} because of response code ${response.body.returnCode}`
+          `Unable to fetch the systems from the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
         );
       }
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the systems from ${instance} because of response code ${
+        `Unable to fetch the systems from the Endevor configuration ${configuration} because of response code ${
           parsedResponse.body.returnCode
         } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
       );
@@ -390,13 +397,13 @@ export const getAllSystems =
       parsedResponse = parseToType(SuccessListSystemsResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to fetch the systems from ${instance} because of error ${
+        `Unable to fetch the systems from the Endevor configuration ${configuration} because of error ${
           error.message
         }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the systems from ${instance} because of incorrect response`
+        `Unable to fetch the systems from the Endevor configuration ${configuration} because of incorrect response`
       );
     }
     const systems = parsedResponse.body.data
@@ -433,7 +440,7 @@ export const getAllSubSystems =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
-  async (instance: string): Promise<ReadonlyArray<SubSystem> | Error> => {
+  async (configuration: string): Promise<ReadonlyArray<SubSystem> | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: ANY_VALUE,
@@ -444,14 +451,14 @@ export const getAllSubSystems =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.listSubsystem(session)(instance)(
+      response = await EndevorClient.listSubsystem(session)(configuration)(
         requestArgs
       );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the subsystems from ${instance} because of error ${error.message}`
+        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of error ${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -467,12 +474,12 @@ export const getAllSubSystems =
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to fetch the subsystems from ${instance} because of response code ${response.body.returnCode}`
+          `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
         );
       }
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the subsystems from ${instance} because of response code ${
+        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of response code ${
           parsedResponse.body.returnCode
         } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
       );
@@ -481,13 +488,13 @@ export const getAllSubSystems =
       parsedResponse = parseToType(SuccessListSubSystemsResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to fetch the subsystems from ${instance} because of error ${
+        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of error ${
           error.message
         }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the subsystems from ${instance} because of incorrect response`
+        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of incorrect response`
       );
     }
     const subSystems = parsedResponse.body.data
@@ -526,7 +533,7 @@ export const searchForElements =
   (progress: ProgressReporter) =>
   (service: Service) =>
   async ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -552,7 +559,7 @@ export const searchForElements =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.listElement(session)(instance)(
+      response = await EndevorClient.listElement(session)(configuration)(
         requestArgs
       );
       response = parseToType(BaseResponse, response);
@@ -625,9 +632,9 @@ export const searchForElements =
           system: element.sysName,
           subSystem: element.sbsName,
           type: element.typeName,
-          name: element.elmName,
-          extension: getElementExtension(element),
-          instance,
+          name: element.fullElmName,
+          extension: element.fileExt ? element.fileExt : undefined,
+          configuration,
         };
       });
     progress.report({ increment: 20 });
@@ -673,7 +680,7 @@ export const printElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   async ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -693,7 +700,7 @@ export const printElement =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.printElement(session)(instance)(
+      response = await EndevorClient.printElement(session)(configuration)(
         requestParms
       );
       response = parseToType(BaseResponse, response);
@@ -768,7 +775,7 @@ export const printListing =
   (progress: ProgressReporter) =>
   (service: Service) =>
   async ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -789,7 +796,7 @@ export const printListing =
     progress.report({ increment: 30 });
     let response;
     try {
-      response = await EndevorClient.printElement(session)(instance)(
+      response = await EndevorClient.printElement(session)(configuration)(
         requestParms
       );
     } catch (error) {
@@ -863,7 +870,7 @@ export const retrieveElementWithFingerprint =
   (progressReporter: ProgressReporter) =>
   (service: Service) =>
   ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -891,7 +898,7 @@ export const retrieveElementWithFingerprint =
     progressReporter.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.retrieveElement(session)(instance)(
+      response = await EndevorClient.retrieveElement(session)(configuration)(
         requestParms
       );
       response = parseToType(BaseResponse, response);
@@ -1028,7 +1035,7 @@ export const signInElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   async ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -1048,7 +1055,7 @@ export const signInElement =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.signinElement(session)(instance)(
+      response = await EndevorClient.signinElement(session)(configuration)(
         requestParms
       );
       response = parseToType(BaseResponse, response);
@@ -1222,7 +1229,7 @@ const retrieveDependentElements =
     subSystem,
     type,
     name,
-    instance,
+    configuration,
   }: Element): Promise<ReadonlyArray<Dependency> | Error> => {
     const requestParms: ElmSpecDictionary & QueryAcmDictionary = {
       environment,
@@ -1239,7 +1246,7 @@ const retrieveDependentElements =
     progressReporter.report({ increment: 30 });
     let response;
     try {
-      response = await EndevorClient.queryAcmComponent(session)(instance)(
+      response = await EndevorClient.queryAcmComponent(session)(configuration)(
         requestParms
       );
     } catch (error) {
@@ -1307,17 +1314,14 @@ const retrieveDependentElements =
     progressReporter.report({ increment: 20 });
     return dependencies.map((dependency) => {
       return {
-        instance,
+        configuration,
         environment: dependency.envName,
         stageNumber: dependency.stgNum,
         system: dependency.sysName,
         subSystem: dependency.sbsName,
         type: dependency.typeName,
-        name: dependency.elmName,
-        extension: getElementExtension({
-          typeName: dependency.typeName,
-          fileExt: dependency.fileExt,
-        }),
+        name: dependency.fullElmName,
+        extension: dependency.fileExt ? dependency.fileExt : undefined,
       };
     });
   };
@@ -1351,7 +1355,7 @@ const retrieveElementDependencies =
                 subSystem: dependency.subSystem,
                 type: dependency.type,
                 name: dependency.name,
-                instance: dependency.instance,
+                configuration: dependency.configuration,
                 extension: dependency.extension,
               })
           ),
@@ -1373,7 +1377,7 @@ const retrieveElementDependencies =
                   subSystem: dependency.subSystem,
                   type: dependency.type,
                   name: dependency.name,
-                  instance: dependency.instance,
+                  configuration: dependency.configuration,
                   extension: dependency.extension,
                 }
               )({ signoutChangeControlValue })
@@ -1395,7 +1399,7 @@ const generateElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -1430,7 +1434,7 @@ const generateElement =
     progress.report({ increment: 30 });
     let response: BaseResponse;
     try {
-      response = await EndevorClient.generateElement(session)(instance)(
+      response = await EndevorClient.generateElement(session)(configuration)(
         requestParms
       );
       response = parseToType(BaseResponse, response);
@@ -1520,7 +1524,7 @@ export const updateElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -1561,7 +1565,7 @@ export const updateElement =
     try {
       response = await AddUpdElement.updElement(
         session,
-        instance,
+        configuration,
         elementData,
         requestParms
       );
@@ -1642,7 +1646,7 @@ export const addElement =
   (progress: ProgressReporter) =>
   (service: Service) =>
   ({
-    instance,
+    configuration,
     environment,
     stageNumber,
     system,
@@ -1678,7 +1682,7 @@ export const addElement =
     try {
       response = await AddUpdElement.addElement(
         session,
-        instance,
+        configuration,
         elementData,
         requestParms
       );

@@ -14,45 +14,68 @@
 import { parseToType } from '@local/type-parser/parser';
 import {
   Element,
-  Repository,
+  Configuration,
   SubSystem,
   System,
   EnvironmentStage,
 } from '../_ext/Endevor';
 
 describe('external Endevor data type parsing', () => {
-  describe('repository type parsing', () => {
-    it('should parse a proper repository', () => {
+  describe('configuration type parsing', () => {
+    const name = 'CONFIG1';
+    const description = 'Config 1';
+    it('should parse a proper configuration', () => {
       // arrange
-      const name = 'REPO1';
-      const repository = {
+      const configuration = {
         name,
+        description,
       };
       // act
-      const parsedRepository = parseToType(Repository, repository);
+      const parsedRepository = parseToType(Configuration, configuration);
       // assert
-      const expectedRepo: Repository = {
+      const expectedRepo: Configuration = {
         name,
+        description,
       };
       expect(parsedRepository).toStrictEqual(expectedRepo);
     });
-    it('should throw an error for a repository without name', () => {
+    it('should throw an error for a configuration without name', () => {
       // arrange
-      const repository = {};
+      const configuration = { description };
       // act && assert
-      expect(() => parseToType(Repository, repository)).toThrowError(
-        'Invalid value undefined supplied to : { name: string }/name: string'
-      );
+      expect(() =>
+        parseToType(Configuration, configuration)
+      ).toThrowErrorMatchingSnapshot();
     });
-    it('should throw an error for a repository with incorrect name', () => {
+    it('should throw an error for a configuration with incorrect name', () => {
       // arrange
-      const repository = {
+      const configuration = {
         naMe: 'something',
+        description,
       };
       // act && assert
-      expect(() => parseToType(Repository, repository)).toThrowError(
-        'Invalid value undefined supplied to : { name: string }/name: string'
-      );
+      expect(() =>
+        parseToType(Configuration, configuration)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a configuration without description', () => {
+      // arrange
+      const configuration = { name };
+      // act && assert
+      expect(() =>
+        parseToType(Configuration, configuration)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a configuration with incorrect description', () => {
+      // arrange
+      const configuration = {
+        name,
+        desCription: 'something',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(Configuration, configuration)
+      ).toThrowErrorMatchingSnapshot();
     });
   });
   describe('system type parsing', () => {
@@ -299,6 +322,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         fileExt: 'cbl',
+        fullElmName: 'ELM1',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -311,6 +335,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         fileExt: 'cbl',
+        fullElmName: 'ELM1',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -324,6 +349,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: 2,
         fileExt: 'cbl',
+        fullElmName: 'ELM1',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -336,6 +362,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         fileExt: 'cbl',
+        fullElmName: 'ELM1',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -348,6 +375,7 @@ describe('external Endevor data type parsing', () => {
         sbsName: 'SBS',
         elmName: 'ELM1',
         stgNum: '2',
+        fullElmName: 'ELM1',
         // fileExt: 'cbl',
       };
       // act
@@ -360,6 +388,7 @@ describe('external Endevor data type parsing', () => {
         sbsName: 'SBS',
         elmName: 'ELM1',
         stgNum: '2',
+        fullElmName: 'ELM1',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -373,6 +402,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         fileExt: null,
+        fullElmName: 'ELM1',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -385,6 +415,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         fileExt: null,
+        fullElmName: 'ELM1',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -395,12 +426,13 @@ describe('external Endevor data type parsing', () => {
         typeName: 'TYPE',
         sysName: 'SYS',
         sbsName: 'SBS',
+        fullElmName: 'ELM1',
         // elmName: 'ELM1',
         stgNum: '2',
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/elmName: string'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/elmName: string'
       );
     });
     it('should throw an error for an element without stage number', () => {
@@ -411,11 +443,12 @@ describe('external Endevor data type parsing', () => {
         sysName: 'SYS',
         sbsName: 'SBS',
         elmName: 'ELM1',
+        fullElmName: 'ELM1',
         // stgNum: '2',
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/stgNum: StageNumber'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/stgNum: StageNumber'
       );
     });
     it('should throw an error for an element without environment name', () => {
@@ -427,10 +460,11 @@ describe('external Endevor data type parsing', () => {
         sbsName: 'SBS',
         elmName: 'ELM1',
         stgNum: '2',
+        fullElmName: 'ELM1',
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/envName: string'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/envName: string'
       );
     });
     it('should throw an error for an element without type name', () => {
@@ -442,10 +476,11 @@ describe('external Endevor data type parsing', () => {
         sbsName: 'SBS',
         elmName: 'ELM1',
         stgNum: '2',
+        fullElmName: 'ELM1',
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/typeName: string'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/typeName: string'
       );
     });
     it('should throw an error for an element without system name', () => {
@@ -457,10 +492,11 @@ describe('external Endevor data type parsing', () => {
         sbsName: 'SBS',
         elmName: 'ELM1',
         stgNum: '2',
+        fullElmName: 'ELM1',
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sysName: string'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/sysName: string'
       );
     });
     it('should throw an error for an element without subsystem name', () => {
@@ -475,7 +511,7 @@ describe('external Endevor data type parsing', () => {
       };
       // act && assert
       expect(() => parseToType(Element, element)).toThrowError(
-        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sbsName: string'
+        'Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string, fullElmName: string }/sbsName: string'
       );
     });
   });

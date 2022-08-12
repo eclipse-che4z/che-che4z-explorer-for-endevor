@@ -2,9 +2,10 @@
   "name": "@local/endevor",
   "version": "1.0.0",
   "dependencies": {
-    "@broadcom/endevor-for-zowe-cli": "^6.5.0",
+    "@broadcom/endevor-for-zowe-cli": "^7.0.1",
     "@local/extension": "1.0.0",
     "@local/type-parser": "1.0.0",
+    "@zowe/imperative": "^5.3.3",
     "string-to-file-stream": "1.3.0"
   },
   "scripts": {

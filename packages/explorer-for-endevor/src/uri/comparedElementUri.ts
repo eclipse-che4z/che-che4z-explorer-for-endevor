@@ -20,12 +20,12 @@ import {
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import { EndevorId } from '../store/_doc/v2/Store';
 import { ComparedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
 
 type SerializedValue = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
   service: Service;
   elementTreePath: SubSystemMapPath;
   overallSearchLocation: ElementSearchLocation;
@@ -45,8 +45,8 @@ export const toComparedElementUri =
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
         type: QueryTypes.COMPARED_ELEMENT,
-        serviceName: uriQuery.initialSearchContext.serviceName,
-        searchLocationName: uriQuery.initialSearchContext.searchLocationName,
+        serviceId: uriQuery.initialSearchContext.serviceId,
+        searchLocationId: uriQuery.initialSearchContext.searchLocationId,
         service: uriQuery.endevorConnectionDetails,
         element: uriQuery.element,
         fingerprint: uriQuery.fingerprint,
@@ -120,8 +120,8 @@ export const fromComparedElementUri = (
       uploadTargetLocation: serializedValue.uploadTargetLocation,
       endevorConnectionDetails: serializedValue.service,
       initialSearchContext: {
-        serviceName: serializedValue.serviceName,
-        searchLocationName: serializedValue.searchLocationName,
+        serviceId: serializedValue.serviceId,
+        searchLocationId: serializedValue.searchLocationId,
         overallSearchLocation: serializedValue.overallSearchLocation,
         initialSearchLocation: serializedValue.elementTreePath,
       },

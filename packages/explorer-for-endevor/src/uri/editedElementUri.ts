@@ -18,12 +18,12 @@ import {
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
-import { ElementLocationName, EndevorServiceName } from '../_doc/settings';
+import { EndevorId } from '../store/_doc/v2/Store';
 import { EditedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
 
 type SerializedValue = Readonly<{
-  serviceName: EndevorServiceName;
-  searchLocationName: ElementLocationName;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
   service: Service;
   element: Element;
   searchLocation: ElementSearchLocation;
@@ -40,8 +40,8 @@ export const toEditedElementUri =
     fingerprint,
     endevorConnectionDetails,
     searchContext: {
-      serviceName,
-      searchLocationName,
+      serviceId,
+      searchLocationId,
       initialSearchLocation,
       overallSearchLocation,
     },
@@ -49,12 +49,12 @@ export const toEditedElementUri =
     try {
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
-        serviceName,
+        serviceId,
         service: endevorConnectionDetails,
         element,
         searchLocation: overallSearchLocation,
         treePath: initialSearchLocation,
-        searchLocationName,
+        searchLocationId,
         type: QueryTypes.EDITED_ELEMENT,
         fingerprint,
       };
@@ -118,8 +118,8 @@ export const fromEditedElementUri = (
       fingerprint: serializedValue.fingerprint,
       endevorConnectionDetails: serializedValue.service,
       searchContext: {
-        serviceName: serializedValue.serviceName,
-        searchLocationName: serializedValue.searchLocationName,
+        serviceId: serializedValue.serviceId,
+        searchLocationId: serializedValue.searchLocationId,
         initialSearchLocation: serializedValue.treePath,
         overallSearchLocation: serializedValue.searchLocation,
       },

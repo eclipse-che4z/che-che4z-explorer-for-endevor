@@ -42,12 +42,12 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
       <td>: ${element.type} </td>
     </tr>
     <tr>
-      <td> elmName </td>
+      <td> fullElmName </td>
       <td>: ${element.name} </td>
     </tr>
     <tr>
       <td> fileExt </td>
-      <td>: ${element.extension} </td>
+      <td>: ${element.extension ? element.extension : ''} </td>
     </tr>
   </table>
 </body>

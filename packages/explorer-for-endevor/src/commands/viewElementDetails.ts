@@ -12,7 +12,7 @@
  */
 
 import { logger, reporter } from '../globals';
-import { ElementNode, Node } from '../_doc/ElementTree';
+import { ElementNode } from '../tree/_doc/ElementTree';
 import { renderElementAttributes } from '../view/elementAttributes';
 import { showWebView } from '@local/vscode-wrapper/window';
 import { filterElementNodes, isError } from '../utils';
@@ -22,6 +22,7 @@ import {
   TelemetryEvents,
   TreeElementCommandArguments,
 } from '../_doc/Telemetry';
+import { Node } from '../tree/_doc/ServiceLocationTree';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = Node[];

@@ -11,9 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import * as vscode from 'vscode';
 import {
   Choice,
+  MessageLevel,
   MessageWithOptions,
   ProgressingFunction,
   PromptInputOptions,
@@ -38,6 +40,34 @@ export const showMessageWithOptions = async ({
   return await vscode.window.showInformationMessage(message, ...options);
 };
 
+export const showModalWithOptions = async (
+  { message, options }: MessageWithOptions,
+  level: MessageLevel = MessageLevel.INFO
+): Promise<Choice | undefined> => {
+  switch (level) {
+    case MessageLevel.WARN:
+      return await vscode.window.showWarningMessage(
+        message,
+        { modal: true },
+        ...options
+      );
+    case MessageLevel.ERROR:
+      return await vscode.window.showErrorMessage(
+        message,
+        { modal: true },
+        ...options
+      );
+    case MessageLevel.INFO:
+      return await vscode.window.showInformationMessage(
+        message,
+        { modal: true },
+        ...options
+      );
+    default:
+      throw new UnreachableCaseError(level);
+  }
+};
+
 export const showInputBox = (
   options: PromptInputOptions
 ): Thenable<string | undefined> =>
@@ -51,6 +81,26 @@ export const showVscodeQuickPick = (
   showOptions?: vscode.QuickPickOptions
 ): Thenable<vscode.QuickPickItem | undefined> => {
   return vscode.window.showQuickPick(items, showOptions);
+};
+
+export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
+  items: I[],
+  placeHolder?: string,
+  ignoreFocusOut?: boolean
+): Promise<vscode.QuickPick<I> | undefined> => {
+  const quickpick = vscode.window.createQuickPick<I>();
+  quickpick.items = items;
+  quickpick.placeholder = placeHolder;
+  quickpick.ignoreFocusOut = ignoreFocusOut || false;
+  quickpick.show();
+  const choice = await new Promise<vscode.QuickPickItem | undefined>(
+    (choice) => {
+      quickpick.onDidAccept(() => choice(quickpick.activeItems[0]));
+      quickpick.onDidHide(() => choice(undefined));
+    }
+  );
+  quickpick.hide();
+  return choice ? quickpick : undefined;
 };
 
 export const showWebView =
@@ -95,6 +145,29 @@ export const withNotificationProgress =
   };
 
 // don't forget to validate promise.reject
+export const withCancellableNotificationProgress =
+  (title: string) =>
+  async <R>(task: ProgressingFunction<R>): Promise<R | undefined> => {
+    return await vscode.window.withProgress(
+      {
+        title,
+        location: vscode.ProgressLocation.Notification,
+        cancellable: true,
+      },
+      async (progress, cancellationToken) => {
+        return await Promise.race([
+          new Promise<undefined>((resolve) => {
+            cancellationToken.onCancellationRequested(() => {
+              resolve(undefined);
+            });
+          }),
+          task(progress),
+        ]);
+      }
+    );
+  };
+
+// don't forget to validate promise.reject
 export const showDiffEditor =
   (resourceToCompareLeft: vscode.Uri) =>
   async (resourceToUpdateRight: vscode.Uri) => {
@@ -104,3 +177,7 @@ export const showDiffEditor =
       resourceToUpdateRight
     );
   };
+
+export const reloadWindow = async () => {
+  await vscode.commands.executeCommand('workbench.action.reloadWindow');
+};

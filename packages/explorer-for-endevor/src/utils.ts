@@ -11,7 +11,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ElementNode, Node } from './_doc/ElementTree';
+import { ElementNode } from './tree/_doc/ElementTree';
+import { Node } from './tree/_doc/ServiceLocationTree';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TimeoutError } from './_doc/Error';
@@ -23,6 +24,7 @@ import {
 } from '@local/endevor/_doc/Endevor';
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 import { EnvironmentStage } from '../../endevor/_doc/Endevor';
+import { Id } from './store/storage/_doc/Storage';
 
 const isElementNode = (node: Node): node is ElementNode => {
   switch (node.type) {
@@ -35,11 +37,20 @@ const isElementNode = (node: Node): node is ElementNode => {
 };
 
 export const filterElementNodes = (nodes: Node[]): ElementNode[] => {
-  return nodes.filter(isElementNode);
+  return nodes
+    .map((node) => {
+      if (isElementNode(node)) return node;
+      return;
+    })
+    .filter(isDefined);
 };
 
 export const isDefined = <T>(value: T | undefined): value is T => {
   return value !== undefined;
+};
+
+export const isEmpty = (value: string): boolean => {
+  return value.trim().length === 0;
 };
 
 export const isError = <T>(value: T | Error): value is Error => {
@@ -48,6 +59,10 @@ export const isError = <T>(value: T | Error): value is Error => {
 
 export const isTuple = <T>(value: Array<T> | unknown): value is Array<T> => {
   return value instanceof Array;
+};
+
+export const isString = (value: string | unknown): value is string => {
+  return typeof value === 'string';
 };
 
 export const isNotLastEnvStage = (
@@ -77,29 +92,26 @@ export const deepCopyError = (error: Error): Error => {
   return copyError;
 };
 
+export const joinUri =
+  (baseUri: vscode.Uri) =>
+  (extraPath: string): vscode.Uri => {
+    return vscode.Uri.file(path.join(baseUri.fsPath, extraPath));
+  };
+
 export const getEditFolderUri =
-  (workspaceUri: vscode.Uri) =>
-  (editFolderWorkspacePath: string) =>
-  (serviceName: string, locationName: string) =>
+  (tempEditFolderUri: vscode.Uri) =>
+  (serviceId: Id, searchLocationId: Id) =>
   (element: Element): vscode.Uri => {
-    return vscode.Uri.file(
+    return joinUri(tempEditFolderUri)(
       path.join(
-        workspaceUri.fsPath,
-        editFolderWorkspacePath,
-        serviceName,
-        locationName,
+        serviceId.name,
+        serviceId.source,
+        searchLocationId.name,
+        searchLocationId.source,
         element.system,
         element.subSystem,
         element.type
       )
-    );
-  };
-
-export const getEditRootFolderUri =
-  (workspaceUri: vscode.Uri) =>
-  (editFolderWorkspacePath: string): vscode.Uri => {
-    return vscode.Uri.file(
-      path.join(workspaceUri.fsPath, editFolderWorkspacePath)
     );
   };
 
@@ -125,12 +137,14 @@ export const parseFilePath = (
   path: string;
   fileName: string;
   fileExtension?: string;
+  fullFileName: string;
 } => {
   const parsedPath = path.parse(filePath);
   return {
     fileName: parsedPath.name,
     path: parsedPath.dir,
     fileExtension: parsedPath.ext || undefined,
+    fullFileName: parsedPath.base,
   };
 };
 
@@ -204,3 +218,17 @@ export const isTheSameLocation =
       firstLocation.system === secondLocation.system
     );
   };
+
+export const byTypeAndNameOrder = (
+  l: { name: string; type: string },
+  r: { name: string; type: string }
+): number => {
+  return l.type.localeCompare(r.type) === -1
+    ? l.type.localeCompare(r.type)
+    : l.name.localeCompare(r.name);
+};
+
+export const getElementExtension = (element: {
+  type: string;
+  extension?: string;
+}): string => (element.extension ? element.extension : element.type);
