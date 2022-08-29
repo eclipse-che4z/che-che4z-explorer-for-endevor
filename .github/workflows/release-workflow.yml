@@ -1,8 +1,5 @@
 name: E4E Release & Publish Workflow
-on:
-  push:
-    branches:
-      - master
+on: workflow_dispatch
 env:
   PROJECT_NAME: explorer-for-endevor
   E4E_TELEMETRY_KEY: ${{ secrets.E4E_TELEMETRY_KEY }}
