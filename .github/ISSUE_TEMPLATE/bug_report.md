@@ -29,5 +29,16 @@ If applicable, add screenshots to help explain your problem.
 - VSCode version
 - Extension version
 
+**Zowe environment**
+If applicable, add some information about the Zowe Environment that you use on your machine.
+
+- Zowe CLI version
+- Zowe Explorer version
+- Zowe profiles information:
+  - Used profile types
+  - V1 profiles or Team Configuration file usage
+
+_Note: you can upload the .zowe folder content in the issue (do not forget to remove the sensitive information from there) to help us reproduce the issue._
+
 **Additional context**
 Add any other context about the problem here.
