@@ -18,7 +18,7 @@ export const askToShowListing = async (
   elements: ReadonlyArray<string>
 ): Promise<boolean> => {
   logger.trace('Prompt user to show element listing.');
-  const showListingOption = 'Show listing';
+  const showListingOption = 'Show Listing';
   const cancelOption = 'Cancel';
   const dialogResult = await showMessageWithOptions({
     message: `Successfully generated the elements: ${elements.join(

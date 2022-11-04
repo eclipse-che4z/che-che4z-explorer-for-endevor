@@ -2,11 +2,34 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.3.0] &ndash; 2022-11-04
+
+### Added
+
+- Added the experimental feature that enables you to create a workspace and synchronize it with Endevor on the mainframe.
+- Added an ability to correct Endevor connection information and credentials for the current VSCode session.
+- Added cancellation for the connection testing and Endevor tree refresh operations.
+- Added Zowe V2 Conformance information to README.
+- Added Get Started with Explorer for Endevor VSCode Walkthrough.
+- Added Introduction to the Endevor Synchronized Workspace VSCode Walkthrough.
+
+### Fixed
+
+- Fixed the immediate user lockout if mainframe credentials were specified incorrectly.
+- Fixed the up the map elements fetching if the Endevor location was specified using wildcards.
+- Fixed the code regression messages. Now the messages are identified as warnings and are more visible.
+
+### Changed
+
+- Improved the extension UI. Now the Endevor tree is provided with welcome views and the get started walkthrough.
+- Improved the indication of the error messages for incorrect credentials or connection issues.
+- Improved the Endevor connection and inventory location related dialogs and messages.
+
 ## [1.2.0] &ndash; 2022-08-12
 
 ### Added
 
-- Added the functionality to create Endevor connections that work independently from Zowe profiles
+- Added the functionality to create Endevor connections that work independently from Zowe profiles.
 - Added the compatibility with the Zowe Secure Credential Store.
 - Added the functionality that reads the Zowe Global Team and User Configuration files.
 - Added the **Add an Inventory Location** button to the extension tree.

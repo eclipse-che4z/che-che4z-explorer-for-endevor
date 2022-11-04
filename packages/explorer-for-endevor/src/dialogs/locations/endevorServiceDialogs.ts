@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { QuickPick, QuickPickItem, QuickPickOptions } from 'vscode';
+import { QuickPick, QuickPickItem } from 'vscode';
 import {
   showInputBox,
   showMessageWithOptions,
@@ -20,16 +20,13 @@ import {
 } from '@local/vscode-wrapper/window';
 import { logger, reporter } from '../../globals';
 import {
-  Service,
   ServiceApiVersion,
   ServiceBasePath,
   ServiceLocation,
 } from '@local/endevor/_doc/Endevor';
-import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
 import { isSelfSignedCertificateError, toUrlParms } from '@local/endevor/utils';
 import {
   isDefined,
-  isEmpty,
   isError,
   isTimeoutError,
   toPromiseWithTimeout,
@@ -44,12 +41,29 @@ import {
   TelemetryEvents,
 } from '../../_doc/telemetry/v2/Telemetry';
 import {
+  EndevorConnection,
+  EndevorConnectionStatus,
   EndevorId,
+  ExistingEndevorServiceDescriptions,
+  InvalidEndevorServiceDescription,
   ValidEndevorServiceDescription,
-  ValidEndevorServiceDescriptions,
 } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
+import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
+import {
+  askForPassword,
+  askForUsername,
+  defaultPasswordPolicy,
+  EmptyValue,
+  emptyValueProvided,
+} from '../credentials/endevorCredentialDialogs';
+import {
+  BaseCredential,
+  Credential,
+  CredentialType,
+} from '@local/endevor/_doc/Credential';
+import { PasswordLengthPolicy } from '../../_doc/Credential';
 const enum DialogResultTypes {
   CREATED = 'CREATED',
   CHOSEN = 'CHOSEN',
@@ -61,12 +75,9 @@ type CreatedService = {
     name: string;
     source: Source.INTERNAL;
   };
-  value: {
-    location: Service['location'];
-    rejectUnauthorized: Service['rejectUnauthorized'];
-    apiVersion: Service['apiVersion'];
-  } & Partial<{
-    credential: Credential;
+  value: Readonly<{
+    connection: EndevorConnection;
+    credential: Credential | undefined;
   }>;
 };
 type ChosenService = {
@@ -74,6 +85,7 @@ type ChosenService = {
   id: EndevorId;
 };
 type OperationCancelled = undefined;
+type ChooseDialogResult = ChosenService | OperationCancelled;
 type DialogResult = CreatedService | ChosenService | OperationCancelled;
 
 export const dialogCancelled = (
@@ -95,7 +107,7 @@ const serviceUrlPlaceholder =
 
 export const askForServiceOrCreateNew =
   (dialogRestrictions: {
-    servicesToChoose: ValidEndevorServiceDescriptions;
+    servicesToChoose: ExistingEndevorServiceDescriptions;
     allExistingServices: ReadonlyArray<string>;
   }) =>
   async (
@@ -173,11 +185,48 @@ export const askForServiceOrCreateNew =
     };
   };
 
+export const askForService = async (
+  servicesToChoose: ExistingEndevorServiceDescriptions
+): Promise<ChooseDialogResult> => {
+  const serviceQuickPickItems = Object.values(servicesToChoose).map(
+    toServiceQuickPickItem
+  );
+  if (!serviceQuickPickItems.length) {
+    logger.warn('No Endevor connections to select from.');
+    return undefined;
+  }
+  const quickPickOptions: QuickPickOptions = {
+    title: 'Select from the available Endevor connections',
+    placeholder: 'An Endevor connection name',
+    ignoreFocusOut: true,
+  };
+  const choice = await createVscodeQuickPick(
+    serviceQuickPickItems,
+    quickPickOptions
+  );
+  if (
+    operationCancelled(choice) ||
+    valueNotProvided(choice) ||
+    !isDefined(choice.activeItems[0])
+  ) {
+    logger.trace('Operation cancelled.');
+    return undefined;
+  }
+  const service = choice.activeItems[0];
+  if (!service || !service.id) return undefined;
+  return {
+    type: DialogResultTypes.CHOSEN,
+    id: service.id,
+  };
+};
+
 const toServiceQuickPickItem = ({
   id,
   url,
   duplicated,
-}: ValidEndevorServiceDescription): QuickPickItem => {
+}:
+  | ValidEndevorServiceDescription
+  | InvalidEndevorServiceDescription): ServiceQuickPickItem => {
   const serviceQuickPickItem: ServiceQuickPickItem = {
     label: id.name,
     detail: url,
@@ -203,23 +252,20 @@ const showServicesInQuickPick = async (
   services: ServiceQuickPickItem[]
 ): Promise<QuickPick<ServiceQuickPickItem> | undefined> => {
   const quickPickOptions: QuickPickOptions = {
-    placeHolder:
+    title: 'Add an Endevor connection',
+    placeholder:
       'Choose "Create new..." to define a new Endevor connection or select an existing one',
     ignoreFocusOut: true,
   };
-  return createVscodeQuickPick(
-    services,
-    quickPickOptions.placeHolder,
-    quickPickOptions.ignoreFocusOut
-  );
+  return createVscodeQuickPick(services, quickPickOptions);
 };
 
 const operationCancelled = <T>(value: T | undefined): value is undefined => {
-  return value == undefined;
+  return value === undefined;
 };
 
 const valueNotProvided = <T>(value: T | undefined): value is undefined => {
-  if (typeof value == 'boolean') {
+  if (typeof value === 'boolean') {
     return !value.toString();
   }
   return !value;
@@ -236,9 +282,7 @@ const parseServiceUrl = (
   const { protocol, hostname, port, pathname, username, password } =
     toUrlParms(urlString);
   if (!protocol && !hostname) {
-    return new Error(
-      `Enter an Endevor Web Services URL in the format: ${serviceUrlPlaceholder}`
-    );
+    return new Error(`Enter URL in the ${serviceUrlPlaceholder} format:`);
   }
   if (!protocol) {
     return new Error(`Protocol required`);
@@ -266,8 +310,9 @@ const askForServiceName = async (
 ): Promise<string | undefined> => {
   logger.trace('Prompt for Endevor connection name.');
   return showInputBox({
-    prompt: 'Endevor connection Name',
-    placeHolder: 'Endevor connection Name',
+    title: 'Enter a name for the new Endevor connection',
+    prompt: 'Must not contain spaces',
+    placeHolder: 'Endevor connection name',
     validateInput: (inputValue) =>
       inputValue.length
         ? inputValue.includes(' ')
@@ -287,68 +332,62 @@ export const askForServiceValue = async (
     ServiceApiVersion | SelfSignedCertificateError | Error | OperationCancelled
   >
 ): Promise<CreatedService['value'] | undefined> => {
-  const serviceDetailsResult = await askForServiceDetails(testServiceLocation);
+  const serviceDetailsResult = await askForConnectionDetails(
+    testServiceLocation,
+    async () => !(await askForTryAgainOrContinue())
+  );
   if (!serviceDetailsResult) return;
-  if (!serviceDetailsResult.username || !serviceDetailsResult.password) {
-    serviceDetailsResult.username = await askForUsername(
-      serviceDetailsResult.username
-    );
-    if (
-      operationCancelled(serviceDetailsResult.username) ||
-      isEmpty(serviceDetailsResult.username)
-    ) {
-      logger.trace('No username was provided.');
+  if (
+    !serviceDetailsResult.credential.username ||
+    !serviceDetailsResult.credential.password
+  ) {
+    const credential = await askForCredentialValue(defaultPasswordPolicy)({
+      user: serviceDetailsResult.credential.username,
+      password: serviceDetailsResult.credential.password,
+    });
+    if (emptyValueProvided(credential)) {
       return {
-        location: serviceDetailsResult.location,
-        apiVersion: serviceDetailsResult.apiVersion,
-        rejectUnauthorized: serviceDetailsResult.rejectUnauthorized,
+        ...serviceDetailsResult,
+        credential: undefined,
       };
     }
-    serviceDetailsResult.password = await askForPassword(
-      serviceDetailsResult.password
-    );
-    if (
-      operationCancelled(serviceDetailsResult.password) ||
-      isEmpty(serviceDetailsResult.password)
-    ) {
-      logger.trace('No password was provided.');
-      return {
-        location: serviceDetailsResult.location,
-        apiVersion: serviceDetailsResult.apiVersion,
-        rejectUnauthorized: serviceDetailsResult.rejectUnauthorized,
-      };
+    if (operationCancelled(credential)) {
+      return;
     }
+    return {
+      ...serviceDetailsResult,
+      credential,
+    };
   }
   return {
+    ...serviceDetailsResult,
     credential: {
       type: CredentialType.BASE,
-      user: serviceDetailsResult.username,
-      password: serviceDetailsResult.password,
+      user: serviceDetailsResult.credential.username,
+      password: serviceDetailsResult.credential.password,
     },
-    location: serviceDetailsResult.location,
-    apiVersion: serviceDetailsResult.apiVersion,
-    rejectUnauthorized: serviceDetailsResult.rejectUnauthorized,
   };
 };
 
-export type ServiceDetailsResult = {
-  location: ServiceLocation;
-  rejectUnauthorized: boolean;
-} & Partial<{
-  apiVersion: ServiceApiVersion;
-  username: string;
-  password: string;
+export type ServiceDetailsResult = Readonly<{
+  connection: EndevorConnection;
+  credential: Partial<{
+    username: string;
+    password: string;
+  }>;
 }>;
 
-export const askForServiceDetails = async (
+export const askForConnectionDetails = async (
   testServiceLocation: (
     location: ServiceLocation,
     rejectUnauthorized: boolean
   ) => Promise<
     ServiceApiVersion | SelfSignedCertificateError | Error | OperationCancelled
-  >
+  >,
+  continueWithError: () => Promise<boolean>,
+  prefilledUrl?: string
 ): Promise<ServiceDetailsResult | undefined> => {
-  let urlString;
+  let urlString = prefilledUrl;
   let rejectUnauthorized = true;
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -387,7 +426,7 @@ export const askForServiceDetails = async (
       });
       // immediately start again if the value was changed: true -> false
       if (!rejectUnauthorized) continue;
-      const tryAgain = await askForTryAgainOrContinue();
+      const tryAgain = !(await continueWithError());
       if (tryAgain) continue;
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.SERVICE_CONNECTION_TEST,
@@ -395,8 +434,16 @@ export const askForServiceDetails = async (
         status: ServiceConnectionTestStatus.CONTINUE_WITH_ERROR,
       });
       return {
-        ...parsedService,
-        rejectUnauthorized,
+        connection: {
+          status: EndevorConnectionStatus.INVALID,
+          value: {
+            rejectUnauthorized,
+            ...parsedService,
+          },
+        },
+        credential: {
+          ...parsedService,
+        },
       };
     }
     if (operationCancelled(apiVersion)) {
@@ -405,7 +452,7 @@ export const askForServiceDetails = async (
         context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
         status: ServiceConnectionTestStatus.CANCELLED,
       });
-      const tryAgain = await askForTryAgainOrContinue();
+      const tryAgain = !(await continueWithError());
       if (tryAgain) continue;
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.SERVICE_CONNECTION_TEST,
@@ -413,8 +460,16 @@ export const askForServiceDetails = async (
         status: ServiceConnectionTestStatus.CONTINUE_WITH_CANCEL,
       });
       return {
-        ...parsedService,
-        rejectUnauthorized,
+        connection: {
+          status: EndevorConnectionStatus.UNKNOWN,
+          value: {
+            rejectUnauthorized,
+            ...parsedService,
+          },
+        },
+        credential: {
+          ...parsedService,
+        },
       };
     }
     if (isError(apiVersion)) {
@@ -423,7 +478,7 @@ export const askForServiceDetails = async (
         'Unable to connect to Endevor Web Services.',
         `${error.message}.`
       );
-      const tryAgain = await askForTryAgainOrContinue();
+      const tryAgain = !(await continueWithError());
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
@@ -437,8 +492,16 @@ export const askForServiceDetails = async (
         status: ServiceConnectionTestStatus.CONTINUE_WITH_ERROR,
       });
       return {
-        ...parsedService,
-        rejectUnauthorized,
+        connection: {
+          status: EndevorConnectionStatus.INVALID,
+          value: {
+            rejectUnauthorized,
+            ...parsedService,
+          },
+        },
+        credential: {
+          ...parsedService,
+        },
       };
     }
     reporter.sendTelemetryEvent({
@@ -448,9 +511,17 @@ export const askForServiceDetails = async (
       apiVersion,
     });
     return {
-      ...parsedService,
-      apiVersion,
-      rejectUnauthorized,
+      connection: {
+        status: EndevorConnectionStatus.VALID,
+        value: {
+          rejectUnauthorized,
+          ...parsedService,
+          apiVersion,
+        },
+      },
+      credential: {
+        ...parsedService,
+      },
     };
   }
 };
@@ -460,7 +531,8 @@ export const askForUrl = async (
 ): Promise<string | undefined> => {
   logger.trace('Prompt for URL.');
   return showInputBox({
-    prompt: `Enter an Endevor Web Services URL in the format: ${serviceUrlPlaceholder}`,
+    title: `Enter the Endevor Web Services URL`,
+    prompt: `Specify the details of your Endevor Web Services. Connection protocol and hostname are required.`,
     placeHolder: serviceUrlPlaceholder,
     value,
     validateInput: (value) => {
@@ -513,7 +585,7 @@ export const askForTryAgainOrContinue = async (): Promise<boolean> => {
   const dialogResult = await toPromiseWithTimeout(NOTIFICATION_TIMEOUT)(
     showMessageWithOptions({
       message:
-        'Would you want to specify another Endevor Web Services URL and try again or to continue adding the connection with the current value?',
+        'Would you want to specify another Endevor Web Services URL and try again or to continue with the provided value?',
       options: [tryAgainOption, continueOption],
     })
   );
@@ -533,35 +605,47 @@ export const askForTryAgainOrContinue = async (): Promise<boolean> => {
   return true;
 };
 
-export const askForUsername = async (
-  value?: string
-): Promise<string | undefined> => {
-  logger.trace('Prompt for username.');
-  return showInputBox({
-    prompt: 'Enter the username for the connection.',
-    placeHolder: '(Optional) Username',
-    value,
-  });
-};
-
-export const askForPassword = async (
-  value?: string
-): Promise<string | undefined> => {
-  logger.trace('Prompt for password.');
-  return showInputBox({
-    prompt: 'Enter the password for the connection.',
-    password: true,
-    placeHolder: '(Optional) Password',
-    value,
-  });
-};
+const askForCredentialValue =
+  (passwordLengthPolicy: PasswordLengthPolicy) =>
+  async (prefilledValue?: {
+    user?: string;
+    password?: string;
+  }): Promise<BaseCredential | OperationCancelled | EmptyValue> => {
+    const user = await askForUsername({
+      allowEmpty: true,
+      prefilledValue: prefilledValue?.user,
+    });
+    if (emptyValueProvided(user)) {
+      logger.trace('No username was provided.');
+      return null;
+    }
+    if (operationCancelled(user)) {
+      logger.trace('Username prompt was cancelled.');
+      return undefined;
+    }
+    const password = await askForPassword({
+      allowEmpty: false,
+      passwordLengthPolicy,
+      prefilledValue: prefilledValue?.password,
+    });
+    if (operationCancelled(password) || emptyValueProvided(password)) {
+      logger.trace('No password was provided.');
+      return undefined;
+    }
+    return {
+      type: CredentialType.BASE,
+      user,
+      password,
+    };
+  };
 
 export const askForServiceDeletion = async (
   serviceName: string
 ): Promise<boolean> => {
   logger.trace(`Prompt for Endevor connection '${serviceName}' deletion.`);
   const dialogResult = await showModalWithOptions({
-    message: `Are you sure you want to delete Endevor connection '${serviceName}'? Warning: this action cannot be undone.`,
+    message: `Do you want to delete the '${serviceName}' Endevor connection?`,
+    detail: 'Warning: this action cannot be undone.',
     options: ['Delete'],
   });
   if (operationCancelled(dialogResult)) {

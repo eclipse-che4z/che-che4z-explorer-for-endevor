@@ -13,25 +13,26 @@
 
 import {
   Element,
-  ElementSearchLocation,
-  Service,
   ElementMapPath,
   SubSystemMapPath,
   ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
-import { EndevorMap } from '../../_doc/Endevor';
 import {
-  EndevorApiVersion,
   EndevorCacheItem,
   EndevorService,
-  EndevorCredential,
   EndevorId,
   EndevorSearchLocation,
+  EndevorCredentialStatus,
+  EndevorConnectionStatus,
+  EndevorCredential,
+  EndevorConnection,
 } from '../_doc/v2/Store';
 
 export const enum Actions {
-  ENDEVOR_CREDENTIAL_ADDED = 'ENDEVOR_CREDENTIAL/ADDED',
-  ENDEVOR_SERVICE_API_VERSION_ADDED = 'ENDEVOR_SERVICE_API_VERSION/ADDED',
+  SESSION_ENDEVOR_CREDENTIAL_ADDED = 'SESSION_ENDEVOR_CREDENTIAL/ADDED',
+  SESSION_ENDEVOR_CONNECTION_ADDED = 'SESSION_ENDEVOR_CONNECTION/ADDED',
+  ENDEVOR_CREDENTIAL_TESTED = 'ENDEVOR_CREDENTIAL/TESTED',
+  ENDEVOR_CONNECTION_TESTED = 'ENDEVOR_CONNECTION_DETAILS/TESTED',
   ENDEVOR_SERVICE_ADDED = 'ENDEVOR_SERVICE/ADDED',
   ENDEVOR_SERVICE_CREATED = 'ENDEVOR_SERVICE/CREATED',
   ENDEVOR_SERVICE_HIDDEN = 'ENDEVOR_SERVICE/HIDDEN',
@@ -40,9 +41,7 @@ export const enum Actions {
   ENDEVOR_SEARCH_LOCATION_ADDED = 'ENDEVOR_SEARCH_LOCATION/ADDED',
   ENDEVOR_SEARCH_LOCATION_HIDDEN = 'ENDEVOR_SEARCH_LOCATION/HIDDEN',
   ENDEVOR_SEARCH_LOCATION_DELETED = 'ENDEVOR_SEARCH_LOCATION/DELETED',
-  ENDEVOR_MAP_BUILT = 'ENDEVOR_MAP_BUILT',
   ENDEVOR_CACHE_FETCHED = 'ENDEVOR_CACHE_FETCHED',
-  ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
   REFRESH = 'REFRESH',
   ELEMENT_ADDED = 'ELEMENT_ADDED',
   ELEMENT_UPDATED_IN_PLACE = 'ELEMENT_UPDATED_IN_PLACE',
@@ -53,15 +52,35 @@ export const enum Actions {
   ELEMENT_GENERATED_WITH_COPY_BACK = 'ELEMENT_GENERATED_WITH_COPY_BACK',
 }
 
-export interface EndevorCredentialsAdded {
-  type: Actions.ENDEVOR_CREDENTIAL_ADDED;
+export interface SessionEndevorCredentialsAdded {
+  type: Actions.SESSION_ENDEVOR_CREDENTIAL_ADDED;
+  sessionId: EndevorId;
   credential: EndevorCredential;
 }
 
-export interface EndevorServiceApiVersionAdded {
-  type: Actions.ENDEVOR_SERVICE_API_VERSION_ADDED;
-  serviceId: EndevorId;
-  apiVersion: EndevorApiVersion;
+export interface SessionEndevorConnectionAdded {
+  type: Actions.SESSION_ENDEVOR_CONNECTION_ADDED;
+  sessionId: EndevorId;
+  connection: EndevorConnection;
+}
+
+export interface EndevorCredentialTested {
+  type: Actions.ENDEVOR_CREDENTIAL_TESTED;
+  credentialId: EndevorId;
+  status: EndevorCredentialStatus.VALID | EndevorCredentialStatus.INVALID;
+}
+
+export interface EndevorConnectionTested {
+  type: Actions.ENDEVOR_CONNECTION_TESTED;
+  connectionId: EndevorId;
+  status:
+    | {
+        status: EndevorConnectionStatus.VALID;
+        apiVersion: ServiceApiVersion;
+      }
+    | {
+        status: EndevorConnectionStatus.INVALID;
+      };
 }
 
 export interface EndevorServiceHidden {
@@ -81,10 +100,17 @@ export interface EndevorServiceAdded {
 
 export interface EndevorServiceCreated {
   type: Actions.ENDEVOR_SERVICE_CREATED;
-  service: EndevorService &
-    Partial<{
-      apiVersion: ServiceApiVersion;
-    }>;
+  service: EndevorService;
+  connectionStatus:
+    | {
+        status: EndevorConnectionStatus.VALID;
+        apiVersion: ServiceApiVersion;
+      }
+    | {
+        status:
+          | EndevorConnectionStatus.UNKNOWN
+          | EndevorConnectionStatus.INVALID;
+      };
 }
 
 export interface EndevorSearchLocationCreated {
@@ -109,23 +135,13 @@ export interface EndevorSearchLocationDeleted {
   searchLocationId: EndevorId;
 }
 
-export interface EndevorMapBuilt {
-  type: Actions.ENDEVOR_MAP_BUILT;
-  serviceId: EndevorId;
-  searchLocationId: EndevorId;
-  endevorMap: EndevorMap;
-}
 export interface EndevorCacheFetched {
   type: Actions.ENDEVOR_CACHE_FETCHED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  endevorCachedItem: EndevorCacheItem;
-}
-export interface ElementsUpdated {
-  type: Actions.ELEMENTS_FETCHED;
-  serviceId: EndevorId;
-  searchLocationId: EndevorId;
-  elements: ReadonlyArray<Element>;
+  endevorCachedItem: EndevorCacheItem | undefined;
+  connection: EndevorConnection;
+  credential: EndevorCredential;
 }
 
 export interface Refresh {
@@ -135,9 +151,7 @@ export interface Refresh {
 export interface ElementAdded {
   type: Actions.ELEMENT_ADDED;
   serviceId: EndevorId;
-  service: Service;
   searchLocationId: EndevorId;
-  searchLocation: ElementSearchLocation;
   element: Element;
 }
 
@@ -155,11 +169,6 @@ export interface ElementGeneratedInPlace {
   element: Element;
 }
 
-type FetchElementsArguments = Readonly<{
-  service: Service;
-  searchLocation: ElementSearchLocation;
-}>;
-
 type ElementTreePath = Readonly<{
   serviceId: EndevorId;
   searchLocationId: EndevorId;
@@ -168,7 +177,6 @@ type ElementTreePath = Readonly<{
 
 export interface ElementGeneratedWithCopyBack {
   type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK;
-  fetchElementsArgs: FetchElementsArguments;
   targetLocation: ElementMapPath;
   pathUpTheMap: ElementMapPath;
   treePath: ElementTreePath;
@@ -176,7 +184,6 @@ export interface ElementGeneratedWithCopyBack {
 
 export interface ElementUpdatedFromUpTheMap {
   type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP;
-  fetchElementsArgs: FetchElementsArguments;
   targetLocation: ElementMapPath;
   pathUpTheMap: ElementMapPath;
   treePath: ElementTreePath;
@@ -203,8 +210,10 @@ export interface ElementSignedIn {
 }
 
 export type Action =
-  | EndevorCredentialsAdded
-  | EndevorServiceApiVersionAdded
+  | SessionEndevorCredentialsAdded
+  | SessionEndevorConnectionAdded
+  | EndevorConnectionTested
+  | EndevorCredentialTested
   | EndevorServiceCreated
   | EndevorServiceAdded
   | EndevorServiceHidden
@@ -213,8 +222,6 @@ export type Action =
   | EndevorSearchLocationAdded
   | EndevorSearchLocationHidden
   | EndevorSearchLocationDeleted
-  | EndevorMapBuilt
-  | ElementsUpdated
   | Refresh
   | ElementUpdatedInPlace
   | ElementUpdatedFromUpTheMap

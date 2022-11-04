@@ -19,6 +19,7 @@ The Explorer for Endevor VS Code extension modernizes the way you interact with 
 - Perform a Generate action
 - Print a listing
 - Read team configuration files and Zowe CLI profiles (including Zowe base profiles)
+- Create and synchronize an Endevor workspace
 
 Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://marketplace.visualstudio.com/items?itemName=broadcomMFD.code4z-extension-pack), an all-round package that offers a modern experience for mainframe application developers, including extensions for language support, data editing, testing, and source code management.
 
@@ -26,17 +27,20 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
 
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
+  - [Get Started Walkthroughs](#get-started-walkthroughs)
   - [Create an Endevor Connection](#create-an-endevor-connection)
-  - [Use Cases](#use-cases)
-  - [Base Profiles](#base-profiles)
-  - [Team Configuration File](#team-configuration-file)
-  - [Manage the Extension Tree](#manage-the-extension-tree)
-  - [Environment Variables](#environment-variables)
-  - [Configure Explorer for Endevor](#configure-explorer-for-endevor)
+  - [Create an Endevor Inventory Location](#create-an-endevor-inventory-location)
+- [Workspace Synchronization](#workspace-synchronization)
+- [Use Cases](#use-cases)
+- [Base Profiles](#base-profiles)
+- [Team Configuration File](#team-configuration-file)
+- [Manage the Extension Tree](#manage-the-extension-tree)
+- [Environment Variables](#environment-variables)
+- [Configure Explorer for Endevor](#configure-explorer-for-endevor)
 - [List of Limitations](#list-of-limitations)
-- [Known Issues](#known-issues)
 - [Contribute to Explorer for Endevor](#contribute-to-explorer-for-endevor)
 - [Eclipse Che4z](#eclipse-che4z)
+- [Zowe Conformance Program](#zowe-conformance-program)
 - [Privacy Notice](#privacy-notice)
 - [Technical Assistance and Support for Explorer for Endevor](#technical-assistance-and-support-for-explorer-for-endevor)
 
@@ -61,6 +65,18 @@ Create an Endevor connection and Endevor inventory location and review use cases
 With the 1.2.0 release, Explorer for Endevor introduces a new setting — **Profiles: Keep in Sync**. The setting enables you to use team configuration files. The profiles sync setting is enabled by default. With this setting enabled, the extension automatically reads available team configuration files or Endevor profiles and Endevor location profiles on startup. The default location of team config files and Endevor profiles is `~/.zowe` or `C:\Users\.zowe`. Learn more about team configuration files in the [Team Configuration File](#team-configuration-file) section. For more information about the new setting, see [Configure Explorer for Endevor](#configure-explorer-for-endevor) in this Readme.
 
 **Note**: The term `connection` has the same connotation as the term `profile` starting from the 1.2.0 release and pertains to all `profiles` that are created in the extension.
+
+### Get Started Walkthroughs
+
+VS Code enables you to review Walkthroughs to get started with Explorer for Endevor. The walkthrough contains short guides that help you get familiar with the extension features.
+
+1. Click **Help** in the menu bar.
+
+2. Select **Get Started** from the drop-down menu.
+
+3. Select the **Get Started with Explorer for Explorer** walkthrough or click **More...** to select the walkthrough if it is not displayed immediately.
+
+4. Select a feature that you want to discover.
 
 ### Create an Endevor Connection
 
@@ -89,7 +105,7 @@ Create an Endevor connection.
 
 Your new connection is now available in the tree.
 
-#### Create an Endevor Inventory Location
+### Create an Endevor Inventory Location
 
 Once you have an Endevor connection, you need to add an inventory location. An inventory location consists of an Endevor instance, Endevor path with environment, system, subsystem, stage number, element type, CCID, and Comment. Inventory locations enable you to view and work with elements of specified Endevor locations.
 
@@ -113,7 +129,17 @@ Once you have an Endevor connection, you need to add an inventory location. An i
 
 You successfully created an inventory location.
 
-### Use Cases
+## Workspace Synchronization
+
+A synchronized Endevor workspace enables you to work with inventory locations locally and synchronize elements from and to Endevor on the mainframe. You can create an Endevor workspace in your VS Code by enabling the **Workspace Sync** setting in the extension settings. Synchronized elements appear in the selected folder and you can see them in the **File Explorer** panel. You can manage the workspace from VSCode with Explorer for Endevor extension installed.
+
+**Note:** The feature is experimental in Explorer for Endevor 1.3.0.
+
+For more information on the setting, see [Configure Explorer for Endevor](#configure-explorer-for-endevor) in this Readme.
+
+To learn more about the Endevor Workspace synchronization feature, read [this article](https://medium.com/modern-mainframe/editing-synchronized-endevor-elements-locally-ff096d09eb5e) on Medium or review [the extension walkthroughs](#get-started-walkthroughs) in VS Code.
+
+## Use Cases
 
 Review the following use cases to familiarize yourself with the basic Explorer for Endevor features:
 
@@ -128,7 +154,7 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Sign out](#sign-out): Lock an Endevor element so that the element is only editable by you.
 - [Sign in](#sign-in): Let you unlock a locked element. You can only unlock the elements that were locked by you.
 
-#### Add an Element
+### Add an Element
 
 You can upload a new element to your inventory location. The uploaded element appears under the selected type in the tree.
 
@@ -147,7 +173,7 @@ You can upload a new element to your inventory location. The uploaded element ap
 
 You successfully added the element.
 
-#### View an Element
+### View an Element
 
 You can view the contents, summary, and source level information of an element by clicking on the element in the tree. The chosen element appears in the editor area. Viewing the contents of the element allows you to determine if you want to retrieve and work with the element.
 
@@ -159,7 +185,7 @@ You can view the contents, summary, and source level information of an element b
 ![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true 'View an Element')
 <br /><br />
 
-#### View Details
+### View Details
 
 The inventory location details of an element you want to view appear in the editor area in a separate tab.
 
@@ -171,7 +197,7 @@ The inventory location details of an element you want to view appear in the edit
 ![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true 'View Details')
 <br /><br />
 
-#### Retrieve an Element
+### Retrieve an Element
 
 You can download an element to your workspace and work with the element locally.
 
@@ -185,7 +211,7 @@ You successfully retrieved the element.
 ![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
 <br /><br />
 
-#### Retrieve an Element with Dependencies
+### Retrieve an Element with Dependencies
 
 You can download an element with dependencies to your workspace and work with the element and the dependencies locally.
 
@@ -199,7 +225,7 @@ You successfully retrieved the element with dependencies.
 ![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
 
-#### Edit
+### Edit
 
 The **Edit** action lets you download an element, edit, and upload the element back.
 
@@ -225,7 +251,7 @@ You successfully edited, saved, and uploaded the element.
 ![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
 
-#### Generate
+### Generate
 
 The **Generate** action creates an executable form of the element, together with any associated outputs such as listings, and has the following available options:
 
@@ -265,7 +291,7 @@ You successfully performed the Generate action.
 
 If Generate fails to process an element, the listing is displayed automatically.
 
-#### Print a Listing
+### Print a Listing
 
 The **Print a listing** option enables you to display the most recently created listing.
 
@@ -279,7 +305,7 @@ You successfully printed the listing.
 ![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true 'Print Listing')
 <br /><br />
 
-#### Sign Out
+### Sign Out
 
 The **Sign out** option enables you to lock an element, which prevents other users from editing the element.
 
@@ -293,7 +319,7 @@ You successfully signed out the element.
 ![Sign Out](packages/explorer-for-endevor/images/E4E-signout.gif?raw=true 'Sign Out')
 <br /><br />
 
-#### Sign In
+### Sign In
 
 The **Sign in** option enables you to unlock an element that earlier was signed out by you.
 
@@ -302,11 +328,11 @@ The **Sign in** option enables you to unlock an element that earlier was signed 
 
 You successfully signed in the element.
 
-### Base Profiles
+## Base Profiles
 
 Explorer for Endevor enables you to use Zowe CLI base profiles. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and rejectUnauthorized in the base profile. For more information, see [the Base Profile section](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#base-profiles) on Zowe Docs.
 
-### Team Configuration File
+## Team Configuration File
 
 Explorer for Endevor supports reading a global team configuration (team config) file. A team configuration file enables you to manage your Endevor connection details efficiently in one location. You can use global team configs with your team members to share access to Endevor inventory locations. For more information about team config, see [Using Team Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-team-profiles) on Zowe Docs. The extension reads team configuration files only if the profile sync setting is enabled. To configure the setting, navigate to > **Settings** > **Extensions** > **Explorer for Endevor** > **Profiles: Keep in sync**.
 
@@ -314,7 +340,7 @@ As an application developer, you can obtain a shared global configuration file f
 
 > **Tip**: You can convert your existing Zowe CLI profiles into team configuration files with the `zowe config convert-profiles` command. For more information about team config conversion, see [Using Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#important-information-about-team-profiles) on Zowe Docs.
 
-### Manage the Extension Tree
+## Manage the Extension Tree
 
 You can perform the following actions to manage your connections and inventory locations in the extension tree:
 
@@ -328,7 +354,7 @@ You can perform the following actions to manage your connections and inventory l
 
   **Note:** The **Hide a connection** or **Hide an inventory location** actions do not permanently delete the information from the extension.
 
-### Configure Explorer for Endevor
+## Configure Explorer for Endevor
 
 You can configure the following settings of the extension:
 
@@ -340,7 +366,7 @@ You can configure the following settings of the extension:
 
   **Note:** This setting applies not only to Explorer for Endevor but to all extensions in your VS Code.
 
-- Profiles: Keep in Sync. The option enables you to use a team configuration file that stores your pre-saved Endevor configuration or Zowe CLI Endevor profiles with Endevor locations in the extension. By default, the setting is enabled, meaning that the extension reads your team configuration files on startup and displays profile information in the explorer tree. If the option is disabled, the extension does not check the `.zowe` folder for available profiles.
+- Profiles: Keep in Sync. The option enables you to use a team configuration file that stores your pre-saved Endevor configuration or Zowe CLI Endevor profiles with Endevor locations in the extension. By default, the setting is enabled, meaning that the extension reads your team configuration files on startup and displays profile information in the Tree View. If the option is disabled, the extension does not check the `.zowe` folder for available profiles.
 
   **Notes**:
 
@@ -353,6 +379,10 @@ You can configure the following settings of the extension:
   - 'Endevor type file extension only' method uses the Endevor defined file extension for the type.
 
   - (Default) 'Endevor type file extension or type name' method uses the Endevor defined file extension for the type. The method also uses the Endevor type name as a fall-back option.
+
+- (Experimental) Workspace Synchronization. The option enables the Endevor Workspace initialization that lets you create a synchronized Endevor workspace locally.
+
+  **Note:** Experimental features might include undiscovered errors. Please, use this feature at your own discretion.
 
 Access the Explorer for Endevor settings by clicking **Settings** > **Extensions** > **Explorer for Endevor**.
 
@@ -368,13 +398,20 @@ This section lists notable limitations in the current version of Explorer for En
 
 ## Contribute to Explorer for Endevor
 
-We encourage you to contribute to Explorer for Endevor.
+We encourage you to share ideas to help improve Explorer for Endevor. You can also report issues in the extension, using the following link.
 
-> How can you improve Explorer for Endevor? [Open an issue in our Git repository](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
+> [Share an idea or open an issue in our Git repository](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
 
 ## Eclipse Che4z
 
 Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. For more information, see the [Eclipse Che4z webpage](https://projects.eclipse.org/projects/ecd.che.che4z).
+
+## Zowe Conformance Program
+
+<a href="https://www.openmainframeproject.org/all-projects/zowe/conformance"><img src="https://www.openmainframeproject.org/wp-content/uploads/sites/11/2022/05/zowe-conformant-zowev2-explorer-color.png" 
+alt="Zowe Conformance Badge" width="200" height="160"/></a>
+
+Explorer for Endevor is Zowe V2 Conformant. The Zowe Conformance Program ensures a high level of common functionality, interoperability, and user experience while using an extension that leverages Zowe. For more information, see [Zowe Conformance Program](https://www.openmainframeproject.org/all-projects/zowe/conformance).
 
 ## Privacy Notice
 

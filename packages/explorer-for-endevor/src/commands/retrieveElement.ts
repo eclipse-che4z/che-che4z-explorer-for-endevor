@@ -21,19 +21,25 @@ import {
   isDefined,
   isError,
   groupBySearchLocationId,
+  getElementExtension,
+  parseFilePath,
 } from '../utils';
 import { ElementNode } from '../tree/_doc/ElementTree';
 import * as vscode from 'vscode';
-import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
-  saveElementIntoWorkspace,
-  showSavedElementContent,
-} from '../workspace';
-import { withNotificationProgress } from '@local/vscode-wrapper/window';
+  createNewWorkspaceDirectory,
+  getWorkspaceUri,
+  saveFileIntoWorkspaceFolder,
+} from '@local/vscode-wrapper/workspace';
+import {
+  showFileContent,
+  withNotificationProgress,
+} from '@local/vscode-wrapper/window';
 import { PromisePool } from 'promise-pool-tool';
 import {
   isAutomaticSignOut,
   getMaxParallelRequests,
+  getFileExtensionResolution,
 } from '../settings/settings';
 import { isSignoutError, toSeveralTasksProgress } from '@local/endevor/utils';
 import {
@@ -61,6 +67,9 @@ import {
   TreeElementCommandArguments,
 } from '../_doc/Telemetry';
 import { Id } from '../store/storage/_doc/Storage';
+import { FileExtensionResolutions } from '../settings/_doc/v2/Settings';
+import path = require('path');
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = ElementNode[];
@@ -368,10 +377,15 @@ const saveIntoWorkspace =
     element: Element,
     elementContent: string
   ): Promise<vscode.Uri | Error> => {
-    const saveResult = await saveElementIntoWorkspace(workspaceUri)(
-      serviceName,
-      locationName
-    )(element, elementContent);
+    const file = toFileDescription(element)(serviceName, locationName);
+    const elementDir = file.workspaceDirectoryPath;
+    const directoryToSave = await createNewWorkspaceDirectory(workspaceUri)(
+      elementDir
+    );
+    const saveResult = await saveFileIntoWorkspaceFolder(directoryToSave)(
+      file,
+      elementContent
+    );
     if (isError(saveResult)) {
       const error = saveResult;
       return new Error(
@@ -382,14 +396,51 @@ const saveIntoWorkspace =
     return savedFileUri;
   };
 
+const toFileDescription =
+  (element: Element) => (serviceName: string, locationName: string) => {
+    const elementDir = path.join(
+      `/`,
+      serviceName,
+      locationName,
+      element.system,
+      element.subSystem,
+      element.type
+    );
+    const fileExtResolution = getFileExtensionResolution();
+    switch (fileExtResolution) {
+      case FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME:
+        return {
+          fileName: element.name,
+          fileExtension: getElementExtension(element),
+          workspaceDirectoryPath: elementDir,
+        };
+      case FileExtensionResolutions.FROM_TYPE_EXT:
+        return {
+          fileName: element.name,
+          fileExtension: element.extension,
+          workspaceDirectoryPath: elementDir,
+        };
+      case FileExtensionResolutions.FROM_NAME: {
+        const { fileName, fileExtension } = parseFilePath(element.name);
+        return {
+          fileName,
+          fileExtension,
+          workspaceDirectoryPath: elementDir,
+        };
+      }
+      default:
+        throw new UnreachableCaseError(fileExtResolution);
+    }
+  };
+
 const showElementInEditor = async (
   fileUri: vscode.Uri
 ): Promise<void | Error> => {
-  const showResult = await showSavedElementContent(fileUri);
-  if (isError(showResult)) {
-    const error = showResult;
+  try {
+    await showFileContent(fileUri);
+  } catch (e) {
     return new Error(
-      `Unable to open the element ${fileUri.fsPath} for editing because of error ${error.message}`
+      `Unable to open the file ${fileUri.fsPath} because of error ${e.message}`
     );
   }
 };

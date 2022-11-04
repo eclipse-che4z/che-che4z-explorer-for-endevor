@@ -17,7 +17,11 @@ import {
   getFileContent,
 } from '@local/vscode-wrapper/workspace';
 import { isError, parseFilePath } from '../utils';
-import { isDuplicateElementError } from '@local/endevor/utils';
+import {
+  isConnectionError,
+  isDuplicateElementError,
+  isWrongCredentialsError,
+} from '@local/endevor/utils';
 import { logger, reporter } from '../globals';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
@@ -45,16 +49,32 @@ import {
   AddElementCommandCompletedStatus,
   TelemetryEvents,
 } from '../_doc/Telemetry';
-import { EndevorId } from '../store/_doc/v2/Store';
-import { getFileExtensionResoluton } from '../settings/settings';
+import {
+  EndevorConfiguration,
+  EndevorConnectionStatus,
+  EndevorCredentialStatus,
+  EndevorId,
+  ValidEndevorConnection,
+  ValidEndevorCredential,
+} from '../store/_doc/v2/Store';
+import { getFileExtensionResolution } from '../settings/settings';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 export const addElementFromFileSystem = async (
-  getService: (serviceId: EndevorId) => Promise<Service | undefined>,
+  getConnectionDetails: (
+    id: EndevorId
+  ) => Promise<ValidEndevorConnection | undefined>,
+  getEndevorConfiguration: (
+    serviceId?: EndevorId,
+    searchLocationId?: EndevorId
+  ) => Promise<EndevorConfiguration | undefined>,
+  getCredential: (
+    connection: ValidEndevorConnection,
+    configuration: EndevorConfiguration
+  ) => (credentialId: EndevorId) => Promise<ValidEndevorCredential | undefined>,
   getElementLocation: (
-    serviceId: EndevorId,
     searchLocationId: EndevorId
-  ) => Promise<ElementSearchLocation | undefined>,
+  ) => Promise<Omit<ElementSearchLocation, 'configuration'> | undefined>,
   dispatch: (action: Action) => Promise<void>,
   searchLocationNode: LocationNode
 ): Promise<void> => {
@@ -68,33 +88,6 @@ export const addElementFromFileSystem = async (
   const { fileName, fullFileName } = parseFilePath(fileUri.path);
   if (!fileName) {
     logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const serviceId = resolveServiceId(searchLocationNode);
-  if (!serviceId) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const service = await getService(serviceId);
-  if (!service) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const searchLocationId = resolveSearchLocationId(searchLocationNode);
-  if (!searchLocationId) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const searchLocation = await getElementLocation(serviceId, searchLocationId);
-  if (!searchLocation) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const fileNameToShow = selectFileNameToShow(fileName, fullFileName);
-  const addValues = await askForAddValues(searchLocation, fileNameToShow);
-  if (isError(addValues)) {
-    const error = addValues;
-    logger.error(error.message);
     return;
   }
   const content = await readElementContent(fileUri.path);
@@ -112,18 +105,114 @@ export const addElementFromFileSystem = async (
     );
     return;
   }
+  const serviceId = resolveServiceId(searchLocationNode);
+  if (!serviceId) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const connectionDetails = await getConnectionDetails(serviceId);
+  if (!connectionDetails) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const searchLocationId = resolveSearchLocationId(searchLocationNode);
+  if (!searchLocationId) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const configuration = await getEndevorConfiguration(
+    serviceId,
+    searchLocationId
+  );
+  if (!configuration) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const credential = await getCredential(
+    connectionDetails,
+    configuration
+  )(serviceId);
+  if (!credential) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const service = {
+    ...connectionDetails.value,
+    credential: credential.value,
+  };
+  const searchLocation = await getElementLocation(searchLocationId);
+  if (!searchLocation) {
+    logger.error(`Unable to add the element ${fileName}.`);
+    return;
+  }
+  const fileNameToShow = selectFileNameToShow(fileName, fullFileName);
+  const addValues = await askForAddValues(
+    {
+      configuration,
+      ...searchLocation,
+    },
+    fileNameToShow
+  );
+  if (isError(addValues)) {
+    const error = addValues;
+    logger.error(error.message);
+    return;
+  }
   const [addLocation, actionControlValue] = addValues;
   const addResult = await addNewElement(service)({
     ...addLocation,
   })(actionControlValue)(content);
   if (isDuplicateElementError(addResult)) {
     const error = addResult;
-    logger.error(`Unable to add the element ${fileName}.`, `${error.message}.`);
+    logger.error(
+      `Unable to add the element ${fileName} because an element with this name already exists.`,
+      `${error.message}.`
+    );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
       errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
       status: AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR,
       error,
+    });
+    return;
+  }
+  if (isConnectionError(addResult)) {
+    const error = addResult;
+    logger.error(
+      `Unable to add the element ${fileName} because of invalid connection.`,
+      `${error.message}.`
+    );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
+    await dispatch({
+      type: Actions.ENDEVOR_CONNECTION_TESTED,
+      connectionId: serviceId,
+      status: {
+        status: EndevorConnectionStatus.INVALID,
+      },
+    });
+    return;
+  }
+  if (isWrongCredentialsError(addResult)) {
+    const error = addResult;
+    logger.error(
+      `Unable to add the element ${fileName} because of invalid credentials.`,
+      `${error.message}.`
+    );
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.ERROR,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+      error,
+    });
+    await dispatch({
+      type: Actions.ENDEVOR_CREDENTIAL_TESTED,
+      credentialId: serviceId,
+      status: EndevorCredentialStatus.INVALID,
     });
     return;
   }
@@ -141,9 +230,7 @@ export const addElementFromFileSystem = async (
   await dispatch({
     type: Actions.ELEMENT_ADDED,
     serviceId,
-    service,
     searchLocationId,
-    searchLocation,
     element: {
       configuration: addLocation.configuration,
       environment: addLocation.environment,
@@ -239,7 +326,7 @@ const selectFileNameToShow = (
   fileName: string,
   fullFileName: string
 ): string => {
-  const fileExtResolution = getFileExtensionResoluton();
+  const fileExtResolution = getFileExtensionResolution();
   switch (fileExtResolution) {
     case FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME:
       return fileName;

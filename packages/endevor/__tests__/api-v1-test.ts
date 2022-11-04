@@ -21,13 +21,23 @@ import {
   getAllSystems,
   printElement,
   getApiVersion,
-  searchForElements,
+  searchForFirstFoundElements,
   signInElement,
   retrieveElementWithFingerprint,
   getConfigurations,
+  searchForAllElements,
+  searchForElementsInPlace,
+  updateElement,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
-import { isError, toEndevorProtocol, isSignoutError } from '../utils';
+import {
+  isError,
+  toEndevorProtocol,
+  isSignoutError,
+  isWrongCredentialsError,
+  isConnectionError,
+  isFingerprintMismatchError,
+} from '../utils';
 import { MockRequest, MockResponse } from '../_doc/MockServer';
 import { ProgressReporter } from '../_doc/Progress';
 import { BaseCredential, CredentialType } from '../_doc/Credential';
@@ -42,10 +52,19 @@ import {
   System,
   SubSystem,
   ServiceBasePath,
+  ElementWithFingerprint,
+  ActionChangeControlValue,
+  UpdateStatus,
+  ErrorUpdateResponse,
 } from '../_doc/Endevor';
 import { join } from 'path';
 import { ANY_VALUE } from '../const';
 import { Elements } from '../_ext/Endevor';
+import {
+  ConnectionError,
+  FingerprintMismatchError,
+  WrongCredentialsError,
+} from '../_doc/Error';
 
 jest.mock('@zowe/imperative/lib/console/src/Console'); // disable imperative logging
 
@@ -63,7 +82,7 @@ const progress: ProgressReporter = {
 
 // mock values
 const rejectUnauthorized = false;
-const nonExistingServerURL = 'http://localhost:1234/';
+const nonExistingServerURL = 'http://127.0.0.1:1234/';
 
 // set up mock server
 const mockServer = getLocal();
@@ -161,9 +180,7 @@ describe('endevor public API v1', () => {
       expect(isError(actualApiVersion)).toEqual(true);
     });
 
-    // TODO: EndevorClient's weird behavior when no valid version header is provided
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('should return an error if something went wrong in Endevor side', async () => {
+    it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const response: MockResponse<unknown> = {
         status: 200,
@@ -248,7 +265,7 @@ describe('endevor public API v1', () => {
         incorrectServiceLocation
       )(rejectUnauthorized);
       // assert
-      expect(isError(actualConfigurations)).toEqual(true);
+      expect(isConnectionError(actualConfigurations)).toEqual(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
@@ -306,8 +323,205 @@ describe('endevor public API v1', () => {
         element ?? ANY_VALUE
       );
     };
+    it('should return all filtered elements', async () => {
+      // arrange
+      const searchLocation: ElementSearchLocation = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subsystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+      };
+      const requestQuery = '?data=BAS&search=SEA&return=ALL';
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const validElements: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const invalidElements: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validElements.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+                fullElmName: element.name,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidElements.map((element: any) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualElements = await searchForAllElements(logger)(progress)(
+        service
+      )(searchLocation);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
 
-    it('should return filtered elements', async () => {
+      expect(actualElements).toEqual(validElements);
+    });
+
+    it('should return filtered elements in place', async () => {
+      // arrange
+      const searchLocation: ElementSearchLocation = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subsystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+      };
+      const requestQuery = '?data=BAS&search=NOS&return=FIR';
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const validElements: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const invalidElements: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validElements.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+                fullElmName: element.name,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidElements.map((element: any) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualElements = await searchForElementsInPlace(logger)(progress)(
+        service
+      )(searchLocation);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualElements).toEqual(validElements);
+    });
+
+    it('should return first found filtered elements', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
         configuration: 'TEST-CONFIG',
@@ -395,9 +609,9 @@ describe('endevor public API v1', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -494,9 +708,9 @@ describe('endevor public API v1', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -548,9 +762,9 @@ describe('endevor public API v1', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        wrongLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(wrongLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -571,9 +785,9 @@ describe('endevor public API v1', () => {
       };
       const nonExistingService = toService(nonExistingServerURL);
       // act
-      const actualElements = await searchForElements(logger)(progress)(
-        nonExistingService
-      )(searchLocation);
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(nonExistingService)(searchLocation);
       // assert
       expect(isError(actualElements)).toBe(true);
     });
@@ -617,15 +831,15 @@ describe('endevor public API v1', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualElements)).toBe(true);
+      expect(isWrongCredentialsError(actualElements)).toBe(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
@@ -667,9 +881,9 @@ describe('endevor public API v1', () => {
       )(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1148,7 +1362,7 @@ describe('endevor public API v1', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualSubSystems)).toBe(true);
+      expect(isWrongCredentialsError(actualSubSystems)).toBe(true);
     });
 
     it('should return an error in case of incorrect connection details', async () => {
@@ -1377,7 +1591,7 @@ describe('endevor public API v1', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualSystems)).toBe(true);
+      expect(isWrongCredentialsError(actualSystems)).toBe(true);
     });
 
     it('should return an error in case of incorrect connection details', async () => {
@@ -1639,7 +1853,7 @@ describe('endevor public API v1', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualEnvironments)).toBe(true);
+      expect(isWrongCredentialsError(actualEnvironments)).toBe(true);
     });
 
     it('should return an error if something went wrong on Endevor side', async () => {
@@ -2554,6 +2768,548 @@ describe('endevor public API v1', () => {
       expect(calledOnce).toBe(true);
 
       expect(isError(actualElement)).toBe(true);
+    });
+  });
+  describe('element updating', () => {
+    it('should update an element', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.forAnyRequest().thenJson(
+        200,
+        {
+          data: null,
+          reasonCode: '0034',
+          messages: null,
+          returnCode: '0000',
+        },
+        {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode: 0,
+          message: '',
+        },
+      });
+    });
+    it('should add a new element', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      mockServer.forAnyRequest().thenJson(
+        200,
+        {
+          data: null,
+          reasonCode: '0034',
+          messages: null,
+          returnCode: '0000',
+        },
+        {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const newElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        newElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode: 0,
+          message: '',
+        },
+      });
+    });
+    // eslint-disable-next-line jest/no-disabled-tests
+    it.skip('should update an element even after change regression error', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = [
+        '03:41:46 SMGR123C 99% PRIOR INSERTS DELETED AND/OR 01% PRIOR DELETES RE-INSERTED',
+      ];
+      mockServer.forAnyRequest().thenJson(
+        409,
+        {
+          returnCode: '0008',
+          reasonCode: '0034',
+          data: null,
+          messages,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode: 8,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
+    });
+    it('should return an error for incorrect connection details', async () => {
+      // arrange
+      const newContent = 'very important content';
+      const nonUsedFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: newContent,
+        fingerprint: nonUsedFingerprint,
+      };
+      const newElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const addActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const updateResult = await updateElement(logger)(progress)(
+        nonExistingService
+      )(newElementLocation)(addActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          error: new ConnectionError(
+            `connect ECONNREFUSED ${nonExistingService.location.hostname}:${nonExistingService.location.port}`
+          ),
+        },
+      });
+      expect(
+        isConnectionError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
+    });
+    it('should return an error for incorrect base credentials', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['API0034S INVALID USERID OR PASSWORD DETECTED'];
+      mockServer.forAnyRequest().thenJson(
+        401,
+        {
+          returnCode: '0020',
+          reasonCode: '0034',
+          reports: null,
+          messages,
+          data: null,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: 20,
+          error: new WrongCredentialsError(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+      expect(
+        isWrongCredentialsError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
+    });
+    it('should return an error for partially element location specified', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['EWS1232E Parameter system cannot be Wildcarded.'];
+      mockServer.forAnyRequest().thenJson(
+        400,
+        {
+          returnCode: '0012',
+          reasonCode: '0034',
+          reports: null,
+          messages,
+          data: null,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: '*',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: 12,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+    });
+    it('should return an error for outdated fingerprint', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = [
+        "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.",
+      ];
+      mockServer.forAnyRequest().thenJson(
+        400,
+        {
+          returnCode: '0012',
+          reasonCode: '0034',
+          reports: null,
+          messages,
+          data: null,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const outdatedFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: outdatedFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: 12,
+          error: new FingerprintMismatchError(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+      expect(
+        isFingerprintMismatchError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
+    });
+    // eslint-disable-next-line jest/no-disabled-tests
+    it.skip('should return update the element with empty content', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = [
+        '03:41:46 SMGR123C 99% PRIOR INSERTS DELETED AND/OR 01% PRIOR DELETES RE-INSERTED',
+      ];
+      mockServer.forAnyRequest().thenJson(
+        409,
+        {
+          returnCode: '0008',
+          reasonCode: '0034',
+          data: null,
+          messages,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode: 8,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
+    });
+    it('may return an error for incorrect ccid&comment', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = [
+        '11:33:28  C1G0142E  SYSTEM REQUIRES A CCID TO BE SPECIFIED - REQUEST NOT PERFORMED',
+      ];
+      mockServer.forAnyRequest().thenJson(
+        400,
+        {
+          returnCode: '0012',
+          reasonCode: '0034',
+          reports: null,
+          messages,
+          data: null,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: 12,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+    });
+    it('should return an error if something went wrong in Endevor side', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['Something went really wrong....'];
+      mockServer.forAnyRequest().thenJson(
+        500,
+        {
+          returnCode: '0020',
+          reasonCode: '0034',
+          reports: null,
+          messages,
+          data: null,
+        },
+        {
+          'content-type': 'application/json',
+          version: '1.1',
+        }
+      );
+      const updatedContent = 'very important content';
+      const existingFingerprint = '12345';
+      const element: ElementWithFingerprint = {
+        content: updatedContent,
+        fingerprint: existingFingerprint,
+      };
+      const existingElementLocation: ElementMapPath = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+        name: 'ELM',
+      };
+      const updateActionChangeControlValue: ActionChangeControlValue = {
+        ccid: 'test',
+        comment: 'test',
+      };
+      const service = toService(mockServer.url);
+      // act
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
+      // assert
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: 20,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
     });
   });
 });

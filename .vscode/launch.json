@@ -11,7 +11,6 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor"
       ],
       "preLaunchTask": "build e4e"
@@ -22,7 +21,6 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
         "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
         "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"
@@ -38,7 +36,6 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/explorer-for-endevor",
         "--folder-uri=${workspaceFolder}/packages/explorer-for-endevor/workspace",
         "--extensionTestsPath=${workspaceFolder}/packages/explorer-for-endevor/mocha.bootstrap"

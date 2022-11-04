@@ -197,7 +197,6 @@ describe('generating an element with copy back', () => {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
       targetLocation,
       pathUpTheMap: element,
-      fetchElementsArgs: { service, searchLocation },
       treePath: {
         serviceId,
         searchLocationId,
@@ -286,7 +285,6 @@ describe('generating an element with copy back', () => {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
       targetLocation,
       pathUpTheMap: element,
-      fetchElementsArgs: { service, searchLocation },
       treePath: {
         serviceId,
         searchLocationId,
@@ -437,7 +435,6 @@ describe('generating an element with copy back', () => {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
       targetLocation,
       pathUpTheMap: element,
-      fetchElementsArgs: { service, searchLocation },
       treePath: {
         serviceId,
         searchLocationId,
@@ -524,7 +521,6 @@ describe('generating an element with copy back', () => {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
       targetLocation,
       pathUpTheMap: element,
-      fetchElementsArgs: { service, searchLocation },
       treePath: {
         serviceId,
         searchLocationId,

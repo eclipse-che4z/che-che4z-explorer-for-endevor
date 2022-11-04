@@ -48,10 +48,12 @@ export const toServiceUrl = (
   if (basePath.startsWith('/')) basePath = basePath.slice(1);
   if (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
   let user;
-  switch (credential?.type) {
-    case CredentialType.BASE:
-      user = credential.user;
-      break;
+  if (credential) {
+    switch (credential.type) {
+      case CredentialType.BASE:
+        user = credential.user;
+        break;
+    }
   }
   return `${service.protocol}://${user ? user + '@' : ''}${service.hostname}:${
     service.port

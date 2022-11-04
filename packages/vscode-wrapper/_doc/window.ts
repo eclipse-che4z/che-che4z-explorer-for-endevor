@@ -11,6 +11,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { CancellationToken } from 'vscode';
+
 export type Choice = string;
 
 export const enum MessageLevel {
@@ -23,16 +25,32 @@ export interface MessageWithOptions {
   options: ReadonlyArray<string>;
 }
 
-export interface PromptInputOptions {
-  prompt?: string;
-  /**
-   * initial value
-   */
-  value?: string;
-  password?: boolean;
-  placeHolder?: string;
-  validateInput?: (value: string) => string | undefined;
+export interface ModalMessageWithOptions extends MessageWithOptions {
+  detail?: string;
 }
+
+export type PromptInputOptions = Readonly<
+  Partial<{
+    title: string;
+    prompt: string;
+    /**
+     * initial value
+     */
+    value: string;
+    password: boolean;
+    placeHolder: string;
+    validateInput: (value: string) => string | undefined;
+  }>
+>;
+
+export type QuickPickOptions = Readonly<
+  Partial<{
+    title: string;
+    placeholder: string;
+    ignoreFocusOut: boolean;
+    canPickMany: boolean;
+  }>
+>;
 
 export type Progress = Readonly<
   Partial<{ message: string; increment: number }>
@@ -40,4 +58,7 @@ export type Progress = Readonly<
 export type ProgressReporter = {
   report(value: Progress): void;
 };
-export type ProgressingFunction<R> = (progress: ProgressReporter) => Promise<R>;
+export type ProgressingFunction<R> = (
+  progress: ProgressReporter,
+  token?: CancellationToken
+) => Promise<R>;

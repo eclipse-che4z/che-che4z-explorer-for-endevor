@@ -24,14 +24,157 @@ import {
   OPENSSL_ERROR_DEPTH_ZERO_SELF_SIGNED_CERT,
   OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN,
   OPENSSL_ERROR_CERT_ISSUER,
+  WRONG_CREDENTIALS_SEVERE,
 } from '../const';
+import { UnreachableCaseError } from '../typeHelpers';
+
+export const enum ErrorContextTypes {
+  CONNECTION_ERROR = 'CONNECTION_ERROR',
+  API_ERROR = 'API_ERROR',
+  INCORRECT_RESPONSE = 'INCORRECT_RESPONSE',
+  ENDEVOR_RETURN_CODE = 'ENDEVOR_RETURN_CODE',
+  ENDEVOR_RETURN_CODE_AND_MESSAGES = 'ENDEVOR_RETURN_CODE_AND_MESSAGES',
+}
+
+type ErrorContext =
+  | Readonly<{
+      type: ErrorContextTypes.CONNECTION_ERROR;
+      code: string;
+      message: string;
+    }>
+  | Readonly<{
+      type: ErrorContextTypes.API_ERROR;
+      error: Error;
+    }>
+  | Readonly<{
+      type: ErrorContextTypes.INCORRECT_RESPONSE;
+    }>
+  | Readonly<{
+      type: ErrorContextTypes.ENDEVOR_RETURN_CODE;
+      returnCode: number;
+    }>
+  | Readonly<{
+      type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES;
+      returnCode: number;
+      messages: ReadonlyArray<string>;
+    }>;
+
+type GeneralError = Error;
+
+export class FingerprintMismatchError extends Error {}
+
+export class SignoutError extends Error {}
+
+export class DuplicateElementError extends Error {}
+
+export class ChangeRegressionError extends Error {}
+
+export class ProcessorStepMaxRcExceededError extends Error {}
+
+export class WrongCredentialsError extends Error {}
+
+export class ConnectionError extends Error {}
+
+export class SelfSignedCertificateError extends ConnectionError {}
+
+export const makeError =
+  (errorMessage: string) =>
+  (
+    errorContext?: ErrorContext
+  ):
+    | FingerprintMismatchError
+    | SignoutError
+    | DuplicateElementError
+    | ChangeRegressionError
+    | ProcessorStepMaxRcExceededError
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | GeneralError => {
+    const cleanedMessage = errorMessage.trim();
+    if (!errorContext) return new Error(cleanedMessage);
+    const errorContextType = errorContext.type;
+    switch (errorContextType) {
+      case ErrorContextTypes.CONNECTION_ERROR:
+        return getTypedErrorFromHttpCode(
+          `${cleanedMessage} because of HTTP response code ${errorContext.code} with reason:\n${errorContext.message}`
+        );
+      case ErrorContextTypes.API_ERROR:
+        return new Error(
+          `${cleanedMessage} because of error:${[
+            '',
+            errorContext.error.message.trim(),
+          ].join('\n')}`
+        );
+      case ErrorContextTypes.INCORRECT_RESPONSE:
+        return new Error(`${cleanedMessage} because of incorrect response`);
+      case ErrorContextTypes.ENDEVOR_RETURN_CODE:
+        return new Error(
+          `${cleanedMessage} because of response code ${errorContext.returnCode}`
+        );
+      case ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES:
+        return getTypedErrorFromEndevorCode(
+          `${cleanedMessage} because of response code ${
+            errorContext.returnCode
+          } with reason:${[
+            '',
+            ...errorContext.messages.map((message) => message.trim()),
+          ].join('\n')}`
+        );
+      default:
+        throw new UnreachableCaseError(errorContextType);
+    }
+  };
+
+export const getTypedErrorFromEndevorCode = (
+  errorMessage: string
+):
+  | FingerprintMismatchError
+  | SignoutError
+  | DuplicateElementError
+  | ChangeRegressionError
+  | ProcessorStepMaxRcExceededError
+  | WrongCredentialsError
+  | GeneralError => {
+  switch (true) {
+    case errorMessage.includes(FINGERPRINT_MISMATCH_ERROR):
+      return new FingerprintMismatchError(errorMessage);
+    case errorMessage.includes(FINGERPRINT_SIGNOUT_ERROR):
+    case errorMessage.includes(NOT_SIGNOUT_ERROR):
+      return new SignoutError(errorMessage);
+    case errorMessage.includes(DUPLICATE_ELEMENT_ERROR):
+      return new DuplicateElementError(errorMessage);
+    case errorMessage.includes(CHANGE_REGRESSION_INFO):
+      return new ChangeRegressionError(errorMessage);
+    case errorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR):
+    case errorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE):
+      return new ProcessorStepMaxRcExceededError(errorMessage);
+    case errorMessage.includes(WRONG_CREDENTIALS_SEVERE):
+      return new WrongCredentialsError(errorMessage);
+    default:
+      return new Error(errorMessage);
+  }
+};
+
+export function getTypedErrorFromHttpCode(
+  errorMessage: string
+): SelfSignedCertificateError | ConnectionError {
+  switch (true) {
+    case errorMessage.includes(OPENSSL_ERROR_CERT_SIGNATURE):
+    case errorMessage.includes(OPENSSL_ERROR_CERT_ISSUER):
+    case errorMessage.includes(OPENSSL_ERROR_LOCAL_CERT_ISSUER):
+    case errorMessage.includes(OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN):
+    case errorMessage.includes(OPENSSL_ERROR_DEPTH_ZERO_SELF_SIGNED_CERT):
+      return new SelfSignedCertificateError(errorMessage);
+    default:
+      return new ConnectionError(errorMessage);
+  }
+}
 
 type EndevorErrorContext = {
   elementName: string;
   endevorMessage: string;
 };
-
-type GeneralError = Error;
 
 export function getTypedErrorFromEndevorError(
   { elementName, endevorMessage }: EndevorErrorContext,
@@ -79,16 +222,6 @@ export function getTypedErrorFromEndevorError(
   }
 }
 
-export class FingerprintMismatchError extends Error {}
-
-export class SignoutError extends Error {}
-
-export class DuplicateElementError extends Error {}
-
-export class ChangeRegressionError extends Error {}
-
-export class ProcessorStepMaxRcExceededError extends Error {}
-
 type HttpErrorContext = {
   code: string;
   message: string;
@@ -113,5 +246,3 @@ export function getTypedErrorFromHttpError(
       );
   }
 }
-
-export class SelfSignedCertificateError extends Error {}

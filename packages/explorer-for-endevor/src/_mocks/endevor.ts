@@ -23,6 +23,7 @@ import {
   SignOutParams,
   GenerateWithCopyBackParams,
   GenerateSignOutParams,
+  UpdateResponse,
 } from '@local/endevor/_doc/Endevor';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import {
@@ -70,7 +71,7 @@ export type UploadingElementStub = [
       element: ElementMapPath
     ) => (
       actionCcid: ChangeControlValue
-    ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+    ) => (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
   >,
   sinon.SinonStub<
     [Service],
@@ -78,19 +79,19 @@ export type UploadingElementStub = [
       element: ElementMapPath
     ) => (
       actionCcid: ChangeControlValue
-    ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+    ) => (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
   >,
   sinon.SinonStub<
     [ElementMapPath],
     (
       actionCcid: ChangeControlValue
-    ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+    ) => (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
   >,
   sinon.SinonStub<
     [ChangeControlValue],
-    (elementContent: ElementWithFingerprint) => Promise<Error | void>
+    (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
   >,
-  sinon.SinonStub<[ElementWithFingerprint], Promise<Error | void>>
+  sinon.SinonStub<[ElementWithFingerprint], Promise<UpdateResponse>>
 ];
 
 export const mockUploadingElementWith =
@@ -100,10 +101,10 @@ export const mockUploadingElementWith =
     actionCcidArg: ChangeControlValue,
     elementContentArg: ElementWithFingerprint
   ) =>
-  (mockResults: ReadonlyArray<undefined | Error>): UploadingElementStub => {
+  (mockResults: ReadonlyArray<UpdateResponse>): UploadingElementStub => {
     const anyProgressReporter = sinon.match.any;
     const withContentStub = sinon
-      .stub<[ElementWithFingerprint], Promise<Error | void>>()
+      .stub<[ElementWithFingerprint], Promise<UpdateResponse>>()
       .withArgs(elementContentArg);
     mockResults.forEach((result, index) => {
       withContentStub.onCall(index).resolves(result);
@@ -111,7 +112,7 @@ export const mockUploadingElementWith =
     const withActionCcidStub = sinon
       .stub<
         [ChangeControlValue],
-        (elementContent: ElementWithFingerprint) => Promise<Error | void>
+        (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
       >()
       .withArgs(actionCcidArg)
       .returns(withContentStub);
@@ -120,7 +121,7 @@ export const mockUploadingElementWith =
         [ElementMapPath],
         (
           actionCcid: ChangeControlValue
-        ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+        ) => (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
       >()
       .withArgs(elementArg)
       .returns(withActionCcidStub);
@@ -131,7 +132,7 @@ export const mockUploadingElementWith =
           element: ElementMapPath
         ) => (
           actionCcid: ChangeControlValue
-        ) => (elementContent: ElementWithFingerprint) => Promise<Error | void>
+        ) => (elementContent: ElementWithFingerprint) => Promise<UpdateResponse>
       >()
       .withArgs(serviceArg)
       .returns(withElementStub);

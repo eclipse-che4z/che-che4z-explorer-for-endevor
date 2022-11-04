@@ -12,8 +12,14 @@
  */
 
 import { Credential } from './Credential';
-import * as fs from 'fs';
-import { SignoutError } from './Error';
+import {
+  ChangeRegressionError,
+  ConnectionError,
+  FingerprintMismatchError,
+  SelfSignedCertificateError,
+  SignoutError,
+  WrongCredentialsError,
+} from './Error';
 
 export type ServiceProtocol = 'http' | 'https';
 export const enum ServiceBasePath {
@@ -167,23 +173,54 @@ export type GenerateSignOutParams = Readonly<{
   overrideSignOut?: boolean;
 }>;
 
-export type DomainUpdateParams = Readonly<{
-  content: ElementContent;
-  fingerprint: Value;
-  ccid: Value;
-  comment: Value;
-}>;
-
-export type SdkUpdateParams = Readonly<{
-  fingerprint: string;
-  fromFile: fs.ReadStream;
-  ccid?: string;
-  comment?: string;
-}>;
-
 export type OverrideSignOut = boolean;
 
 export type SignOutParams = Readonly<{
   signoutChangeControlValue: ActionChangeControlValue;
   overrideSignOut?: OverrideSignOut;
 }>;
+
+export const enum SearchStrategies {
+  SEARCH_IN_PLACE = 'SEARCH_IN_PLACE',
+  SEARCH_WITH_FIRST_FOUND = 'SEARCH_WITH_FIRST_FOUND',
+  SEARCH_ALL = 'SEARCH_ALL',
+}
+
+// it is private static within the SDK, so we have to copy it :(
+export const SDK_FROM_FILE_DESCRIPTION = 'via Zowe CLI command';
+
+export const enum UpdateStatus {
+  OK = 'OK',
+  ERROR = 'ERROR',
+}
+
+export type SuccessUpdateResponse = {
+  status: UpdateStatus.OK;
+  additionalDetails: Readonly<{
+    returnCode: number;
+  }> &
+    Partial<{
+      // can be enhanced to provide similar warning management as we have for the errors
+      message: string;
+    }>;
+};
+
+export type ErrorUpdateResponse = {
+  status: UpdateStatus.ERROR;
+  additionalDetails: Readonly<
+    | {
+        error:
+          | FingerprintMismatchError
+          | ChangeRegressionError
+          | SignoutError
+          | WrongCredentialsError
+          | Error;
+        returnCode: number;
+      }
+    | {
+        error: ConnectionError | SelfSignedCertificateError | Error;
+      }
+  >;
+};
+
+export type UpdateResponse = SuccessUpdateResponse | ErrorUpdateResponse;

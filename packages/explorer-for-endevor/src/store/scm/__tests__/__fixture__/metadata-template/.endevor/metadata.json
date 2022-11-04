@@ -1,0 +1,54 @@
+{
+  "filter": {
+    "inverted": false,
+    "locations": []
+  },
+  "workspaceDir": "<workspaceDir>",
+  "environments": {
+    "ENV-1": {
+      "envName": "ENV",
+      "stageName": "DEV",
+      "stageId": "D",
+      "stageNumber": 1,
+      "nextEnv": "ENV",
+      "nextStgNum": "2",
+      "entry": true,
+      "systems": {
+        "SYS": {
+          "name": "SYS",
+          "subsystems": {
+            "SUBSYS": {
+              "name": "SUBSYS",
+              "elements": {}
+            }
+          },
+          "types": {
+            "TYPE1": {
+              "name": "TYPE1",
+              "fileext": "tp1",
+              "bin": false,
+              "reclen": 80
+            },
+            "TYPE2": {
+              "name": "TYPE2",
+              "fileext": "tp2",
+              "bin": false,
+              "reclen": 80
+            }
+          },
+          "ccidRequired": true,
+          "commentRequired": true
+        }
+      }
+    }
+  },
+  "messages": [],
+  "mkDirs": [],
+  "actions": [],
+  "inSync": false,
+  "unresolvedMergeConflicts": false,
+  "signoutOverrideNeeded": false,
+  "fileEncoding": "ISO8859-1",
+  "nodeEncoding": "LATIN1",
+  "elementCount": 0
+}

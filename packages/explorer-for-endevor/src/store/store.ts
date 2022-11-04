@@ -18,7 +18,7 @@ import {
   ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { searchForElements } from '../endevor';
+import { searchForAllElements } from '../endevor';
 import { logger } from '../globals';
 import { isDefined, isError, isUnique } from '../utils';
 import { Action, Actions } from './_doc/Actions';
@@ -27,6 +27,7 @@ import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
 import {
   ConnectionLocations,
   Connections,
+  Credential,
   Id,
   InventoryLocationNames,
   InventoryLocations,
@@ -38,7 +39,6 @@ import {
   EndevorCacheItem,
   EndevorService,
   EndevorServiceLocations,
-  EndevorCredential,
   EndevorSearchLocation,
   EndevorSession,
   State,
@@ -47,12 +47,20 @@ import {
   EndevorId,
   EndevorSearchLocationStatus,
   ValidEndevorSearchLocationDescriptions,
-  ValidEndevorServiceDescriptions,
+  ExistingEndevorServiceDescriptions,
   EndevorServiceStatus,
-  ValidEndevorServiceDescription,
-  InvalidServiceDescription,
+  InvalidEndevorServiceDescription,
   ValidEndevorSearchLocationDescription,
   InvalidEndevorSearchLocationDescription,
+  EndevorConnection,
+  EndevorConnectionStatus,
+  EndevorConfiguration,
+  EndevorCredentialStatus,
+  EndevorCredential,
+  NonExistingServiceDescription,
+  ValidEndevorServiceDescription,
+  ValidEndevorConnection,
+  EndevorServices,
 } from './_doc/v2/Store';
 import {
   normalizeSearchLocation,
@@ -75,20 +83,164 @@ export const make =
 
     const dispatch = async (action: Action): Promise<void> => {
       switch (action.type) {
-        case Actions.ENDEVOR_CREDENTIAL_ADDED: {
+        case Actions.SESSION_ENDEVOR_CREDENTIAL_ADDED: {
+          const serviceKey = toCompositeKey(action.sessionId);
+          const persistedConnection = state().services[serviceKey]?.value;
+          const sessionConnection = state().sessions[serviceKey]?.connection;
+          const anyApiVersion = ServiceApiVersion.V2;
+          let connection: ValidEndevorConnection | undefined = undefined;
+          if (sessionConnection) {
+            connection = {
+              status: EndevorConnectionStatus.VALID,
+              value: {
+                ...sessionConnection.value,
+                apiVersion: anyApiVersion,
+              },
+            };
+          } else if (persistedConnection) {
+            connection = {
+              status: EndevorConnectionStatus.VALID,
+              value: {
+                ...persistedConnection,
+                apiVersion: anyApiVersion,
+              },
+            };
+          } else {
+            break;
+          }
+          if (!connection) break;
+
           updateState(
-            sessionReducer(state())(action.credential.id)({
+            sessionReducer(state())(action.sessionId)({
               credentials: action.credential,
+              connection,
             })
           );
+          refreshTree();
           break;
         }
-        case Actions.ENDEVOR_SERVICE_API_VERSION_ADDED: {
+        case Actions.SESSION_ENDEVOR_CONNECTION_ADDED: {
           updateState(
-            sessionReducer(state())(action.serviceId)({
-              apiVersion: action.apiVersion,
+            sessionReducer(state())(action.sessionId)({
+              connection: action.connection,
             })
           );
+          refreshTree();
+          break;
+        }
+        case Actions.ENDEVOR_CONNECTION_TESTED: {
+          const serviceKey = toCompositeKey(action.connectionId);
+          const persistedConnection = state().services[serviceKey]?.value;
+          const sessionConnection = state().sessions[serviceKey]?.connection;
+          if (sessionConnection) {
+            if (action.status.status === EndevorConnectionStatus.VALID) {
+              updateState(
+                sessionReducer(state())(action.connectionId)({
+                  connection: {
+                    status: action.status.status,
+                    value: {
+                      ...sessionConnection.value,
+                      apiVersion: action.status.apiVersion,
+                    },
+                  },
+                })
+              );
+            } else {
+              updateState(
+                sessionReducer(state())(action.connectionId)({
+                  connection: {
+                    status: action.status.status,
+                    value: sessionConnection.value,
+                  },
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
+          if (persistedConnection) {
+            if (action.status.status === EndevorConnectionStatus.VALID) {
+              updateState(
+                sessionReducer(state())(action.connectionId)({
+                  connection: {
+                    status: action.status.status,
+                    value: {
+                      ...persistedConnection,
+                      apiVersion: action.status.apiVersion,
+                    },
+                  },
+                })
+              );
+            } else {
+              updateState(
+                sessionReducer(state())(action.connectionId)({
+                  connection: {
+                    status: action.status.status,
+                    value: persistedConnection,
+                  },
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
+          break;
+        }
+        case Actions.ENDEVOR_CREDENTIAL_TESTED: {
+          const serviceKey = toCompositeKey(action.credentialId);
+          const persistedConnection = state().services[serviceKey]?.value;
+          const sessionConnection = state().sessions[serviceKey]?.connection;
+          const anyApiVersion = ServiceApiVersion.V2;
+          let connection: ValidEndevorConnection | undefined = undefined;
+          if (sessionConnection) {
+            connection = {
+              status: EndevorConnectionStatus.VALID,
+              value: {
+                ...sessionConnection.value,
+                apiVersion: anyApiVersion,
+              },
+            };
+          } else if (persistedConnection) {
+            connection = {
+              status: EndevorConnectionStatus.VALID,
+              value: {
+                ...persistedConnection,
+                apiVersion: anyApiVersion,
+              },
+            };
+          } else {
+            break;
+          }
+          if (!connection) break;
+
+          const persistedCredential = state().services[serviceKey]?.credential;
+          const sessionCredential = state().sessions[serviceKey]?.credentials;
+          if (sessionCredential) {
+            updateState(
+              sessionReducer(state())(action.credentialId)({
+                credentials: {
+                  status: action.status,
+                  value: sessionCredential.value,
+                },
+                connection,
+              })
+            );
+            refreshTree();
+            break;
+          }
+          if (persistedCredential) {
+            updateState(
+              sessionReducer(state())(action.credentialId)({
+                credentials: {
+                  status: action.status,
+                  value: persistedCredential.value,
+                },
+                connection,
+              })
+            );
+            refreshTree();
+            break;
+          }
           break;
         }
         case Actions.ENDEVOR_CACHE_FETCHED: {
@@ -97,36 +249,10 @@ export const make =
               action.searchLocationId
             )(action.endevorCachedItem)
           );
-          break;
-        }
-        case Actions.ELEMENTS_FETCHED: {
-          const existingCache =
-            state().caches[
-              toServiceLocationCompositeKey(action.serviceId)(
-                action.searchLocationId
-              )
-            ];
-          const lastRefreshTimestamp = Date.now();
-          let elements = {};
-          elements = action.elements.reduce(
-            (acc: { [id: string]: CachedElement }, element) => {
-              const newElementId = toElementCompositeKey(action.serviceId)(
-                action.searchLocationId
-              )(element);
-              acc[newElementId] = {
-                element,
-                lastRefreshTimestamp,
-              };
-              return acc;
-            },
-            {}
-          );
           updateState(
-            endevorCacheReducer(state())(action.serviceId)(
-              action.searchLocationId
-            )({
-              endevorMap: existingCache?.endevorMap,
-              elements,
+            sessionReducer(state())(action.serviceId)({
+              connection: action.connection,
+              credentials: action.credential,
             })
           );
           refreshTree();
@@ -148,6 +274,16 @@ export const make =
           break;
         }
         case Actions.ELEMENT_ADDED: {
+          const searchLocation =
+            state().searchLocations[toCompositeKey(action.searchLocationId)];
+          if (!searchLocation) break;
+          const session = state().sessions[toCompositeKey(action.serviceId)];
+          if (!session || !session.connection || !session.credentials) break;
+          const service = {
+            credential: session.credentials.value,
+            location: session.connection.value.location,
+            rejectUnauthorized: session.connection.value.rejectUnauthorized,
+          };
           updateState(
             updateElementReducer(state())(action.serviceId)(
               action.searchLocationId
@@ -156,9 +292,11 @@ export const make =
           refreshTree();
           const fetchedElements = await withNotificationProgress(
             'Fetching elements'
-          )((progress) =>
-            searchForElements(progress)(action.service)(action.element)
-          );
+          )((progress) => {
+            return searchForAllElements(progress)(service)(
+              searchLocation.value
+            );
+          });
           if (isError(fetchedElements)) {
             const error = fetchedElements;
             logger.warn(
@@ -223,6 +361,19 @@ export const make =
         }
         case Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP:
         case Actions.ELEMENT_GENERATED_WITH_COPY_BACK: {
+          const searchLocation =
+            state().searchLocations[
+              toCompositeKey(action.treePath.searchLocationId)
+            ];
+          if (!searchLocation) break;
+          const session =
+            state().sessions[toCompositeKey(action.treePath.serviceId)];
+          if (!session || !session.connection || !session.credentials) break;
+          const service = {
+            credential: session.credentials.value,
+            location: session.connection.value.location,
+            rejectUnauthorized: session.connection.value.rejectUnauthorized,
+          };
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.treePath.serviceId)(
@@ -286,9 +437,7 @@ export const make =
           const fetchedElements = await withNotificationProgress(
             'Fetching elements'
           )((progress) =>
-            searchForElements(progress)(action.fetchElementsArgs.service)(
-              action.fetchElementsArgs.searchLocation
-            )
+            searchForAllElements(progress)(service)(searchLocation.value)
           );
           if (isError(fetchedElements)) {
             const error = fetchedElements;
@@ -358,10 +507,30 @@ export const make =
             )
           );
           updateState(addServiceLocationReducer(state())(action.service.id)());
-          if (action.service.apiVersion) {
+          if (
+            action.connectionStatus.status === EndevorConnectionStatus.VALID
+          ) {
             updateState(
               sessionReducer(state())(action.service.id)({
-                apiVersion: action.service.apiVersion,
+                connection: {
+                  status: action.connectionStatus.status,
+                  value: {
+                    ...action.service.value,
+                    apiVersion: action.connectionStatus.apiVersion,
+                  },
+                },
+              })
+            );
+          }
+          if (
+            action.connectionStatus.status === EndevorConnectionStatus.INVALID
+          ) {
+            updateState(
+              sessionReducer(state())(action.service.id)({
+                connection: {
+                  status: action.connectionStatus.status,
+                  value: action.service.value,
+                },
               })
             );
           }
@@ -417,24 +586,6 @@ export const make =
           );
           refreshTree();
           persistState(storageGetters)(state());
-          break;
-        }
-        case Actions.ENDEVOR_MAP_BUILT: {
-          if (!Object.keys(action.endevorMap).length) break;
-          const existingCache =
-            state().caches[
-              toServiceLocationCompositeKey(action.serviceId)(
-                action.searchLocationId
-              )
-            ];
-          updateState(
-            endevorCacheReducer(state())(action.serviceId)(
-              action.searchLocationId
-            )({
-              endevorMap: action.endevorMap,
-              elements: existingCache?.elements,
-            })
-          );
           break;
         }
         default:
@@ -641,7 +792,7 @@ const removeServiceReducer =
 
 const createServiceReducer =
   (initialState: State) =>
-  (service: EndevorService, credentials?: EndevorCredential): State => {
+  (service: EndevorService, credentials?: Credential): State => {
     const serviceKey = toCompositeKey(service.id);
     const existingItem = initialState.services[serviceKey];
     if (existingItem) {
@@ -892,10 +1043,35 @@ export const getAllServiceNames = (
   ].filter(isUnique);
 };
 
-export const getService =
+export const getEndevorConnectionDetails =
   (state: () => State) =>
-  (serviceId: EndevorId): EndevorService | undefined => {
-    return state().services[toCompositeKey(serviceId)];
+  (serviceId: EndevorId): EndevorConnection | undefined => {
+    const serviceKey = toCompositeKey(serviceId);
+    const sessionConnectionDetails = state().sessions[serviceKey]?.connection;
+    if (sessionConnectionDetails) return sessionConnectionDetails;
+    const persistentConnectionDetails = state().services[serviceKey]?.value;
+    if (!persistentConnectionDetails) return;
+    return {
+      status: EndevorConnectionStatus.UNKNOWN,
+      value: persistentConnectionDetails,
+    };
+  };
+
+export const getCredential =
+  (state: () => State) =>
+  (serviceId: EndevorId): EndevorCredential | undefined => {
+    const sessionCredential =
+      state().sessions[toCompositeKey(serviceId)]?.credentials;
+    if (sessionCredential) {
+      return sessionCredential;
+    }
+    const persistentCredential =
+      state().services[toCompositeKey(serviceId)]?.credential;
+    if (!persistentCredential) return;
+    return {
+      status: EndevorCredentialStatus.UNKNOWN,
+      value: persistentCredential.value,
+    };
   };
 
 export const getAllServiceDescriptions = (
@@ -904,13 +1080,40 @@ export const getAllServiceDescriptions = (
   return Object.entries(state().serviceLocations).reduce(
     (acc: EndevorServiceDescriptions, [serviceKey, serviceLocationValue]) => {
       const service = state().services[serviceKey];
-      if (service) {
-        acc[serviceKey] = toValidServiceDescription(state)(service);
+      if (!service) {
+        acc[serviceKey] = toNonExistingServiceDescription(state)(
+          serviceLocationValue.id
+        );
         return acc;
       }
-      acc[serviceKey] = toInvalidServiceDescription(state)(
-        serviceLocationValue.id
-      );
+      const sessionDetails = state().sessions[serviceKey];
+      if (
+        !sessionDetails?.connection ||
+        sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        !sessionDetails.credentials ||
+        sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      acc[serviceKey] = toValidServiceDescription(state)(service);
       return acc;
     },
     {}
@@ -920,22 +1123,10 @@ export const getAllServiceDescriptions = (
 const toValidServiceDescription =
   (state: () => State) =>
   (endevorService: EndevorService): ValidEndevorServiceDescription => {
-    const duplicated =
-      Object.values(Source)
-        .filter((source) => source !== endevorService.id.source)
-        // workaround for ridicilous typescript limitation
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        .map((source) => source as Source)
-        .filter((source) => {
-          return (
-            state().services[
-              toCompositeKey({ name: endevorService.id.name, source })
-            ] ||
-            state().serviceLocations[
-              toCompositeKey({ name: endevorService.id.name, source })
-            ]
-          );
-        }).length >= 1;
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(endevorService.id);
     return {
       id: endevorService.id,
       status: EndevorServiceStatus.VALID,
@@ -947,31 +1138,447 @@ const toValidServiceDescription =
     };
   };
 
-const toInvalidServiceDescription =
-  (state: () => State) =>
-  (serviceId: Id): InvalidServiceDescription => {
-    const duplicated =
+const isDuplicatedService =
+  (services: EndevorServices, serviceLocations: ConnectionLocations) =>
+  (endevorId: EndevorId): boolean => {
+    return (
       Object.values(Source)
-        .filter((source) => source !== serviceId.source)
-        // workaround for ridicilous typescript limitation
+        .filter((source) => source !== endevorId.source)
+        // workaround for ridiculous typescript limitation
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         .map((source) => source as Source)
         .filter((source) => {
           return (
-            state().services[
-              toCompositeKey({ name: serviceId.name, source })
-            ] ||
-            state().serviceLocations[
-              toCompositeKey({ name: serviceId.name, source })
-            ]
+            services[toCompositeKey({ name: endevorId.name, source })] ||
+            serviceLocations[toCompositeKey({ name: endevorId.name, source })]
           );
-        }).length >= 1;
+        }).length >= 1
+    );
+  };
+
+const toNonExistingServiceDescription =
+  (state: () => State) =>
+  (serviceId: Id): NonExistingServiceDescription => {
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(serviceId);
     return {
       id: serviceId,
-      status: EndevorServiceStatus.INVALID,
+      status: EndevorServiceStatus.NON_EXISTING,
       duplicated,
     };
   };
+
+const toUnknownConnectionServiceDescription =
+  (state: () => State) =>
+  ({
+    id: serviceId,
+    value,
+    credential,
+  }: EndevorService): ValidEndevorServiceDescription => {
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(serviceId);
+    return {
+      id: serviceId,
+      status: EndevorServiceStatus.UNKNOWN_CONNECTION,
+      duplicated,
+      url: toServiceUrl(value.location, credential?.value),
+    };
+  };
+
+const toInvalidCredentialServiceDescription =
+  (state: () => State) =>
+  ({
+    id: serviceId,
+    value,
+    credential,
+  }: EndevorService): InvalidEndevorServiceDescription => {
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(serviceId);
+    return {
+      id: serviceId,
+      status: EndevorServiceStatus.INVALID_CREDENTIAL,
+      duplicated,
+      url: toServiceUrl(value.location, credential?.value),
+    };
+  };
+
+const toInvalidConnectionServiceDescription =
+  (state: () => State) =>
+  ({
+    id: serviceId,
+    value,
+    credential,
+  }: EndevorService): InvalidEndevorServiceDescription => {
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(serviceId);
+    return {
+      id: serviceId,
+      status: EndevorServiceStatus.INVALID_CONNECTION,
+      duplicated,
+      url: toServiceUrl(value.location, credential?.value),
+    };
+  };
+
+const toUnknownCredentialServiceDescription =
+  (state: () => State) =>
+  ({
+    id: serviceId,
+    value,
+    credential,
+  }: EndevorService): ValidEndevorServiceDescription => {
+    const duplicated = isDuplicatedService(
+      state().services,
+      state().serviceLocations
+    )(serviceId);
+    return {
+      id: serviceId,
+      status: EndevorServiceStatus.UNKNOWN_CREDENTIAL,
+      duplicated,
+      url: toServiceUrl(value.location, credential?.value),
+    };
+  };
+
+export const getAllExistingServiceDescriptions = (
+  state: () => State
+): ExistingEndevorServiceDescriptions => {
+  return Object.entries(state().services).reduce(
+    (acc: ExistingEndevorServiceDescriptions, [serviceKey, service]) => {
+      if (!service) return acc;
+      const sessionDetails = state().sessions[serviceKey];
+      if (
+        !sessionDetails ||
+        !sessionDetails.connection ||
+        sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        !sessionDetails.credentials ||
+        sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      acc[serviceKey] = toValidServiceDescription(state)(service);
+      return acc;
+    },
+    {}
+  );
+};
+
+export const getExistingUnusedServiceDescriptions = (
+  state: () => State
+): ExistingEndevorServiceDescriptions => {
+  const usedServices = Object.keys(state().serviceLocations);
+  return Object.entries(state().services)
+    .filter(([serviceKey]) => !usedServices.includes(serviceKey))
+    .reduce(
+      (acc: ExistingEndevorServiceDescriptions, [serviceKey, service]) => {
+        if (!service) return acc;
+        const sessionDetails = state().sessions[serviceKey];
+        if (
+          !sessionDetails ||
+          !sessionDetails.connection ||
+          sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          !sessionDetails.credentials ||
+          sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        acc[serviceKey] = toValidServiceDescription(state)(service);
+        return acc;
+      },
+      {}
+    );
+};
+
+export const getExistingUsedServiceDescriptions = (
+  state: () => State
+): ExistingEndevorServiceDescriptions => {
+  return Object.keys(state().serviceLocations).reduce(
+    (acc: ExistingEndevorServiceDescriptions, serviceKey) => {
+      const service = state().services[serviceKey];
+      if (!service) return acc;
+      const sessionDetails = state().sessions[serviceKey];
+      if (
+        !sessionDetails ||
+        !sessionDetails.connection ||
+        sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        !sessionDetails.credentials ||
+        sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+      ) {
+        acc[serviceKey] = toUnknownCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidConnectionServiceDescription(state)(service);
+        return acc;
+      }
+      if (
+        sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+      ) {
+        acc[serviceKey] = toInvalidCredentialServiceDescription(state)(service);
+        return acc;
+      }
+      acc[serviceKey] = toValidServiceDescription(state)(service);
+      return acc;
+    },
+    {}
+  );
+};
+
+export const getExistingServiceDescriptionsBySearchLocationId =
+  (state: () => State) =>
+  (searchLocationId: EndevorId): ExistingEndevorServiceDescriptions => {
+    return Object.entries(state().serviceLocations)
+      .filter(([, value]) => value.value[toCompositeKey(searchLocationId)])
+      .reduce((acc: ExistingEndevorServiceDescriptions, [serviceKey]) => {
+        const service = state().services[serviceKey];
+        if (!service) {
+          return acc;
+        }
+        const sessionDetails = state().sessions[serviceKey];
+        if (
+          !sessionDetails ||
+          !sessionDetails.connection ||
+          sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          !sessionDetails.credentials ||
+          sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        acc[serviceKey] = toValidServiceDescription(state)(service);
+        return acc;
+      }, {});
+  };
+
+export const getAllServiceDescriptionsBySearchLocationId =
+  (state: () => State) =>
+  (searchLocationId: EndevorId): EndevorServiceDescriptions => {
+    return Object.entries(state().serviceLocations)
+      .filter(([, value]) => value.value[toCompositeKey(searchLocationId)])
+      .reduce((acc: EndevorServiceDescriptions, [serviceKey, value]) => {
+        const service = state().services[serviceKey];
+        if (!service) {
+          acc[serviceKey] = toNonExistingServiceDescription(state)(value.id);
+          return acc;
+        }
+        const sessionDetails = state().sessions[serviceKey];
+        if (
+          !sessionDetails ||
+          !sessionDetails.connection ||
+          sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          !sessionDetails.credentials ||
+          sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+        ) {
+          acc[serviceKey] =
+            toUnknownCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidCredentialServiceDescription(state)(service);
+          return acc;
+        }
+        if (
+          sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+        ) {
+          acc[serviceKey] =
+            toInvalidConnectionServiceDescription(state)(service);
+          return acc;
+        }
+        acc[serviceKey] = toValidServiceDescription(state)(service);
+        return acc;
+      }, {});
+  };
+
+export const getAllServiceLocations = (
+  state: () => State
+): EndevorServiceLocations => {
+  const toSearchLocationDescriptions = (
+    inventoryLocationNames: InventoryLocationNames
+  ): EndevorSearchLocationDescriptions => {
+    return Object.entries(inventoryLocationNames).reduce(
+      (
+        acc: EndevorSearchLocationDescriptions,
+        [searchLocationKey, searchLocationValue]
+      ) => {
+        const searchLocation = state().searchLocations[searchLocationKey];
+        acc[searchLocationKey] = searchLocation
+          ? toValidLocationDescription(state)(searchLocation)
+          : toInvalidLocationDescription(state)(searchLocationValue.id);
+        return acc;
+      },
+      {}
+    );
+  };
+  return Object.entries(state().serviceLocations).reduce(
+    (acc: EndevorServiceLocations, [serviceKey, serviceLocation]) => {
+      const service = state().services[serviceKey];
+      if (service) {
+        const sessionDetails = state().sessions[serviceKey];
+        if (
+          !sessionDetails?.connection ||
+          sessionDetails.connection.status === EndevorConnectionStatus.UNKNOWN
+        ) {
+          const serviceDescription =
+            toUnknownConnectionServiceDescription(state)(service);
+          acc[serviceKey] = {
+            ...serviceDescription,
+            url: toServiceUrl(
+              service.value.location,
+              service.credential?.value
+            ),
+            value: toSearchLocationDescriptions(serviceLocation.value),
+          };
+          return acc;
+        }
+        if (
+          sessionDetails.connection.status === EndevorConnectionStatus.INVALID
+        ) {
+          const serviceDescription =
+            toInvalidConnectionServiceDescription(state)(service);
+          acc[serviceKey] = {
+            ...serviceDescription,
+            url: toServiceUrl(
+              service.value.location,
+              service.credential?.value
+            ),
+            value: toSearchLocationDescriptions(serviceLocation.value),
+          };
+          return acc;
+        }
+        if (
+          !sessionDetails.credentials ||
+          sessionDetails.credentials.status === EndevorCredentialStatus.UNKNOWN
+        ) {
+          const serviceDescription =
+            toUnknownCredentialServiceDescription(state)(service);
+          acc[serviceKey] = {
+            ...serviceDescription,
+            url: toServiceUrl(
+              service.value.location,
+              service.credential?.value
+            ),
+            value: toSearchLocationDescriptions(serviceLocation.value),
+          };
+          return acc;
+        }
+        if (
+          sessionDetails.credentials.status === EndevorCredentialStatus.INVALID
+        ) {
+          const serviceDescription =
+            toInvalidCredentialServiceDescription(state)(service);
+          acc[serviceKey] = {
+            ...serviceDescription,
+            url: toServiceUrl(
+              service.value.location,
+              service.credential?.value
+            ),
+            value: toSearchLocationDescriptions(serviceLocation.value),
+          };
+          return acc;
+        }
+        const serviceDescription = toValidServiceDescription(state)(service);
+        acc[serviceKey] = {
+          ...serviceDescription,
+          url: toServiceUrl(service.value.location, service.credential?.value),
+          value: toSearchLocationDescriptions(serviceLocation.value),
+        };
+        return acc;
+      }
+      const serviceDescription = toNonExistingServiceDescription(state)(
+        serviceLocation.id
+      );
+      acc[serviceKey] = {
+        ...serviceDescription,
+        value: toSearchLocationDescriptions(serviceLocation.value),
+      };
+      return acc;
+    },
+    {}
+  );
+};
 
 const toValidLocationDescription =
   (state: () => State) =>
@@ -981,7 +1588,7 @@ const toValidLocationDescription =
     const duplicated =
       Object.values(Source)
         .filter((source) => source !== endevorSearchLocation.id.source)
-        // workaround for ridicilous typescript limitation
+        // workaround for ridiculous typescript limitation
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         .map((source) => source as Source)
         .filter((source) => {
@@ -1014,7 +1621,7 @@ const toInvalidLocationDescription =
     const duplicated =
       Object.values(Source)
         .filter((source) => source !== locationId.source)
-        // workaround for ridicilous typescript limitation
+        // workaround for ridiculous typescript limitation
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         .map((source) => source as Source)
         .filter((source) => {
@@ -1040,117 +1647,6 @@ const toInvalidLocationDescription =
     };
   };
 
-export const getValidUnusedServiceDescriptions = (
-  state: () => State
-): ValidEndevorServiceDescriptions => {
-  const usedServices = Object.keys(state().serviceLocations);
-  return Object.entries(state().services)
-    .filter(([serviceKey]) => !usedServices.includes(serviceKey))
-    .reduce((acc: ValidEndevorServiceDescriptions, [serviceKey, service]) => {
-      if (!service) return acc;
-      acc[serviceKey] = toValidServiceDescription(state)(service);
-      return acc;
-    }, {});
-};
-
-export const getValidServiceDescriptionsBySearchLocationId =
-  (state: () => State) =>
-  (searchLocationId: EndevorId): ValidEndevorServiceDescriptions => {
-    return Object.entries(state().serviceLocations)
-      .filter(([, value]) => value.value[toCompositeKey(searchLocationId)])
-      .reduce((acc: ValidEndevorServiceDescriptions, [serviceKey]) => {
-        const service = state().services[serviceKey];
-        if (service) {
-          acc[serviceKey] = toValidServiceDescription(state)(service);
-          return acc;
-        }
-        return acc;
-      }, {});
-  };
-
-export const getAllServiceDescriptionsBySearchLocationId =
-  (state: () => State) =>
-  (searchLocationId: EndevorId): EndevorServiceDescriptions => {
-    return Object.entries(state().serviceLocations)
-      .filter(([, value]) => value.value[toCompositeKey(searchLocationId)])
-      .reduce((acc: EndevorServiceDescriptions, [serviceKey, value]) => {
-        const service = state().services[serviceKey];
-        if (service) {
-          acc[serviceKey] = toValidServiceDescription(state)(service);
-          return acc;
-        }
-        acc[serviceKey] = toInvalidServiceDescription(state)(value.id);
-        return acc;
-      }, {});
-  };
-
-export const getApiVersion =
-  (state: () => State) =>
-  (serviceId: EndevorId): ServiceApiVersion | undefined => {
-    return state().sessions[toCompositeKey(serviceId)]?.apiVersion;
-  };
-
-export const getCredential =
-  (state: () => State) =>
-  (serviceId: EndevorId): EndevorCredential | undefined => {
-    return (
-      state().sessions[toCompositeKey(serviceId)]?.credentials ||
-      state().services[toCompositeKey(serviceId)]?.credential
-    );
-  };
-
-export const getAllServiceLocations = (
-  state: () => State
-): EndevorServiceLocations => {
-  return Object.entries(state().serviceLocations).reduce(
-    (acc: EndevorServiceLocations, [serviceKey, serviceLocation]) => {
-      const service = state().services[serviceKey];
-      if (service) {
-        const serviceDescription = toValidServiceDescription(state)(service);
-        acc[serviceKey] = {
-          ...serviceDescription,
-          url: toServiceUrl(service.value.location, service.credential?.value),
-          value: Object.entries(serviceLocation.value).reduce(
-            (
-              acc: EndevorSearchLocationDescriptions,
-              [searchLocationKey, searchLocationValue]
-            ) => {
-              const searchLocation = state().searchLocations[searchLocationKey];
-              acc[searchLocationKey] = searchLocation
-                ? toValidLocationDescription(state)(searchLocation)
-                : toInvalidLocationDescription(state)(searchLocationValue.id);
-              return acc;
-            },
-            {}
-          ),
-        };
-        return acc;
-      }
-      const serviceDescription = toInvalidServiceDescription(state)(
-        serviceLocation.id
-      );
-      acc[serviceKey] = {
-        ...serviceDescription,
-        value: Object.entries(serviceLocation.value).reduce(
-          (
-            acc: EndevorSearchLocationDescriptions,
-            [searchLocationKey, searchLocationValue]
-          ) => {
-            const searchLocation = state().searchLocations[searchLocationKey];
-            acc[searchLocationKey] = searchLocation
-              ? toValidLocationDescription(state)(searchLocation)
-              : toInvalidLocationDescription(state)(searchLocationValue.id);
-            return acc;
-          },
-          {}
-        ),
-      };
-      return acc;
-    },
-    {}
-  );
-};
-
 export const getAllSearchLocationNames = (
   state: () => State
 ): ReadonlyArray<string> => {
@@ -1166,13 +1662,26 @@ export const getAllSearchLocationNames = (
 
 export const getSearchLocation =
   (state: () => State) =>
-  (searchLocationId: EndevorId): ElementSearchLocation | undefined => {
+  (
+    searchLocationId: EndevorId
+  ): Omit<ElementSearchLocation, 'configuration'> | undefined => {
     const inventoryLocation =
       state().searchLocations[toCompositeKey(searchLocationId)];
     if (!inventoryLocation) {
       return;
     }
     return normalizeSearchLocation(inventoryLocation.value);
+  };
+
+export const getEndevorConfiguration =
+  (state: () => State) =>
+  (searchLocationId: EndevorId): EndevorConfiguration | undefined => {
+    const inventoryLocation =
+      state().searchLocations[toCompositeKey(searchLocationId)];
+    if (!inventoryLocation) {
+      return;
+    }
+    return inventoryLocation.value.configuration;
   };
 
 export const getAllSearchLocationDescriptions = (
@@ -1193,6 +1702,23 @@ export const getAllSearchLocationDescriptions = (
       },
       {}
     );
+};
+
+export const getAllValidSearchLocationDescriptions = (
+  state: () => State
+): ValidEndevorSearchLocationDescriptions => {
+  return Object.entries(state().searchLocations).reduce(
+    (
+      acc: ValidEndevorSearchLocationDescriptions,
+      [searchLocationKey, searchLocation]
+    ) => {
+      if (!isDefined(searchLocation)) return acc;
+      acc[searchLocationKey] =
+        toValidLocationDescription(state)(searchLocation);
+      return acc;
+    },
+    {}
+  );
 };
 
 export const getValidUnusedSearchLocationDescriptionsForService =

@@ -11,8 +11,32 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Uri, Event } from 'vscode';
+
 export type WorkspaceFile = Readonly<{
   fileName: string;
   fileExtension?: string;
   workspaceDirectoryPath: string;
 }>;
+
+export enum TrackOptions {
+  TRACK_ALL,
+  TRACK_CHANGED,
+  TRACK_CREATED,
+  TRACK_DELETED,
+}
+
+export type FileSystemWatcher = {
+  onDidCreate: Event<Uri>;
+  onDidChange: Event<Uri>;
+  onDidDelete: Event<Uri>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dispose(): any;
+};
+
+export interface SectionChange {
+  readonly originalStartLineNumber: number;
+  readonly originalEndLineNumber: number;
+  readonly modifiedStartLineNumber: number;
+  readonly modifiedEndLineNumber: number;
+}

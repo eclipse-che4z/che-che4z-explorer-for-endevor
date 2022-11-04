@@ -11,229 +11,303 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { CliProfileManager, IProfileLoaded } from '@zowe/imperative';
 import {
-  BaseProfile,
+  BfgProfile,
   EndevorLocationProfile,
   EndevorServiceProfile,
-  Profile,
+  ProfileNameResponse,
+  ProfileNamesResponse,
+  ProfileResponses,
   ProfileTypes,
 } from './_ext/Profile';
-
-import {
-  stringifyWithHiddenCredential,
-  replaceEmptyStringsIntoUndefined,
-} from './utils';
 import { parseToType } from '@local/type-parser/parser';
-import { getProfilesDir } from './globals';
+import {
+  ProfileValidationError,
+  ProfileWithNameNotFoundError,
+  ProfileStoreAPIError,
+  isProfileStoreAPIError,
+  ProfileStoreError,
+} from './_doc/Error';
+import { ProfileStore } from './_doc/ProfileStore';
+import { ZoweExplorerApi, ZoweVsCodeExtension } from '@zowe/zowe-explorer-api';
+import { IProfileLoaded } from '@zowe/imperative';
+import { isDefined } from './utils';
 import { Logger } from '@local/extension/_doc/Logger';
-import { EndevorProfilesConfig } from '@broadcom/endevor-for-zowe-cli/lib/cli/profiles/EndevorProfilesConfig';
 
-const initAndGetProfileManager =
+export const profilesStoreFromZoweExplorer =
   (logger: Logger) =>
-  (profileRootDirectory: string) =>
+  (desiredProfileTypes: ReadonlyArray<ProfileTypes>) =>
   async (
-    profileType: ProfileTypes | string
-  ): Promise<CliProfileManager | undefined> => {
-    let profileManagerOrError =
-      getProfileManagerFromDir(logger)(profileRootDirectory)(profileType);
-    if (!profileManagerOrError) {
-      logger.trace(
-        `Attempting to fix error from getProfileManagerFromDir by initializing the CliProfileManager...`
-      );
-      const configuration = EndevorProfilesConfig.filter(
-        (config) => config.type === profileType
-      );
-      try {
-        await CliProfileManager.initialize({
-          configuration,
-          profileRootDirectory,
-          reinitialize: false,
-        });
-        profileManagerOrError =
-          getProfileManagerFromDir(logger)(profileRootDirectory)(profileType);
-      } catch (error) {
-        logger.trace(
-          `Failed to initialize profile manager of type: ${profileType} because of: ${error.message} with stack: ${error.stack}`
-        );
-      }
-    }
-    return profileManagerOrError;
-  };
-
-const getProfileManagerFromDir =
-  (logger: Logger) =>
-  (profileRootDirectory: string) =>
-  (profileType: ProfileTypes | string): CliProfileManager | undefined => {
-    logger.trace(`Profiles will be read from: ${profileRootDirectory}`);
+    requiredApiVersion?: string
+  ): Promise<ProfileStore | ProfileStoreError> => {
     try {
-      const profileManager = new CliProfileManager({
-        profileRootDirectory,
-        type: profileType,
-      });
-      logger.trace(`Profile Manager created - ${profileType.toUpperCase()}`);
-      return profileManager;
-    } catch (error) {
-      logger.trace(
-        `Failed to create profile manager of type: ${profileType} because of: ${error.message.toUpperCase()}`
-      );
-      return undefined;
+      const zoweExplorerApi: ZoweExplorerApi.IApiRegisterClient | undefined =
+        ZoweVsCodeExtension.getZoweExplorerApi(requiredApiVersion);
+      if (!zoweExplorerApi) {
+        const errorDetails = requiredApiVersion
+          ? ` of required version: ${requiredApiVersion} or above`
+          : '';
+        return new ProfileStoreError(`Missing Zowe Explorer${errorDetails}`);
+      }
+      const zoweExplorerExtenderApi:
+        | ZoweExplorerApi.IApiExplorerExtender
+        | undefined = zoweExplorerApi.getExplorerExtenderApi();
+      if (!zoweExplorerExtenderApi) {
+        return new ProfileStoreError(`Missing Zowe Explorer API`);
+      }
+      const cache = zoweExplorerExtenderApi.getProfilesCache();
+      for (const profileType of desiredProfileTypes) {
+        await zoweExplorerExtenderApi.initForZowe(profileType);
+        cache.registerCustomProfilesType(profileType);
+      }
+      await zoweExplorerExtenderApi.reloadProfiles();
+      return {
+        getProfiles: async (profileType) => {
+          let response: ReadonlyArray<IProfileLoaded> | undefined;
+          try {
+            response = cache.getProfiles(profileType);
+          } catch (error) {
+            return new ProfileStoreAPIError(error);
+          }
+          if (!response) {
+            logger.trace(
+              `Zowe Explorer API responded with no profiles of the type ${profileType}.`
+            );
+            return [];
+          }
+          try {
+            return parseToType(ProfileResponses, response);
+          } catch (error) {
+            return new ProfileStoreAPIError(error);
+          }
+        },
+      };
+    } catch (e) {
+      return new ProfileStoreError(e);
     }
   };
 
-const getProfileManager = (logger: Logger) =>
-  initAndGetProfileManager(logger)(getProfilesDir(logger));
+export const getEndevorProfileNames = async (
+  profileStore: ProfileStore
+): Promise<ProfileNamesResponse | ProfileStoreAPIError> => {
+  const response = await profileStore.getProfiles(ProfileTypes.ENDEVOR);
+  if (isProfileStoreAPIError(response)) {
+    const apiError = response;
+    return apiError;
+  }
+  return response.map(({ name }) => name);
+};
 
-const emptyBaseProfile: BaseProfile = {};
-
-export const getDefaultBaseProfile =
-  (logger: Logger) => async (): Promise<BaseProfile> => {
-    const profileManager = await getProfileManager(logger)(ProfileTypes.BASE);
-    if (profileManager) {
-      let baseProfile;
-      try {
-        baseProfile = (await profileManager.load({ loadDefault: true }))
-          .profile;
-      } catch (error) {
-        logger.trace(`There is no default base profile`);
-        return emptyBaseProfile;
-      }
-      try {
-        return parseToType(BaseProfile, baseProfile);
-      } catch (error) {
-        logger.trace(
-          `Default base profile validation error: ${error}, actual value: ${stringifyWithHiddenCredential(
-            baseProfile
-          )}`
-        );
-        return emptyBaseProfile;
-      }
-    } else {
-      return emptyBaseProfile;
-    }
-  };
-
-interface createProfile {
-  (type: ProfileTypes.ENDEVOR): (
-    logger: Logger
-  ) => (name: string, profile: EndevorServiceProfile) => Promise<void | Error>;
-  (type: ProfileTypes.ENDEVOR_LOCATION): (
-    logger: Logger
-  ) => (name: string, profile: EndevorLocationProfile) => Promise<void | Error>;
-}
-export const createProfile: createProfile =
-  (type: ProfileTypes) =>
+export const getEndevorProfiles =
   (logger: Logger) =>
-  async (name: string, profile: Profile): Promise<void> => {
-    const profileManager = await getProfileManager(logger)(type);
-    if (profileManager) {
-      try {
-        await profileManager.save({
-          name,
-          profile: replaceEmptyStringsIntoUndefined(profile),
-          type,
-        });
-        logger.trace(
-          `Profile with name: ${name} and type: ${type} was created`
-        );
-      } catch (error) {
-        logger.error(
-          `Something went wrong with profile: ${name} creation`,
-          `Profile manager response for saving profile ${name} is: ${error}`
-        );
-        return;
-      }
+  async (
+    profileStore: ProfileStore
+  ): Promise<
+    | ReadonlyArray<{
+        name: ProfileNameResponse;
+        profile: EndevorServiceProfile;
+      }>
+    | ProfileStoreAPIError
+  > => {
+    const response = await profileStore.getProfiles(ProfileTypes.ENDEVOR);
+    if (isProfileStoreAPIError(response)) {
+      const apiError = response;
+      return apiError;
     }
+    return response
+      .map((profile) => {
+        try {
+          return {
+            name: profile.name,
+            profile: parseToType(EndevorServiceProfile, profile.profile),
+          };
+        } catch (error) {
+          logger.trace(`
+        ${
+          new ProfileValidationError(profile.name, ProfileTypes.ENDEVOR, error)
+            .message
+        }.`);
+          return;
+        }
+      })
+      .filter(isDefined);
   };
 
-const emptyServiceProfile: EndevorServiceProfile = {};
-
-export const getServiceProfileByName =
+export const getBfgProfiles =
   (logger: Logger) =>
-  async (name: string): Promise<EndevorServiceProfile> => {
-    const profileManager = await getProfileManager(logger)(
-      ProfileTypes.ENDEVOR
+  async (
+    profileStore: ProfileStore
+  ): Promise<
+    | ReadonlyArray<{
+        name: ProfileNameResponse;
+        profile: BfgProfile;
+      }>
+    | ProfileStoreAPIError
+  > => {
+    const response = await profileStore.getProfiles(
+      ProfileTypes.BRIDGE_FOR_GIT
     );
-    if (profileManager) {
-      let serviceProfile;
-      try {
-        serviceProfile = (await profileManager.load({ name })).profile;
-      } catch (error) {
-        logger.error(
-          `There is no such endevor profile with name: ${name}`,
-          `Profile manager response for fetching endevor profile with name: ${name} is: ${error}`
-        );
-        return emptyServiceProfile;
-      }
-      try {
-        return parseToType(EndevorServiceProfile, serviceProfile);
-      } catch (error) {
-        logger.error(
-          `Endevor profile with name: ${name} is invalid and cannot be used`,
-          `Endevor profile validation error: ${error}, actual value: ${stringifyWithHiddenCredential(
-            serviceProfile
-          )}`
-        );
-        return emptyServiceProfile;
-      }
-    } else {
-      return emptyServiceProfile;
+    if (isProfileStoreAPIError(response)) {
+      const apiError = response;
+      return apiError;
+    }
+    return response
+      .map((profile) => {
+        try {
+          return {
+            name: profile.name,
+            profile: parseToType(BfgProfile, profile.profile),
+          };
+        } catch (error) {
+          logger.trace(`
+        ${
+          new ProfileValidationError(
+            profile.name,
+            ProfileTypes.BRIDGE_FOR_GIT,
+            error
+          ).message
+        }.`);
+          return;
+        }
+      })
+      .filter(isDefined);
+  };
+
+export const getEndevorProfileByName =
+  (profileStore: ProfileStore) =>
+  async (
+    name: string
+  ): Promise<
+    | EndevorServiceProfile
+    | ProfileWithNameNotFoundError
+    | ProfileValidationError
+    | ProfileStoreAPIError
+  > => {
+    const response = await profileStore.getProfiles(ProfileTypes.ENDEVOR);
+    if (isProfileStoreAPIError(response)) {
+      const apiError = response;
+      return apiError;
+    }
+    const convertedProfileName = `${ProfileTypes.ENDEVOR}_${name}`;
+    const serviceProfile = response.find(
+      (profile) =>
+        profile.name === name || profile.name === convertedProfileName
+    );
+    if (!serviceProfile) {
+      return new ProfileWithNameNotFoundError(name, ProfileTypes.ENDEVOR);
+    }
+    try {
+      const parsedProfileValue = parseToType(
+        EndevorServiceProfile,
+        serviceProfile.profile
+      );
+      return {
+        protocol: parsedProfileValue.protocol,
+        user: parsedProfileValue.user,
+        password: parsedProfileValue.password,
+        host: parsedProfileValue.host,
+        port: parsedProfileValue.port,
+        rejectUnauthorized: parsedProfileValue.rejectUnauthorized,
+        basePath: parsedProfileValue.basePath,
+      };
+    } catch (error) {
+      return new ProfileValidationError(
+        serviceProfile.name,
+        ProfileTypes.ENDEVOR,
+        error
+      );
     }
   };
 
-export const getProfilesByType =
+export const getEndevorLocationProfiles =
   (logger: Logger) =>
-  async (type: ProfileTypes | string): Promise<IProfileLoaded[] | Error> => {
-    const profileManager = await getProfileManager(logger)(type);
-    let returnedProfiles: IProfileLoaded[] = [];
-    if (profileManager) {
-      try {
-        returnedProfiles = await profileManager.loadAll({
-          typeOnly: true,
-        });
-      } catch (error) {
-        logger.trace(
-          `Profile manager response for fetching profiles with type: ${type} is: ${error}`
-        );
-        return new Error(
-          `Something went wrong with profiles with type: ${type} fetching`
-        );
-      }
-    }
-    return returnedProfiles;
-  };
-
-const emptyLocationProfile: EndevorLocationProfile = {};
-
-export const getLocationProfileByName =
-  (logger: Logger) =>
-  async (name: string): Promise<EndevorLocationProfile> => {
-    const profileManager = await getProfileManager(logger)(
+  async (
+    profileStore: ProfileStore
+  ): Promise<
+    | ReadonlyArray<{
+        name: ProfileNameResponse;
+        profile: EndevorLocationProfile;
+      }>
+    | ProfileStoreAPIError
+  > => {
+    const response = await profileStore.getProfiles(
       ProfileTypes.ENDEVOR_LOCATION
     );
-    if (profileManager) {
-      let locationProfile;
-      try {
-        locationProfile = (await profileManager.load({ name })).profile;
-      } catch (error) {
-        logger.error(
-          `There is no such profile with name: ${name}`,
-          `Profile manager response for fetching location profile with name: ${name} is: ${error}`
-        );
-        return emptyLocationProfile;
-      }
-      try {
-        return parseToType(EndevorLocationProfile, locationProfile);
-      } catch (error) {
-        logger.error(
-          `Location profile with name: ${name} is invalid and cannot be used`,
-          `Location profile validation error: ${error}, actual value: ${stringifyWithHiddenCredential(
-            locationProfile
-          )}`
-        );
-        return emptyLocationProfile;
-      }
-    } else {
-      return emptyLocationProfile;
+    if (isProfileStoreAPIError(response)) {
+      const apiError = response;
+      return apiError;
+    }
+    return response
+      .map((profile) => {
+        try {
+          return {
+            name: profile.name,
+            profile: parseToType(EndevorLocationProfile, profile.profile),
+          };
+        } catch (error) {
+          logger.trace(
+            `${
+              new ProfileValidationError(
+                profile.name,
+                ProfileTypes.ENDEVOR_LOCATION,
+                error
+              ).message
+            }.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined);
+  };
+
+export const getEndevorLocationProfileByName =
+  (profileStore: ProfileStore) =>
+  async (
+    name: string
+  ): Promise<
+    | EndevorLocationProfile
+    | ProfileWithNameNotFoundError
+    | ProfileValidationError
+    | ProfileStoreAPIError
+  > => {
+    const response = await profileStore.getProfiles(
+      ProfileTypes.ENDEVOR_LOCATION
+    );
+    if (isProfileStoreAPIError(response)) {
+      const apiError = response;
+      return apiError;
+    }
+    const convertedProfileName = `${ProfileTypes.ENDEVOR_LOCATION}_${name}`;
+    const locationProfile = response.find(
+      (profile) =>
+        profile.name === name || profile.name === convertedProfileName
+    );
+    if (!locationProfile) {
+      return new ProfileWithNameNotFoundError(
+        name,
+        ProfileTypes.ENDEVOR_LOCATION
+      );
+    }
+    try {
+      const parsedProfileValue = parseToType(
+        EndevorLocationProfile,
+        locationProfile.profile
+      );
+      return {
+        instance: parsedProfileValue.instance,
+        environment: parsedProfileValue.environment,
+        stageNumber: parsedProfileValue.stageNumber,
+        system: parsedProfileValue.system,
+        subsystem: parsedProfileValue.subsystem,
+        type: parsedProfileValue.type,
+        ccid: parsedProfileValue.ccid,
+        comment: parsedProfileValue.comment,
+      };
+    } catch (error) {
+      return new ProfileValidationError(
+        locationProfile.name,
+        ProfileTypes.ENDEVOR_LOCATION,
+        error
+      );
     }
   };

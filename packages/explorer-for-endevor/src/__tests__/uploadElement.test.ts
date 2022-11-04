@@ -24,10 +24,13 @@ import {
   Element,
   ElementMapPath,
   ElementSearchLocation,
+  ErrorUpdateResponse,
   Service,
   ServiceApiVersion,
   SignOutParams,
   SubSystemMapPath,
+  SuccessUpdateResponse,
+  UpdateStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toEditedElementUri } from '../uri/editedElementUri';
@@ -161,6 +164,12 @@ describe('uploading an edited element', () => {
       ccid: 'test',
       comment: 'test',
     };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     mockAskingForChangeControlValue(uploadChangeControlValue);
     const editedElementContent =
       'everybody is on hackaton, and Im sitting alone, writing tests :(';
@@ -175,7 +184,7 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([undefined]);
+    )([successResult]);
     const closeActiveEditorsStub = mockClosingActiveEditorWith(
       Promise.resolve()
     );
@@ -267,6 +276,12 @@ describe('uploading an edited element', () => {
       ccid: 'test',
       comment: 'test',
     };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     mockAskingForChangeControlValue(uploadChangeControlValue);
     const editedElementContent =
       'everybody is on hackaton, and Im sitting alone, writing tests :(';
@@ -281,7 +296,7 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([undefined]);
+    )([successResult]);
     const closeActiveEditorsStub = mockClosingActiveEditorWith(
       Promise.resolve()
     );
@@ -338,8 +353,6 @@ describe('uploading an edited element', () => {
       type: Actions.ELEMENT_ADDED,
       serviceId,
       searchLocationId,
-      service,
-      searchLocation: preciseSearchLocation,
       element: newUploadLocation,
     };
     assert.deepStrictEqual(
@@ -377,6 +390,12 @@ describe('uploading an edited element', () => {
       ccid: 'test',
       comment: 'test',
     };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     mockAskingForChangeControlValue(uploadChangeControlValue);
     const editedElementContent =
       'everybody is on hackaton, and Im sitting alone, writing tests :(';
@@ -391,7 +410,7 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([undefined]);
+    )([successResult]);
     const closeActiveEditorsStub = mockClosingActiveEditorWith(
       Promise.resolve()
     );
@@ -446,7 +465,6 @@ describe('uploading an edited element', () => {
     );
     const expectedUpdatedElementAction: ElementUpdatedFromUpTheMap = {
       type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
-      fetchElementsArgs: { service, searchLocation: vagueSearchLocation },
       targetLocation: existingLocationDownTheMap,
       pathUpTheMap: element,
       treePath: {
@@ -489,10 +507,18 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new FingerprintMismatchError('something');
+    const failedResult: ErrorUpdateResponse = {
+      status: UpdateStatus.ERROR,
+      additionalDetails: {
+        error: new FingerprintMismatchError('error'),
+      },
+    };
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
-    Object.setPrototypeOf(uploadError, FingerprintMismatchError.prototype);
+    Object.setPrototypeOf(
+      failedResult.additionalDetails.error,
+      FingerprintMismatchError.prototype
+    );
     mockUploadingElementWith(
       service,
       uploadLocation,
@@ -501,7 +527,7 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([uploadError]);
+    )([failedResult]);
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
@@ -669,10 +695,24 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new SignoutError('something');
+    const failedResult: ErrorUpdateResponse = {
+      status: UpdateStatus.ERROR,
+      additionalDetails: {
+        error: new SignoutError('something'),
+      },
+    };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
-    Object.setPrototypeOf(uploadError, SignoutError.prototype);
+    Object.setPrototypeOf(
+      failedResult.additionalDetails.error,
+      SignoutError.prototype
+    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       uploadLocation,
@@ -681,7 +721,7 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([uploadError, undefined]);
+    )([failedResult, successResult]);
     mockAskingForSignout([uploadLocation.name])({
       signOutElements: true,
       automaticSignOut: false,
@@ -784,10 +824,24 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new SignoutError('something');
+    const failedResult: ErrorUpdateResponse = {
+      status: UpdateStatus.ERROR,
+      additionalDetails: {
+        error: new SignoutError('something'),
+      },
+    };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
-    Object.setPrototypeOf(uploadError, SignoutError.prototype);
+    Object.setPrototypeOf(
+      failedResult.additionalDetails.error,
+      SignoutError.prototype
+    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       uploadLocation,
@@ -796,12 +850,12 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([uploadError, undefined]);
+    )([failedResult, successResult]);
     mockAskingForSignout([uploadLocation.name])({
       signOutElements: true,
       automaticSignOut: false,
     });
-    const signoutError = uploadError;
+    const signoutError = failedResult.additionalDetails.error;
     mockAskingForOverrideSignout([uploadLocation.name])(true);
     const [signoutElementStub] = mockSignOutElement(
       service,
@@ -915,10 +969,24 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const uploadError = new SignoutError('something');
+    const failedResult: ErrorUpdateResponse = {
+      status: UpdateStatus.ERROR,
+      additionalDetails: {
+        error: new SignoutError('something'),
+      },
+    };
+    const successResult: SuccessUpdateResponse = {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: 0,
+      },
+    };
     // workaround for the tests, for some reason, the error is passed incorrectly,
     // but works properly in the code itself
-    Object.setPrototypeOf(uploadError, SignoutError.prototype);
+    Object.setPrototypeOf(
+      failedResult.additionalDetails.error,
+      SignoutError.prototype
+    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       existingLocationDownTheMap,
@@ -927,12 +995,12 @@ describe('uploading an edited element', () => {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
-    )([uploadError, undefined]);
+    )([failedResult, successResult]);
     mockAskingForSignout([existingLocationDownTheMap.name])({
       signOutElements: true,
       automaticSignOut: false,
     });
-    const signoutError = uploadError;
+    const signoutError = failedResult.additionalDetails.error;
     mockAskingForOverrideSignout([existingLocationDownTheMap.name])(true);
     const [signoutElementStub] = mockSignOutElement(
       service,

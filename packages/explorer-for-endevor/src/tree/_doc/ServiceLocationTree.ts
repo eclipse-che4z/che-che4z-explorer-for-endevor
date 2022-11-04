@@ -11,21 +11,12 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Command } from 'vscode';
 import { Source } from '../../store/storage/_doc/Storage';
 import { ElementLocationNode } from './ElementTree';
 
 export type ServiceNodes = ServiceNode[];
 export type LocationNodes = LocationNode[];
-
-export type AddNewServiceNode = Readonly<{
-  type: 'BUTTON_ADD_SERVICE';
-  label: string;
-  command: {
-    command: string;
-    title: string;
-    argument: undefined;
-  };
-}>;
 
 export type AddNewSearchLocationNode = Readonly<{
   type: 'BUTTON_ADD_SEARCH_LOCATION';
@@ -52,12 +43,25 @@ export type SyncedServiceNode = Omit<InternalServiceNode, 'type'> &
   }>;
 
 export type ValidServiceNode = InternalServiceNode | SyncedServiceNode;
-export type InvalidServiceNode = Omit<SyncedServiceNode, 'type'> &
+export type NonExistingServiceNode = Omit<SyncedServiceNode, 'type'> &
   Readonly<{
-    type: 'SERVICE_PROFILE/INVALID';
+    type: 'SERVICE_PROFILE/NON_EXISTING' | 'SERVICE/NON_EXISTING';
+  }>;
+export type InvalidCredentialsServiceNode = Omit<SyncedServiceNode, 'type'> &
+  Readonly<{
+    type: 'SERVICE_PROFILE/INVALID_CREDENTIALS' | 'SERVICE/INVALID_CREDENTIALS';
   }>;
 
-export type ServiceNode = ValidServiceNode | InvalidServiceNode;
+export type InvalidConnectionServiceNode = Omit<SyncedServiceNode, 'type'> &
+  Readonly<{
+    type: 'SERVICE_PROFILE/INVALID_CONNECTION' | 'SERVICE/INVALID_CONNECTION';
+  }>;
+
+export type ServiceNode =
+  | ValidServiceNode
+  | NonExistingServiceNode
+  | InvalidCredentialsServiceNode
+  | InvalidConnectionServiceNode;
 
 export type InternalLocationNode = Readonly<{
   id: string;
@@ -78,13 +82,19 @@ export type SyncedLocationNode = Omit<InternalLocationNode, 'type'> &
 export type ValidLocationNode = InternalLocationNode | SyncedLocationNode;
 export type InvalidLocationNode = Omit<SyncedLocationNode, 'type'> &
   Readonly<{
-    type: 'LOCATION_PROFILE/INVALID';
+    type:
+      | 'LOCATION_PROFILE/NON_EXISTING'
+      | 'LOCATION_PROFILE/INVALID_CREDENTIALS'
+      | 'LOCATION_PROFILE/INVALID_CONNECTION'
+      | 'LOCATION/NON_EXISTING'
+      | 'LOCATION/INVALID_CREDENTIALS'
+      | 'LOCATION/INVALID_CONNECTION';
+    command?: Command;
   }>;
 
 export type LocationNode = ValidLocationNode | InvalidLocationNode;
 
 export type Node =
-  | AddNewServiceNode
   | AddNewSearchLocationNode
   | ServiceNode
   | LocationNode

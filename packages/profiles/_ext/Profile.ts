@@ -19,6 +19,7 @@ export enum ProfileTypes {
   BASE = 'base',
   ENDEVOR = 'endevor',
   ENDEVOR_LOCATION = 'endevor-location',
+  BRIDGE_FOR_GIT = 'ebg',
 }
 
 export type Profile = t.TypeOf<typeof Profile>;
@@ -28,8 +29,30 @@ export type BaseProfile = t.TypeOf<typeof BaseProfile>;
 export type EndevorServiceProfile = t.TypeOf<typeof EndevorServiceProfile>;
 export type EndevorServiceProfiles = t.TypeOf<typeof EndevorServiceProfiles>;
 
-export type EndevorLocationProfile = t.TypeOf<typeof EndevorLocationProfile>;
 export type EndevorLocationProfiles = t.TypeOf<typeof EndevorLocationProfiles>;
+export type ProfileResponse = t.TypeOf<typeof ProfileResponse>;
+export type ProfileResponses = t.TypeOf<typeof ProfileResponses>;
+export type ProfileNameResponse = t.TypeOf<typeof ProfileNameResponse>;
+export type ProfileNamesResponse = t.TypeOf<typeof ProfileNamesResponse>;
+
+export const ProfileResponse = t.type({
+  name: t.string,
+  profile: t.unknown,
+});
+export const ProfileResponses = t.array(ProfileResponse);
+export const ProfileNameResponse = t.string;
+export const ProfileNamesResponse = t.array(t.string);
+
+export type EndevorLocationProfile = t.TypeOf<typeof EndevorLocationProfile>;
+export type BfgProfile = t.TypeOf<typeof BfgProfile>;
+
+export const BfgProfile = t.partial({
+  host: t.string,
+  port: t.number,
+  user: t.string,
+  token: t.string,
+  rejectUnauthorized: t.boolean,
+});
 
 class TokenType extends t.Type<SessConstants.TOKEN_TYPE_CHOICES> {
   constructor() {

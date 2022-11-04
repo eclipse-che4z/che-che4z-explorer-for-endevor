@@ -12,10 +12,10 @@
  */
 
 import {
-  getLocationProfiles,
-  getServiceProfileByName,
-  getServiceProfiles,
-} from '../profiles/profiles';
+  getEndevorLocationProfiles,
+  getEndevorProfileByName,
+  getEndevorProfiles,
+} from '@local/profiles/profiles';
 import { logger } from '../../globals';
 import { isDefined, isError } from '../../utils';
 import {
@@ -24,12 +24,12 @@ import {
   StageNumber,
 } from '@local/endevor/_doc/Endevor';
 import { stringifyWithHiddenCredential } from '@local/endevor/utils';
-import { isProfileWithNameNotFoundError } from '../profiles/_doc/Error';
-import { ProfileStore } from '../profiles/_doc/ProfileStore';
+import { isProfileWithNameNotFoundError } from '@local/profiles/_doc/Error';
+import { ProfileStore } from '@local/profiles/_doc/ProfileStore';
 import {
   EndevorLocationProfile,
   EndevorServiceProfile,
-} from '../profiles/_ext/Profile';
+} from '@local/profiles/_ext/Profile';
 import {
   Id,
   Source,
@@ -120,7 +120,7 @@ const parseServiceProfileForCredentials = ({
 export const getConnections = async (
   profilesStore: ProfileStore
 ): Promise<Connections | Error> => {
-  const serviceProfiles = await getServiceProfiles(profilesStore);
+  const serviceProfiles = await getEndevorProfiles(logger)(profilesStore);
   if (isError(serviceProfiles)) {
     const error = serviceProfiles;
     return error;
@@ -148,7 +148,7 @@ export const getConnections = async (
 export const getCredential =
   (profilesStore: ProfileStore) =>
   async (serviceName: string): Promise<Credential | Error | undefined> => {
-    const serviceProfile = await getServiceProfileByName(profilesStore)(
+    const serviceProfile = await getEndevorProfileByName(profilesStore)(
       serviceName
     );
     if (isProfileWithNameNotFoundError(serviceProfile)) {
@@ -198,7 +198,9 @@ const profileIsCorrect = (
 export const getInventoryLocations = async (
   profilesStore: ProfileStore
 ): Promise<InventoryLocations | Error> => {
-  const locationProfiles = await getLocationProfiles(profilesStore);
+  const locationProfiles = await getEndevorLocationProfiles(logger)(
+    profilesStore
+  );
   if (isError(locationProfiles)) {
     const error = locationProfiles;
     return error;
@@ -207,7 +209,7 @@ export const getInventoryLocations = async (
     .map(({ name, profile }) => {
       if (profileIsCorrect(profile)) return { name, profile };
       logger.trace(
-        `Inventory location instance or environment or stage number is missing for the profile ${name}, actual value is ${JSON.stringify(
+        `Inventory location instance or environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
           profile
         )}.`
       );

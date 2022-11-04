@@ -35,6 +35,7 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-non-null-assertion': 'error',
     'no-param-reassign': 'error',
+    'local-rules/no-quadratic-complexity': 'warn',
   },
   // jest rules
   overrides: [
