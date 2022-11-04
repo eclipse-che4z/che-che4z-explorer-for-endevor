@@ -12,7 +12,8 @@
   "dependencies": {
     "@local/extension": "1.0.0",
     "@local/type-parser": "1.0.0",
-    "@zowe/imperative": "^5.3.3"
+    "@zowe/imperative": "^5.3.3",
+    "@zowe/zowe-explorer-api": "2.2.1"
   },
   "license": "UNLICENSED"
 }

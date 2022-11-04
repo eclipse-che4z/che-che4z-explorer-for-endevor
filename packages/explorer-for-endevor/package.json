@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Explorer for Endevor",
   "author": "Broadcom",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -29,7 +29,16 @@
     "zowe"
   ],
   "activationEvents": [
-    "onView:e4e.treeView"
+    "onView:e4e.treeView",
+    "onCommand:e4e.submitIssue",
+    "onCommand:e4e.refreshTreeView",
+    "onCommand:e4e.addServiceAndLocation",
+    "onCommand:e4e.addNewService",
+    "onCommand:e4e.addNewSearchLocation",
+    "onCommand:e4e.cleanupStorage",
+    "onCommand:e4e.migrateLocationsFromSettings",
+    "workspaceContains:.endevor",
+    "onCommand:e4e.sync.initWorkspace"
   ],
   "main": "./dist/extension.bundle.js",
   "contributes": {
@@ -53,7 +62,7 @@
     "commands": [
       {
         "command": "e4e.refreshTreeView",
-        "title": "Refresh the Tree",
+        "title": "Refresh Endevor Tree",
         "icon": {
           "light": "resources/light/refresh.svg",
           "dark": "resources/dark/refresh.svg"
@@ -61,8 +70,19 @@
         "category": "Explorer for Endevor"
       },
       {
+        "command": "e4e.submitIssue",
+        "title": "Submit an Extension Issue",
+        "icon": "$(feedback)",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.addServiceAndLocation",
+        "title": "Add an Endevor Connection and Inventory Location",
+        "category": "Explorer for Endevor"
+      },
+      {
         "command": "e4e.addNewService",
-        "title": "Add a new Endevor connection",
+        "title": "Add a New Endevor Connection",
         "icon": {
           "light": "resources/light/add.svg",
           "dark": "resources/dark/add.svg"
@@ -70,18 +90,13 @@
         "category": "Explorer for Endevor"
       },
       {
-        "command": "e4e.submitIssue",
-        "title": "Submit an extension issue",
-        "icon": "$(feedback)",
-        "category": "Explorer for Endevor"
-      },
-      {
         "command": "e4e.addNewSearchLocation",
-        "title": "Add a new inventory location",
+        "title": "Add a New Inventory Location",
         "icon": {
           "light": "resources/light/add.svg",
           "dark": "resources/dark/add.svg"
-        }
+        },
+        "category": "Endevor for Endevor"
       },
       {
         "command": "e4e.addElementFromFileSystem",
@@ -90,21 +105,36 @@
       },
       {
         "command": "e4e.hideService",
-        "title": "Hide an Endevor connection",
+        "title": "Hide an Endevor Connection",
         "icon": "$(eye-closed)"
       },
       {
+        "command": "e4e.editConnectionDetails",
+        "title": "Repair Connection Details For Service",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "e4e.testConnectionDetails",
+        "title": "Test Connection Details For Service",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "e4e.editCredentials",
+        "title": "Repair Credentials For Service",
+        "icon": "$(wrench)"
+      },
+      {
         "command": "e4e.hideSearchLocation",
-        "title": "Hide an inventory location",
+        "title": "Hide an Inventory Location",
         "icon": "$(eye-closed)"
       },
       {
         "command": "e4e.deleteSearchLocation",
-        "title": "Delete an inventory location"
+        "title": "Delete an Inventory Location"
       },
       {
         "command": "e4e.deleteService",
-        "title": "Delete an Endevor connection"
+        "title": "Delete an Endevor Connection"
       },
       {
         "command": "e4e.viewElementDetails",
@@ -116,7 +146,7 @@
       },
       {
         "command": "e4e.retrieveElementWithDependencies",
-        "title": "Retrieve with dependencies"
+        "title": "Retrieve with Dependencies"
       },
       {
         "command": "e4e.editElement",
@@ -138,21 +168,21 @@
       },
       {
         "command": "e4e.printListing",
-        "title": "Print listing"
+        "title": "Print a Listing"
       },
       {
         "command": "e4e.diff.discardChanges",
-        "title": "Discard changes",
+        "title": "Discard Changes",
         "icon": "$(discard)"
       },
       {
         "command": "e4e.diff.acceptChanges",
-        "title": "Accept changes",
+        "title": "Accept Changes",
         "icon": "$(check)"
       },
       {
         "command": "e4e.signOutElement",
-        "title": "Sign out"
+        "title": "Sign Out"
       },
       {
         "command": "e4e.signInElement",
@@ -160,13 +190,71 @@
       },
       {
         "command": "e4e.cleanupStorage",
-        "title": "Cleanup configuration storage",
+        "title": "Clear Configuration Storage",
         "category": "Explorer for Endevor"
       },
       {
         "command": "e4e.migrateLocationsFromSettings",
-        "title": "Migrate connections/inventory locations from the previous version",
+        "title": "Migrate Connections/Inventory Locations",
         "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.sync.initWorkspace",
+        "title": "Initialize a Workspace",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.sync.syncWorkspace",
+        "title": "Synchronize a Workspace",
+        "icon": "$(repo-sync)",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.sync.pullFromEndevor",
+        "title": "Pull From Endevor",
+        "icon": "$(arrow-down)",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.showGettingStartedWalkthrough",
+        "title": "Show the Getting Started Walkthrough",
+        "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.sync.openElement",
+        "title": "Open Element",
+        "category": "Explorer for Endevor",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "e4e.sync.discardChanges",
+        "title": "Discard Element Changes",
+        "category": "Explorer for Endevor",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "e4e.sync.discardAllChanges",
+        "title": "Discard All Element Changes",
+        "category": "Explorer for Endevor",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "e4e.sync.revertSectionChange",
+        "title": "Revert Element Change",
+        "category": "Explorer for Endevor",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "e4e.sync.confirmConflictResolution",
+        "title": "Confirm Element Conflict Resolution",
+        "category": "Explorer for Endevor",
+        "icon": "$(add)"
+      },
+      {
+        "command": "e4e.sync.confirmAllConflictResolutions",
+        "title": "Confirm All Element Conflict Resolutions",
+        "category": "Explorer for Endevor",
+        "icon": "$(add)"
       }
     ],
     "submenus": [
@@ -176,6 +264,73 @@
       }
     ],
     "menus": {
+      "scm/title": [
+        {
+          "command": "e4e.sync.syncWorkspace",
+          "when": "scmProvider == e4e.scm",
+          "group": "navigation"
+        },
+        {
+          "command": "e4e.sync.pullFromEndevor",
+          "when": "scmProvider == e4e.scm",
+          "group": "navigation"
+        },
+        {
+          "command": "e4e.sync.pullFromEndevor",
+          "group": "1_header@1",
+          "when": "scmProvider == e4e.scm"
+        }
+      ],
+      "scm/resourceGroup/context": [
+        {
+          "command": "e4e.sync.discardAllChanges",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.changes",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.sync.confirmAllConflictResolutions",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.mergeChanges",
+          "group": "inline"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "e4e.sync.openElement",
+          "when": "scmProvider == e4e.scm && scmResourceState != ELEMENT/REMOVED",
+          "group": "1_open"
+        },
+        {
+          "command": "e4e.sync.openElement",
+          "when": "scmProvider == e4e.scm && scmResourceState != ELEMENT/REMOVED",
+          "group": "inline@1"
+        },
+        {
+          "command": "e4e.sync.discardChanges",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.changes",
+          "group": "2_changes"
+        },
+        {
+          "command": "e4e.sync.discardChanges",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.changes",
+          "group": "inline@2"
+        },
+        {
+          "command": "e4e.sync.confirmConflictResolution",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.mergeChanges",
+          "group": "2_conflicts"
+        },
+        {
+          "command": "e4e.sync.confirmConflictResolution",
+          "when": "scmProvider == e4e.scm && scmResourceGroup == e4e.scm.group.mergeChanges",
+          "group": "inline@2"
+        }
+      ],
+      "scm/change/title": [
+        {
+          "command": "e4e.sync.revertSectionChange",
+          "when": "config.endevor.experimental.workspaceSync && e4e.scm.status == 'initialized'"
+        }
+      ],
       "e4e.generateElementUpTheMap": [
         {
           "command": "e4e.generateElementWithCopyBack",
@@ -267,17 +422,17 @@
         },
         {
           "command": "e4e.hideSearchLocation",
-          "when": "viewItem == LOCATION_PROFILE/INVALID",
+          "when": "viewItem == LOCATION_PROFILE/NON_EXISTING || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION",
           "group": "inline"
         },
         {
           "command": "e4e.hideSearchLocation",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION_PROFILE/INVALID",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION_PROFILE/NON_EXISTING || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION",
           "group": "e4e_search_location_actions@0"
         },
         {
           "command": "e4e.deleteSearchLocation",
-          "when": "viewItem == LOCATION",
+          "when": "viewItem == LOCATION || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION",
           "group": "e4e_search_location_actions@1"
         },
         {
@@ -287,17 +442,32 @@
         },
         {
           "command": "e4e.hideService",
-          "when": "viewItem == SERVICE_PROFILE/INVALID",
+          "when": "viewItem == SERVICE_PROFILE/NON_EXISTING || viewItem == SERVICE_PROFILE/INVALID_CREDENTIALS || viewItem == SERVICE_PROFILE/INVALID_CONNECTION || viewItem == SERVICE/NON_EXISTING || viewItem == SERVICE/INVALID_CREDENTIALS || viewItem == SERVICE/INVALID_CONNECTION",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.editConnectionDetails",
+          "when": "viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION/INVALID_CONNECTION",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.testConnectionDetails",
+          "when": "viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION/INVALID_CONNECTION",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.editCredentials",
+          "when": "viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CREDENTIALS",
           "group": "inline"
         },
         {
           "command": "e4e.hideService",
-          "when": "viewItem == SERVICE || viewItem == SERVICE_PROFILE || viewItem == SERVICE_PROFILE/INVALID",
+          "when": "viewItem == SERVICE || viewItem == SERVICE_PROFILE || viewItem == SERVICE_PROFILE/NON_EXISTING || viewItem == SERVICE_PROFILE/INVALID_CREDENTIALS || viewItem == SERVICE_PROFILE/INVALID_CONNECTION || viewItem == SERVICE/NON_EXISTING || viewItem == SERVICE/INVALID_CREDENTIALS || viewItem == SERVICE/INVALID_CONNECTION",
           "group": "e4e_service_actions@0"
         },
         {
           "command": "e4e.deleteService",
-          "when": "viewItem == SERVICE",
+          "when": "viewItem == SERVICE || viewItem == SERVICE/INVALID_CREDENTIALS || viewItem == SERVICE/INVALID_CONNECTION",
           "group": "e4e_service_actions@1"
         },
         {
@@ -308,10 +478,6 @@
       ],
       "commandPalette": [
         {
-          "command": "e4e.addNewSearchLocation",
-          "when": "false"
-        },
-        {
           "command": "e4e.addElementFromFileSystem",
           "when": "false"
         },
@@ -321,6 +487,18 @@
         },
         {
           "command": "e4e.hideService",
+          "when": "false"
+        },
+        {
+          "command": "e4e.editConnectionDetails",
+          "when": "false"
+        },
+        {
+          "command": "e4e.testConnectionDetails",
+          "when": "false"
+        },
+        {
+          "command": "e4e.editCredentials",
           "when": "false"
         },
         {
@@ -382,6 +560,42 @@
         {
           "command": "e4e.migrateLocationsFromSettings",
           "when": "config.profiles.keepInSync"
+        },
+        {
+          "command": "e4e.sync.initWorkspace",
+          "when": "config.endevor.experimental.workspaceSync && e4e.scm.status != 'initialized'"
+        },
+        {
+          "command": "e4e.sync.syncWorkspace",
+          "when": "config.endevor.experimental.workspaceSync && e4e.scm.status == 'initialized'"
+        },
+        {
+          "command": "e4e.sync.pullFromEndevor",
+          "when": "config.endevor.experimental.workspaceSync && e4e.scm.status == 'initialized'"
+        },
+        {
+          "command": "e4e.sync.openElement",
+          "when": "false"
+        },
+        {
+          "command": "e4e.sync.discardChanges",
+          "when": "false"
+        },
+        {
+          "command": "e4e.sync.discardAllChanges",
+          "when": "false"
+        },
+        {
+          "command": "e4e.sync.revertSectionChange",
+          "when": "false"
+        },
+        {
+          "command": "e4e.sync.confirmConflictResolution",
+          "when": "false"
+        },
+        {
+          "command": "e4e.sync.confirmAllConflictResolutions",
+          "when": "false"
         }
       ]
     },
@@ -452,9 +666,193 @@
           "default": true,
           "title": "Keep in sync with Zowe CLI",
           "description": "Keep Endevor configuration in sync with Zowe profiles or a Team Configuration file"
+        },
+        "endevor.experimental.workspaceSync": {
+          "type": "boolean",
+          "scope": "resource",
+          "title": "Endevor workspace sync",
+          "description": "Enable Endevor workspace synchronization capabilities for the opened workspace",
+          "default": false
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "e4e.gettingStartedWalkthrough",
+        "title": "Get Started with Explorer for Endevor",
+        "description": "Work on your Endevor project using VS Code.",
+        "steps": [
+          {
+            "id": "e4e.gettingStarted.openExtension",
+            "title": "Open the Explorer for Endevor Tree View",
+            "description": "The extension offers a custom Tree View to work with Endevor elements.\n[Open Extension](command:e4e.treeView.focus)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/resources/logo.png",
+              "altText": "Link to a remote image with an extension logo."
+            },
+            "completionEvents": [
+              "onCommand:e4e.treeView.focus"
+            ]
+          },
+          {
+            "id": "e4e.gettingStarted.defineConnectionDetails",
+            "title": "Connect to the Endevor Web Services",
+            "description": "Create a new Endevor connection or import existing connection profile from Zowe.\n[Connect to Endevor](command:e4e.addNewService)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/E4E-add-service.gif",
+              "altText": "Link to a remote gif file with an example from the extension UI."
+            },
+            "completionEvents": [
+              "onCommand:e4e.addNewService"
+            ]
+          },
+          {
+            "id": "e4e.gettingStarted.defineSearchLocation",
+            "title": "Search for elements",
+            "description": "Create a new Endevor inventory location or import an existing location profile from Zowe.\n[Search for Elements](command:e4e.addNewSearchLocation)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/E4E-add-search-location.gif",
+              "altText": "Link to a remote gif file with a search example from the extension UI."
+            },
+            "completionEvents": [
+              "onCommand:e4e.addNewSearchLocation"
+            ]
+          },
+          {
+            "id": "e4e.gettingStarted.openMoreWalkthroughs",
+            "title": "Learn how to use the extension",
+            "description": "Learn how to get started with Explorer for Endevor, using a series of practical guides.\n[Select a Guide](command:welcome.showAllWalkthroughs)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/E4E-more-guides.gif",
+              "altText": "Link to a remote gif file with a walkthrough search example."
+            },
+            "completionEvents": [
+              "onCommand:welcome.showAllWalkthroughs"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e4e.exploreSyncWorkspaceWalkthrough",
+        "title": "Introducing the Endevor Synchronized Workspace",
+        "description": "Work with the whole Endevor inventory locations locally using the synchronized workspaces.",
+        "steps": [
+          {
+            "id": "e4e.exploreSync.enableSync",
+            "title": "Enable Endevor Workspace synchronization feature",
+            "description": "To work with Endevor synchronized workspaces, please enable workspace synchronization in your settings.\n[Enable](command:workbench.action.openSettings?%5B%22endevor.workspaceSync%22%5D)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Setting.gif",
+              "altText": "Link to a remote gif file with a setting change example from the VSCode UI."
+            },
+            "completionEvents": [
+              "command:workbench.action.openSettings",
+              "onSettingChanged:config.endevor.experimental.workspaceSync",
+              "onContext:config.endevor.experimental.workspaceSync"
+            ]
+          },
+          {
+            "id": "e4e.exploreSync.openLocalFolder",
+            "title": "Select a Local Folder",
+            "description": "Select a folder to store and work with Endevor inventory location elements locally.\n[Select Folder](command:vscode.openFolder)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Folder.gif",
+              "altText": "Link to a remote gif file with selecting a folder example from the VSCode UI."
+            },
+            "completionEvents": [
+              "onCommand:vscode.openFolder",
+              "onContext:e4e.scm.status == 'initialized'"
+            ]
+          },
+          {
+            "id": "e4e.exploreSync.initializeWorkspace",
+            "title": "Initialize an Endevor Workspace",
+            "description": "Mark folder as an Endevor workspace to keep your own copy of the remote Endevor inventory locally.\n[Initialize an Endevor Workspace](command:e4e.sync.initWorkspace)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Init.gif",
+              "altText": "Link to a remote gif file with a workspace init example from the extension UI."
+            },
+            "completionEvents": [
+              "onCommand:e4e.sync.initWorkspace",
+              "onContext:e4e.scm.status == 'initialized'"
+            ]
+          },
+          {
+            "id": "e4e.exploreSync.pullFromEndevor",
+            "title": "Pull Endevor Elements",
+            "description": "Retrieve all elements from the remote inventory location to the initialized Endevor workspace. If you need more elements, add them to your remote inventory location and pull again.\n[Pull From Endevor](command:e4e.sync.pullFromEndevor)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Pull.gif",
+              "altText": "Link to a remote gif file with a pull example from the extension UI."
+            },
+            "completionEvents": [
+              "onCommand:e4e.sync.pullFromEndevor"
+            ]
+          },
+          {
+            "id": "e4e.exploreSync.editElements",
+            "title": "Work with an entire Endevor inventory location",
+            "description": "All the retrieved elements are regular files now. You can create new, modify, or remove them locally.\n[Show local workspace](command:workbench.files.action.focusFilesExplorer)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Workspace.gif",
+              "altText": "Link to a remote gif file with an element change example from the VSCode UI."
+            },
+            "completionEvents": [
+              "onCommand:workbench.files.action.focusFilesExplorer"
+            ]
+          },
+          {
+            "id": "e4e.exploreSync.syncWithEndevor",
+            "title": "Synchronize Endevor Workspace",
+            "description": "Synchronize the whole local workspace with local changes back to apply them to the remote inventory location. Resolve conflicts and synchronize back again if needed.\n[Synchronize Changes](command:e4e.sync.syncWorkspace)",
+            "media": {
+              "image": "https://raw.githubusercontent.com/eclipse/che-che4z-explorer-for-endevor/master/packages/explorer-for-endevor/images/Endevor_Sync_Sync.gif",
+              "altText": "Link to a remote gif file with a sync example from the extension UI."
+            },
+            "completionEvents": [
+              "onCommand:e4e.sync.syncWorkspace"
+            ]
+          }
+        ]
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "e4e.treeView",
+        "contents": "Initializing...",
+        "when": "!e4e.activated"
+      },
+      {
+        "view": "e4e.treeView",
+        "contents": "To start working with Explorer for Endevor, create or select your first Endevor connection and inventory location.\n[Add an Endevor Connection and Inventory Location](command:e4e.addServiceAndLocation)\nTo learn more about Explorer for Endevor configuration, review the [Getting Started Walkthrough](command:workbench.action.openWalkthrough?%5B%22BroadcomMFD.explorer-for-endevor%23e4e.gettingStartedWalkthrough%22%2C%20false%5D).",
+        "when": "e4e.activated"
+      },
+      {
+        "view": "explorer",
+        "contents": "You can also [open an Endevor workspace folder](command:vscode.openFolder), or create an Endevor synchronized workspace.\n[Initialize an Endevor Workspace](command:e4e.sync.initWorkspace)\nTo learn more about the Endevor synchronization feature, [read the article](https://medium.com/modern-mainframe/editing-synchronized-endevor-elements-locally-ff096d09eb5e) on Medium.",
+        "when": "config.endevor.experimental.workspaceSync"
+      },
+      {
+        "view": "scm",
+        "contents": "To work with Endevor synchronized workspaces, please enable workspace synchronization in your [settings](command:workbench.action.openSettings?%5B%22endevor.workspaceSync%22%5D).",
+        "when": "!config.endevor.experimental.workspaceSync"
+      },
+      {
+        "view": "scm",
+        "contents": "To work with Endevor synchronized workspace, you can [open a folder](command:vscode.openFolder) containing an existing synchronized workspace or create a new one.\n[Initialize an Endevor Workspace](command:e4e.sync.initWorkspace)",
+        "when": "config.endevor.experimental.workspaceSync && workbenchState == 'empty'"
+      },
+      {
+        "view": "scm",
+        "contents": "You can also initialize a new Endevor synchronized workspace.\n[Initialize an Endevor Workspace](command:e4e.sync.initWorkspace)",
+        "when": "config.endevor.experimental.workspaceSync && workbenchState == 'folder'"
+      },
+      {
+        "view": "scm",
+        "contents": "To learn more about the Endevor Workspace synchronization feature, read [this article](https://medium.com/modern-mainframe/editing-synchronized-endevor-elements-locally-ff096d09eb5e) on Medium or review the [Endevor Synchronized workspace Walkthough](command:workbench.action.openWalkthrough?%5B%22BroadcomMFD.explorer-for-endevor%23e4e.exploreSyncWorkspaceWalkthrough%22%2C%20false%5D) in VSCode.",
+        "when": "config.endevor.experimental.workspaceSync"
+      }
+    ]
   },
   "scripts": {
     "build:prod": "rimraf dist && webpack --config webpack.prod.js",
@@ -475,12 +873,13 @@
     "copy-into-repo-root": "copyfiles README.md CHANGELOG.md LICENSE NOTICE.md CONTRIBUTING.md ../../"
   },
   "dependencies": {
+    "@broadcom/endevor-for-zowe-cli": "^7.1.0",
     "@local/endevor": "1.0.0",
     "@local/extension": "1.0.0",
+    "@local/profiles": "1.0.0",
+    "@local/type-parser": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
-    "@zowe/imperative": "^5.3.3",
-    "@zowe/zowe-explorer-api": "2.2.1",
-    "@local/type-parser": "1.0.0"
+    "@zowe/imperative": "^5.3.3"
   },
   "extensionDependencies": [
     "Zowe.vscode-extension-for-zowe"
