@@ -55,7 +55,7 @@ export const mockClosingActiveEditorWith = (
 };
 
 export type ShowingFileContentStub = sinon.SinonStub<
-  [fileUri: Uri],
+  [fileUri: Uri, title?: string],
   Promise<void>
 >;
 export const mockShowingFileContentWith =

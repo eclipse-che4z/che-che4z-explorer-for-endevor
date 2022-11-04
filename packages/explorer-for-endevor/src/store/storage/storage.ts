@@ -21,7 +21,7 @@ import { SecretStorage } from 'vscode';
 import { UNKNOWN_VERSION } from '../../constants';
 import { logger } from '../../globals';
 import { isError, isString } from '../../utils';
-import { ProfileStore } from '../profiles/_doc/ProfileStore';
+import { ProfileStore } from '@local//profiles/_doc/ProfileStore';
 import {
   getConnections as getConnectionsFromProfiles,
   getCredential as getCredentialFromProfile,
@@ -107,16 +107,16 @@ export const createConnectionsStorage =
         } else {
           internalConnections = versionedConnections.value;
         }
-        let syncedConnections: Connections | Error | undefined = profilesStore
+        let syncedConnections: Connections | Error = profilesStore
           ? await getConnectionsFromProfiles(profilesStore)
-          : undefined;
+          : {};
         if (isError(syncedConnections)) {
           const error = syncedConnections;
           logger.error(
             `Unable to read Endevor profiles from Zowe.`,
             `Unable to read Endevor profiles from Zowe because of error: ${error.message}.`
           );
-          syncedConnections = undefined;
+          syncedConnections = {};
         }
         const mergedConnections: Connections = {
           ...internalConnections,
@@ -175,17 +175,16 @@ export const createInventoryLocationsStorage =
         } else {
           internalInventoryLocations = versionedInventoryLocations.value;
         }
-        let syncedInventoryLocations: InventoryLocations | Error | undefined =
-          profilesStore
-            ? await getInventoryLocationsFromProfiles(profilesStore)
-            : undefined;
+        let syncedInventoryLocations: InventoryLocations | Error = profilesStore
+          ? await getInventoryLocationsFromProfiles(profilesStore)
+          : {};
         if (isError(syncedInventoryLocations)) {
           const error = syncedInventoryLocations;
           logger.error(
             `Unable to read Endevor location profiles from Zowe.`,
             `Unable to read Endevor location profiles from Zowe because of error: ${error.message}.`
           );
-          syncedInventoryLocations = undefined;
+          syncedInventoryLocations = {};
         }
         const mergedInventoryLocations: InventoryLocations = {
           ...internalInventoryLocations,

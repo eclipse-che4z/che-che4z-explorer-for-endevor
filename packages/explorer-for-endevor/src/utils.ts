@@ -25,6 +25,7 @@ import {
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 import { EnvironmentStage } from '../../endevor/_doc/Endevor';
 import { Id } from './store/storage/_doc/Storage';
+import { setContextVariable } from '@local/vscode-wrapper/window';
 
 const isElementNode = (node: Node): node is ElementNode => {
   switch (node.type) {
@@ -59,6 +60,12 @@ export const isError = <T>(value: T | Error): value is Error => {
 
 export const isTuple = <T>(value: Array<T> | unknown): value is Array<T> => {
   return value instanceof Array;
+};
+
+export const isPromise = <T>(
+  value: Promise<T> | unknown
+): value is Promise<T> => {
+  return value instanceof Promise;
 };
 
 export const isString = (value: string | unknown): value is string => {
@@ -123,11 +130,7 @@ export const updateEditFoldersWhenContext = (() => {
     // update the list and the context only if there is no such value yet
     if (editFolders.includes(newEditFolder)) return;
     editFolders.push(newEditFolder);
-    vscode.commands.executeCommand(
-      'setContext',
-      DIFF_EDITOR_WHEN_CONTEXT_NAME,
-      editFolders
-    );
+    setContextVariable(DIFF_EDITOR_WHEN_CONTEXT_NAME, editFolders);
   };
 })();
 
@@ -219,13 +222,11 @@ export const isTheSameLocation =
     );
   };
 
-export const byTypeAndNameOrder = (
-  l: { name: string; type: string },
-  r: { name: string; type: string }
+export const byNameOrder = (
+  l: { name: string },
+  r: { name: string }
 ): number => {
-  return l.type.localeCompare(r.type) === -1
-    ? l.type.localeCompare(r.type)
-    : l.name.localeCompare(r.name);
+  return l.name.localeCompare(r.name);
 };
 
 export const getElementExtension = (element: {

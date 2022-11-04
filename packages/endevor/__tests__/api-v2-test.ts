@@ -20,7 +20,7 @@ import { ANY_VALUE } from '../const';
 import {
   printElement,
   printListing,
-  searchForElements,
+  searchForFirstFoundElements,
   signInElement,
   updateElement,
   addElement,
@@ -33,12 +33,18 @@ import {
   retrieveElementWithDependenciesWithoutSignout,
   getApiVersion,
   getConfigurations,
+  searchForAllElements,
+  searchForElementsInPlace,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import {
+  isConnectionError,
+  isDuplicateElementError,
   isError,
+  isFingerprintMismatchError,
   isProcessorStepMaxRcExceededError,
   isSignoutError,
+  isWrongCredentialsError,
   toEndevorProtocol,
 } from '../utils';
 import { BaseCredential, CredentialType } from '../_doc/Credential';
@@ -56,7 +62,14 @@ import {
   ServiceApiVersion,
   Service,
   ServiceBasePath,
+  UpdateStatus,
+  ErrorUpdateResponse,
 } from '../_doc/Endevor';
+import {
+  ConnectionError,
+  FingerprintMismatchError,
+  WrongCredentialsError,
+} from '../_doc/Error';
 import { MockRequest, MockResponse } from '../_doc/MockServer';
 import { ProgressReporter } from '../_doc/Progress';
 import { Elements } from '../_ext/Endevor';
@@ -77,7 +90,7 @@ const progress: ProgressReporter = {
 
 // mock values
 const rejectUnauthorized = false;
-const nonExistingServerURL = 'http://localhost:1234/';
+const nonExistingServerURL = 'http://127.0.0.1:1234/';
 
 // set up mock server
 const mockServer = getLocal();
@@ -174,9 +187,7 @@ describe('endevor public API v2', () => {
       expect(isError(actualApiVersion)).toEqual(true);
     });
 
-    // TODO: EndevorClient's weird behavior when no valid version header is provided
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('should return an error if something went wrong in Endevor side', async () => {
+    it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       const response: MockResponse<unknown> = {
         status: 200,
@@ -261,7 +272,7 @@ describe('endevor public API v2', () => {
         incorrectServiceLocation
       )(rejectUnauthorized);
       // assert
-      expect(isError(actualConfigurations)).toEqual(true);
+      expect(isConnectionError(actualConfigurations)).toEqual(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
@@ -501,7 +512,7 @@ describe('endevor public API v2', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualEnvironments)).toBe(true);
+      expect(isWrongCredentialsError(actualEnvironments)).toBe(true);
     });
 
     it('should return an error if something went wrong on Endevor side', async () => {
@@ -722,7 +733,7 @@ describe('endevor public API v2', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualSystems)).toBe(true);
+      expect(isWrongCredentialsError(actualSystems)).toBe(true);
     });
 
     it('should return an error in case of incorrect connection details', async () => {
@@ -955,7 +966,7 @@ describe('endevor public API v2', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualSubSystems)).toBe(true);
+      expect(isWrongCredentialsError(actualSubSystems)).toBe(true);
     });
 
     it('should return an error in case of incorrect connection details', async () => {
@@ -1040,7 +1051,205 @@ describe('endevor public API v2', () => {
         );
       };
 
-    it('should return filtered elements', async () => {
+    it('should return all filtered elements', async () => {
+      // arrange
+      const searchLocation: ElementSearchLocation = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subsystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+      };
+      const requestQuery = '?data=BAS&search=yes&return=ALL';
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(basePath)(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const validElements: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const invalidElements: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validElements.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+                fullElmName: element.name,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidElements.map((element: any) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualElements = await searchForAllElements(logger)(progress)(
+        service
+      )(searchLocation);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualElements).toEqual(validElements);
+    });
+
+    it('should return filtered elements in place', async () => {
+      // arrange
+      const searchLocation: ElementSearchLocation = {
+        configuration: 'TEST-CONFIG',
+        environment: 'TEST-ENV',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subsystem: 'TEST-SBS',
+        type: 'TEST-TYPE',
+      };
+      const requestQuery = '?data=BAS&search=no&return=FIR';
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(basePath)(searchLocation),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const validElements: ReadonlyArray<Element> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL1',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const invalidElements: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS',
+          name: 'TEST-EL2',
+          type: 'TEST-TYPE',
+          stageNumber: '1',
+          extension: 'ext',
+          configuration: 'TEST-CONFIG',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          version: '2.5',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validElements.map((element) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+                fullElmName: element.name,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidElements.map((element: any) => {
+              return {
+                envName: element.environment,
+                sysName: element.system,
+                sbsName: element.subSystem,
+                elmName: element.name,
+                typeName: element.type,
+                stgNum: element.stageNumber,
+                fileExt: element.extension,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualElements = await searchForElementsInPlace(logger)(progress)(
+        service
+      )(searchLocation);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualElements).toEqual(validElements);
+    });
+
+    it('should return filtered first found elements', async () => {
       // arrange
       const searchLocation: ElementSearchLocation = {
         configuration: 'TEST-CONFIG',
@@ -1128,9 +1337,9 @@ describe('endevor public API v2', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1227,9 +1436,9 @@ describe('endevor public API v2', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1280,9 +1489,9 @@ describe('endevor public API v2', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        wrongLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(wrongLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1303,9 +1512,9 @@ describe('endevor public API v2', () => {
       };
       const nonExistingService = toService(nonExistingServerURL);
       // act
-      const actualElements = await searchForElements(logger)(progress)(
-        nonExistingService
-      )(searchLocation);
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(nonExistingService)(searchLocation);
       // assert
       expect(isError(actualElements)).toBe(true);
     });
@@ -1349,15 +1558,15 @@ describe('endevor public API v2', () => {
       const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      expect(isError(actualElements)).toBe(true);
+      expect(isWrongCredentialsError(actualElements)).toBe(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
@@ -1399,9 +1608,9 @@ describe('endevor public API v2', () => {
       )(mockServer);
       const service = toService(mockServer.urlFor(request.path));
       // act
-      const actualElements = await searchForElements(logger)(progress)(service)(
-        searchLocation
-      );
+      const actualElements = await searchForFirstFoundElements(logger)(
+        progress
+      )(service)(searchLocation);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -3403,13 +3612,15 @@ describe('endevor public API v2', () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 0;
+      const messages: string[] = [];
       mockServer.forAnyRequest().thenJson(
         200,
         {
           data: [],
-          messages: [],
+          messages,
           reports: [],
-          returnCode: 0,
+          returnCode,
         },
         {
           'content-type': 'application/json',
@@ -3441,20 +3652,30 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(updateResult).toBeUndefined();
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
     });
 
     it('should add a new element', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 0;
+      const messages: string[] = [];
       mockServer.forAnyRequest().thenJson(
         200,
         {
           data: [],
-          messages: [],
+          messages,
           reports: [],
-          returnCode: 0,
+          returnCode,
         },
         {
           'content-type': 'application/json',
@@ -3487,24 +3708,34 @@ describe('endevor public API v2', () => {
         newElementLocation
       )(addActionChangeControlValue)(element);
       // assert
-      expect(updateResult).toBeUndefined();
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
     });
 
     it('should update an element even after change regression error', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = [
+        'EWS1117I Request processed by SysID A01SENF, STC TSO1MFTS - STC07435',
+        '03:41:46 SMGR123C 99% PRIOR INSERTS DELETED AND/OR 01% PRIOR DELETES RE-INSERTED',
+      ];
+      const returnCode = 8;
       mockServer.forAnyRequest().thenJson(
         200,
         {
-          returnCode: 8,
+          returnCode,
           reasonCode: 0,
           reports: null,
           data: [],
-          messages: [
-            'EWS1117I Request processed by SysID A01SENF, STC TSO1MFTS - STC07435',
-            '03:41:46 SMGR123C 99% PRIOR INSERTS DELETED AND/OR 01% PRIOR DELETES RE-INSERTED',
-          ],
+          messages,
         },
         {
           'content-type': 'application/json',
@@ -3536,7 +3767,15 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(updateResult).toBeUndefined();
+      expect(updateResult).toEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
     });
 
     it('should return an error for incorrect connection details', async () => {
@@ -3566,20 +3805,35 @@ describe('endevor public API v2', () => {
         nonExistingService
       )(newElementLocation)(addActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          error: new ConnectionError(
+            `connect ECONNREFUSED ${nonExistingService.location.hostname}:${nonExistingService.location.port}`
+          ),
+        },
+      });
+      expect(
+        isConnectionError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
     });
 
     it('should return an error for incorrect base credentials', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['API0034S INVALID USERID OR PASSWORD DETECTED'];
+      const returnCode = 20;
       mockServer.forAnyRequest().thenJson(
-        500,
+        401,
         {
-          returnCode: 20,
+          returnCode,
           reasonCode: 34,
           reports: null,
-          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          messages,
           data: [],
         },
         {
@@ -3612,20 +3866,36 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode,
+          error: new WrongCredentialsError(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+      expect(
+        isWrongCredentialsError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
     });
 
     it('should return an error for partially element location specified', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['EWS1232E Parameter system cannot be Wildcarded.'];
+      const returnCode = 12;
       mockServer.forAnyRequest().thenJson(
         500,
         {
-          returnCode: 12,
+          returnCode,
           reasonCode: 34,
           reports: null,
-          messages: ['EWS1232E Parameter system cannot be Wildcarded.'],
+          messages,
           data: [],
         },
         {
@@ -3658,22 +3928,32 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
     });
 
     it('should return an error for outdated fingerprint', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 12;
+      const messages = [
+        "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.",
+      ];
       mockServer.forAnyRequest().thenJson(
         500,
         {
-          returnCode: 12,
+          returnCode,
           reasonCode: 34,
           reports: null,
-          messages: [
-            "C1G0410E  FINGERPRINT DOESN'T MATCH ELEMENT ALREADY PRESENTED IN THE MAP. ELEMENT SOURCE HAS BEEN UPDATED BEFORE.",
-          ],
+          messages,
           data: [],
         },
         {
@@ -3706,10 +3986,24 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode,
+          error: new FingerprintMismatchError(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
+      expect(
+        isFingerprintMismatchError(
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          (updateResult as ErrorUpdateResponse).additionalDetails.error
+        )
+      ).toBeTruthy();
     });
 
-    it('should return an error for incorrect content', async () => {
+    it('should return update the element with empty content', async () => {
       // arrange
       const emptyContent = '';
       const existingFingerprint = '12345';
@@ -3726,32 +4020,59 @@ describe('endevor public API v2', () => {
         type: 'TEST-TYPE',
         name: 'ELM',
       };
+      const returnCode = 8;
+      const messages: string[] = [
+        '99% BASE STATEMENTS DELETED AND/OR NEW INSERTS EXCEED',
+      ];
+      mockServer.forAnyRequest().thenJson(
+        200,
+        {
+          data: [],
+          messages,
+          reports: [],
+          returnCode,
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
       };
-      const nonExistingService = toService(nonExistingServerURL);
+      const service = toService(mockServer.url);
       // act
-      const updateResult = await updateElement(logger)(progress)(
-        nonExistingService
-      )(existingElementLocation)(updateActionChangeControlValue)(element);
+      const updateResult = await updateElement(logger)(progress)(service)(
+        existingElementLocation
+      )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toStrictEqual({
+        status: UpdateStatus.OK,
+        additionalDetails: {
+          returnCode,
+          message: ['', ...messages.map((message) => message.trim())].join(
+            '\n'
+          ),
+        },
+      });
     });
 
     it('may return an error for incorrect ccid&comment', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 12;
+      const messages = [
+        '11:33:28  C1G0142E  SYSTEM REQUIRES A CCID TO BE SPECIFIED - REQUEST NOT PERFORMED',
+      ];
       mockServer.forAnyRequest().thenJson(
-        500,
+        400,
         {
-          returnCode: 12,
+          returnCode,
           reasonCode: 34,
           reports: null,
-          messages: [
-            '11:33:28  C1G0142E  SYSTEM REQUIRES A CCID TO BE SPECIFIED - REQUEST NOT PERFORMED',
-          ],
+          messages,
           data: [],
         },
         {
@@ -3784,20 +4105,30 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {
       // arrange
       // this chunked multipart/form-data request seems not available to be mocked with mockttp
       // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 20;
+      const messages = ['Something went really wrong....'];
       mockServer.forAnyRequest().thenJson(
         500,
         {
-          returnCode: 20,
+          returnCode,
           reasonCode: 34,
           reports: null,
-          messages: ['Something went really wrong....'],
+          messages,
           data: [],
         },
         {
@@ -3830,7 +4161,15 @@ describe('endevor public API v2', () => {
         existingElementLocation
       )(updateActionChangeControlValue)(element);
       // assert
-      expect(isError(updateResult)).toBe(true);
+      expect(updateResult).toEqual({
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode,
+          error: new Error(
+            `${['', ...messages.map((message) => message.trim())].join('\n')}`
+          ),
+        },
+      });
     });
   });
 
@@ -3897,7 +4236,7 @@ describe('endevor public API v2', () => {
         element
       )(addActionChangeControlValue)(content);
       // assert
-      expect(isError(addResult)).toBe(true);
+      expect(isConnectionError(addResult)).toBe(true);
     });
 
     it('should return an error for incorrect base credentials', async () => {
@@ -3937,7 +4276,7 @@ describe('endevor public API v2', () => {
         addActionChangeControlValue
       )(content);
       // assert
-      expect(isError(addResult)).toBe(true);
+      expect(isWrongCredentialsError(addResult)).toBe(true);
     });
 
     it('should return an error for partially element location specified', async () => {
@@ -4084,7 +4423,7 @@ describe('endevor public API v2', () => {
         addActionChangeControlValue
       )(content);
       // assert
-      expect(isError(addResult)).toBe(true);
+      expect(isDuplicateElementError(addResult)).toBe(true);
     });
 
     it('should return an error if something went wrong in Endevor side', async () => {

@@ -142,7 +142,6 @@ const generateSingleElementWithCopyBack =
       if (isElementInSearchLocation(copiedBackElement)(treePath)) {
         await dispatch({
           type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-          fetchElementsArgs: { service, searchLocation },
           targetLocation,
           pathUpTheMap: element,
           treePath: {
@@ -191,7 +190,6 @@ const generateSingleElementWithCopyBack =
     if (isElementInSearchLocation(copiedBackElement)(treePath)) {
       await dispatch({
         type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-        fetchElementsArgs: { service, searchLocation },
         targetLocation,
         pathUpTheMap: element,
         treePath: {

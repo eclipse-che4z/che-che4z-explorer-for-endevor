@@ -13,7 +13,13 @@
 
 import { URL } from 'url';
 import { UnreachableCaseError } from './typeHelpers';
-import { ServiceProtocol, StageNumber } from './_doc/Endevor';
+import {
+  ErrorUpdateResponse,
+  ServiceProtocol,
+  StageNumber,
+  UpdateResponse,
+  UpdateStatus,
+} from './_doc/Endevor';
 import {
   FingerprintMismatchError,
   ChangeRegressionError,
@@ -21,6 +27,8 @@ import {
   DuplicateElementError,
   ProcessorStepMaxRcExceededError,
   SelfSignedCertificateError,
+  WrongCredentialsError,
+  ConnectionError,
 } from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
@@ -111,6 +119,16 @@ export const stringifyWithHiddenCredential = (value: unknown): string => {
   );
 };
 
+export const stringifyPretty = (value: unknown): string => {
+  return JSON.stringify(value, null, 2);
+};
+
+export const isErrorUpdateResponse = (
+  value: UpdateResponse
+): value is ErrorUpdateResponse => {
+  return value.status === UpdateStatus.ERROR;
+};
+
 export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
@@ -145,10 +163,22 @@ export const isProcessorStepMaxRcExceededError = <T>(
   return value instanceof ProcessorStepMaxRcExceededError;
 };
 
+export const isWrongCredentialsError = <T>(
+  value: T | WrongCredentialsError
+): value is WrongCredentialsError => {
+  return value instanceof WrongCredentialsError;
+};
+
 export const isSelfSignedCertificateError = <T>(
   value: T | SelfSignedCertificateError
 ): value is SelfSignedCertificateError => {
   return value instanceof SelfSignedCertificateError;
+};
+
+export const isConnectionError = <T>(
+  value: T | ConnectionError
+): value is ConnectionError => {
+  return value instanceof ConnectionError;
 };
 
 export const toSeveralTasksProgress =

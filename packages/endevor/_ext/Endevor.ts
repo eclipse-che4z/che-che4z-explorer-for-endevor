@@ -170,12 +170,14 @@ export const Content = t.string;
 // new type for general response parsing
 export const BaseResponse = t.type({
   body: t.type({
+    statusCode: t.number,
     returnCode: new ReturnCodeType(),
   }),
 });
 
 export const BaseResponseWithMessages = t.type({
   body: t.type({
+    statusCode: t.number,
     returnCode: new ReturnCodeType(),
     messages: t.array(t.string),
   }),
@@ -183,6 +185,7 @@ export const BaseResponseWithMessages = t.type({
 
 export const BaseResponseWithUnknownData = t.type({
   body: t.type({
+    statusCode: t.number,
     data: t.array(t.unknown),
   }),
 });
@@ -203,6 +206,7 @@ export const V2ApiVersionResponse = t.type({
 
 export const SuccessPrintResponse = t.type({
   body: t.type({
+    statusCode: t.number,
     returnCode: new ReturnCodeType(),
     data: t.array(Content),
   }),
@@ -221,6 +225,7 @@ class RetrieveContentType extends t.Type<Buffer> {
 
 export const SuccessRetrieveResponse = t.type({
   body: t.type({
+    statusCode: t.number,
     returnCode: new ReturnCodeType(),
     data: t.array(new RetrieveContentType()),
   }),
@@ -243,6 +248,7 @@ export const SuccessListElementsResponse = BaseResponseWithUnknownData;
 
 export const SuccessListDependenciesResponse = t.type({
   body: t.type({
+    statusCode: t.number,
     returnCode: new ReturnCodeType(),
     data: t.array(
       t.type({

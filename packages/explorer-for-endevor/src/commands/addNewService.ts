@@ -11,7 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { withCancellableNotificationProgress } from '@local/vscode-wrapper/window';
+import {
+  focusOnView,
+  withCancellableNotificationProgress,
+} from '@local/vscode-wrapper/window';
 import {
   askForServiceOrCreateNew,
   dialogCancelled,
@@ -25,23 +28,26 @@ import {
 } from '../_doc/telemetry/v2/Telemetry';
 import { Action, Actions } from '../store/_doc/Actions';
 import {
+  EndevorConnectionStatus,
+  EndevorId,
   EndevorServiceName,
-  ValidEndevorServiceDescriptions,
+  ExistingEndevorServiceDescriptions,
 } from '../store/_doc/v2/Store';
+import { TREE_VIEW_ID } from '../constants';
 
 export const addNewService = async (
   configurations: {
     getAllServiceNames: () => ReadonlyArray<EndevorServiceName>;
-    getValidUnusedServiceDescriptions: () => ValidEndevorServiceDescriptions;
+    getValidServiceDescriptions: () => ExistingEndevorServiceDescriptions;
   },
   dispatch: (action: Action) => Promise<void>
-): Promise<void> => {
+): Promise<EndevorId | undefined> => {
   logger.trace('Add an Endevor connection called.');
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
   });
   const dialogResult = await askForServiceOrCreateNew({
-    servicesToChoose: configurations.getValidUnusedServiceDescriptions(),
+    servicesToChoose: configurations.getValidServiceDescriptions(),
     allExistingServices: configurations.getAllServiceNames(),
   })((location, rejectUnauthorized) =>
     withCancellableNotificationProgress('Testing Endevor connection ...')(
@@ -68,30 +74,53 @@ export const addNewService = async (
       status: CommandAddNewServiceCompletedStatus.EXISTING_SERVICE_ADDED,
       source: serviceId.source,
     });
-    return;
+    focusOnView(TREE_VIEW_ID);
+    return serviceId;
   }
   const createdService = dialogResult;
-  dispatch({
-    type: Actions.ENDEVOR_SERVICE_CREATED,
-    service: {
-      value: {
-        location: createdService.value.location,
-        rejectUnauthorized: createdService.value.rejectUnauthorized,
+  if (
+    createdService.value.connection.status === EndevorConnectionStatus.VALID
+  ) {
+    dispatch({
+      type: Actions.ENDEVOR_SERVICE_CREATED,
+      service: {
+        id: createdService.id,
+        value: createdService.value.connection.value,
+        credential: createdService.value.credential
+          ? {
+              value: createdService.value.credential,
+              id: createdService.id,
+            }
+          : undefined,
       },
-      apiVersion: createdService.value.apiVersion,
-      credential: createdService.value.credential
-        ? {
-            value: createdService.value.credential,
-            id: createdService.id,
-          }
-        : undefined,
-      id: createdService.id,
-    },
-  });
+      connectionStatus: {
+        status: createdService.value.connection.status,
+        apiVersion: createdService.value.connection.value.apiVersion,
+      },
+    });
+  } else {
+    dispatch({
+      type: Actions.ENDEVOR_SERVICE_CREATED,
+      service: {
+        id: createdService.id,
+        value: createdService.value.connection.value,
+        credential: createdService.value.credential
+          ? {
+              value: createdService.value.credential,
+              id: createdService.id,
+            }
+          : undefined,
+      },
+      connectionStatus: {
+        status: createdService.value.connection.status,
+      },
+    });
+  }
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED,
     status: CommandAddNewServiceCompletedStatus.NEW_SERVICE_CREATED,
     source: createdService.id.source,
   });
-  return;
+  focusOnView(TREE_VIEW_ID);
+  return createdService.id;
 };

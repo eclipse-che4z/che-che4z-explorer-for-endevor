@@ -21,14 +21,13 @@ import { Id } from '../../store/storage/_doc/Storage';
 import {
   getEditFolderUri,
   getElementExtension,
-  isError,
   parseFilePath,
   updateEditFoldersWhenContext,
 } from '../../utils';
-import { showSavedElementContent } from '../../workspace';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
-import { getFileExtensionResoluton } from '../../settings/settings';
+import { getFileExtensionResolution } from '../../settings/settings';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
+import { showFileContent } from '@local/vscode-wrapper/window';
 
 export const saveIntoEditFolder =
   (tempEditFolderUri: vscode.Uri) =>
@@ -67,11 +66,11 @@ export const saveIntoEditFolder =
 export const showElementToEdit = async (
   fileUri: vscode.Uri
 ): Promise<void | Error> => {
-  const showResult = await showSavedElementContent(fileUri);
-  if (isError(showResult)) {
-    const error = showResult;
+  try {
+    await showFileContent(fileUri);
+  } catch (e) {
     return new Error(
-      `Unable to open the element ${fileUri.fsPath} because of error ${error.message}`
+      `Unable to open the file ${fileUri.fsPath} because of error ${e.message}`
     );
   }
 };
@@ -82,7 +81,7 @@ const selectFileParams = (
   fileName: string;
   fileExtension?: string;
 } => {
-  const fileExtResolution = getFileExtensionResoluton();
+  const fileExtResolution = getFileExtensionResolution();
   switch (fileExtResolution) {
     case FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME:
       return {

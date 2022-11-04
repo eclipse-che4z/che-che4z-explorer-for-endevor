@@ -105,7 +105,24 @@ const getTelemetryEventProperties = (
     case V2TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT:
     case V2TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES:
     case V2TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
-    case V2TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION: {
+    case V2TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION:
+    case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED:
+    case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED:
+    case V2TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED:
+    case V2TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED:
+    case V2TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED:
+    case V2TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED:
+    case V2TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED:
+    case V2TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED:
+    case V2TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED:
+    case V2TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED:
+    case V2TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED:
+    case V2TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED:
+    case V2TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED:
+    case V2TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED:
+    case V2TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED:
+    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED:
+    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED: {
       return {
         ...Object.entries(event)
           .map(([key, value]) => {
@@ -129,7 +146,6 @@ const getTelemetryEventProperties = (
     }
     case V1TelemetryEvents.ELEMENTS_WERE_FETCHED:
     case V1TelemetryEvents.ELEMENTS_PROVIDED:
-    case V1TelemetryEvents.SERVICE_PROFILE_FETCHED:
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED:
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
     case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED:

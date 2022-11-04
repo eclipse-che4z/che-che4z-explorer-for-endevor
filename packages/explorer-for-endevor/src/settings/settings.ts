@@ -25,6 +25,9 @@ import {
   ELM_NAME_VALUE,
   TYPE_EXT_VALUE,
   TYPE_EXT_OR_NAME_VALUE,
+  WORKSPACE_SYNC_DEFAULT,
+  WORKSPACE_SYNC_SETTING,
+  EXPERIMENTAL_CONFIGURATION,
 } from '../constants';
 import { logger, reporter } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
@@ -39,6 +42,7 @@ import {
   FileExtensionsResolution,
   MaxParallelRequests,
   SyncWithProfiles,
+  WorkspaceSync,
 } from './_ext/v2/Settings';
 import {
   TelemetryEvents,
@@ -70,6 +74,14 @@ export const getMaxParallelRequestsSettingValue = (): number => {
     MAX_PARALLEL_REQUESTS_DEFAULT
   );
   return parseToType(MaxParallelRequests, parallelRequestsAmount);
+};
+
+export const getWorkspaceSyncSettingValue = (): boolean => {
+  const workspaceSync = getSettingsValue(EXPERIMENTAL_CONFIGURATION)(
+    WORKSPACE_SYNC_SETTING,
+    WORKSPACE_SYNC_DEFAULT
+  );
+  return parseToType(WorkspaceSync, workspaceSync);
 };
 
 export const getFileExtensionResolutionSettingValue =
@@ -158,6 +170,32 @@ export const watchForSyncProfilesChanges = () => {
           error: e,
           status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
         });
+      }
+    }
+  });
+};
+
+export const watchForWorkspaceSyncChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration(
+        `${EXPERIMENTAL_CONFIGURATION}.${WORKSPACE_SYNC_SETTING}`
+      )
+    ) {
+      let updatedWorkspaceSync;
+      try {
+        updatedWorkspaceSync = getWorkspaceSyncSettingValue();
+        logger.trace(
+          `Setting ${WORKSPACE_SYNC_SETTING} updated with the ${updatedWorkspaceSync} value.`
+        );
+        const reloadNow = await askToReloadWindowAfterSettingsChanged();
+        if (reloadNow) {
+          await reloadWindow();
+        }
+      } catch (e) {
+        logger.trace(
+          `Setting ${WORKSPACE_SYNC_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
       }
     }
   });
@@ -271,7 +309,19 @@ export const isSyncWithProfiles = (): boolean => {
   }
 };
 
-export const getFileExtensionResoluton = (): FileExtensionResolutions => {
+export const isWorkspaceSync = (): boolean => {
+  try {
+    return getWorkspaceSyncSettingValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for workspace synchronization, default: ${WORKSPACE_SYNC_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return WORKSPACE_SYNC_DEFAULT;
+  }
+};
+
+export const getFileExtensionResolution = (): FileExtensionResolutions => {
   try {
     return getFileExtensionResolutionSettingValue();
   } catch (e) {

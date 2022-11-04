@@ -12,6 +12,7 @@
  */
 
 import {
+  isErrorUpdateResponse,
   isFingerprintMismatchError,
   isSignoutError,
   stringifyWithHiddenCredential,
@@ -44,6 +45,7 @@ import {
   ChangeControlValue,
   ElementMapPath,
   SubSystemMapPath,
+  SuccessUpdateResponse,
 } from '@local/endevor/_doc/Endevor';
 import { Action, Actions } from '../store/_doc/Actions';
 import {
@@ -89,11 +91,9 @@ export const applyDiffEditorChanges = async (
   const {
     uploadTargetLocation,
     element,
-    endevorConnectionDetails: service,
     initialSearchContext: {
       serviceId,
       searchLocationId,
-      overallSearchLocation,
       initialSearchLocation,
     },
   } = uriParms;
@@ -131,6 +131,12 @@ export const applyDiffEditorChanges = async (
     );
     return;
   }
+  if (uploadResult && uploadResult.additionalDetails.returnCode >= 4) {
+    logger.warn(
+      `Element ${element.name} was updated with warnings`,
+      `Element ${element.name} was updated with warnings: ${uploadResult.additionalDetails.message}`
+    );
+  }
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL,
     context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
@@ -141,9 +147,7 @@ export const applyDiffEditorChanges = async (
     await dispatch({
       type: Actions.ELEMENT_ADDED,
       serviceId,
-      service,
       searchLocationId,
-      searchLocation: overallSearchLocation,
       element: {
         ...uploadTargetLocation,
         extension: element.extension,
@@ -164,7 +168,6 @@ export const applyDiffEditorChanges = async (
   }
   await dispatch({
     type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
-    fetchElementsArgs: { service, searchLocation: overallSearchLocation },
     treePath: {
       serviceId,
       searchLocationId,
@@ -241,7 +244,10 @@ const uploadElement =
     uploadTargetLocation: ElementMapPath
   ) =>
   (element: Element, elementUri: Uri) =>
-  async (fingerprint: string, content: string): Promise<void | Error> => {
+  async (
+    fingerprint: string,
+    content: string
+  ): Promise<void | Error | SuccessUpdateResponse> => {
     const uploadResult = await withNotificationProgress(
       `Uploading the element ${uploadTargetLocation.name}...`
     )((progressReporter) => {
@@ -252,7 +258,11 @@ const uploadElement =
         content,
       });
     });
-    if (isSignoutError(uploadResult)) {
+    if (!isErrorUpdateResponse(uploadResult)) {
+      return uploadResult;
+    }
+    const uploadError = uploadResult.additionalDetails.error;
+    if (isSignoutError(uploadError)) {
       logger.warn(
         `The element ${uploadTargetLocation.name} requires a sign out action to update/add elements.`
       );
@@ -280,11 +290,11 @@ const uploadElement =
         uploadTargetLocation
       )(element, elementUri)(fingerprint, content);
     }
-    if (isFingerprintMismatchError(uploadResult)) {
+    if (isFingerprintMismatchError(uploadError)) {
       logger.warn(
         `There is a conflict with the remote copy of element ${uploadTargetLocation.name}. Please resolve it before uploading again.`
       );
-      const fingerprintError = uploadResult;
+      const fingerprintError = uploadError;
       await closeActiveTextEditor();
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL,
@@ -305,8 +315,8 @@ const uploadElement =
       }
       return fingerprintError;
     }
-    if (isError(uploadResult)) {
-      const error = uploadResult;
+    if (isError(uploadError)) {
+      const error = uploadError;
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,

@@ -35,7 +35,12 @@ import {
 } from '../dialogs/_mocks/dialogs';
 import { LocationNode } from '../tree/_doc/ServiceLocationTree';
 import { Actions } from '../store/_doc/Actions';
-import { EndevorId } from '../store/_doc/v2/Store';
+import {
+  EndevorConnectionStatus,
+  EndevorCredential,
+  EndevorCredentialStatus,
+  EndevorId,
+} from '../store/_doc/v2/Store';
 import { Source } from '../store/storage/_doc/Storage';
 import { toServiceLocationCompositeKey } from '../store/utils';
 
@@ -72,6 +77,10 @@ describe('adding new element', () => {
     },
     rejectUnauthorized: false,
     apiVersion: ServiceApiVersion.V2,
+  };
+  const credential: EndevorCredential = {
+    value: service.credential,
+    status: EndevorCredentialStatus.VALID,
   };
   const searchLocationNodeName = 'LOC';
   const searchLocationNodeId: EndevorId = {
@@ -138,8 +147,13 @@ describe('adding new element', () => {
       await commands.executeCommand(
         CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
         () => {
-          return service;
+          return {
+            status: EndevorConnectionStatus.VALID,
+            value: service,
+          };
         },
+        () => searchLocation.configuration,
+        () => () => credential,
         () => {
           return searchLocation;
         },
@@ -171,9 +185,7 @@ describe('adding new element', () => {
     const expectedAddedElementAction = {
       type: Actions.ELEMENT_ADDED,
       serviceId,
-      service,
       searchLocationId: searchLocationNodeId,
-      searchLocation,
       element: addedElement,
     };
     assert.deepStrictEqual(

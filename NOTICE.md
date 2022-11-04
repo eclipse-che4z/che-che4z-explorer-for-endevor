@@ -32,9 +32,9 @@ The project maintains the following source code repositories:
 
 This project leverages the following third party content.
 
-@broadcom/endevor-for-zowe-cli (7.0.1)
+@broadcom/endevor-for-zowe-cli (7.2.0)
 
-- License: SEE LICENSE IN LICENSE
+- License: Broadcom Internal
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @colors/colors (1.5.0)
@@ -472,17 +472,17 @@ micromatch (4.0.4)
 - License: MIT
 - Project: https://www.npmjs.com/package/micromatch
 
-mime-db (1.51.0)
+mime-db (1.52.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-db
 
-mime-types (2.1.34)
+mime-types (2.1.35)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-types
 
-minimatch (3.0.4)
+minimatch (3.0.8)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/minimatch
@@ -656,11 +656,6 @@ streamroller (3.1.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/streamroller
-
-string-to-file-stream (1.3.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/string-to-file-stream
 
 string-width (4.2.3)
 

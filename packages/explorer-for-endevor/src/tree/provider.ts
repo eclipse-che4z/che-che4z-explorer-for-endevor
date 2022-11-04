@@ -14,7 +14,6 @@
 import * as vscode from 'vscode';
 import { Node } from './_doc/ServiceLocationTree';
 import {
-  addNewServiceButton,
   addNewSearchLocationButton,
   toServiceNodes,
   emptyMapNode,
@@ -23,24 +22,40 @@ import { buildTree } from './endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import {
   EndevorCacheItem,
+  EndevorConfiguration,
+  EndevorConnection,
+  EndevorCredential,
   EndevorId,
   EndevorServiceLocations,
 } from '../store/_doc/v2/Store';
-import { ElementSearchLocation, Service } from '@local/endevor/_doc/Endevor';
+import { ElementSearchLocation } from '@local/endevor/_doc/Endevor';
 import { toTreeItem } from './render';
-import { byTypeAndNameOrder } from '../utils';
+import { byNameOrder, isPromise } from '../utils';
 
 interface DataGetters {
   getServiceLocations: () => EndevorServiceLocations;
-  getService: (serviceId: EndevorId) => Promise<Service | undefined>;
+  getConnectionDetails: (
+    id: EndevorId
+  ) => Promise<EndevorConnection | undefined>;
+  getCredential: (
+    credentialId: EndevorId
+  ) => Promise<EndevorCredential | undefined>;
   getSearchLocation: (
-    serviceId: EndevorId
-  ) => (
     searchLocationId: EndevorId
-  ) => Promise<ElementSearchLocation | undefined>;
+  ) => Promise<Omit<ElementSearchLocation, 'configuration'> | undefined>;
+  getEndevorConfiguration: (
+    serviceId?: EndevorId,
+    searchLocationId?: EndevorId
+  ) => Promise<EndevorConfiguration | undefined>;
   getEndevorCache: (
-    serviceId: EndevorId
-  ) => (searchLocationId: EndevorId) => Promise<EndevorCacheItem | undefined>;
+    connection: EndevorConnection,
+    configuration: EndevorConfiguration,
+    credential: EndevorCredential,
+    elementsSearchLocation: Omit<ElementSearchLocation, 'configuration'>
+  ) => (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => EndevorCacheItem | undefined | Promise<undefined>;
 }
 
 export const make = (
@@ -54,24 +69,26 @@ export const make = (
     },
     async getChildren(node?: Node) {
       if (!node) {
-        const services = toServiceNodes(dataGetters.getServiceLocations()).sort(
-          byTypeAndNameOrder
+        return toServiceNodes(dataGetters.getServiceLocations()).sort(
+          byNameOrder
         );
-        if (services.length) return services;
-        return [addNewServiceButton];
       }
       switch (node.type) {
-        case 'BUTTON_ADD_SERVICE':
         case 'BUTTON_ADD_SEARCH_LOCATION':
           return [];
         case 'SERVICE':
         case 'SERVICE_PROFILE': {
-          const searchLocations = node.children.sort(byTypeAndNameOrder);
+          const searchLocations = node.children.sort(byNameOrder);
           if (searchLocations.length) return searchLocations;
           return [addNewSearchLocationButton(node)];
         }
-        case 'SERVICE_PROFILE/INVALID':
-          return node.children.sort(byTypeAndNameOrder);
+        case 'SERVICE_PROFILE/NON_EXISTING':
+        case 'SERVICE/NON_EXISTING':
+        case 'SERVICE_PROFILE/INVALID_CONNECTION':
+        case 'SERVICE/INVALID_CONNECTION':
+        case 'SERVICE_PROFILE/INVALID_CREDENTIALS':
+        case 'SERVICE/INVALID_CREDENTIALS':
+          return node.children.sort(byNameOrder);
         case 'LOCATION':
         case 'LOCATION_PROFILE': {
           const serviceId: EndevorId = {
@@ -82,55 +99,72 @@ export const make = (
             name: node.name,
             source: node.source,
           };
-          const endevorService = await dataGetters.getService(serviceId);
-          if (!endevorService) {
-            return [];
-          }
-          const elementsSearchLocation = await dataGetters.getSearchLocation(
+          const connectionDetails = await dataGetters.getConnectionDetails(
             serviceId
-          )(searchLocationId);
-          if (!elementsSearchLocation) {
-            return [];
-          }
-          const endevorCache = await dataGetters.getEndevorCache(serviceId)(
+          );
+          if (!connectionDetails) return [];
+          const configuration = await dataGetters.getEndevorConfiguration(
+            serviceId,
             searchLocationId
           );
-          if (
-            !endevorCache ||
-            !endevorCache.endevorMap ||
-            !endevorCache.elements
-          ) {
+          if (!configuration) return [];
+          const credential = await dataGetters.getCredential(serviceId);
+          if (!credential) return [];
+          const elementsSearchLocation = await dataGetters.getSearchLocation(
+            searchLocationId
+          );
+          if (!elementsSearchLocation) return [];
+          const endevorCache = dataGetters.getEndevorCache(
+            connectionDetails,
+            configuration,
+            credential,
+            elementsSearchLocation
+          )(serviceId, searchLocationId);
+          if (!endevorCache) return [];
+          // acts like a React effect:
+          //    get data from a cache (if available) and render it immediately
+          //    or
+          //    render with default value and fetch the actual data from REST API with the following rerender afterwards
+          const isPendingTask = isPromise(endevorCache);
+          if (isPendingTask) {
+            await endevorCache;
             return [];
           }
+          if (!endevorCache.elements || !endevorCache.endevorMap) return [];
           return buildTree(
             serviceId,
-            endevorService,
+            {
+              ...connectionDetails.value,
+              credential: credential.value,
+            },
             searchLocationId,
-            elementsSearchLocation
+            {
+              configuration,
+              ...elementsSearchLocation,
+            }
           )(endevorCache.endevorMap)(Object.values(endevorCache.elements)).sort(
-            (l, r) => l.name.localeCompare(r.name)
+            byNameOrder
           );
         }
-        case 'LOCATION_PROFILE/INVALID':
+        case 'LOCATION_PROFILE/NON_EXISTING':
+        case 'LOCATION/NON_EXISTING':
+        case 'LOCATION_PROFILE/INVALID_CONNECTION':
+        case 'LOCATION/INVALID_CONNECTION':
+        case 'LOCATION_PROFILE/INVALID_CREDENTIALS':
+        case 'LOCATION/INVALID_CREDENTIALS':
           return [];
         case 'SYS':
-          return Array.from(node.children.values()).sort((l, r) =>
-            l.name.localeCompare(r.name)
-          );
+          return Array.from(node.children.values()).sort(byNameOrder);
         case 'SUB':
-          return Array.from(node.children.values()).sort((l, r) =>
-            l.name.localeCompare(r.name)
-          );
+          return Array.from(node.children.values()).sort(byNameOrder);
         case 'TYPE':
           return [
             node.map,
-            ...Array.from(node.elements.values()).sort((l, r) =>
-              l.name.localeCompare(r.name)
-            ),
+            ...Array.from(node.elements.values()).sort(byNameOrder),
           ];
         case 'MAP': {
           const elementUpTheMap = Array.from(node.elements.values()).sort(
-            (l, r) => l.name.localeCompare(r.name)
+            byNameOrder
           );
           if (elementUpTheMap.length) {
             return elementUpTheMap;

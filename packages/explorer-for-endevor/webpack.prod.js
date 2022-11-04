@@ -45,7 +45,7 @@ const config = {
   plugins: [
     new BundledLicensesPlugin({
       override: {
-        '@broadcom/endevor-for-zowe-cli@7.2.3': {
+        '@broadcom/endevor-for-zowe-cli@7.2.0': {
           licenseName: 'Broadcom Internal',
         },
         '@zowe/cli@7.2.3': {

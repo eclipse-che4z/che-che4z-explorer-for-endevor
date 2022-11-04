@@ -12,6 +12,7 @@
  */
 
 import { logger, reporter } from './globals'; // this import has to be first, it initializes global state
+import { SectionChange } from '@local/vscode-wrapper/_doc/workspace';
 import * as vscode from 'vscode';
 import {
   EDIT_DIR,
@@ -19,18 +20,29 @@ import {
   EXT_VERSION,
   UNKNOWN_VERSION,
   ZE_API_MIN_VERSION,
+  SCM_ID,
+  SCM_CHANGES_GROUP_ID,
+  SCM_CHANGES_GROUP_LABEL,
+  SCM_LABEL,
+  SCM_STATUS_CONTEXT_NAME,
+  EXT_ACTIVATED_WHEN_CONTEXT_NAME,
+  SCM_MERGE_CHANGES_GROUP_LABEL,
+  SCM_MERGE_CHANGES_GROUP_ID,
 } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
 import {
   getAllServiceLocations,
   make as makeStore,
-  getService,
   getValidUnusedSearchLocationDescriptionsForService,
-  getValidUnusedServiceDescriptions,
+  getExistingUnusedServiceDescriptions,
   getAllServiceDescriptionsBySearchLocationId,
   getAllServiceNames,
   getAllSearchLocationNames,
+  getAllValidSearchLocationDescriptions,
+  getAllExistingServiceDescriptions,
+  getExistingUsedServiceDescriptions,
+  getEndevorConnectionDetails,
 } from './store/store';
 import {
   watchForAutoSignoutChanges,
@@ -40,6 +52,9 @@ import {
   getMaxParallelRequests,
   isSyncWithProfiles,
   watchForFileExtensionResolutionChanges,
+  isWorkspaceSync,
+  watchForWorkspaceSyncChanges,
+  getFileExtensionResolution,
 } from './settings/settings';
 import {
   Extension,
@@ -65,7 +80,13 @@ import { generateElementInPlaceCommand } from './commands/generateElementInPlace
 import { generateElementWithCopyBackCommand } from './commands/generateElementWithCopyBack';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './store/_doc/Actions';
-import { State } from './store/_doc/v2/Store';
+import {
+  EndevorConfiguration,
+  EndevorConnection,
+  EndevorCredential,
+  State,
+  ValidEndevorConnection,
+} from './store/_doc/v2/Store';
 import { Schemas } from './_doc/Uri';
 import { readOnlyFileContentProvider } from './view/readOnlyFileContentProvider';
 import { isEditedElementUri } from './uri/editedElementUri';
@@ -74,7 +95,10 @@ import { applyDiffEditorChanges } from './commands/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/addElementFromFileSystem';
 import { TelemetryEvents as V2TelemetryEvents } from './_doc/telemetry/v2/Telemetry';
 import { TelemetryEvents as V1TelemetryEvents } from './_doc/Telemetry';
-import { deleteDirectoryWithContent } from '@local/vscode-wrapper/workspace';
+import {
+  deleteDirectoryWithContent,
+  getWorkspaceUri,
+} from '@local/vscode-wrapper/workspace';
 import {
   createConnectionLocationsStorage,
   createConnectionsStorage,
@@ -87,26 +111,80 @@ import {
   SettingsStorage,
 } from './store/storage/_doc/Storage';
 import {
+  defineValidCredentialsResolutionOrder,
   defineEndevorCacheResolver,
+  defineEndevorConfigurationResolutionOrder,
   defineSearchLocationResolutionOrder,
-  defineServiceResolutionOrder,
+  defineValidConnectionDetailsResolutionOrder,
+  resolveValidCredentials,
   resolveEndevorCache,
+  resolveEndevorConfiguration,
   resolveSearchLocation,
-  resolveService,
+  resolveValidConnectionDetails,
+  resolveAnyConnectionDetails,
+  // defineAnyConnectionDetailsResolutionOrder,
+  resolveAnyCredentials,
+  defineAnyCredentialsResolutionOrder,
+  defineAnyConnectionDetailsResolutionOrder,
 } from './store/resolvers';
 import {
   LocationNode,
   ServiceNode,
   Node,
+  ValidServiceNode,
+  InvalidLocationNode,
 } from './tree/_doc/ServiceLocationTree';
 import { migrateConnectionLocationsFromSettings } from './store/storage/migrate';
 import { deleteSearchLocation } from './commands/deleteSearchLocation';
 import { deleteService } from './commands/deleteService';
 import { submitExtensionIssue } from './commands/submitExtensionIssue';
-import { ProfileStore } from './store/profiles/_doc/ProfileStore';
-import { ProfileTypes } from './store/profiles/_ext/Profile';
-import { isProfileStoreError } from './store/profiles/_doc/Error';
-import { profilesStoreFromZoweExplorer } from './store/profiles/profiles';
+import { ProfileStore } from '@local/profiles/_doc/ProfileStore';
+import { ProfileTypes } from '@local/profiles/_ext/Profile';
+import { isProfileStoreError } from '@local/profiles/_doc/Error';
+import { profilesStoreFromZoweExplorer } from '@local/profiles/profiles';
+import { cachedElementContentProvider } from './view/cachedElementContentProvider';
+import {
+  State as ScmState,
+  ScmStatus,
+  WorkspaceElementType,
+} from './store/scm/_doc/Workspace';
+import {
+  getElementOriginalVersionForFile,
+  getElementOriginalVersions,
+  getWorkspaceChangeForFile,
+  getAllWorkspaceChanges,
+  make as makeScmStore,
+  getNonConflictedWorkspaceChangeForFile,
+} from './store/scm/store';
+import {
+  makeFileExplorerDecorationProvider,
+  makeQuickDiffProvider,
+  scmTreeProvider,
+} from './tree/scmProvider';
+import { isWorkspace as isEndevorWorkspace } from './store/scm/workspace';
+import { watchForFiles, watchForMetadataChanges } from './store/scm/watchers';
+import { initWorkspace } from './commands/sync/initWorkspace';
+import { syncWorkspace } from './commands/sync/syncWorkspace';
+import {
+  focusOnView,
+  reloadWindow,
+  setContextVariable,
+} from '@local/vscode-wrapper/window';
+import { discardChangesCommand } from './commands/sync/discardChanges';
+import { revertSectionChangeCommand } from './commands/sync/revertSectionChange';
+import { toCachedElementUri } from './uri/cachedElementUri';
+import { SyncAction, SyncActions } from './store/scm/_doc/Actions';
+import { editCredentials } from './commands/editCredentials';
+import { pullFromEndevorCommand } from './commands/sync/pullFromEndevor';
+import { editConnectionDetails } from './commands/editConnectionDetails';
+import { ElementSearchLocation } from '@local/endevor/_doc/Endevor';
+import { openElementCommand } from './commands/sync/openElement';
+import { testConnectionDetails } from './commands/testConnectionDetails';
+import { showModifiedElementCommand } from './commands/sync/showModifiedElement';
+import { showDeletedElementCommand } from './commands/sync/showDeletedElement';
+import { showAddedElementCommand } from './commands/sync/showAddedElement';
+import { confirmConflictResolutionCommand } from './commands/sync/confirmConflictResolution';
+import { showConflictedElementCommand } from './commands/sync/showConflictedElement';
 
 const cleanTempDirectory = async (
   tempEditFolderUri: vscode.Uri
@@ -167,7 +245,7 @@ export const initializeProfilesStore = async (): Promise<
   ProfileStore | undefined
 > => {
   if (!isSyncWithProfiles()) return;
-  const profilesStore = await profilesStoreFromZoweExplorer([
+  const profilesStore = await profilesStoreFromZoweExplorer(logger)([
     ProfileTypes.ENDEVOR,
     ProfileTypes.ENDEVOR_LOCATION,
   ])(ZE_API_MIN_VERSION);
@@ -186,7 +264,6 @@ export const activate: Extension['activate'] = async (context) => {
   logger.trace(
     `${context.extension.id} extension with the build number: ${__E4E_BUILD_NUMBER__} will be activated.`
   );
-  logger.trace(vscode.env.machineId);
 
   const tempEditFolderUri = joinUri(context.globalStorageUri)(EDIT_DIR);
   await cleanTempDirectory(tempEditFolderUri);
@@ -200,7 +277,9 @@ export const activate: Extension['activate'] = async (context) => {
     searchLocations: {},
     serviceLocations: {},
   };
-  const refreshTree = (_node?: Node) => treeChangeEmitter.fire(null);
+  const refreshTree = (_node?: Node) => {
+    treeChangeEmitter.fire(null);
+  };
 
   const getState = () => stateForTree;
 
@@ -255,29 +334,55 @@ export const activate: Extension['activate'] = async (context) => {
     }
   );
 
-  const serviceResolver = resolveService(
-    defineServiceResolutionOrder(getState, dispatch)
+  const connectionDetailsResolver = resolveValidConnectionDetails(
+    defineValidConnectionDetailsResolutionOrder(getState, dispatch)
+  );
+  const credentialsResolver = (
+    connection: ValidEndevorConnection,
+    configuration: EndevorConfiguration
+  ) =>
+    resolveValidCredentials(
+      defineValidCredentialsResolutionOrder(
+        getState,
+        dispatch,
+        connection,
+        configuration
+      )
+    );
+  const endevorConfigurationResolver = resolveEndevorConfiguration(
+    defineEndevorConfigurationResolutionOrder(getState)
   );
   const searchLocationResolver = resolveSearchLocation(
     defineSearchLocationResolutionOrder(getState)
   );
 
-  const cacheResolver = resolveEndevorCache(
-    defineEndevorCacheResolver(
-      getState,
-      serviceResolver,
-      (serviceId) => (searchLocationId) =>
-        searchLocationResolver(serviceId, searchLocationId),
-      dispatch
-    )
-  );
+  const cacheResolver = (
+    connection: EndevorConnection,
+    configuration: EndevorConfiguration,
+    credential: EndevorCredential,
+    elementsSearchLocation: Omit<ElementSearchLocation, 'configuration'>
+  ) =>
+    resolveEndevorCache(
+      defineEndevorCacheResolver(
+        getState,
+        connection,
+        configuration,
+        credential,
+        elementsSearchLocation,
+        dispatch
+      )
+    );
   const treeProvider = makeElmTreeProvider(treeChangeEmitter, {
     getServiceLocations: () => getAllServiceLocations(getState),
-    getService: serviceResolver,
-    getSearchLocation: (serviceId) => (searchLocationId) =>
-      searchLocationResolver(serviceId, searchLocationId),
-    getEndevorCache: (serviceId) => (searchLocationId) =>
-      cacheResolver(serviceId, searchLocationId),
+    getConnectionDetails: resolveAnyConnectionDetails(
+      defineAnyConnectionDetailsResolutionOrder(getState)
+    ),
+    getCredential: resolveAnyCredentials(
+      defineAnyCredentialsResolutionOrder(getState)
+    ),
+    getEndevorConfiguration: endevorConfigurationResolver,
+    getSearchLocation: searchLocationResolver,
+    getEndevorCache: cacheResolver,
   });
 
   const withErrorLogging =
@@ -298,9 +403,10 @@ export const activate: Extension['activate'] = async (context) => {
     reporter.sendTelemetryEvent({
       type: V1TelemetryEvents.REFRESH_COMMAND_CALLED,
     });
-    await dispatch({
+    dispatch({
       type: Actions.REFRESH,
     });
+    await focusOnView(TREE_VIEW_ID);
   };
 
   const editElement = editElementCommand({
@@ -309,6 +415,18 @@ export const activate: Extension['activate'] = async (context) => {
   });
 
   const commands = [
+    [
+      CommandId.EDIT_CREDENTIALS,
+      (invalidLocationNode: InvalidLocationNode) => {
+        return withErrorLogging(CommandId.EDIT_CREDENTIALS)(
+          editCredentials(
+            endevorConfigurationResolver,
+            connectionDetailsResolver,
+            dispatch
+          )(invalidLocationNode)
+        );
+      },
+    ],
     [
       CommandId.PRINT_ELEMENT,
       (resourceUri: vscode.Uri) => {
@@ -328,13 +446,48 @@ export const activate: Extension['activate'] = async (context) => {
     [CommandId.REFRESH_TREE_VIEW, refresh],
     [CommandId.SUBMIT_ISSUE, submitExtensionIssue],
     [
+      CommandId.ADD_SERVICE_AND_LOCATION,
+      () => {
+        return withErrorLogging(CommandId.ADD_SERVICE_AND_LOCATION)(
+          (async () => {
+            const serviceId = await addNewService(
+              {
+                getValidServiceDescriptions: () =>
+                  getExistingUnusedServiceDescriptions(getState),
+                getAllServiceNames: () => getAllServiceNames(getState),
+              },
+              dispatch
+            );
+            if (serviceId) {
+              return addNewSearchLocation(
+                {
+                  getSearchLocationNames: () =>
+                    getAllSearchLocationNames(getState),
+                  getValidSearchLocationDescriptionsForService:
+                    getValidUnusedSearchLocationDescriptionsForService(
+                      getState
+                    ),
+                  getServiceDescriptionsBySearchLocationId:
+                    getAllServiceDescriptionsBySearchLocationId(getState),
+                  getConnectionDetails: connectionDetailsResolver,
+                  getValidUsedServiceDescriptions: () =>
+                    getExistingUsedServiceDescriptions(getState),
+                },
+                dispatch
+              )(serviceId);
+            }
+          })()
+        );
+      },
+    ],
+    [
       CommandId.ADD_NEW_SERVICE,
       () => {
         return withErrorLogging(CommandId.ADD_NEW_SERVICE)(
           addNewService(
             {
-              getValidUnusedServiceDescriptions: () =>
-                getValidUnusedServiceDescriptions(getState),
+              getValidServiceDescriptions: () =>
+                getExistingUnusedServiceDescriptions(getState),
               getAllServiceNames: () => getAllServiceNames(getState),
             },
             dispatch
@@ -344,16 +497,18 @@ export const activate: Extension['activate'] = async (context) => {
     ],
     [
       CommandId.ADD_NEW_SEARCH_LOCATION,
-      (serviceNode: ServiceNode) => {
+      (serviceNode?: ValidServiceNode) => {
         return withErrorLogging(CommandId.ADD_NEW_SEARCH_LOCATION)(
           addNewSearchLocation(
             {
               getSearchLocationNames: () => getAllSearchLocationNames(getState),
-              getValidUnusedSearchLocationDescriptionsForService:
+              getValidSearchLocationDescriptionsForService:
                 getValidUnusedSearchLocationDescriptionsForService(getState),
               getServiceDescriptionsBySearchLocationId:
                 getAllServiceDescriptionsBySearchLocationId(getState),
-              getServiceById: getService(getState),
+              getConnectionDetails: connectionDetailsResolver,
+              getValidUsedServiceDescriptions: () =>
+                getExistingUsedServiceDescriptions(getState),
             },
             dispatch
           )(serviceNode)
@@ -403,7 +558,9 @@ export const activate: Extension['activate'] = async (context) => {
       (parentNode: LocationNode) => {
         return withErrorLogging(CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM)(
           addElementFromFileSystem(
-            serviceResolver,
+            connectionDetailsResolver,
+            endevorConfigurationResolver,
+            credentialsResolver,
             searchLocationResolver,
             dispatch,
             parentNode
@@ -515,9 +672,7 @@ export const activate: Extension['activate'] = async (context) => {
             await getConnectionsStorage().delete();
             await getInventoryLocationsStorage().delete();
             await getSettingsStorage().delete();
-            dispatch({
-              type: Actions.REFRESH,
-            });
+            await reloadWindow();
           })()
         );
       },
@@ -531,8 +686,31 @@ export const activate: Extension['activate'] = async (context) => {
             await migrateConnectionLocations(() => connectionLocationsStorage)(
               UNKNOWN_VERSION
             );
-            dispatch({ type: Actions.REFRESH });
+            await reloadWindow();
           })()
+        );
+      },
+    ],
+    [CommandId.INIT_WORKSPACE, initWorkspace],
+    [
+      CommandId.EDIT_CONNECTION_DETAILS,
+      (invalidLocationNode: InvalidLocationNode) => {
+        return withErrorLogging(CommandId.EDIT_CONNECTION_DETAILS)(
+          editConnectionDetails(
+            getEndevorConnectionDetails(getState),
+            dispatch
+          )(invalidLocationNode)
+        );
+      },
+    ],
+    [
+      CommandId.TEST_CONNECTION_DETAILS,
+      (invalidLocationNode: InvalidLocationNode) => {
+        return withErrorLogging(CommandId.TEST_CONNECTION_DETAILS)(
+          testConnectionDetails(
+            getEndevorConnectionDetails(getState),
+            dispatch
+          )(invalidLocationNode)
         );
       },
     ],
@@ -573,13 +751,13 @@ export const activate: Extension['activate'] = async (context) => {
       Schemas.READ_ONLY_FILE,
       readOnlyFileContentProvider
     ),
-
     ...commands.map(([id, command]) =>
       vscode.commands.registerCommand(id, command)
     ),
     watchForAutoSignoutChanges(),
     watchForMaxEndevorRequestsChanges(),
     watchForSyncProfilesChanges(),
+    watchForWorkspaceSyncChanges(),
     watchForFileExtensionResolutionChanges(),
     vscode.workspace.onDidSaveTextDocument((document) =>
       textDocumentSavedHandlers
@@ -589,13 +767,253 @@ export const activate: Extension['activate'] = async (context) => {
         })
     )
   );
+
+  const isWorkspaceSyncEnabled = isWorkspaceSync();
+  if (isWorkspaceSyncEnabled) {
+    setContextVariable(SCM_STATUS_CONTEXT_NAME, ScmStatus.UNKNOWN);
+    const folderUri = await getWorkspaceUri();
+    if (folderUri && isEndevorWorkspace(folderUri)) {
+      const endevorSourceControl = vscode.scm.createSourceControl(
+        SCM_ID,
+        SCM_LABEL,
+        folderUri
+      );
+      // hide scm common input box for now
+      endevorSourceControl.inputBox.visible = false;
+      const endevorMergeChangesResourceGroup =
+        endevorSourceControl.createResourceGroup(
+          SCM_MERGE_CHANGES_GROUP_ID,
+          SCM_MERGE_CHANGES_GROUP_LABEL
+        );
+
+      endevorMergeChangesResourceGroup.hideWhenEmpty = true;
+      const endevorChangesResourceGroup =
+        endevorSourceControl.createResourceGroup(
+          SCM_CHANGES_GROUP_ID,
+          SCM_CHANGES_GROUP_LABEL
+        );
+      endevorChangesResourceGroup.hideWhenEmpty = true;
+      let scmState: ScmState = [];
+      const getScmState = () => scmState;
+      const updateScmState = (state: ScmState) => {
+        scmState = state;
+      };
+      const fileExplorerChangeEmitter = new vscode.EventEmitter<undefined>();
+      const fileExplorerDecorationProvider = makeFileExplorerDecorationProvider(
+        fileExplorerChangeEmitter,
+        getWorkspaceChangeForFile(getScmState)
+      );
+      const originalCacheVersionChangeEmitter =
+        new vscode.EventEmitter<vscode.Uri>();
+      const renderScmUI = (action?: SyncAction) => {
+        scmTreeProvider([
+          {
+            group: endevorMergeChangesResourceGroup,
+            changeTypes: [WorkspaceElementType.ELEMENT_CONFLICTED],
+          },
+          {
+            group: endevorChangesResourceGroup,
+            changeTypes: [
+              WorkspaceElementType.ELEMENT_ADDED,
+              WorkspaceElementType.ELEMENT_MODIFIED,
+              WorkspaceElementType.ELEMENT_REMOVED,
+            ],
+          },
+        ])(() => getAllWorkspaceChanges(getScmState));
+        fileExplorerChangeEmitter.fire(undefined);
+        if (
+          action?.type === SyncActions.WORKSPACE_SYNCED ||
+          action?.type === SyncActions.WORKSPACE_SYNCED_ONEWAY
+        ) {
+          getElementOriginalVersions(getScmState).forEach(
+            (workspaceElement) => {
+              originalCacheVersionChangeEmitter.fire(
+                toCachedElementUri(workspaceElement.workspaceElementUri)
+              );
+            }
+          );
+          return;
+        }
+      };
+      endevorSourceControl.quickDiffProvider = makeQuickDiffProvider(
+        getElementOriginalVersionForFile(getScmState)
+      );
+      const scmDispatch = await makeScmStore(
+        renderScmUI,
+        updateScmState
+      )(folderUri);
+      context.subscriptions.push(
+        watchForFiles(folderUri)(scmDispatch),
+        watchForMetadataChanges(folderUri)(scmDispatch),
+        endevorSourceControl,
+        endevorChangesResourceGroup,
+        vscode.window.registerFileDecorationProvider(
+          fileExplorerDecorationProvider
+        ),
+        vscode.workspace.registerTextDocumentContentProvider(
+          Schemas.READ_ONLY_CACHED_ELEMENT,
+          cachedElementContentProvider(
+            getElementOriginalVersionForFile(getScmState),
+            originalCacheVersionChangeEmitter.event
+          )
+        )
+      );
+      const scmCommands = [
+        [
+          CommandId.SYNC_WORKSPACE,
+          () => {
+            return withErrorLogging(CommandId.SYNC_WORKSPACE)(
+              syncWorkspace(
+                {
+                  getValidServiceDescriptions: () =>
+                    getAllExistingServiceDescriptions(getState),
+                  getValidSearchLocationDescriptions: () =>
+                    getAllValidSearchLocationDescriptions(getState),
+                  getConnectionDetails: connectionDetailsResolver,
+                  getEndevorConfiguration: endevorConfigurationResolver,
+                  getCredential: credentialsResolver,
+                  getSearchLocation: searchLocationResolver,
+                },
+                scmDispatch
+              )
+            );
+          },
+        ],
+        [
+          CommandId.PULL_FROM_ENDEVOR,
+          () => {
+            return withErrorLogging(CommandId.PULL_FROM_ENDEVOR)(
+              pullFromEndevorCommand(
+                {
+                  getValidServiceDescriptions: () =>
+                    getAllExistingServiceDescriptions(getState),
+                  getValidSearchLocationDescriptions: () =>
+                    getAllValidSearchLocationDescriptions(getState),
+                  getConnectionDetails: connectionDetailsResolver,
+                  getEndevorConfiguration: endevorConfigurationResolver,
+                  getCredential: credentialsResolver,
+                  getElementLocation: searchLocationResolver,
+                },
+                scmDispatch
+              )
+            );
+          },
+        ],
+        [
+          CommandId.SHOW_ADDED_ELEMENT,
+          (resourceUri: vscode.Uri) => {
+            return withErrorLogging(CommandId.SHOW_ADDED_ELEMENT)(
+              showAddedElementCommand(resourceUri)
+            );
+          },
+        ],
+        [
+          CommandId.SHOW_DELETED_ELEMENT,
+          (resourceUri: vscode.Uri) => {
+            return withErrorLogging(CommandId.SHOW_DELETED_ELEMENT)(
+              showDeletedElementCommand(resourceUri)
+            );
+          },
+        ],
+        [
+          CommandId.SHOW_MODIFIED_ELEMENT,
+          (resourceUri: vscode.Uri) => {
+            return withErrorLogging(CommandId.SHOW_MODIFIED_ELEMENT)(
+              showModifiedElementCommand(resourceUri)
+            );
+          },
+        ],
+        [
+          CommandId.SHOW_CONFLICTED_ELEMENT,
+          (resourceUri: vscode.Uri) => {
+            return withErrorLogging(CommandId.SHOW_CONFLICTED_ELEMENT)(
+              showConflictedElementCommand(resourceUri)
+            );
+          },
+        ],
+        [
+          CommandId.OPEN_ELEMENT,
+          (...resourceStates: vscode.SourceControlResourceState[]) => {
+            return withErrorLogging(CommandId.OPEN_ELEMENT)(
+              openElementCommand(resourceStates)
+            );
+          },
+        ],
+        [
+          CommandId.DISCARD_CHANGES,
+          (...resourceStates: vscode.SourceControlResourceState[]) => {
+            return withErrorLogging(CommandId.DISCARD_CHANGES)(
+              discardChangesCommand(
+                getNonConflictedWorkspaceChangeForFile(getScmState)
+              )(scmDispatch)(resourceStates)
+            );
+          },
+        ],
+        [
+          CommandId.DISCARD_ALL_CHANGES,
+          (resourceGroup: vscode.SourceControlResourceGroup) => {
+            return withErrorLogging(CommandId.DISCARD_ALL_CHANGES)(
+              discardChangesCommand(
+                getNonConflictedWorkspaceChangeForFile(getScmState)
+              )(scmDispatch)(resourceGroup.resourceStates)
+            );
+          },
+        ],
+        [
+          CommandId.REVERT_SECTION_CHANGE,
+          (
+            elementUri: vscode.Uri,
+            sectionChanges: SectionChange[],
+            changeIndex: number
+          ) => {
+            return withErrorLogging(CommandId.REVERT_SECTION_CHANGE)(
+              revertSectionChangeCommand(
+                elementUri,
+                sectionChanges,
+                changeIndex
+              )
+            );
+          },
+        ],
+        [
+          CommandId.CONFIRM_CONFLICT_RESOLUTION,
+          (...resourceStates: vscode.SourceControlResourceState[]) => {
+            return withErrorLogging(CommandId.CONFIRM_CONFLICT_RESOLUTION)(
+              confirmConflictResolutionCommand(scmDispatch)(resourceStates)
+            );
+          },
+        ],
+        [
+          CommandId.CONFIRM_ALL_CONFLICT_RESOLUTIONS,
+          (resourceGroup: vscode.SourceControlResourceGroup) => {
+            return withErrorLogging(CommandId.CONFIRM_ALL_CONFLICT_RESOLUTIONS)(
+              confirmConflictResolutionCommand(scmDispatch)(
+                resourceGroup.resourceStates
+              )
+            );
+          },
+        ],
+      ] as const;
+      context.subscriptions.push(
+        ...scmCommands.map(([id, command]) =>
+          vscode.commands.registerCommand(id, command)
+        )
+      );
+      setContextVariable(SCM_STATUS_CONTEXT_NAME, ScmStatus.INITIALIZED);
+    }
+  }
+
   reporter.sendTelemetryEvent({
     type: V2TelemetryEvents.EXTENSION_ACTIVATED,
     buildNumber: __E4E_BUILD_NUMBER__,
     autoSignOut: isAutomaticSignOut(),
     maxParallelRequests: getMaxParallelRequests(),
     syncWithProfiles: isSyncWithProfiles(),
+    fileExtensionResolution: getFileExtensionResolution(),
+    workspaceSync: isWorkspaceSync(),
   });
+
+  setContextVariable(EXT_ACTIVATED_WHEN_CONTEXT_NAME, true);
 };
 
 export const deactivate: Extension['deactivate'] = () => {

@@ -68,10 +68,21 @@ export const buildTree =
     const searchSubsystemDefined = elementsSearchLocation.subsystem;
 
     const elementsInPlace: Array<CachedElement> = [];
-    const elementsUpTheMap: Array<CachedElement> = [];
+    const elementsUpTheMap: Map<
+      SubsystemMapPathId,
+      Array<CachedElement>
+    > = new Map();
     elements.forEach((element) => {
       if (isElementUpTheMap(elementsSearchLocation)(element.element)) {
-        elementsUpTheMap.push(element);
+        let elementsCache = elementsUpTheMap.get(
+          toSubsystemMapPathId(element.element)
+        );
+        if (elementsCache) elementsCache.push(element);
+        else elementsCache = [element];
+        elementsUpTheMap.set(
+          toSubsystemMapPathId(element.element),
+          elementsCache
+        );
       } else {
         elementsInPlace.push(element);
       }
@@ -197,94 +208,76 @@ export const buildTree =
         const skipValue = true;
         return skipValue;
       });
-    const addElementUpTheMap = async (
-      elementUpTheMap: CachedElement
-    ): Promise<void> => {
-      const endevorElement = elementUpTheMap.element;
-      const elementMapPath = toSubsystemMapPathId(endevorElement);
-      [...addedSubsystemsInPlace, ...skippedSubsystemsInPlace].forEach(
-        (subsystemInPlace) => {
-          const subsystemAlreadyInTree = isTuple(subsystemInPlace);
-          if (subsystemAlreadyInTree) {
-            const [subsystemMapPathId, subsystemNode] = subsystemInPlace;
-            const coveredMapPaths = endevorMap[subsystemMapPathId];
-            if (!isDefined(coveredMapPaths)) {
-              logger.trace(
-                `Unable to show the element ${endevorElement.name} in the tree, because an opened subsystem ${subsystemMapPathId} is not presented in the Endevor map.`
-              );
-              return;
-            }
-            const isElementUpTheMap = coveredMapPaths.filter((mapPath) => {
-              return mapPath === elementMapPath;
-            }).length;
-            if (isElementUpTheMap) {
-              const typeNode = addTypeNode()(subsystemNode)(endevorElement);
-              const nodeName =
-                endevorElement.name +
-                ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
-              const elementNode = toUpTheMapElementNode(
-                serviceId,
-                service,
-                searchLocationId,
-                elementsSearchLocation
-              )(elementUpTheMap)(typeNode)(nodeName);
-              if (isError(elementNode)) {
-                const error = elementNode;
-                logger.trace(
-                  `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
-                );
-                return;
-              }
-              typeNode.map.elements.set(nodeName, elementNode);
-              return;
-            }
-          } else {
-            const subsystemMapPathId = toSubsystemMapPathId({
-              environment: searchEnvironment,
-              stageNumber: searchStageNumber,
-              system: subsystemInPlace.system,
-              subSystem: subsystemInPlace.subSystem,
-            });
-            const coveredMapPaths = endevorMap[subsystemMapPathId];
-            if (!isDefined(coveredMapPaths)) {
-              logger.trace(
-                `Unable to show the element ${endevorElement.name} in the tree, because an opened subsystem ${subsystemMapPathId} is not presented in the Endevor map.`
-              );
-              return;
-            }
-            const isElementUpTheMap = coveredMapPaths.filter((mapPath) => {
-              return mapPath === elementMapPath;
-            }).length;
-            if (isElementUpTheMap) {
-              const typeNode = addTypeNode()()({
-                ...endevorElement,
-                system: subsystemInPlace.system,
-                subSystem: subsystemInPlace.subSystem,
-              });
-              const nodeName =
-                endevorElement.name +
-                ` [${endevorElement.environment}/${endevorElement.stageNumber}]`;
-              const elementNode = toUpTheMapElementNode(
-                serviceId,
-                service,
-                searchLocationId,
-                elementsSearchLocation
-              )(elementUpTheMap)(typeNode)(nodeName);
-              if (isError(elementNode)) {
-                const error = elementNode;
-                logger.trace(
-                  `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
-                );
-                return;
-              }
-              typeNode.map.elements.set(nodeName, elementNode);
-              return;
+    const addElementUpTheMap =
+      (subsystemNode?: SubSystemNode) =>
+      (system?: string, subSystem?: string) =>
+      async (elementUpTheMap: CachedElement): Promise<void> => {
+        const endevorElement = elementUpTheMap.element;
+        const typeNode = addTypeNode()(subsystemNode)({
+          ...endevorElement,
+          system: system ? system : endevorElement.system,
+          subSystem: subSystem ? subSystem : endevorElement.subSystem,
+        });
+        if (
+          typeNode.elements.get(endevorElement.name) ||
+          typeNode.map.elements.get(endevorElement.name)
+        )
+          return;
+        const nodeName = endevorElement.name;
+        const elementNode = toUpTheMapElementNode(
+          serviceId,
+          service,
+          searchLocationId,
+          elementsSearchLocation
+        )(elementUpTheMap)(typeNode)(nodeName);
+        if (isError(elementNode)) {
+          const error = elementNode;
+          logger.trace(
+            `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
+          );
+          return;
+        }
+        typeNode.map.elements.set(nodeName, elementNode);
+        return;
+      };
+    [...addedSubsystemsInPlace, ...skippedSubsystemsInPlace].forEach(
+      (subsystemInPlace) => {
+        const subsystemAlreadyInTree = isTuple(subsystemInPlace);
+        if (subsystemAlreadyInTree) {
+          const [subsystemMapPathId, subsystemNode] = subsystemInPlace;
+          const coveredMapPaths = endevorMap[subsystemMapPathId];
+          if (!isDefined(coveredMapPaths)) {
+            return;
+          }
+          for (const route of coveredMapPaths) {
+            elementsUpTheMap
+              .get(route)
+              ?.forEach(addElementUpTheMap(subsystemNode)());
+          }
+        } else {
+          const subsystemMapPathId = toSubsystemMapPathId({
+            environment: searchEnvironment,
+            stageNumber: searchStageNumber,
+            system: subsystemInPlace.system,
+            subSystem: subsystemInPlace.subSystem,
+          });
+          const coveredMapPaths = endevorMap[subsystemMapPathId];
+          if (!isDefined(coveredMapPaths)) {
+            return;
+          }
+          for (const route of coveredMapPaths) {
+            const routElementsUpTheMap = elementsUpTheMap.get(route);
+            if (!routElementsUpTheMap) continue;
+            for (const ele of routElementsUpTheMap) {
+              addElementUpTheMap()(
+                subsystemInPlace.system,
+                subsystemInPlace.subSystem
+              )(ele);
             }
           }
         }
-      );
-    };
-    elementsUpTheMap.forEach(addElementUpTheMap);
+      }
+    );
 
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ELEMENTS_PROVIDED,
@@ -295,7 +288,7 @@ export const buildTree =
         types,
       },
       elementsUpTheMap: {
-        elements: elementsUpTheMap.length,
+        elements: elements.length - elementsInPlace.length,
       },
     });
     return Array.from(tree.values());
@@ -306,7 +299,7 @@ const toInPlaceElementNode =
     serviceId: EndevorId,
     service: Service,
     searchLocationId: EndevorId,
-    elementsSearchLocation: ElementSearchLocation
+    searchLocation: ElementSearchLocation
   ) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
@@ -316,7 +309,7 @@ const toInPlaceElementNode =
       searchLocationId,
       service,
       element,
-      searchLocation: elementsSearchLocation,
+      searchLocation,
     })(lastRefreshTimestamp.toString());
     if (isError(serializedUri)) {
       const error = serializedUri;
@@ -338,7 +331,7 @@ const toUpTheMapElementNode =
     serviceId: EndevorId,
     service: Service,
     searchLocationId: EndevorId,
-    elementsSearchLocation: ElementSearchLocation
+    searchLocation: ElementSearchLocation
   ) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
@@ -348,7 +341,7 @@ const toUpTheMapElementNode =
       searchLocationId,
       service,
       element,
-      searchLocation: elementsSearchLocation,
+      searchLocation,
     })(lastRefreshTimestamp.toString());
     if (isError(serializedUri)) {
       const error = serializedUri;
