@@ -12,6 +12,7 @@
  */
 
 import {
+  isErrorUpdateResponse,
   isFingerprintMismatchError,
   isSignoutError,
   stringifyWithHiddenCredential,
@@ -46,6 +47,7 @@ import {
   ElementSearchLocation,
   Service,
   SubSystemMapPath,
+  SuccessUpdateResponse,
 } from '@local/endevor/_doc/Endevor';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
 import { TextDecoder } from 'util';
@@ -127,6 +129,12 @@ export const uploadElementCommand = async (
     }
     return;
   }
+  if (uploadResult && uploadResult.additionalDetails.returnCode >= 4) {
+    logger.warn(
+      `Element ${element.name} was updated with warnings`,
+      `Element ${element.name} was updated with warnings: ${uploadResult.additionalDetails.message}`
+    );
+  }
   await safeRemoveUploadedElement(elementUri);
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
@@ -137,9 +145,7 @@ export const uploadElementCommand = async (
     await dispatch({
       type: Actions.ELEMENT_ADDED,
       serviceId,
-      service,
       searchLocationId,
-      searchLocation,
       element: {
         ...uploadLocation,
         extension: element.extension,
@@ -159,7 +165,6 @@ export const uploadElementCommand = async (
   }
   await dispatch({
     type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
-    fetchElementsArgs: { service, searchLocation },
     treePath: {
       serviceId,
       searchLocationId,
@@ -213,7 +218,7 @@ const uploadElement =
     element: Element,
     elementFilePath: string,
     fingerprint: string
-  ): Promise<void | Error> => {
+  ): Promise<void | Error | SuccessUpdateResponse> => {
     const content = await readEditedElementContent(elementFilePath);
     if (isError(content)) {
       const error = content;
@@ -235,7 +240,11 @@ const uploadElement =
         content,
       });
     });
-    if (isSignoutError(uploadResult)) {
+    if (!isErrorUpdateResponse(uploadResult)) {
+      return uploadResult;
+    }
+    const uploadError = uploadResult.additionalDetails.error;
+    if (isSignoutError(uploadError)) {
       logger.warn(
         `The element ${uploadTargetLocation.name} requires a sign out action to update/add elements.`
       );
@@ -263,7 +272,7 @@ const uploadElement =
         fingerprint
       );
     }
-    if (isFingerprintMismatchError(uploadResult)) {
+    if (isFingerprintMismatchError(uploadError)) {
       logger.warn(
         `There is a conflict with the remote copy of element ${uploadTargetLocation.name}. Please resolve it before uploading again.`
       );
@@ -310,8 +319,8 @@ const uploadElement =
       }
       return;
     }
-    if (isError(uploadResult)) {
-      const error = uploadResult;
+    if (isError(uploadError)) {
+      const error = uploadError;
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
@@ -319,7 +328,7 @@ const uploadElement =
         error,
       });
     }
-    return uploadResult;
+    return uploadError;
   };
 
 const readEditedElementContent = async (
@@ -392,7 +401,7 @@ const complexSignoutElement =
         })
       );
       if (isError(overrideSignoutResult)) {
-        const error = signOutResult;
+        const error = overrideSignoutResult;
         return new Error(
           `Unable to perform an override signout of the element ${element.name} because of error ${error.message}`
         );

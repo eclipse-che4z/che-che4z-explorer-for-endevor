@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { COMMAND_PREFIX } from '../constants';
+import { COMMAND_PREFIX, SYNC_PREFIX } from '../constants';
 
 export const CommandId = {
   CLEANUP_STORAGE: `${COMMAND_PREFIX}.cleanupStorage`,
@@ -19,6 +19,7 @@ export const CommandId = {
   PRINT_ELEMENT: `${COMMAND_PREFIX}.printElement`,
   PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
   REFRESH_TREE_VIEW: `${COMMAND_PREFIX}.refreshTreeView`,
+  ADD_SERVICE_AND_LOCATION: `${COMMAND_PREFIX}.addServiceAndLocation`,
   ADD_NEW_SERVICE: `${COMMAND_PREFIX}.addNewService`,
   ADD_NEW_SEARCH_LOCATION: `${COMMAND_PREFIX}.addNewSearchLocation`,
   HIDE_SEARCH_LOCATION: `${COMMAND_PREFIX}.hideSearchLocation`,
@@ -39,4 +40,22 @@ export const CommandId = {
   SIGN_OUT_ELEMENT: `${COMMAND_PREFIX}.signOutElement`,
   SIGN_IN_ELEMENT: `${COMMAND_PREFIX}.signInElement`,
   MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
+  EDIT_CONNECTION_DETAILS: `${COMMAND_PREFIX}.editConnectionDetails`,
+  TEST_CONNECTION_DETAILS: `${COMMAND_PREFIX}.testConnectionDetails`,
+  EDIT_CREDENTIALS: `${COMMAND_PREFIX}.editCredentials`,
+
+  // sync commands
+  INIT_WORKSPACE: `${COMMAND_PREFIX}.${SYNC_PREFIX}.initWorkspace`,
+  SYNC_WORKSPACE: `${COMMAND_PREFIX}.${SYNC_PREFIX}.syncWorkspace`,
+  PULL_FROM_ENDEVOR: `${COMMAND_PREFIX}.${SYNC_PREFIX}.pullFromEndevor`,
+  SHOW_ADDED_ELEMENT: `${COMMAND_PREFIX}.${SYNC_PREFIX}.showAddedElement`,
+  SHOW_DELETED_ELEMENT: `${COMMAND_PREFIX}.${SYNC_PREFIX}.showDeletedElement`,
+  SHOW_MODIFIED_ELEMENT: `${COMMAND_PREFIX}.${SYNC_PREFIX}.showModifiedElement`,
+  SHOW_CONFLICTED_ELEMENT: `${COMMAND_PREFIX}.${SYNC_PREFIX}.showConflictedElement`,
+  OPEN_ELEMENT: `${COMMAND_PREFIX}.${SYNC_PREFIX}.openElement`,
+  DISCARD_CHANGES: `${COMMAND_PREFIX}.${SYNC_PREFIX}.discardChanges`,
+  DISCARD_ALL_CHANGES: `${COMMAND_PREFIX}.${SYNC_PREFIX}.discardAllChanges`,
+  REVERT_SECTION_CHANGE: `${COMMAND_PREFIX}.${SYNC_PREFIX}.revertSectionChange`,
+  CONFIRM_CONFLICT_RESOLUTION: `${COMMAND_PREFIX}.${SYNC_PREFIX}.confirmConflictResolution`,
+  CONFIRM_ALL_CONFLICT_RESOLUTIONS: `${COMMAND_PREFIX}.${SYNC_PREFIX}.confirmAllConflictResolutions`,
 };

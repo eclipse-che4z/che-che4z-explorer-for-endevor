@@ -16,9 +16,9 @@ import {
   stringifyWithHiddenCredential,
   isError,
   isDefined,
-  isChangeRegressionError,
   toSeveralTasksProgress,
   toCorrectBasePathFormat,
+  stringifyPretty,
 } from './utils';
 import {
   AddUpdElement,
@@ -43,9 +43,7 @@ import {
   ServiceLocation,
   ElementContent,
   ListingContent,
-  DomainUpdateParams,
   ServiceInstance,
-  SdkUpdateParams,
   OverrideSignOut,
   ElementWithDependenciesWithSignout,
   EnvironmentStage,
@@ -58,6 +56,10 @@ import {
   GenerateSignOutParams,
   ServiceApiVersion,
   Configuration,
+  SearchStrategies,
+  SDK_FROM_FILE_DESCRIPTION,
+  UpdateResponse as InternalUpdateResponse,
+  UpdateStatus,
 } from './_doc/Endevor';
 import {
   Session,
@@ -97,12 +99,30 @@ import { PromisePool } from 'promise-pool-tool';
 import {
   getTypedErrorFromEndevorError,
   SignoutError,
-  FingerprintMismatchError,
   DuplicateElementError,
   ProcessorStepMaxRcExceededError,
   getTypedErrorFromHttpError,
   SelfSignedCertificateError,
+  WrongCredentialsError,
+  makeError,
+  ErrorContextTypes,
+  ConnectionError,
+  getTypedErrorFromEndevorCode,
+  getTypedErrorFromHttpCode,
 } from './_doc/Error';
+import { Readable } from 'stream';
+
+const toEndevorSession =
+  ({ protocol, hostname, port, basePath }: ServiceLocation) =>
+  (rejectUnauthorized: boolean): Session => {
+    return new Session({
+      protocol,
+      hostname,
+      port,
+      basePath: toCorrectBasePathFormat(basePath),
+      rejectUnauthorized,
+    });
+  };
 
 export const getApiVersion =
   (logger: Logger) =>
@@ -168,18 +188,29 @@ export const getConfigurations =
   (serviceLocation: ServiceLocation) =>
   async (
     rejectUnauthorized: boolean
-  ): Promise<ReadonlyArray<Configuration> | Error> => {
+  ): Promise<ReadonlyArray<Configuration> | Error | ConnectionError> => {
     const session = toEndevorSession(serviceLocation)(rejectUnauthorized);
     progress.report({ increment: 30 });
     let response: BaseResponse;
+    const errorMessage = `Unable to get endevor configurations for service`;
+    const makeErrorWithReason = makeError(errorMessage);
     try {
       response = await EndevorClient.listInstances(session);
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the list of Endevor configurations because of error ${error.message}`
-      );
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
     }
     progress.report({ increment: 50 });
     if (response.body.returnCode) {
@@ -240,408 +271,7 @@ export const getConfigurations =
     return configurations;
   };
 
-const toEndevorSession =
-  ({ protocol, hostname, port, basePath }: ServiceLocation) =>
-  (rejectUnauthorized: boolean): Session => {
-    return new Session({
-      protocol,
-      hostname,
-      port,
-      basePath: toCorrectBasePathFormat(basePath),
-      rejectUnauthorized,
-    });
-  };
-
-export const getAllEnvironmentStages =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  async (
-    configuration: string
-  ): Promise<ReadonlyArray<EnvironmentStage> | Error> => {
-    const session = toSecuredEndevorSession(logger)(service);
-    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
-    };
-    progress.report({ increment: 30 });
-    let response: BaseResponse;
-    try {
-      response = await EndevorClient.listStage(session)(configuration)(
-        requestArgs
-      );
-      response = parseToType(BaseResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the environments stages for the configuration ${configuration} because of error ${error.message}`
-      );
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: SuccessListEnvironmentStagesResponse | ErrorResponse;
-    if (response.body.returnCode) {
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (error) {
-        logger.trace(
-          `Unable to provide a failed response reason because of error ${
-            error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
-        );
-      }
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of response code ${
-          parsedResponse.body.returnCode
-        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
-      );
-    }
-    try {
-      parsedResponse = parseToType(
-        SuccessListEnvironmentStagesResponse,
-        response
-      );
-    } catch (error) {
-      logger.trace(
-        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of error ${
-          error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
-      );
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the environments stages for the Endevor configuration ${configuration} because of incorrect response`
-      );
-    }
-    const environments = parsedResponse.body.data
-      .map((environment) => {
-        try {
-          return parseToType(ExternalEnvironmentStage, environment);
-        } catch (e) {
-          logger.trace(
-            `Unable to fetch the environment ${JSON.stringify(
-              environment
-            )} because of error ${e.message} in the response.`
-          );
-          return;
-        }
-      })
-      .filter(isDefined)
-      .map((environment) => {
-        return {
-          environment: environment.envName,
-          stageNumber: environment.stgNum,
-          nextEnvironment:
-            environment.nextEnv === null ? undefined : environment.nextEnv,
-          nextStageNumber:
-            environment.nextStgNum === null
-              ? undefined
-              : environment.nextStgNum,
-        };
-      });
-    progress.report({ increment: 20 });
-    return environments;
-  };
-
-export const getAllSystems =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  async (configuration: Value): Promise<ReadonlyArray<System> | Error> => {
-    const session = toSecuredEndevorSession(logger)(service);
-    const requestArgs: ElmSpecDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
-      system: ANY_VALUE,
-    };
-    progress.report({ increment: 30 });
-    let response: BaseResponse;
-    try {
-      response = await EndevorClient.listSystem(session)(configuration)(
-        requestArgs
-      );
-      response = parseToType(BaseResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the systems from the Endevor configuration ${configuration} because of error ${error.message}`
-      );
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: SuccessListSystemsResponse | ErrorResponse;
-    if (response.body.returnCode) {
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (error) {
-        logger.trace(
-          `Unable to provide a failed response reason because of error ${
-            error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to fetch the systems from the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
-        );
-      }
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the systems from the Endevor configuration ${configuration} because of response code ${
-          parsedResponse.body.returnCode
-        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
-      );
-    }
-    try {
-      parsedResponse = parseToType(SuccessListSystemsResponse, response);
-    } catch (error) {
-      logger.trace(
-        `Unable to fetch the systems from the Endevor configuration ${configuration} because of error ${
-          error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
-      );
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the systems from the Endevor configuration ${configuration} because of incorrect response`
-      );
-    }
-    const systems = parsedResponse.body.data
-      .map((system) => {
-        try {
-          return parseToType(ExternalSystem, system);
-        } catch (e) {
-          logger.trace(
-            `Unable to fetch the system ${JSON.stringify(
-              system
-            )} because of error ${e.message} in the response.`
-          );
-          return;
-        }
-      })
-      .filter(isDefined)
-      .map((system) => {
-        return {
-          environment: system.envName,
-          // we treat stage sequence number as a stage number here,
-          // because with search for systems in all environments (*),
-          // each environment will be treated independently, so sequence number will be the same as stage number
-          // TODO: change to stageID
-          stageNumber: system.stgSeqNum,
-          system: system.sysName,
-          nextSystem: system.nextSys,
-        };
-      });
-    progress.report({ increment: 20 });
-    return systems;
-  };
-
-export const getAllSubSystems =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  async (configuration: string): Promise<ReadonlyArray<SubSystem> | Error> => {
-    const session = toSecuredEndevorSession(logger)(service);
-    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
-      system: ANY_VALUE,
-      subsystem: ANY_VALUE,
-    };
-    progress.report({ increment: 30 });
-    let response: BaseResponse;
-    try {
-      response = await EndevorClient.listSubsystem(session)(configuration)(
-        requestArgs
-      );
-      response = parseToType(BaseResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of error ${error.message}`
-      );
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: SuccessListSubSystemsResponse | ErrorResponse;
-    if (response.body.returnCode) {
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (error) {
-        logger.trace(
-          `Unable to provide a failed response reason because of error ${
-            error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of response code ${response.body.returnCode}`
-        );
-      }
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of response code ${
-          parsedResponse.body.returnCode
-        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
-      );
-    }
-    try {
-      parsedResponse = parseToType(SuccessListSubSystemsResponse, response);
-    } catch (error) {
-      logger.trace(
-        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of error ${
-          error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
-      );
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the subsystems from the Endevor configuration ${configuration} because of incorrect response`
-      );
-    }
-    const subSystems = parsedResponse.body.data
-      .map((subSystem) => {
-        try {
-          return parseToType(ExternalSubSystem, subSystem);
-        } catch (e) {
-          logger.trace(
-            `Unable to fetch the subsystem ${JSON.stringify(
-              subSystem
-            )} because of error ${e.message} in the response.`
-          );
-          return;
-        }
-      })
-      .filter(isDefined)
-      .map((subSystem): SubSystem => {
-        return {
-          environment: subSystem.envName,
-          // we treat stage sequence number as a stage number here,
-          // because with search for systems in all environments (*),
-          // each environment will be treated independently, so sequence number will be the same as stage number
-          // TODO: change to stageID
-          stageNumber: subSystem.stgSeqNum,
-          system: subSystem.sysName,
-          subSystem: subSystem.sbsName,
-          nextSubSystem: subSystem.nextSbs,
-        };
-      });
-    progress.report({ increment: 20 });
-    return subSystems;
-  };
-
-export const searchForElements =
-  (logger: Logger) =>
-  (progress: ProgressReporter) =>
-  (service: Service) =>
-  async ({
-    configuration,
-    environment,
-    stageNumber,
-    system,
-    subsystem,
-    type,
-    element,
-  }: ElementSearchLocation): Promise<ReadonlyArray<Element> | Error> => {
-    const session = toSecuredEndevorSession(logger)(service);
-    const minimalElementInfo = 'BAS';
-    const searchUpInMap = true;
-    const firstOccurrence = 'FIR';
-    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: environment || ANY_VALUE,
-      'stage-number': fromStageNumber(stageNumber),
-      system: system || ANY_VALUE,
-      subsystem: subsystem || ANY_VALUE,
-      type: type || ANY_VALUE,
-      element: element || ANY_VALUE,
-      data: minimalElementInfo,
-      search: searchUpInMap,
-      return: firstOccurrence,
-    };
-    progress.report({ increment: 30 });
-    let response: BaseResponse;
-    try {
-      response = await EndevorClient.listElement(session)(configuration)(
-        requestArgs
-      );
-      response = parseToType(BaseResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of error ${error.message}`
-      );
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: SuccessListElementsResponse | ErrorResponse;
-    if (response.body.returnCode) {
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (error) {
-        logger.trace(
-          `Unable to provide a failed response reason because of error ${
-            error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of response code ${response.body.returnCode}`
-        );
-      }
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the elements from ${requestArgs.environment}/${
-          requestArgs.system
-        }/${requestArgs.subsystem}/${
-          requestArgs.type
-        } because of response code ${
-          parsedResponse.body.returnCode
-        } with reason \n${parsedResponse.body.messages.join('\n').trim()}`
-      );
-    }
-    try {
-      parsedResponse = parseToType(SuccessListElementsResponse, response);
-    } catch (error) {
-      logger.trace(
-        `Unable to fetch the elements from ${requestArgs.environment}/${
-          requestArgs.system
-        }/${requestArgs.subsystem}/${requestArgs.type} because of error ${
-          error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
-      );
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type} because of incorrect response`
-      );
-    }
-    const elements = parsedResponse.body.data
-      .map((element) => {
-        try {
-          return parseToType(ExternalElement, element);
-        } catch (e) {
-          logger.trace(
-            `Unable to fetch the element ${JSON.stringify(
-              element
-            )} because of error ${e.message} in the response.`
-          );
-          return;
-        }
-      })
-      .filter(isDefined)
-      .map((element) => {
-        return {
-          environment: element.envName,
-          stageNumber: element.stgNum,
-          system: element.sysName,
-          subSystem: element.sbsName,
-          type: element.typeName,
-          name: element.fullElmName,
-          extension: element.fileExt ? element.fileExt : undefined,
-          configuration,
-        };
-      });
-    progress.report({ increment: 20 });
-    return elements;
-  };
-
-const toSecuredEndevorSession =
+export const toSecuredEndevorSession =
   (logger: Logger) =>
   ({ location, credential, rejectUnauthorized }: Service): Session => {
     const commonSession: ClientConfig =
@@ -673,6 +303,570 @@ const toSecuredEndevorSession =
       )}`
     );
     return new Session(securedSession);
+  };
+
+export const getAllEnvironmentStages =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (
+    configuration: string
+  ): Promise<
+    | ReadonlyArray<EnvironmentStage>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+    };
+    const errorMessage = `Unable to fetch the environment stages for the Endevor configuration ${configuration}`;
+    const makeErrorWithReason = makeError(errorMessage);
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listStage(session)(configuration)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListEnvironmentStagesResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof an incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          returnCode: response.body.returnCode,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
+    try {
+      parsedResponse = parseToType(
+        SuccessListEnvironmentStagesResponse,
+        response
+      );
+    } catch (error) {
+      logger.trace(
+        `${errorMessage} because of error:\n${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE,
+      });
+    }
+    const environments = parsedResponse.body.data
+      .map((environment) => {
+        try {
+          return parseToType(ExternalEnvironmentStage, environment);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the environment stage:\n${stringifyPretty(
+              environment
+            )}\nbecause of an error in the response:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((environment) => {
+        return {
+          environment: environment.envName,
+          stageNumber: environment.stgNum,
+          nextEnvironment:
+            environment.nextEnv === null ? undefined : environment.nextEnv,
+          nextStageNumber:
+            environment.nextStgNum === null
+              ? undefined
+              : environment.nextStgNum,
+        };
+      });
+    progress.report({ increment: 20 });
+    return environments;
+  };
+
+export const getAllSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (
+    configuration: Value
+  ): Promise<
+    | ReadonlyArray<System>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+      system: ANY_VALUE,
+    };
+    const errorMessage = `Unable to fetch the systems from the Endevor configuration ${configuration}`;
+    const makeErrorWithReason = makeError(errorMessage);
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listSystem(session)(configuration)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListSystemsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof an incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          returnCode: response.body.returnCode,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
+    try {
+      parsedResponse = parseToType(SuccessListSystemsResponse, response);
+    } catch (error) {
+      logger.trace(
+        `${errorMessage} because of error:\n${
+          error.message
+        }\nof incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE,
+      });
+    }
+    const systems = parsedResponse.body.data
+      .map((system) => {
+        try {
+          return parseToType(ExternalSystem, system);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the system:\n${stringifyPretty(
+              system
+            )}\nbecause of error in the response:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((system) => {
+        return {
+          environment: system.envName,
+          // we treat stage sequence number as a stage number here,
+          // because with search for systems in all environments (*),
+          // each environment will be treated independently, so sequence number will be the same as stage number
+          // TODO: change to stageID
+          stageNumber: system.stgSeqNum,
+          system: system.sysName,
+          nextSystem: system.nextSys,
+        };
+      });
+    progress.report({ increment: 20 });
+    return systems;
+  };
+
+export const getAllSubSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (
+    configuration: string
+  ): Promise<
+    | ReadonlyArray<SubSystem>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: ANY_VALUE,
+      'stage-number': ANY_VALUE,
+      system: ANY_VALUE,
+      subsystem: ANY_VALUE,
+    };
+    const errorMessage = `Unable to fetch the subsystems from the Endevor configuration ${configuration}`;
+    const makeErrorWithReason = makeError(errorMessage);
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listSubsystem(session)(configuration)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListSubSystemsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          returnCode: response.body.returnCode,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
+    try {
+      parsedResponse = parseToType(SuccessListSubSystemsResponse, response);
+    } catch (error) {
+      logger.trace(
+        `${errorMessage} because of error ${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE,
+      });
+    }
+    const subSystems = parsedResponse.body.data
+      .map((subSystem) => {
+        try {
+          return parseToType(ExternalSubSystem, subSystem);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the subsystem:\n${stringifyPretty(
+              subSystem
+            )}\nbecause of error in the response:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((subSystem): SubSystem => {
+        return {
+          environment: subSystem.envName,
+          // we treat stage sequence number as a stage number here,
+          // because with search for systems in all environments (*),
+          // each environment will be treated independently, so sequence number will be the same as stage number
+          // TODO: change to stageID
+          stageNumber: subSystem.stgSeqNum,
+          system: subSystem.sysName,
+          subSystem: subSystem.sbsName,
+          nextSubSystem: subSystem.nextSbs,
+        };
+      });
+    progress.report({ increment: 20 });
+    return subSystems;
+  };
+
+export const searchForElements =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  ({
+    configuration,
+    environment,
+    stageNumber,
+    system,
+    subsystem,
+    type,
+    element,
+  }: ElementSearchLocation) =>
+  async (
+    searchStrategy: SearchStrategies
+  ): Promise<
+    | ReadonlyArray<Element>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const minimalElementInfo = 'BAS';
+    let searchUpInMap = true;
+    let firstOccurrence = 'FIR';
+    switch (searchStrategy) {
+      case SearchStrategies.SEARCH_IN_PLACE:
+        searchUpInMap = false;
+        break;
+      case SearchStrategies.SEARCH_ALL:
+        firstOccurrence = 'ALL';
+        break;
+      case SearchStrategies.SEARCH_WITH_FIRST_FOUND:
+        break;
+      default:
+        throw new UnreachableCaseError(searchStrategy);
+    }
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: environment || ANY_VALUE,
+      'stage-number': fromStageNumber(stageNumber),
+      system: system || ANY_VALUE,
+      subsystem: subsystem || ANY_VALUE,
+      type: type || ANY_VALUE,
+      element: element || ANY_VALUE,
+      data: minimalElementInfo,
+      search: searchUpInMap,
+      return: firstOccurrence,
+    };
+    const errorMessage = `Unable to fetch the elements from ${requestArgs.environment}/${requestArgs['stage-number']}/${requestArgs.system}/${requestArgs.subsystem}/${requestArgs.type}`;
+    const makeErrorWithReason = makeError(errorMessage);
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listElement(session)(configuration)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListElementsResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof an incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          returnCode: response.body.returnCode,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
+    try {
+      parsedResponse = parseToType(SuccessListElementsResponse, response);
+    } catch (error) {
+      logger.trace(
+        `${errorMessage} because of error:\n${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE,
+      });
+    }
+    const elements = parsedResponse.body.data
+      .map((element) => {
+        try {
+          return parseToType(ExternalElement, element);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the element:\n${stringifyPretty(
+              element
+            )}\nbecause of error in the response:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((element) => {
+        return {
+          environment: element.envName,
+          stageNumber: element.stgNum,
+          system: element.sysName,
+          subSystem: element.sbsName,
+          type: element.typeName,
+          name: element.fullElmName,
+          extension: element.fileExt ? element.fileExt : undefined,
+          configuration,
+        };
+      });
+    progress.report({ increment: 20 });
+    return elements;
+  };
+
+export const searchForElementsInPlace =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async ({
+    configuration,
+    environment,
+    stageNumber,
+    system,
+    subsystem,
+    type,
+    element,
+  }: ElementSearchLocation): Promise<
+    | ReadonlyArray<Element>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return searchForElements(logger)(progress)(service)({
+      configuration,
+      environment,
+      stageNumber,
+      system,
+      subsystem,
+      type,
+      element,
+    })(SearchStrategies.SEARCH_IN_PLACE);
+  };
+
+export const searchForFirstFoundElements =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async ({
+    configuration,
+    environment,
+    stageNumber,
+    system,
+    subsystem,
+    type,
+    element,
+  }: ElementSearchLocation): Promise<
+    | ReadonlyArray<Element>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return searchForElements(logger)(progress)(service)({
+      configuration,
+      environment,
+      stageNumber,
+      system,
+      subsystem,
+      type,
+      element,
+    })(SearchStrategies.SEARCH_WITH_FIRST_FOUND);
+  };
+
+export const searchForAllElements =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async ({
+    configuration,
+    environment,
+    stageNumber,
+    system,
+    subsystem,
+    type,
+    element,
+  }: ElementSearchLocation): Promise<
+    | ReadonlyArray<Element>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return searchForElements(logger)(progress)(service)({
+      configuration,
+      environment,
+      stageNumber,
+      system,
+      subsystem,
+      type,
+      element,
+    })(SearchStrategies.SEARCH_ALL);
   };
 
 export const printElement =
@@ -1536,9 +1730,7 @@ export const updateElement =
   async ({
     content,
     fingerprint,
-  }: ElementWithFingerprint): Promise<
-    void | FingerprintMismatchError | SignoutError | Error
-  > => {
+  }: ElementWithFingerprint): Promise<InternalUpdateResponse> => {
     const elementData = {
       element: name,
       environment,
@@ -1548,18 +1740,13 @@ export const updateElement =
       type,
     };
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms = toUpdateRequest({
-      content,
-      fingerprint,
+    const requestParms = {
+      fromFile: Readable.from(content),
+      fromFileDescription: SDK_FROM_FILE_DESCRIPTION,
       ccid,
       comment,
-    });
-    if (isError(requestParms)) {
-      const error = requestParms;
-      return new Error(
-        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
-      );
-    }
+      fingerprint,
+    };
     progress.report({ increment: 30 });
     let response;
     try {
@@ -1571,75 +1758,69 @@ export const updateElement =
       );
     } catch (error) {
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
-      );
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return {
+          status: UpdateStatus.ERROR,
+          additionalDetails: {
+            error: getTypedErrorFromHttpCode(error.causeErrors?.message),
+          },
+        };
+      }
+      return {
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          error,
+        },
+      };
     }
+    logger.trace(`Update response:\n${JSON.stringify(response, null, 2)}.`);
     progress.report({ increment: 50 });
     let parsedResponse: UpdateResponse;
     try {
       parsedResponse = parseToType(UpdateResponse, response);
     } catch (e) {
-      logger.trace(
-        `Unable to update the element ${system}/${subSystem}/${type}/${name} because the Endevor response parsing is failed:\n${
-          e.message
-        }\nof an incorrect response:\n${JSON.stringify(response, null, 2)}.`
-      );
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to update the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
-      );
-    }
-    const updateReturnCode = parsedResponse.body.returnCode;
-    if (updateReturnCode) {
-      // TODO move messages processing to some util function
-      // add an extra \n in the beginning of the Endevor messages line
-      const errorResponseAsString = [
-        '',
-        ...parsedResponse.body.messages.map((message) => message.trim()),
-      ].join('\n');
-      const errorMessage = `Unable to update the element ${system}/${subSystem}/${type}/${name} because of response code ${updateReturnCode} with reason:${errorResponseAsString}`;
-      const typedError = getTypedErrorFromEndevorError(
-        {
-          elementName: name,
-          endevorMessage: errorResponseAsString,
+      return {
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          error: new Error(
+            `Endevor response parsing is failed:\n${e.message}\nbecause of an incorrect response.`
+          ),
         },
-        errorMessage
-      );
-      if (isChangeRegressionError(typedError)) {
-        // if the expected regression info message appeared, just leave a trace and update successfully
-        logger.trace(
-          `An element ${system}/${subSystem}/${type}/${name} was updated, but got a response code ${updateReturnCode} with reason:${errorResponseAsString}.`
-        );
-      } else {
-        progress.report({ increment: 100 });
-        return typedError;
-      }
+      };
+    }
+    const successHttpStatusStart = '2';
+    const updateFailed = !parsedResponse.body.statusCode
+      .toString()
+      .startsWith(successHttpStatusStart);
+    if (updateFailed) {
+      progress.report({ increment: 100 });
+      return {
+        status: UpdateStatus.ERROR,
+        additionalDetails: {
+          returnCode: parsedResponse.body.returnCode,
+          error: getTypedErrorFromEndevorCode(
+            [
+              '',
+              ...parsedResponse.body.messages.map((message) => message.trim()),
+            ].join('\n')
+          ),
+        },
+      };
     }
     progress.report({ increment: 20 });
+    return {
+      status: UpdateStatus.OK,
+      additionalDetails: {
+        returnCode: parsedResponse.body.returnCode,
+        message: [
+          '',
+          ...parsedResponse.body.messages.map((message) => message.trim()),
+        ].join('\n'),
+      },
+    };
   };
-
-const toUpdateRequest = ({
-  fingerprint,
-  content,
-  ccid,
-  comment,
-}: DomainUpdateParams): SdkUpdateParams | Error => {
-  let tempFile;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const string2fileStream = require('string-to-file-stream');
-    tempFile = string2fileStream(content);
-  } catch (error) {
-    return new Error(`Reading element from temp file error ${error.message}`);
-  }
-  return {
-    fromFile: tempFile,
-    ccid,
-    comment,
-    fingerprint,
-  };
-};
 
 export const addElement =
   (logger: Logger) =>
@@ -1655,7 +1836,9 @@ export const addElement =
     name,
   }: ElementMapPath) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
-  async (content: string): Promise<void | DuplicateElementError | Error> => {
+  async (
+    content: string
+  ): Promise<void | DuplicateElementError | Error | ConnectionError> => {
     const elementData = {
       element: name,
       environment,
@@ -1665,18 +1848,19 @@ export const addElement =
       type,
     };
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms = toUpdateRequest({
-      content,
-      fingerprint: '',
+    const requestParms = {
+      fromFile: Readable.from(content),
       ccid,
       comment,
-    });
+    };
     if (isError(requestParms)) {
       const error = requestParms;
       return new Error(
         `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
       );
     }
+    const errorMessage = `Unable to add element ${system}/${subSystem}/${type}/${name} for Endevor configuration ${configuration}`;
+    const makeErrorWithReason = makeError(errorMessage);
     progress.report({ increment: 30 });
     let response;
     try {
@@ -1688,12 +1872,43 @@ export const addElement =
       );
     } catch (error) {
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
-      );
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
     }
     progress.report({ increment: 50 });
     let parsedResponse: AddResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof an incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          returnCode: response.body.returnCode,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
     try {
       parsedResponse = parseToType(AddResponse, response);
     } catch (e) {
@@ -1703,26 +1918,9 @@ export const addElement =
         }\nof an incorrect error response ${JSON.stringify(response)}.`
       );
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
-      );
-    }
-    if (parsedResponse.body.returnCode) {
-      // TODO move messages processing to some util function
-      // add an extra \n in the beginning of the Endevor messages line
-      const errorResponseAsString = [
-        '',
-        ...parsedResponse.body.messages.map((message) => message.trim()),
-      ].join('\n');
-      const errorMessage = `Unable to add the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:${errorResponseAsString}`;
-      progress.report({ increment: 100 });
-      return getTypedErrorFromEndevorError(
-        {
-          elementName: name,
-          endevorMessage: errorResponseAsString,
-        },
-        errorMessage
-      );
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE,
+      });
     }
     progress.report({ increment: 20 });
   };

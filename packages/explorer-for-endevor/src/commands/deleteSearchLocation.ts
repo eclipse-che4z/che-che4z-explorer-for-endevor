@@ -76,8 +76,15 @@ export const deleteSearchLocation =
       });
       return;
     }
+    const selectedService = usedByServices.find(
+      (service) => service.id.name === serviceName
+    );
     const deletionOptions = await askToDeleteSearchLocationForAllServices(
       searchLocationId.name,
+      selectedService?.duplicated &&
+        selectedService?.id.source === Source.SYNCHRONIZED
+        ? `${serviceName} [${ZOWE_PROFILE_DESCRIPTION}]`
+        : serviceName,
       usedByServices.map((service) =>
         service.duplicated && service.id.source === Source.SYNCHRONIZED
           ? `${service.id.name} [${ZOWE_PROFILE_DESCRIPTION}]`

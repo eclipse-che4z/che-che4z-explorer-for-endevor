@@ -27,6 +27,7 @@ export const enum Schemas {
   ELEMENT_LISTING = 'e4eListing',
   FILE = 'file',
   READ_ONLY_FILE = 'e4eReadonlyFile',
+  READ_ONLY_CACHED_ELEMENT = 'e4eReadOnlyCachedElement',
 }
 
 export const enum QueryTypes {

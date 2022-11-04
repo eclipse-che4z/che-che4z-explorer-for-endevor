@@ -17,6 +17,6 @@ export const askToReloadWindowAfterSettingsChanged = () => {
   return showMessageWithOptions({
     message:
       'Reloading the window is required to apply the change of the settings. Do you want to do it now?',
-    options: ['Reload the window'],
+    options: ['Reload the Window'],
   });
 };

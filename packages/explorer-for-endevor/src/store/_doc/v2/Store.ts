@@ -54,10 +54,55 @@ export type EndevorCache = {
   [id: CompositeKey]: EndevorCacheItem | undefined;
 };
 
-export type EndevorCredential = Credential;
 export type EndevorApiVersion = ServiceApiVersion.V1 | ServiceApiVersion.V2;
+export const enum EndevorConnectionStatus {
+  VALID = 'VALID',
+  INVALID = 'INVALID',
+  UNKNOWN = 'UNKNOWN',
+}
+export type ValidEndevorConnection = Readonly<{
+  status: EndevorConnectionStatus.VALID;
+  value: Connection['value'] & {
+    apiVersion: ServiceApiVersion;
+  };
+}>;
+export type InvalidEndevorConnection = Readonly<{
+  status: EndevorConnectionStatus.INVALID;
+  value: Connection['value'];
+}>;
+export type UnknownEndevorConnection = Readonly<{
+  status: EndevorConnectionStatus.UNKNOWN;
+  value: Connection['value'];
+}>;
+export type EndevorConnection =
+  | UnknownEndevorConnection
+  | ValidEndevorConnection
+  | InvalidEndevorConnection;
+
+export const enum EndevorCredentialStatus {
+  VALID = 'VALID',
+  INVALID = 'INVALID',
+  UNKNOWN = 'UNKNOWN',
+}
+export type ValidEndevorCredential = Readonly<{
+  status: EndevorCredentialStatus.VALID;
+  value: Credential['value'];
+}>;
+export type InvalidEndevorCredential = Readonly<{
+  status: EndevorCredentialStatus.INVALID;
+  value: Credential['value'];
+}>;
+export type UnknownEndevorCredential = Readonly<{
+  status: EndevorCredentialStatus.UNKNOWN;
+  value: Credential['value'];
+}>;
+export type EndevorCredential =
+  | UnknownEndevorCredential
+  | ValidEndevorCredential
+  | InvalidEndevorCredential;
+
 export type EndevorSession = Partial<{
-  apiVersion: EndevorApiVersion;
+  connection: EndevorConnection;
   credentials: EndevorCredential;
 }>;
 export type EndevorSessions = {
@@ -66,15 +111,13 @@ export type EndevorSessions = {
 
 export type EndevorService = Connection &
   Partial<{
-    credential: EndevorCredential;
+    credential: Credential;
   }>;
-
 export type EndevorServices = {
   [key: EndevorServiceKey]: EndevorService | undefined;
 };
 
 export type EndevorSearchLocation = InventoryLocation;
-
 export type EndevorSearchLocations = {
   [key: EndevorLocationKey]: EndevorSearchLocation | undefined;
 };
@@ -90,33 +133,57 @@ export type State = {
 // external types
 export const enum EndevorServiceStatus {
   VALID = 'VALID',
-  INVALID = 'INVALID',
+
+  NON_EXISTING = 'NON_EXISTING',
+
+  INVALID_CREDENTIAL = 'INVALID_CREDENTIALS',
+  UNKNOWN_CREDENTIAL = 'UNKNOWN_CREDENTIAL',
+
+  INVALID_CONNECTION = 'INVALID_CONNECTION',
+  UNKNOWN_CONNECTION = 'UNKNOWN_CONNECTION',
 }
 
 export type ValidEndevorServiceDescription = Readonly<{
-  status: EndevorServiceStatus.VALID;
+  status:
+    | EndevorServiceStatus.VALID
+    | EndevorServiceStatus.UNKNOWN_CONNECTION
+    | EndevorServiceStatus.UNKNOWN_CREDENTIAL;
   duplicated: boolean;
   id: EndevorId;
   url: string;
 }>;
 
-export type InvalidServiceDescription = Readonly<{
-  status: EndevorServiceStatus.INVALID;
+export type InvalidEndevorServiceDescription = Readonly<{
+  status:
+    | EndevorServiceStatus.INVALID_CONNECTION
+    | EndevorServiceStatus.INVALID_CREDENTIAL;
+  duplicated: boolean;
+  id: EndevorId;
+  url: string;
+}>;
+
+export type NonExistingServiceDescription = Readonly<{
+  status: EndevorServiceStatus.NON_EXISTING;
   duplicated: boolean;
   id: EndevorId;
 }>;
 
 export type EndevorServiceDescription =
   | ValidEndevorServiceDescription
-  | InvalidServiceDescription;
+  | InvalidEndevorServiceDescription
+  | NonExistingServiceDescription;
 
-export type ValidEndevorServiceDescriptions = {
-  [key: EndevorLocationKey]: ValidEndevorServiceDescription;
+export type ExistingEndevorServiceDescriptions = {
+  [key: EndevorLocationKey]:
+    | ValidEndevorServiceDescription
+    | InvalidEndevorServiceDescription;
 };
 
 export type EndevorServiceDescriptions = {
   [key: EndevorLocationKey]: EndevorServiceDescription;
 };
+
+export type EndevorConfiguration = string;
 
 export const enum EndevorSearchLocationStatus {
   VALID = 'VALID',

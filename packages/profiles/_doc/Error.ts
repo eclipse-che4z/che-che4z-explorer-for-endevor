@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { isError } from '../../../utils';
+import { isError } from '../utils';
 import { ProfileTypes } from '../_ext/Profile';
 
 export class ProfileWithNameNotFoundError extends Error {

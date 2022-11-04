@@ -15,7 +15,12 @@ import { TextEncoder } from 'util';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { showFileContent } from './window';
-import { WorkspaceFile } from './_doc/workspace';
+import {
+  FileSystemWatcher,
+  TrackOptions,
+  WorkspaceFile,
+} from './_doc/workspace';
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 export const getWorkspaceUri = async (): Promise<vscode.Uri | undefined> => {
   const openedWorkspaces = vscode.workspace.workspaceFolders;
@@ -152,3 +157,54 @@ export const getFileContent = async (
 ): Promise<Uint8Array> => {
   return await vscode.workspace.fs.readFile(fileUri);
 };
+
+export interface FileSystemWatcherContract {
+  (track: TrackOptions.TRACK_CHANGED): {
+    onDidChange: FileSystemWatcher['onDidChange'];
+    dispose: FileSystemWatcher['dispose'];
+  };
+  (track: TrackOptions.TRACK_CREATED): {
+    onDidCreate: FileSystemWatcher['onDidCreate'];
+    dispose: FileSystemWatcher['dispose'];
+  };
+  (track: TrackOptions.TRACK_DELETED): {
+    onDidDelete: FileSystemWatcher['onDidDelete'];
+    dispose: FileSystemWatcher['dispose'];
+  };
+  (track: TrackOptions.TRACK_ALL): FileSystemWatcher;
+}
+export const createFileSystemWatcher =
+  (globPattern: string): FileSystemWatcherContract =>
+  (track: TrackOptions): FileSystemWatcher => {
+    let ignoreCreateEvents = false;
+    let ignoreChangeEvents = false;
+    let ignoreDeleteEvents = false;
+    switch (track) {
+      case TrackOptions.TRACK_ALL: {
+        break;
+      }
+      case TrackOptions.TRACK_CHANGED: {
+        ignoreCreateEvents = true;
+        ignoreDeleteEvents = true;
+        break;
+      }
+      case TrackOptions.TRACK_CREATED: {
+        ignoreChangeEvents = true;
+        ignoreDeleteEvents = true;
+        break;
+      }
+      case TrackOptions.TRACK_DELETED: {
+        ignoreCreateEvents = true;
+        ignoreChangeEvents = true;
+        break;
+      }
+      default:
+        throw new UnreachableCaseError(track);
+    }
+    return vscode.workspace.createFileSystemWatcher(
+      globPattern,
+      ignoreCreateEvents,
+      ignoreChangeEvents,
+      ignoreDeleteEvents
+    );
+  };

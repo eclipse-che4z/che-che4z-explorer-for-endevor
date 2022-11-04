@@ -17,14 +17,10 @@ import { CommandId } from '../commands/id';
 import { ZOWE_PROFILE_DESCRIPTION } from '../constants';
 import { Source } from '../store/storage/_doc/Storage';
 import { ElementNode } from './_doc/ElementTree';
-import {
-  AddNewSearchLocationNode,
-  AddNewServiceNode,
-  Node,
-} from './_doc/ServiceLocationTree';
+import { AddNewSearchLocationNode, Node } from './_doc/ServiceLocationTree';
 
 class ButtonItem extends vscode.TreeItem {
-  constructor(node: AddNewServiceNode | AddNewSearchLocationNode) {
+  constructor(node: AddNewSearchLocationNode) {
     super(node.label, vscode.TreeItemCollapsibleState.None);
     this.contextValue = node.type;
     this.label = node.label;
@@ -79,10 +75,12 @@ class InvalidServiceLocationItem extends ServiceLocationItem {
     type: string,
     tooltip: string,
     duplicate: boolean,
-    collapsable: boolean
+    collapsable: boolean,
+    command?: vscode.Command
   ) {
     super(name, source, type, tooltip, duplicate, collapsable);
     this.iconPath = new vscode.ThemeIcon('warning');
+    this.command = command;
   }
 }
 
@@ -99,9 +97,9 @@ class ElementItem extends vscode.TreeItem {
     this.contextValue = node.type;
     this.tooltip = node.tooltip;
     this.command = {
-      title: 'Print element',
+      title: 'Print Element',
       command: CommandId.PRINT_ELEMENT,
-      tooltip: 'Print element',
+      tooltip: 'Print Element',
       arguments: [this.resourceUri, node.name],
     };
   }
@@ -109,7 +107,6 @@ class ElementItem extends vscode.TreeItem {
 
 export const toTreeItem = (node: Node): vscode.TreeItem => {
   switch (node.type) {
-    case 'BUTTON_ADD_SERVICE':
     case 'BUTTON_ADD_SEARCH_LOCATION':
       return new ButtonItem(node);
     case 'SERVICE':
@@ -124,7 +121,12 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
         node.duplicated,
         true
       );
-    case 'SERVICE_PROFILE/INVALID':
+    case 'SERVICE_PROFILE/NON_EXISTING':
+    case 'SERVICE/NON_EXISTING':
+    case 'SERVICE_PROFILE/INVALID_CONNECTION':
+    case 'SERVICE/INVALID_CONNECTION':
+    case 'SERVICE_PROFILE/INVALID_CREDENTIALS':
+    case 'SERVICE/INVALID_CREDENTIALS':
       return new InvalidServiceLocationItem(
         node.name,
         node.source,
@@ -133,14 +135,20 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
         node.duplicated,
         node.children.length > 0
       );
-    case 'LOCATION_PROFILE/INVALID':
+    case 'LOCATION_PROFILE/NON_EXISTING':
+    case 'LOCATION/NON_EXISTING':
+    case 'LOCATION_PROFILE/INVALID_CONNECTION':
+    case 'LOCATION/INVALID_CONNECTION':
+    case 'LOCATION_PROFILE/INVALID_CREDENTIALS':
+    case 'LOCATION/INVALID_CREDENTIALS':
       return new InvalidServiceLocationItem(
         node.name,
         node.source,
         node.type,
         node.tooltip,
         node.duplicated,
-        false
+        false,
+        node.command
       );
     case 'MAP':
     case 'SYS':

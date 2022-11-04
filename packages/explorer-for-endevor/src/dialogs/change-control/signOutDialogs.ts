@@ -30,7 +30,7 @@ export const askToSignOutElements = async (
     )}.`
   );
   const signOutElementsOption = `Signout`;
-  const automaticSignOutOption = 'Turn on automatic signout';
+  const automaticSignOutOption = 'Turn on Automatic Signout';
   const cancelOption = 'Cancel';
   const dialogResult = await toPromiseWithTimeout(NOTIFICATION_TIMEOUT)(
     showMessageWithOptions({
@@ -77,7 +77,7 @@ export const askToOverrideSignOutForElements = async (
       elementNames
     )}.`
   );
-  const overrideOption = 'Override signout';
+  const overrideOption = 'Override Signout';
   const cancelOption = 'Cancel';
   const dialogResult = await toPromiseWithTimeout(NOTIFICATION_TIMEOUT)(
     showMessageWithOptions({

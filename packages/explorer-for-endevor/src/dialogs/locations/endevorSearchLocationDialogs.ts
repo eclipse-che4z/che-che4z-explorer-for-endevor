@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { QuickPick, QuickPickItem, QuickPickOptions } from 'vscode';
+import { QuickPick, QuickPickItem } from 'vscode';
 import { logger } from '../../globals';
 import {
   showInputBox,
@@ -34,6 +34,9 @@ import {
 import { Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { ZOWE_PROFILE_DESCRIPTION } from '../../constants';
+import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
+import { ConnectionError } from '@local/endevor/_doc/Error';
+import { isConnectionError } from '@local/endevor/utils';
 
 const enum DialogResultTypes {
   CREATED = 'CREATED',
@@ -52,6 +55,7 @@ type ChosenLocation = {
   id: EndevorId;
 };
 type OperationCancelled = undefined;
+type ChooseDialogResult = ChosenLocation | OperationCancelled;
 type DialogResult = CreatedLocation | ChosenLocation | OperationCancelled;
 
 export const dialogCancelled = (
@@ -79,7 +83,7 @@ export const askForSearchLocationOrCreateNew =
     getConfigurations: () => Promise<
       ReadonlyArray<Configuration> | Error | undefined
     >
-  ): Promise<DialogResult> => {
+  ): Promise<DialogResult | ConnectionError> => {
     const createNewLocationItem: QuickPickItem = {
       label: '+ Create a new inventory location',
       alwaysShow: true,
@@ -127,6 +131,10 @@ export const askForSearchLocationOrCreateNew =
         logger.trace('Operation cancelled.');
         return undefined;
       }
+      if (isConnectionError(existingConfigurations)) {
+        const error = existingConfigurations;
+        return error;
+      }
       if (isError(existingConfigurations)) {
         const error = existingConfigurations;
         logger.error(
@@ -170,6 +178,42 @@ export const askForSearchLocationOrCreateNew =
     };
   };
 
+export const askForSearchLocation = async (
+  locationsToChoose: ValidEndevorSearchLocationDescriptions
+): Promise<ChooseDialogResult> => {
+  const locationQuickPickItems = Object.values(locationsToChoose).map(
+    toLocationQuickPickItem
+  );
+  if (!locationQuickPickItems.length) {
+    logger.warn('No inventory locations to select from.');
+    return undefined;
+  }
+  const quickPickOptions: QuickPickOptions = {
+    title: 'Select from the available inventory locations',
+    placeholder: 'Start typing a name to filter...',
+    ignoreFocusOut: true,
+  };
+  const choice = await createVscodeQuickPick(
+    locationQuickPickItems,
+    quickPickOptions
+  );
+  if (
+    operationCancelled(choice) ||
+    valueNotProvided(choice) ||
+    !isDefined(choice.activeItems[0])
+  ) {
+    logger.trace('No inventory location name was provided.');
+    logger.trace('Operation cancelled.');
+    return undefined;
+  }
+  const location = choice.activeItems[0];
+  if (!location || !location.id) return undefined;
+  return {
+    type: DialogResultTypes.CHOSEN,
+    id: location.id,
+  };
+};
+
 const toLocationQuickPickItem = ({
   id,
   path,
@@ -199,15 +243,12 @@ const showLocationsInQuickPick = async (
   locations: LocationQuickPickItem[]
 ): Promise<QuickPick<LocationQuickPickItem> | undefined> => {
   const quickPickOptions: QuickPickOptions = {
-    placeHolder:
-      'Select from the available inventory location or create a new one',
+    title: 'Add an inventory location',
+    placeholder:
+      'Choose "Create new..." to define a new inventory location or select an existing one',
     ignoreFocusOut: true,
   };
-  return createVscodeQuickPick(
-    locations,
-    quickPickOptions.placeHolder,
-    quickPickOptions.ignoreFocusOut
-  );
+  return createVscodeQuickPick(locations, quickPickOptions);
 };
 
 const operationCancelled = <T>(value: T | undefined): value is undefined => {
@@ -226,8 +267,9 @@ const askForLocationName = async (
 ): Promise<string | undefined> => {
   logger.trace('Prompt for inventory location name.');
   return showInputBox({
-    prompt: 'Custom name for inventory location',
-    placeHolder: 'Custom name for inventory location',
+    title: 'Enter a name for the new inventory location',
+    prompt: 'Must not contain spaces',
+    placeHolder: 'Inventory location name',
     validateInput: (inputValue) =>
       inputValue.length
         ? inputValue.includes(' ')
@@ -294,7 +336,8 @@ const askForConfigurationName = async (
   const choice = await showVscodeQuickPick(
     existingConfigurations.map(toQuickPickItem),
     {
-      placeHolder: 'Select from the available Endevor configurations',
+      title: 'Select from the available Endevor configurations',
+      placeholder: 'Start typing to filter...',
       ignoreFocusOut: true,
       canPickMany: false,
     }
@@ -480,7 +523,8 @@ export const askForSearchLocationDeletion = async (
   );
   const deleteOption = 'Delete';
   const dialogResult = await showModalWithOptions({
-    message: `Are you sure you want to delete inventory location '${searchLocationName}'? Warning: this action cannot be undone.`,
+    message: `Do you want to delete the '${searchLocationName}' inventory location?`,
+    detail: 'Warning: this action cannot be undone.',
     options: [deleteOption],
   });
   if (operationCancelled(dialogResult)) {
@@ -498,6 +542,7 @@ type ChosenDeletionOption = Readonly<{
 
 export const askToDeleteSearchLocationForAllServices = async (
   searchLocationName: string,
+  selectedServiceName: string,
   serviceNames: ReadonlyArray<string>
 ): Promise<ChosenDeletionOption | OperationCancelled> => {
   logger.trace(
@@ -508,9 +553,10 @@ export const askToDeleteSearchLocationForAllServices = async (
   const deleteOption = 'Delete';
   const hideOption = 'Hide';
   const dialogResult = await showModalWithOptions({
-    message: `Selected inventory location is used by multiple Endevor connections: ${serviceNames.join(
-      ', '
-    )}. Do you want to delete the inventory location for all the connections or hide it for the selected connection?`,
+    message: `Do you want to delete the '${searchLocationName}' inventory location for the following ${serviceNames.length} Endevor connections or to hide it for the selected '${selectedServiceName}'?`,
+    detail: `${serviceNames.join(
+      '\n'
+    )}\n\nWarning: the Delete action cannot be undone.`,
     options: [hideOption, deleteOption],
   });
   if (dialogResult === deleteOption) {

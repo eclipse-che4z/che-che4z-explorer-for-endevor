@@ -23,6 +23,8 @@ export type SyncWithProfiles = t.TypeOf<typeof SyncWithProfiles>;
 
 export type MaxParallelRequests = t.TypeOf<typeof MaxParallelRequests>;
 
+export type WorkspaceSync = t.TypeOf<typeof WorkspaceSync>;
+
 export type FileExtensionsResolution = t.TypeOf<
   typeof FileExtensionsResolution
 >;
@@ -37,3 +39,5 @@ export const FileExtensionsResolution = t.union([
   t.literal(TYPE_EXT_VALUE),
   t.literal(TYPE_EXT_OR_NAME_VALUE),
 ]);
+
+export const WorkspaceSync = t.boolean;

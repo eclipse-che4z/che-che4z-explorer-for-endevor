@@ -17,8 +17,10 @@ import {
   Choice,
   MessageLevel,
   MessageWithOptions,
+  ModalMessageWithOptions,
   ProgressingFunction,
   PromptInputOptions,
+  QuickPickOptions,
 } from './_doc/window';
 
 export const getActiveTextEditor = (): vscode.TextEditor | undefined => {
@@ -41,26 +43,26 @@ export const showMessageWithOptions = async ({
 };
 
 export const showModalWithOptions = async (
-  { message, options }: MessageWithOptions,
+  { message, options, detail }: ModalMessageWithOptions,
   level: MessageLevel = MessageLevel.INFO
 ): Promise<Choice | undefined> => {
   switch (level) {
     case MessageLevel.WARN:
       return await vscode.window.showWarningMessage(
         message,
-        { modal: true },
+        { modal: true, detail },
         ...options
       );
     case MessageLevel.ERROR:
       return await vscode.window.showErrorMessage(
         message,
-        { modal: true },
+        { modal: true, detail },
         ...options
       );
     case MessageLevel.INFO:
       return await vscode.window.showInformationMessage(
         message,
-        { modal: true },
+        { modal: true, detail },
         ...options
       );
     default:
@@ -78,27 +80,25 @@ export const showInputBox = (
 
 export const showVscodeQuickPick = (
   items: vscode.QuickPickItem[],
-  showOptions?: vscode.QuickPickOptions
+  showOptions?: QuickPickOptions
 ): Thenable<vscode.QuickPickItem | undefined> => {
   return vscode.window.showQuickPick(items, showOptions);
 };
 
 export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
   items: I[],
-  placeHolder?: string,
-  ignoreFocusOut?: boolean
+  options?: QuickPickOptions
 ): Promise<vscode.QuickPick<I> | undefined> => {
   const quickpick = vscode.window.createQuickPick<I>();
   quickpick.items = items;
-  quickpick.placeholder = placeHolder;
-  quickpick.ignoreFocusOut = ignoreFocusOut || false;
+  quickpick.title = options?.title;
+  quickpick.placeholder = options?.placeholder;
+  quickpick.ignoreFocusOut = options?.ignoreFocusOut || false;
   quickpick.show();
-  const choice = await new Promise<vscode.QuickPickItem | undefined>(
-    (choice) => {
-      quickpick.onDidAccept(() => choice(quickpick.activeItems[0]));
-      quickpick.onDidHide(() => choice(undefined));
-    }
-  );
+  const choice = await new Promise<I | undefined>((choice) => {
+    quickpick.onDidAccept(() => choice(quickpick.activeItems[0]));
+    quickpick.onDidHide(() => choice(undefined));
+  });
   quickpick.hide();
   return choice ? quickpick : undefined;
 };
@@ -117,8 +117,18 @@ export const showWebView =
   };
 
 // don't forget to validate promise.reject
-export const showFileContent = async (fileUri: vscode.Uri): Promise<void> => {
-  await vscode.window.showTextDocument(fileUri, { preview: false });
+export const showFileContent = async (
+  fileUri: vscode.Uri,
+  title?: string
+): Promise<void> => {
+  vscode.commands.executeCommand(
+    'vscode.open',
+    fileUri,
+    {
+      preview: false,
+    },
+    title
+  );
 };
 
 // don't forget to validate promise.reject
@@ -161,7 +171,7 @@ export const withCancellableNotificationProgress =
               resolve(undefined);
             });
           }),
-          task(progress),
+          task(progress, cancellationToken),
         ]);
       }
     );
@@ -180,4 +190,39 @@ export const showDiffEditor =
 
 export const reloadWindow = async () => {
   await vscode.commands.executeCommand('workbench.action.reloadWindow');
+};
+
+export const showOpenFolderDialog = async (): Promise<
+  vscode.Uri | undefined
+> => {
+  const folderUri = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+  });
+  if (!folderUri) return;
+  return folderUri[0];
+};
+
+export const openFolder = async (folderUri: vscode.Uri): Promise<void> => {
+  await vscode.commands.executeCommand('vscode.openFolder', folderUri);
+};
+
+export const setContextVariable = async (
+  name: string,
+  value: unknown
+): Promise<void> => {
+  await vscode.commands.executeCommand('setContext', name, value);
+};
+
+export const showWalkthrough = async (walkthroughId: string): Promise<void> => {
+  await vscode.commands.executeCommand(
+    `workbench.action.openWalkthrough`,
+    walkthroughId,
+    false // show in split view
+  );
+};
+
+export const focusOnView = async (viewId: string): Promise<void> => {
+  await vscode.commands.executeCommand(`${viewId}.focus`);
 };

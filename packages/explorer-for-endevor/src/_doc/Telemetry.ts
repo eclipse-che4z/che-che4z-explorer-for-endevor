@@ -11,13 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
-
 export const TELEMETRY_EVENTS_VERSION = '1';
 
 export const enum TelemetryEvents {
   ERROR = 'extension error',
-  SERVICE_PROFILE_FETCHED = 'service profile fetched',
   REFRESH_COMMAND_CALLED = 'refresh tree command called',
   ELEMENTS_PROVIDED = 'elements provided in the tree',
   ELEMENTS_WERE_FETCHED = 'elements were fetched',
@@ -99,11 +96,6 @@ export type EndevorMapNotBuiltEvent = {
   errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT;
   status: EndevorMapBuildingStatus.GENERIC_ERROR;
   error: Error;
-};
-
-export type ServiceProfileFetchedEvent = {
-  type: TelemetryEvents.SERVICE_PROFILE_FETCHED;
-  apiVersion: ServiceApiVersion;
 };
 
 export type MissingCredentialsPromptCalledEvent = {
@@ -447,7 +439,6 @@ export type TelemetryEvent =
   | EndevorMapNotBuiltEvent
   | MissingCredentialsPromptCalledEvent
   | MissingCredentialsProvidedEvent
-  | ServiceProfileFetchedEvent
   | CommandViewElementDetailsCalledEvent
   | CommandResolveConflictWithRemoteCallEvent
   | CommandPrintListingCalledEvent

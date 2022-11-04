@@ -55,6 +55,23 @@ export const enum TelemetryEvents {
   COMMAND_SIGNOUT_ELEMENT_CALLED = 'signout element command called',
   COMMAND_SIGNOUT_ELEMENT_COMPLETED = 'signout element command completed',
 
+  COMMAND_INIT_WORKSPACE_CALLED = 'init workspace command called',
+  COMMAND_INIT_WORKSPACE_COMPLETED = 'init workspace command completed',
+
+  COMMAND_SYNC_WORKSPACE_CALLED = 'sync workspace command called',
+  COMMAND_SYNC_WORKSPACE_COMPLETED = 'sync workspace command completed',
+
+  COMMAND_PULL_FROM_ENDEVOR_CALLED = 'pull from endevor command called',
+  COMMAND_PULL_FROM_ENDEVOR_COMPLETED = 'pull from endevor command completed',
+
+  COMMAND_DISCARD_ELEMENT_CHANGES_CALLED = 'discard element changes command called',
+  COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED = 'discard element changes command completed',
+
+  COMMAND_REVERT_SECTION_CHANGE_CALLED = 'revert section change command called',
+
+  COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED = 'confirm conflict resolution command called',
+  COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED = 'confirm conflict resolution command completed',
+
   DIALOG_SERVICE_INFO_COLLECTION_CALLED = 'service information collection dialog called',
   SERVICE_INFO_RESOLVER_CALLED = 'service information resolver called',
   SERVICE_CONNECTION_TEST = 'service connection test',
@@ -64,6 +81,15 @@ export const enum TelemetryEvents {
   SETTING_CHANGED_SYNC_WITH_PROFILES = 'sync with profiles setting changed',
   SETTING_CHANGED_FILE_EXT_RESOLUTION = 'file extension resolution setting changed',
   SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
+
+  COMMAND_EDIT_CONNECTION_DETAILS_CALLED = 'edit connection details command called',
+  COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED = 'edit connection details command completed',
+
+  COMMAND_TEST_CONNECTION_DETAILS_CALLED = 'test connection details command called',
+  COMMAND_TEST_CONNECTION_DETAILS_COMPLETED = 'test connection details command completed',
+
+  COMMAND_EDIT_CREDENTIALS_CALLED = 'edit credentials command called',
+  COMMAND_EDIT_CREDENTIALS_COMPLETED = 'edit credentials command completed',
 }
 
 export type ExtensionActivatedEvent = {
@@ -72,6 +98,8 @@ export type ExtensionActivatedEvent = {
   autoSignOut: boolean;
   syncWithProfiles: boolean;
   maxParallelRequests: number;
+  fileExtensionResolution: FileExtensionResolutions;
+  workspaceSync: boolean;
 };
 
 export type ProfileMigrationCalledEvent = {
@@ -441,6 +469,198 @@ export const enum SettingChangedStatus {
   WRONG_SETTING_TYPE_ERROR = 'WRONG_SETTING_TYPE_ERROR',
 }
 
+export type CommandDiscardElementChangesCalledEvent = {
+  type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED;
+  commandArguments: CommandArguments;
+};
+
+export const enum DiscardElementChangesCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandDiscardElementChangesCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED;
+      status: DiscardElementChangesCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED;
+      status:
+        | DiscardElementChangesCommandCompletedStatus.SUCCESS
+        | DiscardElementChangesCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandRevertSectionChangeEvent = {
+  type: TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED;
+};
+
+export type CommandConfirmConflictResolutionCalledEvent = {
+  type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED;
+  commandArguments: CommandArguments;
+};
+
+export const enum ConfirmConflictResolutionCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandConfirmConflictResolutionCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED;
+      status: ConfirmConflictResolutionCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED;
+      status: ConfirmConflictResolutionCommandCompletedStatus.SUCCESS;
+    };
+
+export type CommandInitWorkspaceCalledEvent = {
+  type: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED;
+};
+
+export const enum InitWorkspaceCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandInitWorkspaceCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED;
+      status: InitWorkspaceCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED;
+      status:
+        | InitWorkspaceCommandCompletedStatus.SUCCESS
+        | InitWorkspaceCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandSyncWorkspaceCalledEvent = {
+  type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED;
+};
+
+export const enum SyncWorkspaceCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandSyncWorkspaceCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED;
+      status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED;
+      status:
+        | SyncWorkspaceCommandCompletedStatus.SUCCESS
+        | SyncWorkspaceCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandPullFromEndevorCalledEvent = {
+  type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED;
+};
+
+export const enum PullFromEndevorCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandPullFromEndevorCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED;
+      status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED;
+      status:
+        | PullFromEndevorCommandCompletedStatus.SUCCESS
+        | PullFromEndevorCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandEditCredentialsCalledEvent = {
+  type: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED;
+};
+
+export const enum EditCredentialsCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandEditCredentialsCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED;
+      status: EditCredentialsCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED;
+      status:
+        | EditCredentialsCommandCompletedStatus.SUCCESS
+        | EditCredentialsCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandEditConnectionDetailsCalledEvent = {
+  type: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED;
+};
+
+export const enum EditConnectionDetailsCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandEditConnectionDetailsCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED;
+      status: EditConnectionDetailsCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED;
+      status:
+        | EditConnectionDetailsCommandCompletedStatus.SUCCESS
+        | EditConnectionDetailsCommandCompletedStatus.CANCELLED;
+    };
+
+export type CommandTestConnectionDetailsCalledEvent = {
+  type: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED;
+};
+
+export const enum TestConnectionDetailsCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandTestConnectionDetailsCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED;
+      status: TestConnectionDetailsCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED;
+      status: TestConnectionDetailsCommandCompletedStatus.SUCCESS;
+    };
+
 export type TelemetryEvent =
   | ExtensionActivatedEvent
   | ProfileMigrationCompletedEvent
@@ -466,4 +686,21 @@ export type TelemetryEvent =
   | CommandSignOutElementCompletedEvent
   | ServiceConnectionTestEvent
   | RejectUnauthorizedProvidedEvent
-  | SettingChangedEvent;
+  | SettingChangedEvent
+  | CommandDiscardElementChangesCalledEvent
+  | CommandDiscardElementChangesCompletedEvent
+  | CommandRevertSectionChangeEvent
+  | CommandConfirmConflictResolutionCalledEvent
+  | CommandConfirmConflictResolutionCompletedEvent
+  | CommandInitWorkspaceCalledEvent
+  | CommandInitWorkspaceCompletedEvent
+  | CommandSyncWorkspaceCalledEvent
+  | CommandSyncWorkspaceCompletedEvent
+  | CommandPullFromEndevorCalledEvent
+  | CommandPullFromEndevorCompletedEvent
+  | CommandEditConnectionDetailsCompletedEvent
+  | CommandEditCredentialsCompletedEvent
+  | CommandEditCredentialsCalledEvent
+  | CommandEditConnectionDetailsCalledEvent
+  | CommandTestConnectionDetailsCompletedEvent
+  | CommandTestConnectionDetailsCalledEvent;
