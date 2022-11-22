@@ -2,6 +2,17 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.3.1] &ndash; 2022-11-22
+
+### Fixed
+
+- Fixed an issue with collapsing the Endevor tree on refresh.
+- Fixed an issue with fetching environments, systems and subsystem outside of the specified Endevor map.
+
+### Changed
+
+- Improved the Endevor workspace sync related messages.
+
 ## [1.3.0] &ndash; 2022-11-04
 
 ### Added
