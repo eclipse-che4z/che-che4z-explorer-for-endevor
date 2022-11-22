@@ -30,7 +30,7 @@ import {
 } from '../store/_doc/v2/Store';
 import { ElementSearchLocation } from '@local/endevor/_doc/Endevor';
 import { toTreeItem } from './render';
-import { byNameOrder, isPromise } from '../utils';
+import { byNameOrder } from '../utils';
 
 interface DataGetters {
   getServiceLocations: () => EndevorServiceLocations;
@@ -55,7 +55,13 @@ interface DataGetters {
   ) => (
     serviceId: EndevorId,
     searchLocationId: EndevorId
-  ) => EndevorCacheItem | undefined | Promise<undefined>;
+  ) =>
+    | EndevorCacheItem
+    | undefined
+    | Readonly<{
+        pendingTask: Promise<undefined>;
+        outdatedCacheValue: Omit<EndevorCacheItem, 'cacheVersion'> | undefined;
+      }>;
 }
 
 export const make = (
@@ -125,12 +131,32 @@ export const make = (
           //    get data from a cache (if available) and render it immediately
           //    or
           //    render with default value and fetch the actual data from REST API with the following rerender afterwards
-          const isPendingTask = isPromise(endevorCache);
-          if (isPendingTask) {
-            await endevorCache;
-            return [];
+          const isEndevorCacheItem = <T>(
+            value: EndevorCacheItem | T
+          ): value is EndevorCacheItem => {
+            return 'elements' in value;
+          };
+          if (isEndevorCacheItem(endevorCache)) {
+            if (!endevorCache.elements || !endevorCache.endevorMap) return [];
+            return buildTree(
+              serviceId,
+              {
+                ...connectionDetails.value,
+                credential: credential.value,
+              },
+              searchLocationId,
+              {
+                configuration,
+                ...elementsSearchLocation,
+              }
+            )(endevorCache.endevorMap)(
+              Object.values(endevorCache.elements)
+            ).sort(byNameOrder);
           }
-          if (!endevorCache.elements || !endevorCache.endevorMap) return [];
+          await endevorCache.pendingTask;
+          const outdatedCacheValue = endevorCache.outdatedCacheValue;
+          if (!outdatedCacheValue?.elements || !outdatedCacheValue?.endevorMap)
+            return [];
           return buildTree(
             serviceId,
             {
@@ -142,9 +168,9 @@ export const make = (
               configuration,
               ...elementsSearchLocation,
             }
-          )(endevorCache.endevorMap)(Object.values(endevorCache.elements)).sort(
-            byNameOrder
-          );
+          )(outdatedCacheValue.endevorMap)(
+            Object.values(outdatedCacheValue.elements)
+          ).sort(byNameOrder);
         }
         case 'LOCATION_PROFILE/NON_EXISTING':
         case 'LOCATION/NON_EXISTING':

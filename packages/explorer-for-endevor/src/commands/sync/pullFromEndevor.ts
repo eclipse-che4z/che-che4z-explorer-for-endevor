@@ -44,6 +44,11 @@ import {
   PullFromEndevorCommandCompletedStatus,
   TelemetryEvents,
 } from '../../_doc/telemetry/v2/Telemetry';
+import {
+  isWorkspaceSyncConflictResponse,
+  isWorkspaceSyncErrorResponse,
+} from '../../store/scm/utils';
+import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
 
 export const pullFromEndevorCommand = async (
   configurations: {
@@ -167,7 +172,7 @@ export const pullFromEndevorCommand = async (
   }
 
   // TODO: Remove these hardcoded values when ccid and comment are no longer required in this call.
-  const syncResult = withNotificationProgress('Pulling from Endevor')(
+  const syncResult = await withNotificationProgress('Pulling from Endevor')(
     (progressReporter) =>
       syncEndevorWorkspaceOneWay(progressReporter)({
         ...connectionDetails.value,
@@ -186,6 +191,52 @@ export const pullFromEndevorCommand = async (
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
+    return;
+  }
+  // always dump the result messages
+  // TODO: consider not to use the result messages since they include internal CLI info sometimes
+  logger.trace(syncResult.messages.join('\n'));
+  if (isWorkspaceSyncErrorResponse(syncResult)) {
+    const syncError = syncResult;
+    logger.error(
+      `Unable to pull from Endevor these elements: ${syncError.errorDetails
+        .map((errorInfo) => errorInfo.element.name)
+        .join(', ')}`
+    );
+    syncError.errorDetails
+      .map(
+        (errorInfo) =>
+          `Unable to perform ${errorInfo.operation} operation on the element ${
+            errorInfo.element.environment
+          }/${errorInfo.element.stageNumber}/${errorInfo.element.system}/${
+            errorInfo.element.subSystem
+          }/${errorInfo.element.type}/${
+            errorInfo.element.name
+          } because of an error:\n${errorInfo.errorMessages.join('\n')}`
+      )
+      .forEach((errorMessage) => {
+        logger.trace(errorMessage);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+          status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
+          error: new Error(errorMessage),
+        });
+      });
+    return;
+  }
+  if (isWorkspaceSyncConflictResponse(syncResult)) {
+    const syncConflict = syncResult;
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
+      status: PullFromEndevorCommandCompletedStatus.CONFLICT,
+    });
+    showConflictResolutionRequiredMessage(
+      syncConflict.conflictDetails.map(
+        (conflictInfo) => conflictInfo.element.name
+      )
+    );
+    return;
   }
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,

@@ -81,6 +81,7 @@ const applyChangesList = (
 ): string => {
   const result: string[] = [];
   let currentLine = 0;
+  const originalElementLines = originalElement.lineCount;
 
   for (const difference of differencesList) {
     const insertion = difference.originalEndLineNumber === 0;
@@ -91,10 +92,7 @@ const applyChangesList = (
       : difference.originalStartLineNumber - 1;
     let endCharacter = 0;
 
-    if (
-      deletion &&
-      difference.originalEndLineNumber === originalElement.lineCount
-    ) {
+    if (deletion && difference.originalEndLineNumber === originalElementLines) {
       endLine -= 1;
       endCharacter = originalElement.lineAt(endLine).range.end.character;
     }
@@ -111,7 +109,7 @@ const applyChangesList = (
 
       if (
         insertion &&
-        difference.originalStartLineNumber === originalElement.lineCount
+        difference.originalStartLineNumber === originalElementLines
       ) {
         fromLine -= 1;
         fromCharacter = modifiedElement.lineAt(fromLine).range.end.character;

@@ -44,7 +44,13 @@ export type CachedElements = Readonly<{
   [id: ElementId]: CachedElement;
 }>;
 
-export type EndevorCacheItem = Partial<{
+export const enum EndevorCacheVersion {
+  UP_TO_DATE = 'UP_TO_DATE',
+  OUTDATED = 'OUTDATED',
+}
+export type EndevorCacheItem = {
+  cacheVersion: EndevorCacheVersion;
+} & Partial<{
   endevorMap: EndevorMap;
   elements: CachedElements;
 }>;

@@ -26,6 +26,7 @@ import {
   EndevorConnectionStatus,
   EndevorCredential,
   EndevorConnection,
+  CachedElements,
 } from '../_doc/v2/Store';
 
 export const enum Actions {
@@ -42,6 +43,11 @@ export const enum Actions {
   ENDEVOR_SEARCH_LOCATION_HIDDEN = 'ENDEVOR_SEARCH_LOCATION/HIDDEN',
   ENDEVOR_SEARCH_LOCATION_DELETED = 'ENDEVOR_SEARCH_LOCATION/DELETED',
   ENDEVOR_CACHE_FETCHED = 'ENDEVOR_CACHE_FETCHED',
+  ENDEVOR_CACHE_FETCH_CANCELED = 'ENDEVOR_CACHE_FETCH_CANCELED',
+  ENDEVOR_CACHE_FETCH_FAILED = 'ENDEVOR_CACHE_FETCH_FAILED',
+  ENDEVOR_ELEMENTS_FETCHED = 'ENDEVOR_ELEMENTS_FETCHED',
+  ENDEVOR_ELEMENTS_FETCH_CANCELED = 'ENDEVOR_ELEMENTS_FETCH_CANCELED',
+  ENDEVOR_ELEMENTS_FETCH_FAILED = 'ENDEVOR_ELEMENTS_FETCH_FAILED',
   REFRESH = 'REFRESH',
   ELEMENT_ADDED = 'ELEMENT_ADDED',
   ELEMENT_UPDATED_IN_PLACE = 'ELEMENT_UPDATED_IN_PLACE',
@@ -139,9 +145,42 @@ export interface EndevorCacheFetched {
   type: Actions.ENDEVOR_CACHE_FETCHED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  endevorCachedItem: EndevorCacheItem | undefined;
+  endevorCachedItem: Omit<EndevorCacheItem, 'cacheVersion'> | undefined;
   connection: EndevorConnection;
   credential: EndevorCredential;
+}
+
+export interface EndevorCacheFetchCanceled {
+  type: Actions.ENDEVOR_CACHE_FETCH_CANCELED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+}
+
+export interface EndevorCacheFetchFailed {
+  type: Actions.ENDEVOR_CACHE_FETCH_FAILED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  connection?: EndevorConnection;
+  credential?: EndevorCredential;
+}
+
+export interface EndevorElementsFetched {
+  type: Actions.ENDEVOR_ELEMENTS_FETCHED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  elements: CachedElements;
+}
+
+export interface EndevorElementsFetchCanceled {
+  type: Actions.ENDEVOR_ELEMENTS_FETCH_CANCELED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+}
+
+export interface EndevorElementsFetchFailed {
+  type: Actions.ENDEVOR_ELEMENTS_FETCH_FAILED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
 }
 
 export interface Refresh {
@@ -230,4 +269,9 @@ export type Action =
   | ElementGeneratedInPlace
   | ElementGeneratedWithCopyBack
   | ElementSignedIn
-  | EndevorCacheFetched;
+  | EndevorCacheFetched
+  | EndevorCacheFetchCanceled
+  | EndevorCacheFetchFailed
+  | EndevorElementsFetched
+  | EndevorElementsFetchCanceled
+  | EndevorElementsFetchFailed;

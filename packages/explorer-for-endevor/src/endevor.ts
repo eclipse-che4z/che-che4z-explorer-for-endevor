@@ -36,7 +36,7 @@ export const validateCredentials =
     const result = await endevor.getAllEnvironmentStages(logger)(progress)({
       ...connectionDetails,
       credential,
-    })(configuration);
+    })(configuration)();
     if (isWrongCredentialsError(result)) return false;
     if (isError(result)) return result;
     return true;
@@ -157,7 +157,7 @@ export const makeEndevorClient = (
         const [service, searchLocation] = result;
         return endevor.getAllEnvironmentStages(logger)(progress)(service)(
           searchLocation.configuration
-        );
+        )();
       },
     getAllSystems: (progress) => (serviceId) => async (searchLocationId) => {
       const result = await getServiceAndSearchLocation(
@@ -170,7 +170,7 @@ export const makeEndevorClient = (
       const [service, searchLocation] = result;
       return endevor.getAllSystems(logger)(progress)(service)(
         searchLocation.configuration
-      );
+      )();
     },
     getAllSubSystems: (progress) => (serviceId) => async (searchLocationId) => {
       const result = await getServiceAndSearchLocation(
@@ -183,7 +183,7 @@ export const makeEndevorClient = (
       const [service, searchLocation] = result;
       return endevor.getAllSubSystems(logger)(progress)(service)(
         searchLocation.configuration
-      );
+      )();
     },
     searchForAllElements:
       (progress) => (serviceId) => async (searchLocationId) => {

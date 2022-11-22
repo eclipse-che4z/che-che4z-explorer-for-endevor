@@ -27,6 +27,7 @@ import { logger } from '../../globals';
 import { isDefined, isError } from '../../utils';
 import {
   WorkspaceElement as ExternalWorkspaceElement,
+  WorkspaceResponse as ExternalWorkspaceResponse,
   WorkspaceState as ExternalWorkspaceState,
 } from './_ext/Workspace';
 import {
@@ -44,45 +45,74 @@ import { toSecuredEndevorSession } from '@local/endevor/endevor';
 import { ANY_VALUE } from '@local/endevor/const';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import { IHandlerProgressApi } from '@zowe/imperative';
+import { stringifyPretty } from '@local/endevor/utils';
+import { WorkspaceResponse, WorkspaceSyncResponse } from './_doc/Error';
+import { getWorkspaceResponse, getWorkspaceSyncResponse } from './error';
 
 export const isWorkspace = (folderUri: Uri): boolean => {
   return WorkspaceUtils.isWorkspace(folderUri.fsPath);
 };
 
-export const initWorkspace = async (folderUri: Uri): Promise<void | Error> => {
+export const initWorkspace = async (
+  folderUri: Uri
+): Promise<WorkspaceResponse | Error> => {
   const workspaceDir = folderUri.fsPath;
   const workspaceArgs: WorkspaceDictionary = {
     'workspace-dir': workspaceDir,
   };
+  let response;
   try {
-    const response = await InitWorkspace.initWorkspace(workspaceArgs);
-    // TODO: better response handling
-    logger.trace(response.messages.join('\n'));
+    response = await InitWorkspace.initWorkspace(workspaceArgs);
   } catch (error) {
     return new Error(
-      `Unable to initialize workspace folder ${workspaceDir} because of an error: ${error.message}`
+      `Unable to initialize workspace folder ${workspaceDir} because of an error:\n${error.message}`
     );
   }
+  let parsedResponse: ExternalWorkspaceResponse;
+  try {
+    parsedResponse = parseToType(ExternalWorkspaceResponse, response);
+  } catch (error) {
+    logger.trace(
+      `Unable to provide a failed response reason because of error:\n${
+        error.message
+      }\nof an incorrect response:\n${stringifyPretty(response)}.`
+    );
+    return new Error(
+      `Unable to initialize workspace folder ${workspaceDir} because of an incorrect response`
+    );
+  }
+  return getWorkspaceResponse(parsedResponse);
 };
 
 export const confirmConflictResolution = async (
   fileUri: Uri
-): Promise<void | Error> => {
+): Promise<WorkspaceResponse | Error> => {
   const filePath = fileUri.fsPath;
   const workspaceArgs: WorkspaceDictionary = {
     'workspace-file': filePath,
   };
+  let response;
   try {
-    const confirmResult = await ConfirmResolution.confirmResolution(
-      workspaceArgs
-    );
-    // TODO: better response handling
-    logger.trace(confirmResult.messages.join('\n'));
+    response = await ConfirmResolution.confirmResolution(workspaceArgs);
   } catch (error) {
     return new Error(
       `Unable to confirm conflict resolution for workspace file ${filePath} because of an error: ${error.message}`
     );
   }
+  let parsedResponse: ExternalWorkspaceResponse;
+  try {
+    parsedResponse = parseToType(ExternalWorkspaceResponse, response);
+  } catch (error) {
+    logger.trace(
+      `Unable to provide a failed response reason because of error:\n${
+        error.message
+      }\nof an incorrect response:\n${stringifyPretty(response)}.`
+    );
+    return new Error(
+      `Unable to confirm conflict resolution for workspace file ${filePath} because of an incorrect response`
+    );
+  }
+  return getWorkspaceResponse(parsedResponse);
 };
 
 export const syncWorkspace =
@@ -98,7 +128,7 @@ export const syncWorkspace =
     element,
   }: ElementSearchLocation) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
-  async (folderUri: Uri): Promise<void | Error> => {
+  async (folderUri: Uri): Promise<WorkspaceSyncResponse | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const location: IElementBasicData = {
       environment: environment ?? ANY_VALUE,
@@ -127,23 +157,38 @@ export const syncWorkspace =
       },
     };
     progress.report({ increment: 30 });
+    let response;
     try {
-      const syncResult = await SyncWorkspace.syncWorkspace(
+      response = await SyncWorkspace.syncWorkspace(
         session,
         configuration,
         location,
         workspaceArgs,
         progressApi
       );
-      progress.report({ increment: 100 });
-      // TODO: better response handling
-      logger.trace(syncResult.messages.join('\n'));
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to synchronize workspace folder ${workspaceDir} because of an error: ${error.message}`
+        `Unable to synchronize workspace folder ${workspaceDir} because of an error:\n${error.message}`
       );
     }
+    progress.report({ increment: 50 });
+    let parsedResponse: ExternalWorkspaceResponse;
+    try {
+      parsedResponse = parseToType(ExternalWorkspaceResponse, response);
+    } catch (error) {
+      logger.trace(
+        `Unable to provide a failed response reason because of error:\n${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to synchronize workspace folder ${workspaceDir} because of an incorrect response`
+      );
+    }
+    progress.report({ increment: 20 });
+    return getWorkspaceSyncResponse(parsedResponse);
   };
 
 export const syncWorkspaceOneWay =
@@ -158,7 +203,7 @@ export const syncWorkspaceOneWay =
     type,
     element,
   }: ElementSearchLocation) =>
-  async (folderUri: Uri): Promise<void | Error> => {
+  async (folderUri: Uri): Promise<WorkspaceSyncResponse | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const location: IElementBasicData = {
       environment: environment ?? ANY_VALUE,
@@ -186,23 +231,38 @@ export const syncWorkspaceOneWay =
       },
     };
     progress.report({ increment: 30 });
+    let response;
     try {
-      const syncResult = await SyncWorkspace.syncWorkspace(
+      response = await SyncWorkspace.syncWorkspace(
         session,
         configuration,
         location,
         workspaceArgs,
         progressApi
       );
-      progress.report({ increment: 100 });
-      // TODO: better response handling
-      logger.trace(syncResult.messages.join('\n'));
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
         `Unable to synchronize workspace folder ${workspaceDir} because of an error: ${error.message}`
       );
     }
+    progress.report({ increment: 50 });
+    let parsedResponse: ExternalWorkspaceResponse;
+    try {
+      parsedResponse = parseToType(ExternalWorkspaceResponse, response);
+    } catch (error) {
+      logger.trace(
+        `Unable to provide a failed response reason because of error:\n${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return new Error(
+        `Unable to synchronize workspace folder ${workspaceDir} because of an incorrect response`
+      );
+    }
+    progress.report({ increment: 20 });
+    return getWorkspaceSyncResponse(parsedResponse);
   };
 
 export const getWorkspaceState = async (
