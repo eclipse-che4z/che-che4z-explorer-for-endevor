@@ -56,6 +56,7 @@ import {
   ActionChangeControlValue,
   UpdateStatus,
   ErrorUpdateResponse,
+  EnvironmentStageMapPath,
 } from '../_doc/Endevor';
 import { join } from 'path';
 import { ANY_VALUE } from '../const';
@@ -1204,6 +1205,25 @@ describe('endevor public API v1', () => {
       );
     };
 
+    const toSpecificRequestPath = (
+      configuration: string,
+      environment: string,
+      stageNumber: string
+    ): string => {
+      return join(
+        basePath,
+        configuration,
+        'env',
+        environment,
+        'stgnum',
+        stageNumber,
+        'sys',
+        ANY_VALUE,
+        'subsys',
+        ANY_VALUE
+      );
+    };
+
     it('should return the list of all filtered subsystems', async () => {
       // arrange
       const request: MockRequest<null> = {
@@ -1251,6 +1271,7 @@ describe('endevor public API v1', () => {
                 envName: subsystem.environment,
                 sysName: subsystem.system,
                 sbsName: subsystem.subSystem,
+                stgId: subsystem.stageNumber,
                 stgSeqNum: parseInt(subsystem.stageNumber),
                 nextSbs: subsystem.nextSubSystem,
               };
@@ -1261,6 +1282,7 @@ describe('endevor public API v1', () => {
                 envName: subsystem.environment,
                 sysName: subsystem.system,
                 sbsName: subsystem.subSystem,
+                stgId: subsystem.stageNumber,
                 stgSeqNum: parseInt(subsystem.stageNumber),
                 nextSbs: subsystem.nextSubSystem,
               };
@@ -1273,7 +1295,95 @@ describe('endevor public API v1', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(configuration);
+      )(configuration)();
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSubSystems).toEqual(validSubSystems);
+    });
+
+    it('should return the list of all filtered subsystems searching with environment and stage number', async () => {
+      // arrange
+      const searchParams: Readonly<EnvironmentStageMapPath> = {
+        environment: 'TEST',
+        stageNumber: '1',
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toSpecificRequestPath(
+          configuration,
+          searchParams.environment,
+          searchParams.stageNumber
+        ),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSubSystems: ReadonlyArray<SubSystem> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageNumber: '1',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const invalidSubSystems: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          stageNumber: '2',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSubSystems.map((subsystem) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgId: subsystem.stageNumber,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidSubSystems.map((subsystem: any) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgId: subsystem.stageNumber,
+                stgSeqNum: parseInt(subsystem.stageNumber),
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)(
+        service
+      )(configuration)(searchParams);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1316,7 +1426,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(nonExistingConfiguration);
+      )(nonExistingConfiguration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1356,7 +1466,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(configuration);
+      )(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1371,7 +1481,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         nonExistingService
-      )(configuration);
+      )(configuration)();
       // assert
       expect(isError(actualSubSystems)).toBe(true);
     });
@@ -1406,7 +1516,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
-      )(configuration);
+      )(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1425,6 +1535,23 @@ describe('endevor public API v1', () => {
         ANY_VALUE,
         'stgnum',
         ANY_VALUE,
+        'sys',
+        ANY_VALUE
+      );
+    };
+
+    const toSpecificRequestPath = (
+      configuration: string,
+      environment: string,
+      stageNumber: string
+    ): string => {
+      return join(
+        basePath,
+        configuration,
+        'env',
+        environment,
+        'stgnum',
+        stageNumber,
         'sys',
         ANY_VALUE
       );
@@ -1480,7 +1607,8 @@ describe('endevor public API v1', () => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgSeqNum: system.stageNumber,
+                stgId: system.stageNumber,
+                stgSeqNum: parseInt(system.stageNumber),
                 nextSys: system.nextSystem,
               };
             }),
@@ -1489,7 +1617,8 @@ describe('endevor public API v1', () => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgSeqNum: system.stageNumber,
+                stgId: system.stageNumber,
+                stgSeqNum: parseInt(system.stageNumber),
                 nextSys: system.nextSystem,
               };
             }),
@@ -1501,7 +1630,97 @@ describe('endevor public API v1', () => {
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
         configuration
-      );
+      )();
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSystems).toEqual(validSystems);
+    });
+
+    it('should return the list of all filtered systems searching with environment and stage number', async () => {
+      // arrange
+      const searchParams: Readonly<EnvironmentStageMapPath> = {
+        environment: 'TEST',
+        stageNumber: '1',
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toSpecificRequestPath(
+          configuration,
+          searchParams.environment,
+          searchParams.stageNumber
+        ),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSystems: ReadonlyArray<System> = [
+        {
+          environment: 'TEST',
+          stageNumber: '1',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS2',
+        },
+        {
+          environment: 'TEST1',
+          stageNumber: '1',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const invalidSystems: ReadonlyArray<unknown> = [
+        {
+          // environment: 'TEST1',
+          stageNumber: '1',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSystems.map((system) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgId: system.stageNumber,
+                stgSeqNum: parseInt(system.stageNumber),
+                nextSys: system.nextSystem,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidSystems.map((system: any) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgId: system.stageNumber,
+                stgSeqNum: parseInt(system.stageNumber),
+                nextSys: system.nextSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)(service)(
+        configuration
+      )(searchParams);
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1545,7 +1764,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
         nonExistingConfiguration
-      );
+      )();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1585,7 +1804,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
         configuration
-      );
+      )();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1601,7 +1820,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSystems = await getAllSystems(logger)(progress)(
         nonExistingService
-      )(configurationName);
+      )(configurationName)();
       // assert
       expect(isError(actualSystems)).toBe(true);
     });
@@ -1637,7 +1856,7 @@ describe('endevor public API v1', () => {
       // act
       const actualSystems = await getAllSystems(logger)(progress)(service)(
         configuration
-      );
+      )();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1742,7 +1961,7 @@ describe('endevor public API v1', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(configuration);
+      )(service)(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1796,7 +2015,7 @@ describe('endevor public API v1', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(configuration);
+      )(service)(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1811,7 +2030,7 @@ describe('endevor public API v1', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(nonExistingService)(configuration);
+      )(nonExistingService)(configuration)();
       // assert
       expect(isError(actualEnvironments)).toBe(true);
     });
@@ -1847,7 +2066,7 @@ describe('endevor public API v1', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(configuration);
+      )(service)(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1886,7 +2105,7 @@ describe('endevor public API v1', () => {
       // act
       const actualEnvironments = await getAllEnvironmentStages(logger)(
         progress
-      )(service)(configuration);
+      )(service)(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
