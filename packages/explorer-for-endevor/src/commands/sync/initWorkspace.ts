@@ -28,6 +28,7 @@ import {
   InitWorkspaceCommandCompletedStatus,
   TelemetryEvents,
 } from '../../_doc/telemetry/v2/Telemetry';
+import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 
 export const initWorkspace = async (): Promise<void> => {
   logger.trace('Initialization of an Endevor workspace called.');
@@ -46,7 +47,7 @@ export const initWorkspace = async (): Promise<void> => {
     return;
   }
   if (isEndevorWorkspace(folder.uri)) {
-    logger.trace(
+    logger.warn(
       'An opened workspace folder already initialized as the Endevor workspace, initialization cancelled.'
     );
     reporter.sendTelemetryEvent({
@@ -70,6 +71,20 @@ export const initWorkspace = async (): Promise<void> => {
     });
     return;
   }
+  // always dump the result messages
+  // TODO: consider not to use the result messages since they include internal CLI info sometimes
+  logger.trace(initResult.messages.join('\n'));
+  switch (initResult.status) {
+    case WorkspaceResponseStatus.ERROR:
+      logger.error('Unable to initialize workspace.');
+      return;
+    case WorkspaceResponseStatus.WARNING:
+      logger.warn(
+        'Workspace initialization was successful with some warnings.'
+      );
+      break;
+  }
+  logger.trace(initResult.messages.join('\n'));
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED,
     status: InitWorkspaceCommandCompletedStatus.SUCCESS,

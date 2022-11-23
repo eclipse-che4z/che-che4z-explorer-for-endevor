@@ -84,25 +84,7 @@ describe('external Endevor data type parsing', () => {
       const system = {
         envName: 'ENV',
         sysName: 'SYS',
-        stgSeqNum: '1',
-        nextSys: 'SYS',
-      };
-      // act
-      const parsedSystem = parseToType(System, system);
-      // assert
-      const expectedSystem: System = {
-        envName: 'ENV',
-        sysName: 'SYS',
-        stgSeqNum: '1',
-        nextSys: 'SYS',
-      };
-      expect(parsedSystem).toStrictEqual(expectedSystem);
-    });
-    it('should parse a system with numeric stage sequence number', () => {
-      // arrange
-      const system = {
-        envName: 'ENV',
-        sysName: 'SYS',
+        stgId: '1',
         stgSeqNum: 1,
         nextSys: 'SYS',
       };
@@ -112,7 +94,29 @@ describe('external Endevor data type parsing', () => {
       const expectedSystem: System = {
         envName: 'ENV',
         sysName: 'SYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
+        nextSys: 'SYS',
+      };
+      expect(parsedSystem).toStrictEqual(expectedSystem);
+    });
+    it('should parse a system with numeric stage sequence number', () => {
+      // arrange
+      const system = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        stgId: 1,
+        stgSeqNum: 1,
+        nextSys: 'SYS',
+      };
+      // act
+      const parsedSystem = parseToType(System, system);
+      // assert
+      const expectedSystem: System = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSys: 'SYS',
       };
       expect(parsedSystem).toStrictEqual(expectedSystem);
@@ -122,12 +126,13 @@ describe('external Endevor data type parsing', () => {
       const system = {
         // envName: 'ENV',
         sysName: 'SYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSys: 'SYS',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, nextSys: string }/envName: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/envName: string'
       );
     });
     it('should throw an error for a system without a system name', () => {
@@ -135,12 +140,13 @@ describe('external Endevor data type parsing', () => {
       const system = {
         envName: 'ENV',
         // sysName: 'SYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSys: 'SYS',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, nextSys: string }/sysName: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/sysName: string'
       );
     });
     it('should throw an error for a system without a next system name', () => {
@@ -148,38 +154,55 @@ describe('external Endevor data type parsing', () => {
       const system = {
         envName: 'ENV',
         sysName: 'SYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         // nextSys: 'SYS',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, nextSys: string }/nextSys: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/nextSys: string'
       );
     });
-    it('should throw an error for a system with an incorrect stage sequence number', () => {
+    it('should throw an error for a system without a next stage sequence number', () => {
       // arrange
       const system = {
         envName: 'ENV',
         sysName: 'SYS',
-        stgSeqNum: 3, // <-- should be 1 or 2
+        stgId: '1',
+        // stgSeqNum: 1,
         nextSys: 'SYS',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowError(
-        'Invalid value 3 supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, nextSys: string }/stgSeqNum: StageNumber'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/stgSeqNum: number'
       );
     });
-    it('should throw an error for a system without a stage sequence number', () => {
+    it('should throw an error for a system with an incorrect stage id', () => {
       // arrange
       const system = {
         envName: 'ENV',
         sysName: 'SYS',
-        // stgSeqNum: '1',
+        stgId: 3, // <-- should be 1 or 2
+        stgSeqNum: 1,
         nextSys: 'SYS',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, nextSys: string }/stgSeqNum: StageNumber'
+        'Invalid value 3 supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/stgId: StageNumber'
+      );
+    });
+    it('should throw an error for a system without a stage id', () => {
+      // arrange
+      const system = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        // stgId: '1',
+        stgSeqNum: 1,
+        nextSys: 'SYS',
+      };
+      // act && assert
+      expect(() => parseToType(System, system)).toThrowError(
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, nextSys: string }/stgId: StageNumber'
       );
     });
   });
@@ -190,27 +213,7 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: '1',
-        nextSbs: 'SUBSYS',
-      };
-      // act
-      const parsedSubSystem = parseToType(SubSystem, subSystem);
-      // assert
-      const expectedSubSystem: SubSystem = {
-        envName: 'ENV',
-        sysName: 'SYS',
-        sbsName: 'SUBSYS',
-        stgSeqNum: '1',
-        nextSbs: 'SUBSYS',
-      };
-      expect(parsedSubSystem).toStrictEqual(expectedSubSystem);
-    });
-    it('should parse a subsystem with numeric stage sequence number', () => {
-      // arrange
-      const subSystem = {
-        envName: 'ENV',
-        sysName: 'SYS',
-        sbsName: 'SUBSYS',
+        stgId: '1',
         stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
@@ -221,7 +224,31 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
+        nextSbs: 'SUBSYS',
+      };
+      expect(parsedSubSystem).toStrictEqual(expectedSubSystem);
+    });
+    it('should parse a subsystem with numeric stage sequence number', () => {
+      // arrange
+      const subSystem = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        sbsName: 'SUBSYS',
+        stgId: 1,
+        stgSeqNum: 1,
+        nextSbs: 'SUBSYS',
+      };
+      // act
+      const parsedSubSystem = parseToType(SubSystem, subSystem);
+      // assert
+      const expectedSubSystem: SubSystem = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        sbsName: 'SUBSYS',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       expect(parsedSubSystem).toStrictEqual(expectedSubSystem);
@@ -232,12 +259,13 @@ describe('external Endevor data type parsing', () => {
         // envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/envName: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/envName: string'
       );
     });
     it('should throw an error for a subsystem without a system name', () => {
@@ -246,12 +274,13 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         // sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/sysName: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/sysName: string'
       );
     });
     it('should throw an error for a subsystem without a subsystem name', () => {
@@ -260,12 +289,13 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         sysName: 'SYS',
         // sbsName: 'SUBSYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/sbsName: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/sbsName: string'
       );
     });
     it('should throw an error for a subsystem without a next subsystem name', () => {
@@ -274,26 +304,43 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: '1',
+        stgId: '1',
+        stgSeqNum: 1,
         // nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/nextSbs: string'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/nextSbs: string'
       );
     });
-    it('should throw an error for a subsystem with an incorrect stage sequence number', () => {
+    it('should throw an error for a subsystem with an incorrect stage id', () => {
       // arrange
       const subSystem = {
         envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        stgSeqNum: 3, // <-- should be 1 or 2
+        stgId: 3, // <-- should be 1 or 2
+        stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value 3 supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/stgSeqNum: StageNumber'
+        'Invalid value 3 supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/stgId: StageNumber'
+      );
+    });
+    it('should throw an error for a subsystem without a stage id', () => {
+      // arrange
+      const subSystem = {
+        envName: 'ENV',
+        sysName: 'SYS',
+        sbsName: 'SUBSYS',
+        // stgId: '1',
+        stgSeqNum: 1,
+        nextSbs: 'SUBSYS',
+      };
+      // act && assert
+      expect(() => parseToType(SubSystem, subSystem)).toThrowError(
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/stgId: StageNumber'
       );
     });
     it('should throw an error for a subsystem without a stage sequence number', () => {
@@ -302,12 +349,13 @@ describe('external Endevor data type parsing', () => {
         envName: 'ENV',
         sysName: 'SYS',
         sbsName: 'SUBSYS',
-        // stgSeqNum: '1',
+        stgId: '1',
+        // stgSeqNum: 1,
         nextSbs: 'SUBSYS',
       };
       // act && assert
       expect(() => parseToType(SubSystem, subSystem)).toThrowError(
-        'Invalid value undefined supplied to : { envName: string, stgSeqNum: StageNumber, sysName: string, sbsName: string, nextSbs: string }/stgSeqNum: StageNumber'
+        'Invalid value undefined supplied to : { envName: string, stgId: StageNumber, stgSeqNum: number, sysName: string, sbsName: string, nextSbs: string }/stgSeqNum: number'
       );
     });
   });

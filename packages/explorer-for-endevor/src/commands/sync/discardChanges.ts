@@ -106,7 +106,7 @@ export const discardChangesCommand =
             type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
             status: DiscardElementChangesCommandCompletedStatus.CANCELLED,
           });
-          break;
+          return;
         }
         discardResult = await discardAddedElementChanges(
           changedElement.workspaceElementUri
@@ -119,7 +119,7 @@ export const discardChangesCommand =
             type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
             status: DiscardElementChangesCommandCompletedStatus.CANCELLED,
           });
-          break;
+          return;
         }
         discardResult = await discardModifiedElementChanges(
           changedElement.workspaceElementUri
@@ -132,7 +132,7 @@ export const discardChangesCommand =
             type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
             status: DiscardElementChangesCommandCompletedStatus.CANCELLED,
           });
-          break;
+          return;
         }
         discardResult = await discardModifiedElementChanges(
           changedElement.workspaceElementUri

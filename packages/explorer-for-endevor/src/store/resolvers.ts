@@ -31,6 +31,7 @@ import {
 import {
   CachedElement,
   EndevorCacheItem,
+  EndevorCacheVersion,
   EndevorConfiguration,
   EndevorConnection,
   EndevorConnectionStatus,
@@ -40,7 +41,6 @@ import {
   InvalidEndevorConnection,
   InvalidEndevorCredential,
   State,
-  UnknownEndevorCredential,
   ValidEndevorConnection,
   ValidEndevorCredential,
 } from './_doc/v2/Store';
@@ -64,7 +64,7 @@ import {
   searchForAllElements,
   validateCredentials,
 } from '../endevor';
-import { isDefined, isError, isPromise } from '../utils';
+import { isDefined, isError } from '../utils';
 import { EndevorMap } from '../_doc/Endevor';
 import {
   isConnectionError,
@@ -399,7 +399,10 @@ export const defineSearchLocationResolutionOrder = (
   ];
 };
 
-type PendingTask = Promise<undefined>;
+type PendingTask = Readonly<{
+  pendingTask: Promise<undefined>;
+  outdatedCacheValue: Omit<EndevorCacheItem, 'cacheVersion'> | undefined;
+}>;
 export type GetEndevorCache = (
   serviceId: EndevorId,
   searchLocationId: EndevorId
@@ -412,8 +415,7 @@ export const resolveEndevorCache =
   ): EndevorCacheItem | undefined | PendingTask => {
     for (const getCache of elementGetters) {
       const endevorCache = getCache(serviceId, searchLocationId);
-      const isPendingTask = isPromise(endevorCache);
-      if (endevorCache || isPendingTask) return endevorCache;
+      if (endevorCache) return endevorCache;
     }
     return undefined;
   };
@@ -426,298 +428,410 @@ export const defineEndevorCacheResolver = (
   dispatch: (action: Action) => Promise<void>
 ): ReadonlyArray<GetEndevorCache> => {
   return [
-    (serviceId, searchLocationId) =>
-      getEndevorCache(getState)(serviceId)(searchLocationId),
     (serviceId, searchLocationId) => {
-      return new Promise((resolve) => {
-        (async () => {
-          const tasksNumber = 4;
-          const result = await withCancellableNotificationProgress(
-            'Fetching Endevor elements and map structure'
-          )((progress, cancellationToken) => {
-            // use the first task to test connections and credentials issues
-            // decline all other tasks if first is already unsuccessful
-            const testTaskCompletionEmitter: EventEmitter<Error | void> =
-              new EventEmitter();
-            const testTaskCompletion = new Promise<Error | void>((resolve) => {
-              testTaskCompletionEmitter.event((value) => {
-                resolve(value);
-              });
-            });
-            return Promise.all([
-              (async () => {
-                const taskResult = await getAllEnvironmentStages(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
-                  ...connection.value,
-                  credential: credential.value,
-                })(configuration);
-                if (cancellationToken?.isCancellationRequested) {
-                  testTaskCompletionEmitter.fire(undefined);
-                  return [];
-                }
-                if (isConnectionError(taskResult)) {
-                  const error = taskResult;
-                  logger.error(
-                    'Unable to connect to Endevor Web Services.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  const testedConnection: InvalidEndevorConnection = {
-                    status: EndevorConnectionStatus.INVALID,
-                    value: connection.value,
-                  };
-                  const testedCredential: UnknownEndevorCredential = {
-                    status: EndevorCredentialStatus.UNKNOWN,
-                    value: credential.value,
-                  };
-                  dispatch({
-                    type: Actions.ENDEVOR_CACHE_FETCHED,
-                    endevorCachedItem: {},
-                    serviceId,
-                    searchLocationId,
-                    connection: testedConnection,
-                    credential: testedCredential,
-                  });
-                  testTaskCompletionEmitter.fire(error);
-                  return error;
-                }
-                if (isWrongCredentialsError(taskResult)) {
-                  const error = taskResult;
-                  logger.error(
-                    'Endevor credentials are incorrect.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  const anyVersion = ServiceApiVersion.V2;
-                  const testedConnection: ValidEndevorConnection = {
-                    status: EndevorConnectionStatus.VALID,
-                    value: {
-                      ...connection.value,
-                      apiVersion: anyVersion,
-                    },
-                  };
-                  const testedCredential: InvalidEndevorCredential = {
-                    status: EndevorCredentialStatus.INVALID,
-                    value: credential.value,
-                  };
-                  dispatch({
-                    type: Actions.ENDEVOR_CACHE_FETCHED,
-                    endevorCachedItem: {},
-                    serviceId,
-                    searchLocationId,
-                    connection: testedConnection,
-                    credential: testedCredential,
-                  });
-                  testTaskCompletionEmitter.fire(error);
-                  return error;
-                }
-                if (isError(taskResult)) {
-                  const error = taskResult;
-                  logger.error(
-                    'Unable to fetch environment stages information from Endevor.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  testTaskCompletionEmitter.fire(error);
-                  return error;
-                }
-                testTaskCompletionEmitter.fire(undefined);
-                return taskResult;
-              })(),
-              (async (): Promise<ReadonlyArray<System> | Error> => {
-                const testResult = await testTaskCompletion;
-                if (
-                  isError(testResult) ||
-                  cancellationToken?.isCancellationRequested
-                )
-                  return [];
-                const systems = await getAllSystems(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
-                  ...connection.value,
-                  credential: credential.value,
-                })(configuration);
-                if (isError(systems)) {
-                  const error = systems;
-                  logger.error(
-                    'Unable to fetch systems information from Endevor.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  return error;
-                }
-                return systems;
-              })(),
-              (async (): Promise<ReadonlyArray<SubSystem> | Error> => {
-                const testResult = await testTaskCompletion;
-                if (
-                  isError(testResult) ||
-                  cancellationToken?.isCancellationRequested
-                )
-                  return [];
-                const subsystems = await getAllSubSystems(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
-                  ...connection.value,
-                  credential: credential.value,
-                })(configuration);
-                if (isError(subsystems)) {
-                  const error = subsystems;
-                  logger.error(
-                    'Unable to fetch subsystems information from Endevor.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  return error;
-                }
-                return subsystems;
-              })(),
-              (async (): Promise<ReadonlyArray<Element> | Error> => {
-                const testResult = await testTaskCompletion;
-                if (
-                  isError(testResult) ||
-                  cancellationToken?.isCancellationRequested
-                )
-                  return [];
-                const elements = await searchForAllElements(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
+      const existingCache =
+        getEndevorCache(getState)(serviceId)(searchLocationId);
+      if (!existingCache || !existingCache.endevorMap) return;
+      if (
+        existingCache.endevorMap &&
+        existingCache.cacheVersion !== EndevorCacheVersion.UP_TO_DATE
+      ) {
+        return {
+          outdatedCacheValue: existingCache,
+          pendingTask: new Promise((resolve) => {
+            (async () => {
+              const elements = await withCancellableNotificationProgress(
+                'Fetching elements'
+              )((progress) =>
+                searchForAllElements(progress)({
                   ...connection.value,
                   credential: credential.value,
                 })({
                   configuration,
                   ...elementsSearchLocation,
+                })
+              );
+              const operationCancelled = !elements;
+              if (operationCancelled) {
+                dispatch({
+                  type: Actions.ENDEVOR_ELEMENTS_FETCH_CANCELED,
+                  serviceId,
+                  searchLocationId,
                 });
-                if (isError(elements)) {
-                  const error = elements;
-                  reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                    status: ElementsFetchingStatus.GENERIC_ERROR,
-                    error,
+                resolve(undefined);
+                return;
+              }
+              if (isError(elements)) {
+                dispatch({
+                  type: Actions.ENDEVOR_ELEMENTS_FETCH_FAILED,
+                  serviceId,
+                  searchLocationId,
+                });
+                const error = elements;
+                logger.warn(
+                  'Unable to fetch the list of elements from Endevor.',
+                  `${error.message}.`
+                );
+                resolve(undefined);
+                return;
+              }
+              const lastRefreshTimestamp = Date.now();
+              dispatch({
+                type: Actions.ENDEVOR_ELEMENTS_FETCHED,
+                serviceId,
+                searchLocationId,
+                elements: elements.reduce(
+                  (acc: { [id: string]: CachedElement }, element) => {
+                    const newElementId =
+                      toElementCompositeKey(serviceId)(searchLocationId)(
+                        element
+                      );
+                    acc[newElementId] = {
+                      element,
+                      lastRefreshTimestamp,
+                    };
+                    return acc;
+                  },
+                  {}
+                ),
+              });
+              resolve(undefined);
+              return;
+            })();
+          }),
+        };
+      }
+      return existingCache;
+    },
+    (serviceId, searchLocationId) => {
+      return {
+        outdatedCacheValue:
+          getEndevorCache(getState)(serviceId)(searchLocationId),
+        pendingTask: new Promise((resolve) => {
+          (async () => {
+            const tasksNumber = 4;
+            const result = await withCancellableNotificationProgress(
+              'Fetching Endevor elements and map structure'
+            )((progress, cancellationToken) => {
+              // use the first task to test connections and credentials issues
+              // decline all other tasks if first is already unsuccessful
+              const testTaskCompletionEmitter: EventEmitter<Error | void> =
+                new EventEmitter();
+              const testTaskCompletion = new Promise<Error | void>(
+                (resolve) => {
+                  testTaskCompletionEmitter.event((value) => {
+                    resolve(value);
                   });
-                  logger.error(
-                    'Unable to fetch any valid element from Endevor.',
-                    `${error.message}.`
-                  );
-                  return error;
                 }
-                reporter.sendTelemetryEvent({
-                  type: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                  elementsAmount: elements.length,
-                });
-                return elements;
-              })(),
-            ]);
-          });
-          const operationCancelled = !result;
-          if (operationCancelled) {
-            resolve(undefined);
-            return;
-          }
-          const [environmentStages, systems, subsystems, elements] = result;
-          if (
-            isError(environmentStages) ||
-            isError(systems) ||
-            isError(subsystems) ||
-            isError(elements)
-          ) {
-            resolve(undefined);
-            return;
-          }
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const searchEnvironment = elementsSearchLocation.environment!;
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const searchStage = elementsSearchLocation.stageNumber!;
-          let endevorMap: EndevorMap;
-          if (
-            !isDefined(elementsSearchLocation.subsystem) ||
-            !isDefined(elementsSearchLocation.system)
-          ) {
-            endevorMap = toEndevorMapWithWildcards(environmentStages)(systems)(
-              subsystems
-            )({
-              environment: searchEnvironment,
-              stageNumber: searchStage,
+              );
+              return Promise.all([
+                (async () => {
+                  const taskResult = await getAllEnvironmentStages(
+                    toSeveralTasksProgress(progress)(tasksNumber)
+                  )({
+                    ...connection.value,
+                    credential: credential.value,
+                  })(configuration)(elementsSearchLocation);
+                  if (cancellationToken?.isCancellationRequested) {
+                    testTaskCompletionEmitter.fire(undefined);
+                    return [];
+                  }
+                  if (isConnectionError(taskResult)) {
+                    const error = taskResult;
+                    logger.error(
+                      'Unable to connect to Endevor Web Services.',
+                      `${error.message}.`
+                    );
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext:
+                        V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                      status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    const testedConnection: InvalidEndevorConnection = {
+                      status: EndevorConnectionStatus.INVALID,
+                      value: connection.value,
+                    };
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                      connection: testedConnection,
+                    });
+                    testTaskCompletionEmitter.fire(error);
+                    return error;
+                  }
+                  if (isWrongCredentialsError(taskResult)) {
+                    const error = taskResult;
+                    logger.error(
+                      'Endevor credentials are incorrect.',
+                      `${error.message}.`
+                    );
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext:
+                        V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                      status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    const anyVersion = ServiceApiVersion.V2;
+                    const testedConnection: ValidEndevorConnection = {
+                      status: EndevorConnectionStatus.VALID,
+                      value: {
+                        ...connection.value,
+                        apiVersion: anyVersion,
+                      },
+                    };
+                    const testedCredential: InvalidEndevorCredential = {
+                      status: EndevorCredentialStatus.INVALID,
+                      value: credential.value,
+                    };
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                      connection: testedConnection,
+                      credential: testedCredential,
+                    });
+                    testTaskCompletionEmitter.fire(error);
+                    return error;
+                  }
+                  if (isError(taskResult)) {
+                    const error = taskResult;
+                    logger.error(
+                      'Unable to fetch environment stages information from Endevor.',
+                      `${error.message}.`
+                    );
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext:
+                        V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                      status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                    });
+                    testTaskCompletionEmitter.fire(error);
+                    return error;
+                  }
+                  testTaskCompletionEmitter.fire(undefined);
+                  return taskResult;
+                })(),
+                (async (): Promise<ReadonlyArray<System> | Error> => {
+                  const testResult = await testTaskCompletion;
+                  if (
+                    isError(testResult) ||
+                    cancellationToken?.isCancellationRequested
+                  )
+                    return [];
+                  const systems = await getAllSystems(
+                    toSeveralTasksProgress(progress)(tasksNumber)
+                  )({
+                    ...connection.value,
+                    credential: credential.value,
+                  })(configuration)(elementsSearchLocation);
+                  if (cancellationToken?.isCancellationRequested) {
+                    testTaskCompletionEmitter.fire(undefined);
+                    return [];
+                  }
+                  if (isError(systems)) {
+                    const error = systems;
+                    logger.error(
+                      'Unable to fetch systems information from Endevor.',
+                      `${error.message}.`
+                    );
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext:
+                        V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                      status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                    });
+                    return error;
+                  }
+                  return systems;
+                })(),
+                (async (): Promise<ReadonlyArray<SubSystem> | Error> => {
+                  const testResult = await testTaskCompletion;
+                  if (
+                    isError(testResult) ||
+                    cancellationToken?.isCancellationRequested
+                  )
+                    return [];
+                  const subsystems = await getAllSubSystems(
+                    toSeveralTasksProgress(progress)(tasksNumber)
+                  )({
+                    ...connection.value,
+                    credential: credential.value,
+                  })(configuration)(elementsSearchLocation);
+                  if (cancellationToken?.isCancellationRequested) {
+                    testTaskCompletionEmitter.fire(undefined);
+                    return [];
+                  }
+                  if (isError(subsystems)) {
+                    const error = subsystems;
+                    logger.error(
+                      'Unable to fetch subsystems information from Endevor.',
+                      `${error.message}.`
+                    );
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext:
+                        V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                      status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                    });
+                    return error;
+                  }
+                  return subsystems;
+                })(),
+                (async (): Promise<ReadonlyArray<Element> | Error> => {
+                  const testResult = await testTaskCompletion;
+                  if (
+                    isError(testResult) ||
+                    cancellationToken?.isCancellationRequested
+                  )
+                    return [];
+                  const elements = await searchForAllElements(
+                    toSeveralTasksProgress(progress)(tasksNumber)
+                  )({
+                    ...connection.value,
+                    credential: credential.value,
+                  })({
+                    configuration,
+                    ...elementsSearchLocation,
+                  });
+                  if (cancellationToken?.isCancellationRequested) {
+                    testTaskCompletionEmitter.fire(undefined);
+                    return [];
+                  }
+                  if (isError(elements)) {
+                    const error = elements;
+                    reporter.sendTelemetryEvent({
+                      type: V1TelemetryEvents.ERROR,
+                      errorContext: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                      status: ElementsFetchingStatus.GENERIC_ERROR,
+                      error,
+                    });
+                    logger.error(
+                      'Unable to fetch any valid element from Endevor.',
+                      `${error.message}.`
+                    );
+                    dispatch({
+                      type: Actions.ENDEVOR_CACHE_FETCH_FAILED,
+                      serviceId,
+                      searchLocationId,
+                    });
+                    return error;
+                  }
+                  reporter.sendTelemetryEvent({
+                    type: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                    elementsAmount: elements.length,
+                  });
+                  return elements;
+                })(),
+              ]);
             });
-          } else {
-            endevorMap = toEndevorMap(environmentStages)(systems)(subsystems)({
-              environment: searchEnvironment,
-              stageNumber: searchStage,
-              system: elementsSearchLocation.system,
-              subSystem: elementsSearchLocation.subsystem,
-            });
-          }
-          const lastRefreshTimestamp = Date.now();
-          const endevorCachedItem: EndevorCacheItem = {
-            endevorMap,
-            elements: elements.reduce(
-              (acc: { [id: string]: CachedElement }, element) => {
-                const newElementId =
-                  toElementCompositeKey(serviceId)(searchLocationId)(element);
-                acc[newElementId] = {
-                  element,
-                  lastRefreshTimestamp,
-                };
-                return acc;
+            const operationCancelled = !result;
+            if (operationCancelled) {
+              dispatch({
+                type: Actions.ENDEVOR_CACHE_FETCH_CANCELED,
+                serviceId,
+                searchLocationId,
+              });
+              resolve(undefined);
+              return;
+            }
+            const [environmentStages, systems, subsystems, elements] = result;
+            if (
+              isError(environmentStages) ||
+              isError(systems) ||
+              isError(subsystems) ||
+              isError(elements)
+            ) {
+              resolve(undefined);
+              return;
+            }
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const searchEnvironment = elementsSearchLocation.environment!;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const searchStage = elementsSearchLocation.stageNumber!;
+            let endevorMap: EndevorMap;
+            if (
+              !isDefined(elementsSearchLocation.subsystem) ||
+              !isDefined(elementsSearchLocation.system)
+            ) {
+              endevorMap = toEndevorMapWithWildcards(environmentStages)(
+                systems
+              )(subsystems)({
+                environment: searchEnvironment,
+                stageNumber: searchStage,
+              });
+            } else {
+              endevorMap = toEndevorMap(environmentStages)(systems)(subsystems)(
+                {
+                  environment: searchEnvironment,
+                  stageNumber: searchStage,
+                  system: elementsSearchLocation.system,
+                  subSystem: elementsSearchLocation.subsystem,
+                }
+              );
+            }
+            const lastRefreshTimestamp = Date.now();
+            const endevorCachedItem = {
+              endevorMap,
+              elements: elements.reduce(
+                (acc: { [id: string]: CachedElement }, element) => {
+                  const newElementId =
+                    toElementCompositeKey(serviceId)(searchLocationId)(element);
+                  acc[newElementId] = {
+                    element,
+                    lastRefreshTimestamp,
+                  };
+                  return acc;
+                },
+                {}
+              ),
+            };
+            const anyVersion = ServiceApiVersion.V2;
+            const testedConnection: ValidEndevorConnection = {
+              status: EndevorConnectionStatus.VALID,
+              value: {
+                ...connection.value,
+                apiVersion: anyVersion,
               },
-              {}
-            ),
-          };
-          if (!endevorCachedItem) {
+            };
+            const testedCredential: ValidEndevorCredential = {
+              status: EndevorCredentialStatus.VALID,
+              value: credential.value,
+            };
+            dispatch({
+              type: Actions.ENDEVOR_CACHE_FETCHED,
+              endevorCachedItem,
+              serviceId,
+              searchLocationId,
+              connection: testedConnection,
+              credential: testedCredential,
+            });
             resolve(undefined);
             return;
-          }
-          const anyVersion = ServiceApiVersion.V2;
-          const testedConnection: ValidEndevorConnection = {
-            status: EndevorConnectionStatus.VALID,
-            value: {
-              ...connection.value,
-              apiVersion: anyVersion,
-            },
-          };
-          const testedCredential: ValidEndevorCredential = {
-            status: EndevorCredentialStatus.VALID,
-            value: credential.value,
-          };
-          dispatch({
-            type: Actions.ENDEVOR_CACHE_FETCHED,
-            endevorCachedItem,
-            serviceId,
-            searchLocationId,
-            connection: testedConnection,
-            credential: testedCredential,
-          });
-          resolve(undefined);
-          return;
-        })();
-      });
+          })();
+        }),
+      };
     },
   ];
 };
