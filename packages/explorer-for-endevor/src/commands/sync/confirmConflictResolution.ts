@@ -16,6 +16,7 @@ import { SourceControlResourceState } from 'vscode';
 import { logger, reporter } from '../../globals';
 import { confirmConflictResolution as confirmEndevorConflictResolution } from '../../store/scm/workspace';
 import { SyncAction, SyncActions } from '../../store/scm/_doc/Actions';
+import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 import { isError } from '../../utils';
 import { TreeElementCommandArguments } from '../../_doc/Telemetry';
 import {
@@ -70,6 +71,25 @@ export const confirmConflictResolutionCommand =
           });
           return error;
         }
+        // always dump the result messages
+        // TODO: consider not to use the result messages since they include internal CLI info sometimes
+        logger.trace(confirmationResult.messages.join('\n'));
+        switch (confirmationResult.status) {
+          case WorkspaceResponseStatus.ERROR: {
+            const error = new Error(
+              `Unable to confirm conflict resolution for ${resourceState.resourceUri.fsPath}`
+            );
+            reporter.sendTelemetryEvent({
+              type: TelemetryEvents.ERROR,
+              errorContext:
+                TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
+              status:
+                ConfirmConflictResolutionCommandCompletedStatus.GENERIC_ERROR,
+              error,
+            });
+            return error;
+          }
+        }
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED,
           status: ConfirmConflictResolutionCommandCompletedStatus.SUCCESS,
@@ -77,11 +97,25 @@ export const confirmConflictResolutionCommand =
         return confirmationResult;
       })
     );
+    scmDispatch({
+      type: SyncActions.SYNC_ELEMENTS_UPDATED,
+    });
     const overallErrors = conflictConfirmations.filter(isError);
+    const overallWarnings = conflictConfirmations.filter(
+      (confirmationResult) => {
+        if (isError(confirmationResult)) return false;
+        switch (confirmationResult.status) {
+          case WorkspaceResponseStatus.WARNING:
+            return true;
+          default:
+            return false;
+        }
+      }
+    );
     if (overallErrors.length > 1) {
       logger.error(
         'There were some issues confirming conflict resolutions.',
-        `There were some issues confirming conflict resolutions: ${[
+        `There were some issues confirming conflict resolutions:\n${[
           '',
           ...overallErrors.map((error) => error.message),
         ].join('\n')}.`
@@ -91,8 +125,7 @@ export const confirmConflictResolutionCommand =
         'Unable to confirm conflict resolution.',
         `${overallErrors[0]?.message}`
       );
+    } else if (overallWarnings.length) {
+      logger.warn('Confirmation was successful with some warnings.');
     }
-    scmDispatch({
-      type: SyncActions.SYNC_ELEMENTS_UPDATED,
-    });
   };

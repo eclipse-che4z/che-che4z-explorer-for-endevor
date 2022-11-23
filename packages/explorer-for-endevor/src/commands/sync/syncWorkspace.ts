@@ -45,6 +45,11 @@ import {
   SyncWorkspaceCommandCompletedStatus,
   TelemetryEvents,
 } from '../../_doc/telemetry/v2/Telemetry';
+import {
+  isWorkspaceSyncConflictResponse,
+  isWorkspaceSyncErrorResponse,
+} from '../../store/scm/utils';
+import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
 
 export const syncWorkspace = async (
   configurations: {
@@ -202,7 +207,7 @@ export const syncWorkspace = async (
     });
     return;
   }
-  const syncResult = withNotificationProgress(
+  const syncResult = await withNotificationProgress(
     'Synchronizing Endevor workspace'
   )((progressReporter) =>
     syncEndevorWorkspace(progressReporter)({
@@ -225,7 +230,57 @@ export const syncWorkspace = async (
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
+    return;
   }
+  // always dump the result messages
+  // TODO: consider not to use the result messages since they include internal CLI info sometimes
+  logger.trace(syncResult.messages.join('\n'));
+  if (isWorkspaceSyncErrorResponse(syncResult)) {
+    const syncError = syncResult;
+    logger.error(
+      `Unable to synchronize Endevor workspace for these elements: ${syncError.errorDetails
+        .map((errorInfo) => errorInfo.element.name)
+        .join(', ')}`
+    );
+    syncError.errorDetails
+      .map(
+        (errorInfo) =>
+          `Unable to perform ${errorInfo.operation} operation on the element ${
+            errorInfo.element.environment
+          }/${errorInfo.element.stageNumber}/${errorInfo.element.system}/${
+            errorInfo.element.subSystem
+          }/${errorInfo.element.type}/${
+            errorInfo.element.name
+          } because of an error:\n${errorInfo.errorMessages.join('\n')}`
+      )
+      .forEach((errorMessage) => {
+        logger.trace(errorMessage);
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+          status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
+          error: new Error(errorMessage),
+        });
+      });
+    return;
+  }
+  if (isWorkspaceSyncConflictResponse(syncResult)) {
+    const syncConflict = syncResult;
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
+      status: SyncWorkspaceCommandCompletedStatus.CONFLICT,
+    });
+    showConflictResolutionRequiredMessage(
+      syncConflict.conflictDetails.map(
+        (conflictInfo) => conflictInfo.element.name
+      )
+    );
+    return;
+  }
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
+    status: SyncWorkspaceCommandCompletedStatus.SUCCESS,
+  });
   dispatch({
     type: SyncActions.WORKSPACE_SYNCED,
   });

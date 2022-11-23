@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { initWorkspace, isWorkspace } from '../workspace';
 import { isError } from '@local/endevor/utils';
+import { WorkspaceResponseStatus } from '../_doc/Error';
 
 jest.mock('vscode', () => ({}), { virtual: true });
 jest.mock(
@@ -108,7 +109,10 @@ describe('endevor workspace initialization', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     // assert
-    expect(result).toBeUndefined();
+    expect(isError(result)).toBeFalsy();
+    expect(
+      !isError(result) && result.status === WorkspaceResponseStatus.SUCCESS
+    ).toBeTruthy();
     expect(await containsEndevorFolder(emptyFolder)).toBeTruthy();
 
     await removeEndevorFolder(emptyFolder);
@@ -125,7 +129,10 @@ describe('endevor workspace initialization', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     // assert
-    expect(result).toBeUndefined();
+    expect(isError(result)).toBeFalsy();
+    expect(
+      !isError(result) && result.status === WorkspaceResponseStatus.SUCCESS
+    ).toBeTruthy();
     expect(await containsEndevorFolder(initializedFolder)).toBeTruthy();
   });
   it('should return an error in case of initializing a non existing folder', async () => {

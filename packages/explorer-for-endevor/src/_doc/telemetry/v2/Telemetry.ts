@@ -552,6 +552,7 @@ export const enum SyncWorkspaceCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
   CANCELLED = 'CANCELLED',
+  CONFLICT = 'CONFLICT',
 }
 
 export type CommandSyncWorkspaceCompletedEvent =
@@ -565,7 +566,8 @@ export type CommandSyncWorkspaceCompletedEvent =
       type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED;
       status:
         | SyncWorkspaceCommandCompletedStatus.SUCCESS
-        | SyncWorkspaceCommandCompletedStatus.CANCELLED;
+        | SyncWorkspaceCommandCompletedStatus.CANCELLED
+        | SyncWorkspaceCommandCompletedStatus.CONFLICT;
     };
 
 export type CommandPullFromEndevorCalledEvent = {
@@ -576,6 +578,7 @@ export const enum PullFromEndevorCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
   CANCELLED = 'CANCELLED',
+  CONFLICT = 'CONFLICT',
 }
 
 export type CommandPullFromEndevorCompletedEvent =
@@ -589,7 +592,8 @@ export type CommandPullFromEndevorCompletedEvent =
       type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED;
       status:
         | PullFromEndevorCommandCompletedStatus.SUCCESS
-        | PullFromEndevorCommandCompletedStatus.CANCELLED;
+        | PullFromEndevorCommandCompletedStatus.CANCELLED
+        | PullFromEndevorCommandCompletedStatus.CONFLICT;
     };
 
 export type CommandEditCredentialsCalledEvent = {

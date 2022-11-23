@@ -79,6 +79,8 @@ export const SCM_RESOURCE_CONFLICTED_TOOLTIP =
 export const SCM_RESOURCE_CONFLICTED_COLOR =
   'gitDecoration.conflictingResourceForeground';
 
+export const SCM_VIEW_ID = 'workbench.scm';
+
 export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;
 export const EXT_ACTIVATED_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.activated`;
 export const SCM_STATUS_CONTEXT_NAME = `${COMMAND_PREFIX}.scm.status`;

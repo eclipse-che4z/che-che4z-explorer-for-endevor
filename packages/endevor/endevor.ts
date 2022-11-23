@@ -19,6 +19,7 @@ import {
   toSeveralTasksProgress,
   toCorrectBasePathFormat,
   stringifyPretty,
+  toEndevorStageNumber,
 } from './utils';
 import {
   AddUpdElement,
@@ -60,6 +61,10 @@ import {
   SDK_FROM_FILE_DESCRIPTION,
   UpdateResponse as InternalUpdateResponse,
   UpdateStatus,
+  EnvironmentStageMapPath,
+  SystemMapPath,
+  SubSystemMapPath,
+  StageNumber,
 } from './_doc/Endevor';
 import {
   Session,
@@ -309,8 +314,9 @@ export const getAllEnvironmentStages =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
+  (configuration: Value) =>
   async (
-    configuration: string
+    environmentSearchParams?: Partial<EnvironmentStageMapPath>
   ): Promise<
     | ReadonlyArray<EnvironmentStage>
     | WrongCredentialsError
@@ -320,8 +326,12 @@ export const getAllEnvironmentStages =
   > => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
+      environment: environmentSearchParams?.environment || ANY_VALUE,
+      'stage-number': environmentSearchParams?.environment
+        ? environmentSearchParams.stageNumber || ANY_VALUE
+        : ANY_VALUE,
+      search: environmentSearchParams?.environment ? 'YES' : 'NO',
+      return: 'ALL',
     };
     const errorMessage = `Unable to fetch the environment stages for the Endevor configuration ${configuration}`;
     const makeErrorWithReason = makeError(errorMessage);
@@ -421,8 +431,9 @@ export const getAllSystems =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
+  (configuration: Value) =>
   async (
-    configuration: Value
+    systemSearchParams?: Partial<SystemMapPath>
   ): Promise<
     | ReadonlyArray<System>
     | WrongCredentialsError
@@ -431,10 +442,19 @@ export const getAllSystems =
     | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
-    const requestArgs: ElmSpecDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
-      system: ANY_VALUE,
+    const withSearchUpTheMap =
+      systemSearchParams?.environment !== undefined &&
+      systemSearchParams.stageNumber !== undefined;
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: withSearchUpTheMap
+        ? systemSearchParams.environment
+        : ANY_VALUE,
+      'stage-number': withSearchUpTheMap
+        ? systemSearchParams.stageNumber
+        : ANY_VALUE,
+      system: systemSearchParams?.system || ANY_VALUE,
+      search: withSearchUpTheMap ? 'YES' : 'NO',
+      return: 'ALL',
     };
     const errorMessage = `Unable to fetch the systems from the Endevor configuration ${configuration}`;
     const makeErrorWithReason = makeError(errorMessage);
@@ -497,6 +517,7 @@ export const getAllSystems =
         type: ErrorContextTypes.INCORRECT_RESPONSE,
       });
     }
+    const systemsSortedByRoutes = !withSearchUpTheMap;
     const systems = parsedResponse.body.data
       .map((system) => {
         try {
@@ -510,19 +531,30 @@ export const getAllSystems =
           return;
         }
       })
-      .filter(isDefined)
       .map((system) => {
+        if (!system) return;
+        let stageNumber: StageNumber | undefined = system.stgId;
+        if (systemsSortedByRoutes) {
+          stageNumber = toEndevorStageNumber(system.stgSeqNum);
+          if (!stageNumber) {
+            logger.trace(
+              `Unable to use the subsystem:\n${stringifyPretty(
+                system
+              )}\nbecause of error in conversion of a sequence stage number ${
+                system.stgSeqNum
+              } to the applicable value 1 or 2.`
+            );
+            return;
+          }
+        }
         return {
           environment: system.envName,
-          // we treat stage sequence number as a stage number here,
-          // because with search for systems in all environments (*),
-          // each environment will be treated independently, so sequence number will be the same as stage number
-          // TODO: change to stageID
-          stageNumber: system.stgSeqNum,
+          stageNumber,
           system: system.sysName,
           nextSystem: system.nextSys,
         };
-      });
+      })
+      .filter(isDefined);
     progress.report({ increment: 20 });
     return systems;
   };
@@ -531,8 +563,9 @@ export const getAllSubSystems =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
+  (configuration: Value) =>
   async (
-    configuration: string
+    subSystemSearchParams?: Partial<SubSystemMapPath>
   ): Promise<
     | ReadonlyArray<SubSystem>
     | WrongCredentialsError
@@ -541,11 +574,20 @@ export const getAllSubSystems =
     | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
+    const withSearchUpTheMap =
+      subSystemSearchParams?.environment !== undefined &&
+      subSystemSearchParams.stageNumber !== undefined;
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: ANY_VALUE,
-      'stage-number': ANY_VALUE,
-      system: ANY_VALUE,
-      subsystem: ANY_VALUE,
+      environment: withSearchUpTheMap
+        ? subSystemSearchParams.environment
+        : ANY_VALUE,
+      'stage-number': withSearchUpTheMap
+        ? subSystemSearchParams.stageNumber
+        : ANY_VALUE,
+      system: subSystemSearchParams?.system || ANY_VALUE,
+      subsystem: subSystemSearchParams?.subSystem || ANY_VALUE,
+      search: withSearchUpTheMap ? 'YES' : 'NO',
+      return: 'ALL',
     };
     const errorMessage = `Unable to fetch the subsystems from the Endevor configuration ${configuration}`;
     const makeErrorWithReason = makeError(errorMessage);
@@ -608,6 +650,7 @@ export const getAllSubSystems =
         type: ErrorContextTypes.INCORRECT_RESPONSE,
       });
     }
+    const subSystemsSortedByRoutes = !withSearchUpTheMap;
     const subSystems = parsedResponse.body.data
       .map((subSystem) => {
         try {
@@ -621,20 +664,31 @@ export const getAllSubSystems =
           return;
         }
       })
-      .filter(isDefined)
-      .map((subSystem): SubSystem => {
+      .map((subSystem) => {
+        if (!subSystem) return;
+        let stageNumber: StageNumber | undefined = subSystem.stgId;
+        if (subSystemsSortedByRoutes) {
+          stageNumber = toEndevorStageNumber(subSystem.stgSeqNum);
+          if (!stageNumber) {
+            logger.trace(
+              `Unable to use the subsystem:\n${stringifyPretty(
+                subSystem
+              )}\nbecause of error in conversion of a sequence stage number ${
+                subSystem.stgSeqNum
+              } to the applicable value 1 or 2.`
+            );
+            return;
+          }
+        }
         return {
           environment: subSystem.envName,
-          // we treat stage sequence number as a stage number here,
-          // because with search for systems in all environments (*),
-          // each environment will be treated independently, so sequence number will be the same as stage number
-          // TODO: change to stageID
-          stageNumber: subSystem.stgSeqNum,
+          stageNumber,
           system: subSystem.sysName,
           subSystem: subSystem.sbsName,
           nextSubSystem: subSystem.nextSbs,
         };
-      });
+      })
+      .filter(isDefined);
     progress.report({ increment: 20 });
     return subSystems;
   };

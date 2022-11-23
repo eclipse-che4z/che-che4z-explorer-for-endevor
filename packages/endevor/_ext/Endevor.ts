@@ -117,7 +117,8 @@ class ReturnCodeType extends t.Type<number> {
 
 export const System = t.type({
   envName: t.string,
-  stgSeqNum: new StageNumberType(),
+  stgId: new StageNumberType(),
+  stgSeqNum: t.number,
   sysName: t.string,
   nextSys: t.string,
 });
@@ -125,7 +126,8 @@ export const Systems = t.array(System);
 
 export const SubSystem = t.type({
   envName: t.string,
-  stgSeqNum: new StageNumberType(),
+  stgId: new StageNumberType(),
+  stgSeqNum: t.number,
   sysName: t.string,
   sbsName: t.string,
   nextSbs: t.string,

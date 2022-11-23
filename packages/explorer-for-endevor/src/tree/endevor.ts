@@ -223,21 +223,24 @@ export const buildTree =
           typeNode.map.elements.get(endevorElement.name)
         )
           return;
-        const nodeName = endevorElement.name;
+        const elementName = endevorElement.name;
         const elementNode = toUpTheMapElementNode(
           serviceId,
           service,
           searchLocationId,
           elementsSearchLocation
-        )(elementUpTheMap)(typeNode)(nodeName);
+        )(elementUpTheMap)(typeNode)(
+          elementName +
+            ` [${endevorElement.environment}/${endevorElement.stageNumber}]`
+        );
         if (isError(elementNode)) {
           const error = elementNode;
           logger.trace(
-            `Unable to show the element ${nodeName} in the tree because of error ${error.message}.`
+            `Unable to show the element ${elementName} in the tree because of error ${error.message}.`
           );
           return;
         }
-        typeNode.map.elements.set(nodeName, elementNode);
+        typeNode.map.elements.set(elementName, elementNode);
         return;
       };
     [...addedSubsystemsInPlace, ...skippedSubsystemsInPlace].forEach(

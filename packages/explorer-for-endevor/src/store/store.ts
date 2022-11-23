@@ -17,8 +17,6 @@ import {
   ElementSearchLocation,
   ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
-import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { searchForAllElements } from '../endevor';
 import { logger } from '../globals';
 import { isDefined, isError, isUnique } from '../utils';
 import { Action, Actions } from './_doc/Actions';
@@ -61,6 +59,7 @@ import {
   ValidEndevorServiceDescription,
   ValidEndevorConnection,
   EndevorServices,
+  EndevorCacheVersion,
 } from './_doc/v2/Store';
 import {
   normalizeSearchLocation,
@@ -108,7 +107,6 @@ export const make =
           } else {
             break;
           }
-          if (!connection) break;
 
           updateState(
             sessionReducer(state())(action.sessionId)({
@@ -211,7 +209,6 @@ export const make =
           } else {
             break;
           }
-          if (!connection) break;
 
           const persistedCredential = state().services[serviceKey]?.credential;
           const sessionCredential = state().sessions[serviceKey]?.credentials;
@@ -247,7 +244,10 @@ export const make =
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
-            )(action.endevorCachedItem)
+            )({
+              ...action.endevorCachedItem,
+              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+            })
           );
           updateState(
             sessionReducer(state())(action.serviceId)({
@@ -258,14 +258,98 @@ export const make =
           refreshTree();
           break;
         }
+        case Actions.ENDEVOR_ELEMENTS_FETCHED: {
+          const existingCache =
+            state().caches[
+              toServiceLocationCompositeKey(action.serviceId)(
+                action.searchLocationId
+              )
+            ];
+          if (!existingCache) break;
+          updateState(
+            endevorCacheReducer(state())(action.serviceId)(
+              action.searchLocationId
+            )({
+              ...existingCache,
+              elements: action.elements,
+              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+            })
+          );
+          refreshTree();
+          break;
+        }
+        case Actions.ENDEVOR_ELEMENTS_FETCH_CANCELED:
+        case Actions.ENDEVOR_CACHE_FETCH_CANCELED: {
+          const existingCache =
+            state().caches[
+              toServiceLocationCompositeKey(action.serviceId)(
+                action.searchLocationId
+              )
+            ];
+          updateState(
+            endevorCacheReducer(state())(action.serviceId)(
+              action.searchLocationId
+            )({
+              ...existingCache,
+              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+            })
+          );
+          refreshTree();
+          break;
+        }
+        case Actions.ENDEVOR_ELEMENTS_FETCH_FAILED: {
+          updateState(
+            endevorCacheReducer(state())(action.serviceId)(
+              action.searchLocationId
+            )({
+              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+            })
+          );
+          refreshTree();
+          break;
+        }
+        case Actions.ENDEVOR_CACHE_FETCH_FAILED: {
+          updateState(
+            endevorCacheReducer(state())(action.serviceId)(
+              action.searchLocationId
+            )({
+              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+            })
+          );
+          if (action.connection) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                connection: action.connection,
+              })
+            );
+          }
+          if (action.credential) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                credentials: action.credential,
+              })
+            );
+          }
+          refreshTree();
+          break;
+        }
         case Actions.REFRESH: {
           let actionState = state();
           Object.entries(actionState.serviceLocations).forEach(
             ([, service]) => {
               Object.entries(service.value).forEach(([, searchLocation]) => {
-                actionState = endevorCacheReducer(actionState)(service.id)(
-                  searchLocation.id
-                )(undefined);
+                const existingCache =
+                  state().caches[
+                    toServiceLocationCompositeKey(service.id)(searchLocation.id)
+                  ];
+                if (existingCache) {
+                  actionState = endevorCacheReducer(actionState)(service.id)(
+                    searchLocation.id
+                  )({
+                    ...existingCache,
+                    cacheVersion: EndevorCacheVersion.OUTDATED,
+                  });
+                }
               });
             }
           );
@@ -274,64 +358,28 @@ export const make =
           break;
         }
         case Actions.ELEMENT_ADDED: {
-          const searchLocation =
-            state().searchLocations[toCompositeKey(action.searchLocationId)];
-          if (!searchLocation) break;
-          const session = state().sessions[toCompositeKey(action.serviceId)];
-          if (!session || !session.connection || !session.credentials) break;
-          const service = {
-            credential: session.credentials.value,
-            location: session.connection.value.location,
-            rejectUnauthorized: session.connection.value.rejectUnauthorized,
-          };
-          updateState(
-            updateElementReducer(state())(action.serviceId)(
-              action.searchLocationId
-            )(action.element)
-          );
-          refreshTree();
-          const fetchedElements = await withNotificationProgress(
-            'Fetching elements'
-          )((progress) => {
-            return searchForAllElements(progress)(service)(
-              searchLocation.value
-            );
-          });
-          if (isError(fetchedElements)) {
-            const error = fetchedElements;
-            logger.warn(
-              'Unable to fetch the updated list of elements from Endevor.',
-              `${error.message}.`
-            );
-            break;
-          }
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.serviceId)(
                 action.searchLocationId
               )
             ];
-          let elements = {};
-          const lastRefreshTimestamp = Date.now();
-          elements = fetchedElements.reduce(
-            (acc: { [id: string]: CachedElement }, element) => {
-              const newElementId = toElementCompositeKey(action.serviceId)(
-                action.searchLocationId
-              )(element);
-              acc[newElementId] = {
-                element,
-                lastRefreshTimestamp,
-              };
-              return acc;
-            },
-            {}
-          );
+          if (!existingCache) break;
+          const optimisticStateUpdate = updateElementReducer(state())(
+            action.serviceId
+          )(action.searchLocationId)(action.element);
+          updateState(optimisticStateUpdate);
+          refreshTree();
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
             )({
-              endevorMap: existingCache?.endevorMap,
-              elements,
+              ...optimisticStateUpdate.caches[
+                toServiceLocationCompositeKey(action.serviceId)(
+                  action.searchLocationId
+                )
+              ],
+              cacheVersion: EndevorCacheVersion.OUTDATED,
             })
           );
           refreshTree();
@@ -361,19 +409,6 @@ export const make =
         }
         case Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP:
         case Actions.ELEMENT_GENERATED_WITH_COPY_BACK: {
-          const searchLocation =
-            state().searchLocations[
-              toCompositeKey(action.treePath.searchLocationId)
-            ];
-          if (!searchLocation) break;
-          const session =
-            state().sessions[toCompositeKey(action.treePath.serviceId)];
-          if (!session || !session.connection || !session.credentials) break;
-          const service = {
-            credential: session.credentials.value,
-            location: session.connection.value.location,
-            rejectUnauthorized: session.connection.value.rejectUnauthorized,
-          };
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.treePath.serviceId)(
@@ -416,58 +451,33 @@ export const make =
             extension: oldELement.element.extension,
             name: oldELement.element.name,
           };
-          let elements = {
-            ...existingCachedElements,
-            [toElementCompositeKey(action.treePath.serviceId)(
-              action.treePath.searchLocationId
-            )(newElement)]: {
-              element: newElement,
-              lastRefreshTimestamp: Date.now(),
+          const optimisticStateUpdate = endevorCacheReducer(state())(
+            action.treePath.serviceId
+          )(action.treePath.searchLocationId)({
+            endevorMap: existingCache.endevorMap,
+            elements: {
+              ...existingCachedElements,
+              [toElementCompositeKey(action.treePath.serviceId)(
+                action.treePath.searchLocationId
+              )(newElement)]: {
+                element: newElement,
+                lastRefreshTimestamp: Date.now(),
+              },
             },
-          };
-          updateState(
-            endevorCacheReducer(state())(action.treePath.serviceId)(
-              action.treePath.searchLocationId
-            )({
-              endevorMap: existingCache.endevorMap,
-              elements,
-            })
-          );
+            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+          });
+          updateState(optimisticStateUpdate);
           refreshTree();
-          const fetchedElements = await withNotificationProgress(
-            'Fetching elements'
-          )((progress) =>
-            searchForAllElements(progress)(service)(searchLocation.value)
-          );
-          if (isError(fetchedElements)) {
-            const error = fetchedElements;
-            logger.warn(
-              'Unable to fetch the updated list of elements from Endevor.',
-              `${error.message}.`
-            );
-            break;
-          }
-          elements = {};
-          const lastRefreshTimestamp = Date.now();
-          elements = fetchedElements.reduce(
-            (acc: { [id: string]: CachedElement }, element) => {
-              const newElementId = toElementCompositeKey(
-                action.treePath.serviceId
-              )(action.treePath.searchLocationId)(element);
-              acc[newElementId] = {
-                element,
-                lastRefreshTimestamp,
-              };
-              return acc;
-            },
-            {}
-          );
           updateState(
             endevorCacheReducer(state())(action.treePath.serviceId)(
               action.treePath.searchLocationId
             )({
-              endevorMap: existingCache?.endevorMap,
-              elements,
+              ...optimisticStateUpdate.caches[
+                toServiceLocationCompositeKey(action.treePath.serviceId)(
+                  action.treePath.searchLocationId
+                )
+              ],
+              cacheVersion: EndevorCacheVersion.OUTDATED,
             })
           );
           refreshTree();
@@ -1010,16 +1020,15 @@ const updateElementReducer =
       initialState.caches[
         toServiceLocationCompositeKey(serviceId)(searchLocationId)
       ];
+    if (!existingCache) return initialState;
     return {
       ...initialState,
       caches: {
         ...initialState.caches,
         [toServiceLocationCompositeKey(serviceId)(searchLocationId)]: {
-          endevorMap: existingCache?.endevorMap
-            ? existingCache.endevorMap
-            : undefined,
+          ...existingCache,
           elements: {
-            ...(existingCache?.elements ? existingCache.elements : {}),
+            ...existingCache.elements,
             [toElementCompositeKey(serviceId)(searchLocationId)(element)]: {
               element,
               lastRefreshTimestamp: Date.now(),
