@@ -117,8 +117,7 @@ class ReturnCodeType extends t.Type<number> {
 
 export const System = t.type({
   envName: t.string,
-  stgId: new StageNumberType(),
-  stgSeqNum: t.number,
+  stgId: t.string,
   sysName: t.string,
   nextSys: t.string,
 });
@@ -126,15 +125,14 @@ export const Systems = t.array(System);
 
 export const SubSystem = t.type({
   envName: t.string,
-  stgId: new StageNumberType(),
-  stgSeqNum: t.number,
+  stgId: t.string,
   sysName: t.string,
   sbsName: t.string,
   nextSbs: t.string,
 });
 export const SubSystems = t.array(SubSystem);
 
-const Path = t.type({
+const ElementPath = t.type({
   envName: t.string,
   stgNum: new StageNumberType(),
   sysName: t.string,
@@ -147,12 +145,13 @@ const Path = t.type({
 export const EnvironmentStage = t.type({
   envName: t.string,
   stgNum: new StageNumberType(),
+  stgId: t.string,
   nextEnv: t.union([t.string, t.null]),
   nextStgNum: t.union([new StageNumberType(), t.null]),
 });
 
 export const Element = t.intersection([
-  Path,
+  ElementPath,
   t.partial({
     fileExt: t.union([t.string, t.null]),
   }),

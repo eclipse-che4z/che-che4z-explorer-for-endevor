@@ -48,6 +48,7 @@ import { Action, Actions } from './_doc/Actions';
 import {
   Element,
   ElementSearchLocation,
+  EnvironmentStageResponseObject,
   ServiceApiVersion,
   SubSystem,
   System,
@@ -70,6 +71,8 @@ import {
   isConnectionError,
   isSelfSignedCertificateError,
   isWrongCredentialsError,
+  subsystemStageIdToStageNumber,
+  systemStageIdToStageNumber,
   toSeveralTasksProgress,
 } from '@local/endevor/utils';
 import { toEndevorMap, toEndevorMapWithWildcards } from '../tree/endevorMap';
@@ -515,15 +518,20 @@ export const defineEndevorCacheResolver = (
             )((progress, cancellationToken) => {
               // use the first task to test connections and credentials issues
               // decline all other tasks if first is already unsuccessful
-              const testTaskCompletionEmitter: EventEmitter<Error | void> =
-                new EventEmitter();
-              const testTaskCompletion = new Promise<Error | void>(
-                (resolve) => {
-                  testTaskCompletionEmitter.event((value) => {
-                    resolve(value);
-                  });
-                }
-              );
+              const testTaskCompletionEmitter: EventEmitter<
+                | Error
+                | ReadonlyArray<EnvironmentStageResponseObject>
+                | undefined
+              > = new EventEmitter();
+              const testTaskCompletion = new Promise<
+                | Error
+                | ReadonlyArray<EnvironmentStageResponseObject>
+                | undefined
+              >((resolve) => {
+                testTaskCompletionEmitter.event((value) => {
+                  resolve(value);
+                });
+              });
               return Promise.all([
                 (async () => {
                   const taskResult = await getAllEnvironmentStages(
@@ -618,13 +626,14 @@ export const defineEndevorCacheResolver = (
                     testTaskCompletionEmitter.fire(error);
                     return error;
                   }
-                  testTaskCompletionEmitter.fire(undefined);
+                  testTaskCompletionEmitter.fire(taskResult);
                   return taskResult;
                 })(),
                 (async (): Promise<ReadonlyArray<System> | Error> => {
                   const testResult = await testTaskCompletion;
                   if (
                     isError(testResult) ||
+                    !isDefined(testResult) ||
                     cancellationToken?.isCancellationRequested
                   )
                     return [];
@@ -658,12 +667,13 @@ export const defineEndevorCacheResolver = (
                     });
                     return error;
                   }
-                  return systems;
+                  return systemStageIdToStageNumber(testResult)(systems);
                 })(),
                 (async (): Promise<ReadonlyArray<SubSystem> | Error> => {
                   const testResult = await testTaskCompletion;
                   if (
                     isError(testResult) ||
+                    !isDefined(testResult) ||
                     cancellationToken?.isCancellationRequested
                   )
                     return [];
@@ -672,7 +682,10 @@ export const defineEndevorCacheResolver = (
                   )({
                     ...connection.value,
                     credential: credential.value,
-                  })(configuration)(elementsSearchLocation);
+                  })(configuration)({
+                    ...elementsSearchLocation,
+                    subSystem: elementsSearchLocation.subsystem,
+                  });
                   if (cancellationToken?.isCancellationRequested) {
                     testTaskCompletionEmitter.fire(undefined);
                     return [];
@@ -697,7 +710,7 @@ export const defineEndevorCacheResolver = (
                     });
                     return error;
                   }
-                  return subsystems;
+                  return subsystemStageIdToStageNumber(testResult)(subsystems);
                 })(),
                 (async (): Promise<ReadonlyArray<Element> | Error> => {
                   const testResult = await testTaskCompletion;

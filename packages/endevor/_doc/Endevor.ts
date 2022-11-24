@@ -106,6 +106,23 @@ export type EnvironmentStage =
   | IntermediateEnvironmentStage
   | LastEnvironmentStage;
 
+export type LastEnvironmentStageResponseObject = Readonly<{
+  environment: Value;
+  stageNumber: StageNumber;
+  stageId: Value;
+}>;
+
+export type IntermediateEnvironmentStageResponseObject =
+  LastEnvironmentStageResponseObject &
+    Readonly<{
+      nextEnvironment: Value;
+      nextStageNumber: StageNumber;
+    }>;
+
+export type EnvironmentStageResponseObject =
+  | IntermediateEnvironmentStageResponseObject
+  | LastEnvironmentStageResponseObject;
+
 export type SystemMapPath = EnvironmentStageMapPath &
   Readonly<{
     system: Value;
@@ -114,6 +131,13 @@ export type SystemMapPath = EnvironmentStageMapPath &
 export type System = SystemMapPath & {
   nextSystem: Value;
 };
+
+export type SystemResponseObject = Readonly<{
+  environment: Value;
+  stageId: Value;
+  system: Value;
+  nextSystem: Value;
+}>;
 
 export type SubSystemMapPath = SystemMapPath &
   Readonly<{
@@ -124,6 +148,14 @@ export type SubSystem = SubSystemMapPath &
   Readonly<{
     nextSubSystem: Value;
   }>;
+
+export type SubSystemResponseObject = Readonly<{
+  environment: Value;
+  stageId: Value;
+  system: Value;
+  subSystem: Value;
+  nextSubSystem: Value;
+}>;
 
 export type ElementMapPath = Readonly<{
   configuration: Value;
