@@ -13,9 +13,9 @@
 
 import {
   Element,
-  EnvironmentStage,
-  SubSystem,
-  System,
+  EnvironmentStageResponseObject,
+  SubSystemResponseObject,
+  SystemResponseObject,
 } from '@local/endevor/_doc/Endevor';
 import {
   ConnectionError,
@@ -33,7 +33,7 @@ export type EndevorClient = Readonly<{
   ) => (
     searchLocationId: EndevorId
   ) => Promise<
-    | ReadonlyArray<EnvironmentStage>
+    | ReadonlyArray<EnvironmentStageResponseObject>
     | WrongCredentialsError
     | SelfSignedCertificateError
     | ConnectionError
@@ -46,7 +46,7 @@ export type EndevorClient = Readonly<{
   ) => (
     searchLocationId: EndevorId
   ) => Promise<
-    | ReadonlyArray<System>
+    | ReadonlyArray<SystemResponseObject>
     | WrongCredentialsError
     | SelfSignedCertificateError
     | ConnectionError
@@ -59,7 +59,7 @@ export type EndevorClient = Readonly<{
   ) => (
     searchLocationId: EndevorId
   ) => Promise<
-    | ReadonlyArray<SubSystem>
+    | ReadonlyArray<SubSystemResponseObject>
     | WrongCredentialsError
     | SelfSignedCertificateError
     | ConnectionError

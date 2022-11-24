@@ -14,9 +14,14 @@
 import { URL } from 'url';
 import { UnreachableCaseError } from './typeHelpers';
 import {
+  EnvironmentStageResponseObject,
   ErrorUpdateResponse,
   ServiceProtocol,
   StageNumber,
+  SubSystem,
+  SubSystemResponseObject,
+  System,
+  SystemResponseObject,
   UpdateResponse,
   UpdateStatus,
 } from './_doc/Endevor';
@@ -196,4 +201,49 @@ export const toSeveralTasksProgress =
         }
       },
     };
+  };
+
+export const subsystemStageIdToStageNumber =
+  (environmentStagesMap: ReadonlyArray<EnvironmentStageResponseObject>) =>
+  (
+    subsystems: ReadonlyArray<SubSystemResponseObject>
+  ): ReadonlyArray<SubSystem> => {
+    return subsystems
+      .map((subsystem) => {
+        const stage = environmentStagesMap.find(
+          (envStage) =>
+            envStage.environment === subsystem.environment &&
+            envStage.stageId === subsystem.stageId
+        );
+        if (!stage) return;
+        return {
+          environment: subsystem.environment,
+          stageNumber: stage.stageNumber,
+          system: subsystem.system,
+          subSystem: subsystem.subSystem,
+          nextSubSystem: subsystem.nextSubSystem,
+        };
+      })
+      .filter(isDefined);
+  };
+
+export const systemStageIdToStageNumber =
+  (environmentStagesMap: ReadonlyArray<EnvironmentStageResponseObject>) =>
+  (systems: ReadonlyArray<SystemResponseObject>): ReadonlyArray<System> => {
+    return systems
+      .map((system) => {
+        const stage = environmentStagesMap.find(
+          (envStage) =>
+            envStage.environment === system.environment &&
+            envStage.stageId === system.stageId
+        );
+        if (!stage) return;
+        return {
+          environment: system.environment,
+          stageNumber: stage.stageNumber,
+          system: system.system,
+          nextSystem: system.nextSystem,
+        };
+      })
+      .filter(isDefined);
   };
