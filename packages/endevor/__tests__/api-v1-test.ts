@@ -48,15 +48,16 @@ import {
   Service,
   ServiceApiVersion,
   ElementMapPath,
-  EnvironmentStage,
-  System,
-  SubSystem,
+  SystemResponseObject,
+  SubSystemResponseObject,
   ServiceBasePath,
   ElementWithFingerprint,
   ActionChangeControlValue,
   UpdateStatus,
   ErrorUpdateResponse,
   EnvironmentStageMapPath,
+  SystemMapPath,
+  SubSystemMapPath,
 } from '../_doc/Endevor';
 import { join } from 'path';
 import { ANY_VALUE } from '../const';
@@ -1208,7 +1209,9 @@ describe('endevor public API v1', () => {
     const toSpecificRequestPath = (
       configuration: string,
       environment: string,
-      stageNumber: string
+      stageNumber: string,
+      system?: string,
+      subsystem?: string
     ): string => {
       return join(
         basePath,
@@ -1218,9 +1221,9 @@ describe('endevor public API v1', () => {
         'stgnum',
         stageNumber,
         'sys',
-        ANY_VALUE,
+        system || ANY_VALUE,
         'subsys',
-        ANY_VALUE
+        subsystem || ANY_VALUE
       );
     };
 
@@ -1235,13 +1238,27 @@ describe('endevor public API v1', () => {
         },
         body: null,
       };
-      const validSubSystems: ReadonlyArray<SubSystem> = [
+      const validSubSystems: ReadonlyArray<SubSystemResponseObject> = [
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
           subSystem: 'TEST-SBS1',
-          stageNumber: '1',
+          nextSubSystem: 'TEST-SBS1',
+          stageId: 'D',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
           nextSubSystem: 'TEST-SBS2',
+          stageId: 'Q',
+        },
+        {
+          environment: 'TEST-ENV2',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          nextSubSystem: 'TEST-SBS2',
+          stageId: 'P',
         },
       ];
       const invalidSubSystems: ReadonlyArray<unknown> = [
@@ -1249,7 +1266,7 @@ describe('endevor public API v1', () => {
           // environment: 'TEST-ENV',
           system: 'TEST-SYS',
           subSystem: 'TEST-SBS2',
-          stageNumber: '2',
+          stageId: '1',
           nextSubSystem: 'TEST-SBS2',
         },
       ];
@@ -1271,8 +1288,7 @@ describe('endevor public API v1', () => {
                 envName: subsystem.environment,
                 sysName: subsystem.system,
                 sbsName: subsystem.subSystem,
-                stgId: subsystem.stageNumber,
-                stgSeqNum: parseInt(subsystem.stageNumber),
+                stgId: subsystem.stageId,
                 nextSbs: subsystem.nextSubSystem,
               };
             }),
@@ -1282,8 +1298,7 @@ describe('endevor public API v1', () => {
                 envName: subsystem.environment,
                 sysName: subsystem.system,
                 sbsName: subsystem.subSystem,
-                stgId: subsystem.stageNumber,
-                stgSeqNum: parseInt(subsystem.stageNumber),
+                stgId: subsystem.stgId,
                 nextSbs: subsystem.nextSubSystem,
               };
             }),
@@ -1304,7 +1319,7 @@ describe('endevor public API v1', () => {
       expect(actualSubSystems).toEqual(validSubSystems);
     });
 
-    it('should return the list of all filtered subsystems searching with environment and stage number', async () => {
+    it('should return the list of all subsystems searching from specific environment stage', async () => {
       // arrange
       const searchParams: Readonly<EnvironmentStageMapPath> = {
         environment: 'TEST',
@@ -1317,27 +1332,33 @@ describe('endevor public API v1', () => {
           searchParams.environment,
           searchParams.stageNumber
         ),
+        query: '?search=SEA&return=ALL',
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
         },
         body: null,
       };
-      const validSubSystems: ReadonlyArray<SubSystem> = [
+      const validSubSystems: ReadonlyArray<SubSystemResponseObject> = [
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
           subSystem: 'TEST-SBS1',
-          stageNumber: '1',
+          stageId: '1',
+          nextSubSystem: 'TEST-SBS1',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageId: '2',
           nextSubSystem: 'TEST-SBS2',
         },
-      ];
-      const invalidSubSystems: ReadonlyArray<unknown> = [
         {
-          // environment: 'TEST-ENV',
+          environment: 'TEST-ENV2',
           system: 'TEST-SYS',
           subSystem: 'TEST-SBS2',
-          stageNumber: '2',
+          stageId: '1',
           nextSubSystem: 'TEST-SBS2',
         },
       ];
@@ -1359,19 +1380,7 @@ describe('endevor public API v1', () => {
                 envName: subsystem.environment,
                 sysName: subsystem.system,
                 sbsName: subsystem.subSystem,
-                stgId: subsystem.stageNumber,
-                stgSeqNum: parseInt(subsystem.stageNumber),
-                nextSbs: subsystem.nextSubSystem,
-              };
-            }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...invalidSubSystems.map((subsystem: any) => {
-              return {
-                envName: subsystem.environment,
-                sysName: subsystem.system,
-                sbsName: subsystem.subSystem,
-                stgId: subsystem.stageNumber,
-                stgSeqNum: parseInt(subsystem.stageNumber),
+                stgId: subsystem.stageId,
                 nextSbs: subsystem.nextSubSystem,
               };
             }),
@@ -1384,6 +1393,166 @@ describe('endevor public API v1', () => {
       const actualSubSystems = await getAllSubSystems(logger)(progress)(
         service
       )(configuration)(searchParams);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSubSystems).toEqual(validSubSystems);
+    });
+
+    it('should return the route for a subsystem searching from specific environment stage', async () => {
+      // arrange
+      const searchParams: Readonly<SubSystemMapPath> = {
+        environment: 'TEST',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+        subSystem: 'TEST-SBS1',
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toSpecificRequestPath(
+          configuration,
+          searchParams.environment,
+          searchParams.stageNumber,
+          searchParams.system,
+          searchParams.subSystem
+        ),
+        query: '?search=SEA&return=ALL',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSubSystems: ReadonlyArray<SubSystemResponseObject> = [
+        {
+          environment: searchParams.environment,
+          system: searchParams.system,
+          subSystem: searchParams.subSystem,
+          stageId: searchParams.stageNumber,
+          nextSubSystem: 'TEST-SBS1',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageId: '2',
+          nextSubSystem: 'TEST-SBS2',
+        },
+        {
+          environment: 'TEST-ENV2',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          stageId: '1',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSubSystems.map((subsystem) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgId: subsystem.stageId,
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)(
+        service
+      )(configuration)(searchParams);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSubSystems).toEqual(validSubSystems);
+    });
+
+    it('should return the list of all subsystems searching across all the environments', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        query: '?search=NOS&return=ALL',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSubSystems: ReadonlyArray<SubSystemResponseObject> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageId: '1',
+          nextSubSystem: 'TEST-SBS1',
+        },
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS1',
+          stageId: '2',
+          nextSubSystem: 'TEST-SBS2',
+        },
+        {
+          environment: 'TEST-ENV2',
+          system: 'TEST-SYS',
+          subSystem: 'TEST-SBS2',
+          stageId: '1',
+          nextSubSystem: 'TEST-SBS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSubSystems.map((subsystem) => {
+              return {
+                envName: subsystem.environment,
+                sysName: subsystem.system,
+                sbsName: subsystem.subSystem,
+                stgId: subsystem.stageId,
+                nextSbs: subsystem.nextSubSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSubSystems = await getAllSubSystems(logger)(progress)(
+        service
+      )(configuration)();
       // assert
       const seenRequests = await endevorEndpoint.getSeenRequests();
       const calledOnce = seenRequests.length === 1;
@@ -1543,7 +1712,8 @@ describe('endevor public API v1', () => {
     const toSpecificRequestPath = (
       configuration: string,
       environment: string,
-      stageNumber: string
+      stageNumber: string,
+      system?: string
     ): string => {
       return join(
         basePath,
@@ -1553,7 +1723,7 @@ describe('endevor public API v1', () => {
         'stgnum',
         stageNumber,
         'sys',
-        ANY_VALUE
+        system || ANY_VALUE
       );
     };
 
@@ -1568,16 +1738,16 @@ describe('endevor public API v1', () => {
         },
         body: null,
       };
-      const validSystems: ReadonlyArray<System> = [
+      const validSystems: ReadonlyArray<SystemResponseObject> = [
         {
           environment: 'TEST',
-          stageNumber: '1',
+          stageId: 'P',
           system: 'TEST-SYS',
           nextSystem: 'TEST-SYS2',
         },
         {
-          environment: 'TEST1',
-          stageNumber: '1',
+          environment: 'TEST',
+          stageId: '2',
           system: 'TEST-SYS2',
           nextSystem: 'TEST-SYS2',
         },
@@ -1585,7 +1755,7 @@ describe('endevor public API v1', () => {
       const invalidSystems: ReadonlyArray<unknown> = [
         {
           // environment: 'TEST1',
-          stageNumber: '1',
+          stageId: '1',
           system: 'TEST-SYS2',
           nextSystem: 'TEST-SYS2',
         },
@@ -1607,8 +1777,7 @@ describe('endevor public API v1', () => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgId: system.stageNumber,
-                stgSeqNum: parseInt(system.stageNumber),
+                stgId: system.stageId,
                 nextSys: system.nextSystem,
               };
             }),
@@ -1617,8 +1786,7 @@ describe('endevor public API v1', () => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgId: system.stageNumber,
-                stgSeqNum: parseInt(system.stageNumber),
+                stgId: system.stageId,
                 nextSys: system.nextSystem,
               };
             }),
@@ -1639,7 +1807,7 @@ describe('endevor public API v1', () => {
       expect(actualSystems).toEqual(validSystems);
     });
 
-    it('should return the list of all filtered systems searching with environment and stage number', async () => {
+    it('should return the list of all filtered systems searching from the specific environment stage', async () => {
       // arrange
       const searchParams: Readonly<EnvironmentStageMapPath> = {
         environment: 'TEST',
@@ -1652,30 +1820,29 @@ describe('endevor public API v1', () => {
           searchParams.environment,
           searchParams.stageNumber
         ),
+        query: '?search=SEA&return=ALL',
         headers: {
           Accept: 'application/json',
           Authorization: `Basic ${toBase64(credential)}`,
         },
         body: null,
       };
-      const validSystems: ReadonlyArray<System> = [
+      const validSystems: ReadonlyArray<SystemResponseObject> = [
         {
           environment: 'TEST',
-          stageNumber: '1',
+          stageId: '1',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS',
+        },
+        {
+          environment: 'TEST1',
+          stageId: '2',
           system: 'TEST-SYS',
           nextSystem: 'TEST-SYS2',
         },
         {
-          environment: 'TEST1',
-          stageNumber: '1',
-          system: 'TEST-SYS2',
-          nextSystem: 'TEST-SYS2',
-        },
-      ];
-      const invalidSystems: ReadonlyArray<unknown> = [
-        {
-          // environment: 'TEST1',
-          stageNumber: '1',
+          environment: 'TEST2',
+          stageId: '2',
           system: 'TEST-SYS2',
           nextSystem: 'TEST-SYS2',
         },
@@ -1697,18 +1864,157 @@ describe('endevor public API v1', () => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgId: system.stageNumber,
-                stgSeqNum: parseInt(system.stageNumber),
+                stgId: system.stageId,
                 nextSys: system.nextSystem,
               };
             }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...invalidSystems.map((system: any) => {
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)(service)(
+        configuration
+      )(searchParams);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSystems).toEqual(validSystems);
+    });
+
+    it('should return the list of all filtered systems searching across all environment stages', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        query: '?search=NOS&return=ALL',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSystems: ReadonlyArray<SystemResponseObject> = [
+        {
+          environment: 'TEST',
+          stageId: '1',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS',
+        },
+        {
+          environment: 'TEST1',
+          stageId: '2',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS2',
+        },
+        {
+          environment: 'TEST2',
+          stageId: '2',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSystems.map((system) => {
               return {
                 envName: system.environment,
                 sysName: system.system,
-                stgId: system.stageNumber,
-                stgSeqNum: parseInt(system.stageNumber),
+                stgId: system.stageId,
+                nextSys: system.nextSystem,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualSystems = await getAllSystems(logger)(progress)(service)(
+        configuration
+      )();
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(actualSystems).toEqual(validSystems);
+    });
+
+    it('should return the route for a system searching from specific environment stage', async () => {
+      // arrange
+      const searchParams: Readonly<SystemMapPath> = {
+        environment: 'TEST',
+        stageNumber: '1',
+        system: 'TEST-SYS',
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toSpecificRequestPath(
+          configuration,
+          searchParams.environment,
+          searchParams.stageNumber,
+          searchParams.system
+        ),
+        query: '?search=SEA&return=ALL',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validSystems: ReadonlyArray<SystemResponseObject> = [
+        {
+          environment: searchParams.environment,
+          stageId: searchParams.stageNumber,
+          system: searchParams.system,
+          nextSystem: 'TEST-SYS',
+        },
+        {
+          environment: 'TEST',
+          stageId: '2',
+          system: 'TEST-SYS',
+          nextSystem: 'TEST-SYS2',
+        },
+        {
+          environment: 'TEST2',
+          stageId: '2',
+          system: 'TEST-SYS2',
+          nextSystem: 'TEST-SYS2',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validSystems.map((system) => {
+              return {
+                envName: system.environment,
+                sysName: system.system,
+                stgId: system.stageId,
                 nextSys: system.nextSystem,
               };
             }),
@@ -1877,6 +2183,20 @@ describe('endevor public API v1', () => {
         ANY_VALUE
       );
     };
+    const toSpecificRequestPath = (
+      configuration: string,
+      environment: string,
+      stageNumber: string
+    ): string => {
+      return join(
+        basePath,
+        configuration,
+        'env',
+        environment,
+        'stgnum',
+        stageNumber
+      );
+    };
 
     it('should return filtered environment stages', async () => {
       // arrange
@@ -1895,12 +2215,14 @@ describe('endevor public API v1', () => {
           stageNumber: '1',
           nextEnvironment: 'FINAL-ENV',
           nextStageNumber: '1',
+          stgId: '1',
         },
         {
           environment: 'FINAL-ENV',
           stageNumber: '1',
           nextEnvironment: null,
           nextStageNumber: null,
+          stgId: '1',
         },
       ];
       const invalidEnvironments = [
@@ -1940,6 +2262,7 @@ describe('endevor public API v1', () => {
               return {
                 envName: element.environment,
                 stgNum: element.stageNumber,
+                stgId: element.stgId,
                 nextEnv: element.nextEnvironment,
                 nextStgNum: element.nextStageNumber,
               };
@@ -1967,18 +2290,195 @@ describe('endevor public API v1', () => {
       const calledOnce = seenRequests.length === 1;
       expect(calledOnce).toBe(true);
 
-      const expectedEnvironments: ReadonlyArray<EnvironmentStage> = [
+      const expectedEnvironments = validEnvironments.map((env) => {
+        if (env.nextEnvironment && env.nextStageNumber) {
+          return {
+            environment: env.environment,
+            stageId: env.stgId,
+            stageNumber: env.stageNumber,
+            nextEnvironment: env.nextEnvironment,
+            nextStageNumber: env.nextStageNumber,
+          };
+        }
+        return {
+          environment: env.environment,
+          stageId: env.stgId,
+          stageNumber: env.stageNumber,
+        };
+      });
+      expect(actualEnvironments).toEqual(expectedEnvironments);
+    });
+
+    it('should return all environment stages searching from a specific environment stage', async () => {
+      // arrange
+      const searchParams: EnvironmentStageMapPath = {
+        environment: 'TEST-ENV1',
+        stageNumber: '1',
+      };
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toSpecificRequestPath(
+          configuration,
+          searchParams.environment,
+          searchParams.stageNumber
+        ),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        query: '?search=SEA&return=ALL',
+        body: null,
+      };
+      const validEnvironments = [
         {
-          environment: 'TEST-ENV1',
-          stageNumber: '1',
+          ...searchParams,
+          stgId: '1',
           nextEnvironment: 'FINAL-ENV',
           nextStageNumber: '1',
         },
         {
           environment: 'FINAL-ENV',
           stageNumber: '1',
+          nextEnvironment: null,
+          nextStageNumber: null,
+          stgId: '1',
         },
       ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validEnvironments.map((element) => {
+              return {
+                envName: element.environment,
+                stgNum: element.stageNumber,
+                stgId: element.stgId,
+                nextEnv: element.nextEnvironment,
+                nextStgNum: element.nextStageNumber,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )(service)(configuration)(searchParams);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      const expectedEnvironments = validEnvironments.map((env) => {
+        if (env.nextEnvironment && env.nextStageNumber) {
+          return {
+            environment: env.environment,
+            stageId: env.stgId,
+            stageNumber: env.stageNumber,
+            nextEnvironment: env.nextEnvironment,
+            nextStageNumber: env.nextStageNumber,
+          };
+        }
+        return {
+          environment: env.environment,
+          stageId: env.stgId,
+          stageNumber: env.stageNumber,
+        };
+      });
+      expect(actualEnvironments).toEqual(expectedEnvironments);
+    });
+
+    it('should return all environment stages across all the environment stages', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        query: '?search=NOS&return=ALL',
+        body: null,
+      };
+      const validEnvironments = [
+        {
+          environment: 'TEST-ENV1',
+          stageNumber: '1',
+          stgId: '1',
+          nextEnvironment: 'FINAL-ENV',
+          nextStageNumber: '1',
+        },
+        {
+          environment: 'FINAL-ENV',
+          stageNumber: '1',
+          nextEnvironment: null,
+          nextStageNumber: null,
+          stgId: '1',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: null,
+          data: [
+            ...validEnvironments.map((element) => {
+              return {
+                envName: element.environment,
+                stgNum: element.stageNumber,
+                stgId: element.stgId,
+                nextEnv: element.nextEnvironment,
+                nextStgNum: element.nextStageNumber,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualEnvironments = await getAllEnvironmentStages(logger)(
+        progress
+      )(service)(configuration)();
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      const expectedEnvironments = validEnvironments.map((env) => {
+        if (env.nextEnvironment && env.nextStageNumber) {
+          return {
+            environment: env.environment,
+            stageId: env.stgId,
+            stageNumber: env.stageNumber,
+            nextEnvironment: env.nextEnvironment,
+            nextStageNumber: env.nextStageNumber,
+          };
+        }
+        return {
+          environment: env.environment,
+          stageId: env.stgId,
+          stageNumber: env.stageNumber,
+        };
+      });
       expect(actualEnvironments).toEqual(expectedEnvironments);
     });
 

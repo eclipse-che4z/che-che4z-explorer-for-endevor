@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.3.2] &ndash; 2022-11-24
+
+### Fixed
+
+- Fixed an issue with the fetching of Endevor elements for environments where the Stage ID does not correspond to the Stage number.
+
 ## [1.3.1] &ndash; 2022-11-23
 
 ### Fixed
