@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@local/extension": "1.0.0",
-    "@vscode/extension-telemetry": "^0.4.7"
+    "@types/semver": "^7.3.13",
+    "@vscode/extension-telemetry": "^0.4.7",
+    "semver": "^7.3.8"
   },
   "devDependencies": {
     "@types/vscode": "1.58.0"

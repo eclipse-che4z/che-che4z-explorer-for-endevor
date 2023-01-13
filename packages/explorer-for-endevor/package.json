@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Explorer for Endevor",
   "author": "Broadcom",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -104,6 +104,16 @@
         "icon": "$(file-add)"
       },
       {
+        "command": "e4e.showFirstFoundElements",
+        "title": "Show Endevor elements from up the map",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "e4e.showElementsInPlace",
+        "title": "Show Endevor elements in place",
+        "icon": "$(eye-closed)"
+      },
+      {
         "command": "e4e.hideService",
         "title": "Hide an Endevor Connection",
         "icon": "$(eye-closed)"
@@ -122,6 +132,34 @@
         "command": "e4e.editCredentials",
         "title": "Repair Credentials For Service",
         "icon": "$(wrench)"
+      },
+      {
+        "command": "e4e.clearSearchLocationFilters",
+        "title": "Clear all filters",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "e4e.clearSearchLocationFilter",
+        "title": "Clear filter",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "e4e.clearSearchLocationFilterValue",
+        "title": "Clear filter value",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "e4e.editSearchLocationFilter",
+        "title": "Edit filter",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "e4e.filterSearchLocationByElementName",
+        "title": "By Element Name..."
+      },
+      {
+        "command": "e4e.filterSearchLocationByElementCcid",
+        "title": "By Element Last Action CCID..."
       },
       {
         "command": "e4e.hideSearchLocation",
@@ -261,6 +299,11 @@
       {
         "id": "e4e.generateElementUpTheMap",
         "label": "Generate element"
+      },
+      {
+        "id": "e4e.filterSearchLocationMenu",
+        "label": "Filter an Inventory Location",
+        "icon": "$(filter)"
       }
     ],
     "menus": {
@@ -345,6 +388,20 @@
           "group": "e4e_generate_element_actions@2"
         }
       ],
+      "e4e.filterSearchLocationMenu": [
+        {
+          "command": "e4e.filterSearchLocationByElementName",
+          "group": "1_e4e_filter_location_actions@0"
+        },
+        {
+          "command": "e4e.filterSearchLocationByElementCcid",
+          "group": "1_e4e_filter_location_actions@1"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilters",
+          "group": "2_e4e_filter_location_clear"
+        }
+      ],
       "view/title": [
         {
           "command": "e4e.refreshTreeView",
@@ -397,7 +454,7 @@
         },
         {
           "command": "e4e.printListing",
-          "when": "!listMultiSelection&& viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
           "group": "2_e4e_generate_element_actions@1"
         },
         {
@@ -427,18 +484,73 @@
         },
         {
           "command": "e4e.hideSearchLocation",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION_PROFILE/NON_EXISTING || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION_PROFILE/NON_EXISTING || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION|| viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
           "group": "e4e_search_location_actions@0"
         },
         {
           "command": "e4e.deleteSearchLocation",
-          "when": "viewItem == LOCATION || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION",
+          "when": "viewItem == LOCATION || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
           "group": "e4e_search_location_actions@1"
         },
         {
-          "command": "e4e.addElementFromFileSystem",
+          "submenu": "e4e.filterSearchLocationMenu",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "group": "inline@0"
+        },
+        {
+          "command": "e4e.showFirstFoundElements",
           "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE",
+          "group": "inline@1"
+        },
+        {
+          "command": "e4e.showElementsInPlace",
+          "when": "viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "group": "inline@1"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilters",
+          "when": "viewItem == FILTERED",
           "group": "inline"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilters",
+          "when": "viewItem == FILTERED",
+          "group": "e4e_filter_actions"
+        },
+        {
+          "command": "e4e.editSearchLocationFilter",
+          "when": "viewItem == FILTER",
+          "group": "inline@0"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilter",
+          "when": "viewItem == FILTER",
+          "group": "inline@1"
+        },
+        {
+          "command": "e4e.editSearchLocationFilter",
+          "when": "viewItem == FILTER",
+          "group": "e4e_filter_actions@0"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilter",
+          "when": "viewItem == FILTER",
+          "group": "e4e_filter_actions@1"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilterValue",
+          "when": "viewItem == FILTER_VALUE",
+          "group": "inline"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilterValue",
+          "when": "viewItem == FILTER_VALUE",
+          "group": "e4e_filter_actions"
+        },
+        {
+          "command": "e4e.addElementFromFileSystem",
+          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "group": "inline@2"
         },
         {
           "command": "e4e.hideService",
@@ -479,6 +591,30 @@
       "commandPalette": [
         {
           "command": "e4e.addElementFromFileSystem",
+          "when": "false"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilters",
+          "when": "false"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilter",
+          "when": "false"
+        },
+        {
+          "command": "e4e.clearSearchLocationFilterValue",
+          "when": "false"
+        },
+        {
+          "command": "e4e.editSearchLocationFilter",
+          "when": "false"
+        },
+        {
+          "command": "e4e.filterSearchLocationByElementName",
+          "when": "false"
+        },
+        {
+          "command": "e4e.filterSearchLocationByElementCcid",
           "when": "false"
         },
         {
@@ -591,6 +727,14 @@
         },
         {
           "command": "e4e.sync.confirmConflictResolution",
+          "when": "false"
+        },
+        {
+          "command": "e4e.showElementsInPlace",
+          "when": "false"
+        },
+        {
+          "command": "e4e.showFirstFoundElements",
           "when": "false"
         },
         {
@@ -820,12 +964,12 @@
       {
         "view": "e4e.treeView",
         "contents": "Initializing...",
-        "when": "!e4e.activated"
+        "when": "!e4e.treeView.initialized"
       },
       {
         "view": "e4e.treeView",
         "contents": "To start working with Explorer for Endevor, create or select your first Endevor connection and inventory location.\n[Add an Endevor Connection and Inventory Location](command:e4e.addServiceAndLocation)\nTo learn more about Explorer for Endevor configuration, review the [Getting Started Walkthrough](command:workbench.action.openWalkthrough?%5B%22BroadcomMFD.explorer-for-endevor%23e4e.gettingStartedWalkthrough%22%2C%20false%5D).",
-        "when": "e4e.activated"
+        "when": "e4e.treeView.initialized"
       },
       {
         "view": "explorer",
