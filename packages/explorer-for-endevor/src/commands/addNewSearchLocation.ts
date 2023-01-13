@@ -62,7 +62,9 @@ export const addNewSearchLocation =
     },
     dispatch: (action: Action) => Promise<void>
   ) =>
-  async (serviceArg?: EndevorId | ValidServiceNode): Promise<void> => {
+  async (
+    serviceArg?: EndevorId | ValidServiceNode
+  ): Promise<EndevorId | undefined> => {
     const serviceId = await resolveServiceId(
       configurations.getValidUsedServiceDescriptions()
     )(serviceArg);
@@ -144,8 +146,8 @@ export const addNewSearchLocation =
         source: createdSearchLocation.id.source,
         serviceSource: serviceId.source,
       });
-      focusOnView(TREE_VIEW_ID);
-      return;
+      await focusOnView(TREE_VIEW_ID);
+      return createdSearchLocation.id;
     }
     const searchLocationId = dialogResult.id;
     const inUseByServicesAmount = Object.keys(
@@ -173,8 +175,8 @@ export const addNewSearchLocation =
       serviceId,
       searchLocationId,
     });
-    focusOnView(TREE_VIEW_ID);
-    return;
+    await focusOnView(TREE_VIEW_ID);
+    return searchLocationId;
   };
 
 const resolveServiceId =

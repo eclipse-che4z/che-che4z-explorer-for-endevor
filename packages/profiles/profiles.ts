@@ -29,10 +29,14 @@ import {
   ProfileStoreError,
 } from './_doc/Error';
 import { ProfileStore } from './_doc/ProfileStore';
-import { ZoweExplorerApi, ZoweVsCodeExtension } from '@zowe/zowe-explorer-api';
-import { IProfileLoaded } from '@zowe/imperative';
 import { isDefined } from './utils';
 import { Logger } from '@local/extension/_doc/Logger';
+import { getExtensionApi } from '@local/vscode-wrapper/extension';
+import { ZOWE_EXTENSION_ID } from './constants';
+import {
+  ZoweExplorerApi,
+  ZoweExplorerExtenderApi,
+} from './_doc/ZoweExplorerApi';
 
 export const profilesStoreFromZoweExplorer =
   (logger: Logger) =>
@@ -41,17 +45,18 @@ export const profilesStoreFromZoweExplorer =
     requiredApiVersion?: string
   ): Promise<ProfileStore | ProfileStoreError> => {
     try {
-      const zoweExplorerApi: ZoweExplorerApi.IApiRegisterClient | undefined =
-        ZoweVsCodeExtension.getZoweExplorerApi(requiredApiVersion);
+      const zoweExplorerApi: ZoweExplorerApi | undefined = getExtensionApi(
+        ZOWE_EXTENSION_ID,
+        requiredApiVersion
+      );
       if (!zoweExplorerApi) {
         const errorDetails = requiredApiVersion
           ? ` of required version: ${requiredApiVersion} or above`
           : '';
         return new ProfileStoreError(`Missing Zowe Explorer${errorDetails}`);
       }
-      const zoweExplorerExtenderApi:
-        | ZoweExplorerApi.IApiExplorerExtender
-        | undefined = zoweExplorerApi.getExplorerExtenderApi();
+      const zoweExplorerExtenderApi: ZoweExplorerExtenderApi | undefined =
+        zoweExplorerApi.getExplorerExtenderApi();
       if (!zoweExplorerExtenderApi) {
         return new ProfileStoreError(`Missing Zowe Explorer API`);
       }
@@ -63,7 +68,7 @@ export const profilesStoreFromZoweExplorer =
       await zoweExplorerExtenderApi.reloadProfiles();
       return {
         getProfiles: async (profileType) => {
-          let response: ReadonlyArray<IProfileLoaded> | undefined;
+          let response;
           try {
             response = cache.getProfiles(profileType);
           } catch (error) {

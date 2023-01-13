@@ -130,7 +130,7 @@ type RetrieveResult = {
 
 const retrieveRemoteVersionIntoFolder =
   (service: Service) =>
-  (element: Element) =>
+  (element: Omit<Element, 'lastActionCcid'>) =>
   async (folder: Uri): Promise<RetrieveResult | Error> => {
     const remoteElementVersion = await withNotificationProgress(
       `Retrieving a remote version of the element ${element.name}...`

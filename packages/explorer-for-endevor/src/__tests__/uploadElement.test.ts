@@ -30,7 +30,7 @@ import {
   SignOutParams,
   SubSystemMapPath,
   SuccessUpdateResponse,
-  UpdateStatus,
+  ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toEditedElementUri } from '../uri/editedElementUri';
@@ -143,6 +143,7 @@ describe('uploading an edited element', () => {
     type: 'TYP',
     name: 'ELM',
     extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
   };
   const elementFingerprint = 'some_value';
   const editedElementFilePath = '/some/temp/element.cbl';
@@ -165,7 +166,7 @@ describe('uploading an edited element', () => {
       comment: 'test',
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },
@@ -277,7 +278,7 @@ describe('uploading an edited element', () => {
       comment: 'test',
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },
@@ -353,7 +354,10 @@ describe('uploading an edited element', () => {
       type: Actions.ELEMENT_ADDED,
       serviceId,
       searchLocationId,
-      element: newUploadLocation,
+      element: {
+        ...newUploadLocation,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+      },
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
@@ -391,7 +395,7 @@ describe('uploading an edited element', () => {
       comment: 'test',
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },
@@ -444,7 +448,7 @@ describe('uploading an edited element', () => {
       );
     } catch (e) {
       assert.fail(
-        `Test failed because of uncaugt error inside command: ${e.message}`
+        `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
     // assert
@@ -465,12 +469,16 @@ describe('uploading an edited element', () => {
     );
     const expectedUpdatedElementAction: ElementUpdatedFromUpTheMap = {
       type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP,
-      targetLocation: existingLocationDownTheMap,
       pathUpTheMap: element,
       treePath: {
         serviceId,
         searchLocationId,
         searchLocation: subsystemMapPathDownTheMap,
+      },
+      targetElement: {
+        ...existingLocationDownTheMap,
+        extension: element.extension,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
       },
     };
     assert.deepStrictEqual(
@@ -508,7 +516,7 @@ describe('uploading an edited element', () => {
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
     const failedResult: ErrorUpdateResponse = {
-      status: UpdateStatus.ERROR,
+      status: ResponseStatus.ERROR,
       additionalDetails: {
         error: new FingerprintMismatchError('error'),
       },
@@ -696,13 +704,13 @@ describe('uploading an edited element', () => {
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
     const failedResult: ErrorUpdateResponse = {
-      status: UpdateStatus.ERROR,
+      status: ResponseStatus.ERROR,
       additionalDetails: {
         error: new SignoutError('something'),
       },
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },
@@ -825,13 +833,13 @@ describe('uploading an edited element', () => {
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
     const failedResult: ErrorUpdateResponse = {
-      status: UpdateStatus.ERROR,
+      status: ResponseStatus.ERROR,
       additionalDetails: {
         error: new SignoutError('something'),
       },
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },
@@ -970,13 +978,13 @@ describe('uploading an edited element', () => {
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
     const failedResult: ErrorUpdateResponse = {
-      status: UpdateStatus.ERROR,
+      status: ResponseStatus.ERROR,
       additionalDetails: {
         error: new SignoutError('something'),
       },
     };
     const successResult: SuccessUpdateResponse = {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: 0,
       },

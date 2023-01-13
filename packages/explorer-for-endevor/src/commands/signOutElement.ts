@@ -33,7 +33,6 @@ import { SignoutError } from '@local/endevor/_doc/Error';
 import { ElementNode } from '../tree/_doc/ElementTree';
 import { Action, Actions } from '../store/_doc/Actions';
 import { fromTreeElementUri } from '../uri/treeElementUri';
-import { TreeElementCommandArguments } from '../_doc/Telemetry';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import * as endevor from '../endevor';
 
@@ -51,9 +50,6 @@ export const signOutElementCommand =
     }
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
     });
     const { serviceId, searchLocationId, service, element, searchLocation } =
       uriParams;

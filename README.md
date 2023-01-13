@@ -11,6 +11,8 @@
 The Explorer for Endevor VS Code extension modernizes the way you interact with Endevor and offers a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
 
 - Work with multiple Endevor inventory locations
+- Filter elements in the tree
+- Fetch elements from up the Endevor map
 - Add an element
 - View an element
 - Edit an element
@@ -62,13 +64,17 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 Create an Endevor connection and Endevor inventory location and review use cases to see how you can use the full potential of Explorer for Endevor. Alternatively, use your existing Zowe CLI Endevor profiles to get started.
 
+With the 1.4.0 release, Explorer for Endevor introduces a feature that enables you to filter the elements in the tree by names and/or last action CCID. For more information, see the [Filter Elements](#filter-elements) section in this Readme.
+
+From now on, the default behavior of the extension is to display the elements from the inventory location only. However, you can use a new functionality that combines the Endevor **Build using map** and **Return first found** options to display the first found elements from up the Endevor map in the tree. For more information, see the [Fetch Elements from up the Map](#fetch-elements-from-up-the-map) section in this Readme.
+
 With the 1.2.0 release, Explorer for Endevor introduces a new setting — **Profiles: Keep in Sync**. The setting enables you to use team configuration files. The profiles sync setting is enabled by default. With this setting enabled, the extension automatically reads available team configuration files or Endevor profiles and Endevor location profiles on startup. The default location of team config files and Endevor profiles is `~/.zowe` or `C:\Users\.zowe`. Learn more about team configuration files in the [Team Configuration File](#team-configuration-file) section. For more information about the new setting, see [Configure Explorer for Endevor](#configure-explorer-for-endevor) in this Readme.
 
 **Note**: The term `connection` has the same connotation as the term `profile` starting from the 1.2.0 release and pertains to all `profiles` that are created in the extension.
 
 ### Get Started Walkthroughs
 
-VS Code enables you to review Walkthroughs to get started with Explorer for Endevor. The walkthrough contains short guides that help you get familiar with the extension features.
+VS Code enables you to review walkthroughs to get started with Explorer for Endevor. The walkthrough contains short guides that help you get familiar with the extension features.
 
 1. Click **Help** in the menu bar.
 
@@ -143,6 +149,8 @@ To learn more about the Endevor Workspace synchronization feature, read [this ar
 
 Review the following use cases to familiarize yourself with the basic Explorer for Endevor features:
 
+- [Filter elements](#filter-elements): Filter one or multiple elements by names or last action CCID.
+- [Fetch elements from up the Endevor map](#fetch-elements-from-up-the-map): Fetch the first found elements from up the Endevor map.
 - [Add an element](#add-an-element): Upload an element from your workstation to a chosen Endevor inventory location.
 - [View an element](#view-an-element): View the contents, summary report, and source level information of the selected element.
 - [View details](#view-details): View the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
@@ -153,6 +161,56 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Print a listing](#print-a-listing): Reveal the output of the performed Generate action.
 - [Sign out](#sign-out): Lock an Endevor element so that the element is only editable by you.
 - [Sign in](#sign-in): Let you unlock a locked element. You can only unlock the elements that were locked by you.
+
+### Filter Elements
+
+You apply a filter or multiple filters to the Endevor elements that were fetched into the tree. Filters enable you to display the specified elements only.
+
+1. Hover over an inventory location in the tree.
+
+   The **Filter an Inventory Location** icon appears on the right side of the panel.
+
+2. Click the **Filter an Inventory Location** icon to set a filter for one or more elements.
+
+   The dialog with the following options appears:
+
+   - Select the **By Element Name** option.
+
+     The Explorer dialog appears. Type a name(s) to filter by. Use a comma to separate multiple values.
+
+   - Select the **By Element Last Action CCID** option.
+
+     The Explorer dialog appears. Type a last action CCID to filter by. Use a comma to separate multiple values.
+
+3. Press Enter to confirm your choice.
+
+   A **Filtered** row appears in the tree. You can expand the row to see what filters are applied to the inventory location.
+
+4. (Optional) Edit or remove your filters by clicking the **Edit filter** or **Clear filter value** options respectively. The options appear when you hover over the filter names.
+
+![Filter Elements](packages/explorer-for-endevor/images/E4E-filter-elements.gif?raw=true 'Filter Elements')
+<br /><br />
+
+You successfully set a filter for your inventory location.
+
+### Fetch Elements from up the Map
+
+Both **Build using map** and **Return first found** Endevor search element options are combined to fetch first found elements from up the map into the tree.
+
+1. Hover over an inventory location in the tree.
+
+   The **Show Endevor elements from up the map** icon appears on the right side of the panel.
+
+2. Click the **Show Endevor elements from up the map** icon.
+
+   The elements from up the Endevor map appear in the tree.
+
+3. (Optional) You can switch back to the elements from the inventory location only view by clicking the **Show Endevor elements in place**.
+
+![Show Endevor Elements from up the Map](packages/explorer-for-endevor/images/E4E-up-the-map.gif?raw=true 'Show Endevor Elements from up the Map')
+<br /><br />
+
+You successfully fetched the elements from up the map.
 
 ### Add an Element
 
@@ -423,6 +481,7 @@ The current release of Explorer for Endevor collects anonymous data for the foll
 
 - Extension commands, such as Add, Retrieve, Sign in, Sign out, Edit, Generate, etc.
 - Build the tree view, refresh the tree view
+- Filter elements
 - Internal and Endevor errors
 
 **Note**: Any sensitive information is filtered, so the extension gets only anonymous error messages and Endevor REST API error codes. The Endevor REST API error codes are collected for the purposes of determining errors in the extension lifecycle.

@@ -37,7 +37,6 @@ import {
   SignedOutElementsPayload,
 } from '../../store/_doc/Actions';
 import {
-  TreeElementCommandArguments,
   EditElementCommandCompletedStatus,
   TelemetryEvents,
   SignoutErrorRecoverCommandCompletedStatus,
@@ -52,9 +51,6 @@ export const editSingleElementWithSignout =
   async (element: ElementNode): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
       autoSignOut: true,
     });
     const elementUri = fromTreeElementUri(element.uri);

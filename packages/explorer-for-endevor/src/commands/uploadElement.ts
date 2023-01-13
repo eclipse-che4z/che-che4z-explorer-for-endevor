@@ -149,6 +149,7 @@ export const uploadElementCommand = async (
       element: {
         ...uploadLocation,
         extension: element.extension,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
       },
     });
     return;
@@ -171,7 +172,11 @@ export const uploadElementCommand = async (
       searchLocation: initialSearchLocation,
     },
     pathUpTheMap: element,
-    targetLocation: uploadLocation,
+    targetElement: {
+      ...uploadLocation,
+      extension: element.extension,
+      lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+    },
   });
 };
 
@@ -438,7 +443,7 @@ const complexSignoutElement =
 
 const saveLocalElementVersion =
   (elementFilePath: string) =>
-  (element: Element) =>
+  ({ name, extension }: Omit<Element, 'lastActionCcid'>) =>
   async (content: string): Promise<Uri | Error> => {
     const tempEditFolder = path.dirname(elementFilePath);
     if (!tempEditFolder) {
@@ -451,8 +456,8 @@ const saveLocalElementVersion =
     try {
       return saveFileIntoWorkspaceFolder(tempEditFolderUri)(
         {
-          fileName: `${element.name}-local-version`,
-          fileExtension: element.extension,
+          fileName: `${name}-local-version`,
+          fileExtension: extension,
         },
         content
       );

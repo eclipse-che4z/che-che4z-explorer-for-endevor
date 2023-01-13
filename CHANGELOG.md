@@ -2,6 +2,25 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.4.0] &ndash; 2023-01-13
+
+### Added
+
+- Added a function that enables you to switch between the in-place only and in-place with up the map elements view for an Endevor inventory location.
+- Added a filtering functionality for an Endevor inventory location. You can now apply filters by element name, last action CCID, or a combination of these.
+
+### Fixed
+
+- Fixed the inability to download dependent elements when using the retrieve with dependencies function.
+- Fixed the infinite and non-cancellable elements fetching process during the first opening of the Endevor inventory location if the first attempt ended up with an error.
+- Fixed the incorrect focusing on the Explorer for Endevor view for the add connection and inventory location function when the extension is used for the first time.
+- Fixed the flickering of the Explorer for Endevor view on the extension startup.
+
+### Changed
+
+- The Endevor inventory location view now displays in-place elements only by default.
+- Absence of a listing for a particular element is now recognized separately while using the Show listing command. A proper notification is shown instead of the error.
+
 ## [1.3.2] &ndash; 2022-11-24
 
 ### Fixed

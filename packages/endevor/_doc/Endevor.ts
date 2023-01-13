@@ -16,6 +16,7 @@ import {
   ChangeRegressionError,
   ConnectionError,
   FingerprintMismatchError,
+  NoComponentInfoError,
   SelfSignedCertificateError,
   SignoutError,
   WrongCredentialsError,
@@ -149,6 +150,23 @@ export type SubSystem = SubSystemMapPath &
     nextSubSystem: Value;
   }>;
 
+export type ElementTypeMapPath = SystemMapPath & {
+  type: Value;
+};
+
+export type ElementType = ElementTypeMapPath &
+  Readonly<{
+    nextType: Value;
+  }>;
+
+export type ElementTypeResponseObject = Readonly<{
+  environment: Value;
+  stageId: Value;
+  system: Value;
+  type: Value;
+  nextType: Value;
+}>;
+
 export type SubSystemResponseObject = Readonly<{
   environment: Value;
   stageId: Value;
@@ -166,7 +184,12 @@ export type ElementMapPath = Readonly<{
     name: Value;
   }>;
 
+export type Component = ElementMapPath;
+
 export type Element = ElementMapPath &
+  Readonly<{
+    lastActionCcid: Value;
+  }> &
   Partial<
     Readonly<{
       extension: Value;
@@ -213,21 +236,21 @@ export type SignOutParams = Readonly<{
 }>;
 
 export const enum SearchStrategies {
-  SEARCH_IN_PLACE = 'SEARCH_IN_PLACE',
-  SEARCH_WITH_FIRST_FOUND = 'SEARCH_WITH_FIRST_FOUND',
-  SEARCH_ALL = 'SEARCH_ALL',
+  IN_PLACE = 'IN_PLACE',
+  FIRST_FOUND = 'FIRST_FOUND',
+  ALL = 'ALL',
 }
 
 // it is private static within the SDK, so we have to copy it :(
 export const SDK_FROM_FILE_DESCRIPTION = 'via Zowe CLI command';
 
-export const enum UpdateStatus {
+export const enum ResponseStatus {
   OK = 'OK',
   ERROR = 'ERROR',
 }
 
 export type SuccessUpdateResponse = {
-  status: UpdateStatus.OK;
+  status: ResponseStatus.OK;
   additionalDetails: Readonly<{
     returnCode: number;
   }> &
@@ -238,7 +261,7 @@ export type SuccessUpdateResponse = {
 };
 
 export type ErrorUpdateResponse = {
-  status: UpdateStatus.ERROR;
+  status: ResponseStatus.ERROR;
   additionalDetails: Readonly<
     | {
         error:
@@ -256,3 +279,32 @@ export type ErrorUpdateResponse = {
 };
 
 export type UpdateResponse = SuccessUpdateResponse | ErrorUpdateResponse;
+
+export type SuccessPrintListingResponse = {
+  status: ResponseStatus.OK;
+  content: ListingContent;
+  additionalDetails: Readonly<{
+    returnCode: number;
+  }> &
+    Partial<{
+      // can be enhanced to provide similar warning management as we have for the errors
+      message: string;
+    }>;
+};
+
+export type ErrorPrintListingResponse = {
+  status: ResponseStatus.ERROR;
+  additionalDetails: Readonly<
+    | {
+        error: NoComponentInfoError | WrongCredentialsError | Error;
+        returnCode: number;
+      }
+    | {
+        error: ConnectionError | SelfSignedCertificateError | Error;
+      }
+  >;
+};
+
+export type PrintListingResponse =
+  | SuccessPrintListingResponse
+  | ErrorPrintListingResponse;

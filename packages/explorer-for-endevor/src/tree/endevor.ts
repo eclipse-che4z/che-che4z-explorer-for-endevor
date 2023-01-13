@@ -19,31 +19,26 @@ import {
   ElementNode,
 } from './_doc/ElementTree';
 import {
-  Element,
   ElementMapPath,
   ElementSearchLocation,
   Service,
 } from '@local/endevor/_doc/Endevor';
 import { toTreeElementUri } from '../uri/treeElementUri';
-import { isDefined, isElementUpTheMap, isError, isTuple } from '../utils';
+import { isElementUpTheMap, isError } from '../utils';
 import { logger, reporter } from '../globals';
-import { CachedElement, EndevorId } from '../store/_doc/v2/Store';
-import { TelemetryEvents } from '../_doc/Telemetry';
 import {
-  EndevorMap,
-  SubsystemMapPathId,
-  mapSubsystems,
-  toSubsystemMapPathId,
-} from '../_doc/Endevor';
+  CachedElement,
+  ElementsPerRoute,
+  EndevorId,
+} from '../store/_doc/v2/Store';
+import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
+import { fromSubsystemMapPathId } from '../_doc/Endevor';
 import { toServiceLocationCompositeKey } from '../store/utils';
 
-export const toElementTooltip = (element: ElementMapPath): string => {
-  const tooltip =
-    element.configuration && element
-      ? `${element.configuration}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}`
-      : '';
-  return tooltip;
-};
+type ElementsTreeOptions = Readonly<{
+  withElementsUpTheMap: boolean;
+  showEmptyRoutes: boolean;
+}>;
 
 /**
  * Converts list element result into a tree for tree view
@@ -55,246 +50,122 @@ export const buildTree =
     searchLocationId: EndevorId,
     elementsSearchLocation: ElementSearchLocation
   ) =>
-  (endevorMap: EndevorMap) =>
-  (elements: ReadonlyArray<CachedElement>): SystemNode[] => {
-    // TODO: update the tree type system to be less profile-oriented
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const searchEnvironment = elementsSearchLocation.environment!;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const searchStageNumber = elementsSearchLocation.stageNumber!;
-
-    const searchSystemDefined = elementsSearchLocation.system;
-
-    const searchSubsystemDefined = elementsSearchLocation.subsystem;
-
-    const elementsInPlace: Array<CachedElement> = [];
-    const elementsUpTheMap: Map<
-      SubsystemMapPathId,
-      Array<CachedElement>
-    > = new Map();
-    elements.forEach((element) => {
-      if (isElementUpTheMap(elementsSearchLocation)(element.element)) {
-        let elementsCache = elementsUpTheMap.get(
-          toSubsystemMapPathId(element.element)
+  (elementsPerRoute: ElementsPerRoute) =>
+  ({ withElementsUpTheMap, showEmptyRoutes }: ElementsTreeOptions): Systems => {
+    let overallElementsInPlaceCount = 0;
+    let overallElementsUpTheMapCount = 0;
+    const elementsTree = Object.entries(elementsPerRoute)
+      .filter(([, elements]) => {
+        if (elements.length === 0) {
+          if (showEmptyRoutes) return true;
+          return false;
+        }
+        return true;
+      })
+      .reduce((acc: Systems, [searchSubsystem, elements]) => {
+        const parsedSearchSubsystem = fromSubsystemMapPathId(searchSubsystem);
+        if (!parsedSearchSubsystem) return acc;
+        const existingSystem = acc.find(
+          (system) => system.name === parsedSearchSubsystem.system
         );
-        if (elementsCache) elementsCache.push(element);
-        else elementsCache = [element];
-        elementsUpTheMap.set(
-          toSubsystemMapPathId(element.element),
-          elementsCache
-        );
-      } else {
-        elementsInPlace.push(element);
-      }
-    });
-
-    const tree: Systems = new Map();
-    let subsystems = 0;
-    let types = 0;
-
-    const addSystemNode = (element: Element): SystemNode => {
-      const name = element.system;
-      const node: SystemNode = tree.get(name) ?? {
-        type: 'SYS',
-        name,
-        children: new Map(),
-      };
-      tree.set(name, node);
-      return node;
-    };
-    const addSubSystemNode =
-      (system?: SystemNode) =>
-      (element: Element): SubSystemNode => {
-        const systemNode = system ?? addSystemNode(element);
-        const name = element.subSystem;
-        const existingNode = systemNode.children.get(name);
-        if (existingNode) return existingNode;
-        const node: SubSystemNode = systemNode.children.get(name) ?? {
+        const systemNode: SystemNode = existingSystem ?? {
+          type: 'SYS',
+          name: parsedSearchSubsystem.system,
+          children: [],
+        };
+        if (!existingSystem) acc.push(systemNode);
+        const subsystemNode: SubSystemNode = {
           type: 'SUB',
-          name,
+          name: parsedSearchSubsystem.subSystem,
           parent: systemNode,
-          children: new Map(),
+          children: [],
         };
-        systemNode.children.set(name, node);
-        subsystems++;
-        return node;
-      };
-    const addTypeNode =
-      (system?: SystemNode) =>
-      (subsystem?: SubSystemNode) =>
-      (element: Element): TypeNode => {
-        const subsystemNode = subsystem ?? addSubSystemNode(system)(element);
-        const name = element.type;
-        const existingNode = subsystemNode.children.get(name);
-        if (existingNode) return existingNode;
-        const node: TypeNode = subsystemNode.children.get(name) ?? {
-          type: 'TYPE',
-          name,
-          parent: subsystemNode,
-          elements: new Map(),
-          map: {
-            type: 'MAP',
-            name: '[MAP]',
-            elements: new Map(),
-          },
-        };
-        subsystemNode.children.set(name, node);
-        types++;
-        return node;
-      };
-    const addElementInPlace = (elementInPlace: CachedElement): void => {
-      const element = elementInPlace.element;
-      const typeNode = addTypeNode()()(element);
-      const elementNode = toInPlaceElementNode(
-        serviceId,
-        service,
-        searchLocationId,
-        elementsSearchLocation
-      )(elementInPlace)(typeNode)();
-      if (isError(elementNode)) {
-        const error = elementNode;
-        logger.trace(
-          `Unable to show the element ${element.name} in the tree because of error ${error.message}.`
-        );
-        return;
-      }
-      typeNode.elements.set(elementNode.name, elementNode);
-    };
-    elementsInPlace.forEach(addElementInPlace);
-
-    const allSubsystemsInPlace = mapSubsystems(endevorMap);
-    const addedSubsystemsInPlace: ReadonlyArray<
-      [SubsystemMapPathId, SubSystemNode]
-    > = Array.from(tree.values()).flatMap((system) => {
-      return Array.from(system.children.values()).map((subsystem) => {
-        const result: [SubsystemMapPathId, SubSystemNode] = [
-          toSubsystemMapPathId({
-            environment: searchEnvironment,
-            stageNumber: searchStageNumber,
-            system: system.name,
-            subSystem: subsystem.name,
-          }),
-          subsystem,
-        ];
-        return result;
-      });
-    });
-    const skippedSubsystemsInPlace = allSubsystemsInPlace
-      .filter(({ subSystem, system }) => {
-        const subsystemMapPathId = toSubsystemMapPathId({
-          environment: searchEnvironment,
-          stageNumber: searchStageNumber,
-          subSystem,
-          system,
-        });
-        const subsystemNotAdded = !isDefined(
-          addedSubsystemsInPlace.find(([addedSubsystemId]) => {
-            return addedSubsystemId === subsystemMapPathId;
-          })
-        );
-        return subsystemNotAdded;
-      })
-      .filter(({ system }) => {
-        if (searchSystemDefined) {
-          return system === elementsSearchLocation.system;
-        }
-        const skipValue = true;
-        return skipValue;
-      })
-      .filter(({ subSystem }) => {
-        if (searchSubsystemDefined) {
-          return subSystem === elementsSearchLocation.subsystem;
-        }
-        const skipValue = true;
-        return skipValue;
-      });
-    const addElementUpTheMap =
-      (subsystemNode?: SubSystemNode) =>
-      (system?: string, subSystem?: string) =>
-      async (elementUpTheMap: CachedElement): Promise<void> => {
-        const endevorElement = elementUpTheMap.element;
-        const typeNode = addTypeNode()(subsystemNode)({
-          ...endevorElement,
-          system: system ? system : endevorElement.system,
-          subSystem: subSystem ? subSystem : endevorElement.subSystem,
-        });
-        if (
-          typeNode.elements.get(endevorElement.name) ||
-          typeNode.map.elements.get(endevorElement.name)
-        )
-          return;
-        const elementName = endevorElement.name;
-        const elementNode = toUpTheMapElementNode(
-          serviceId,
-          service,
-          searchLocationId,
-          elementsSearchLocation
-        )(elementUpTheMap)(typeNode)(
-          elementName +
-            ` [${endevorElement.environment}/${endevorElement.stageNumber}]`
-        );
-        if (isError(elementNode)) {
-          const error = elementNode;
-          logger.trace(
-            `Unable to show the element ${elementName} in the tree because of error ${error.message}.`
+        systemNode.children.push(subsystemNode);
+        const addTypeNode = (name: string): TypeNode => {
+          const existingNode = subsystemNode.children.find(
+            (node) => node.name === name
           );
-          return;
-        }
-        typeNode.map.elements.set(elementName, elementNode);
-        return;
-      };
-    [...addedSubsystemsInPlace, ...skippedSubsystemsInPlace].forEach(
-      (subsystemInPlace) => {
-        const subsystemAlreadyInTree = isTuple(subsystemInPlace);
-        if (subsystemAlreadyInTree) {
-          const [subsystemMapPathId, subsystemNode] = subsystemInPlace;
-          const coveredMapPaths = endevorMap[subsystemMapPathId];
-          if (!isDefined(coveredMapPaths)) {
-            return;
-          }
-          for (const route of coveredMapPaths) {
-            elementsUpTheMap
-              .get(route)
-              ?.forEach(addElementUpTheMap(subsystemNode)());
-          }
-        } else {
-          const subsystemMapPathId = toSubsystemMapPathId({
-            environment: searchEnvironment,
-            stageNumber: searchStageNumber,
-            system: subsystemInPlace.system,
-            subSystem: subsystemInPlace.subSystem,
-          });
-          const coveredMapPaths = endevorMap[subsystemMapPathId];
-          if (!isDefined(coveredMapPaths)) {
-            return;
-          }
-          for (const route of coveredMapPaths) {
-            const routElementsUpTheMap = elementsUpTheMap.get(route);
-            if (!routElementsUpTheMap) continue;
-            for (const ele of routElementsUpTheMap) {
-              addElementUpTheMap()(
-                subsystemInPlace.system,
-                subsystemInPlace.subSystem
-              )(ele);
+          if (existingNode) return existingNode;
+          const node: TypeNode = {
+            type: 'TYPE',
+            name,
+            parent: subsystemNode,
+            elements: [],
+            map: withElementsUpTheMap
+              ? {
+                  type: 'MAP',
+                  name: '[MAP]',
+                  elements: [],
+                }
+              : undefined,
+          };
+          subsystemNode.children.push(node);
+          return node;
+        };
+        const addElement = (cachedElement: CachedElement): void => {
+          const element = cachedElement.element;
+          if (
+            isElementUpTheMap(elementsSearchLocation)(element) &&
+            withElementsUpTheMap
+          ) {
+            overallElementsUpTheMapCount++;
+            const typeNode = addTypeNode(element.type);
+            const elementName = element.name;
+            const elementNode = toUpTheMapElementNode(
+              serviceId,
+              service,
+              searchLocationId,
+              elementsSearchLocation
+            )(cachedElement)(typeNode)(
+              elementName + ` [${element.environment}/${element.stageNumber}]`
+            );
+            if (isError(elementNode)) {
+              const error = elementNode;
+              logger.trace(
+                `Unable to show the element ${elementName} in the tree because of error ${error.message}.`
+              );
+              return;
             }
+            typeNode.map?.elements.push(elementNode);
+            return;
+          } else {
+            overallElementsInPlaceCount++;
+            const typeNode = addTypeNode(element.type);
+            const elementNode = toInPlaceElementNode(
+              serviceId,
+              service,
+              searchLocationId,
+              elementsSearchLocation
+            )(cachedElement)(typeNode)();
+            if (isError(elementNode)) {
+              const error = elementNode;
+              logger.trace(
+                `Unable to show the element ${element.name} in the tree because of error ${error.message}.`
+              );
+              return;
+            }
+            typeNode.elements.push(elementNode);
           }
-        }
-      }
-    );
-
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ELEMENTS_PROVIDED,
-      elementsInPlace: {
-        elements: elementsInPlace.length,
-        systems: tree.size,
-        subsystems,
-        types,
-      },
-      elementsUpTheMap: {
-        elements: elements.length - elementsInPlace.length,
-      },
-    });
-    return Array.from(tree.values());
+        };
+        elements.forEach(addElement);
+        return acc;
+      }, []);
+    if (withElementsUpTheMap) {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT,
+        routesCount: Object.keys(elementsPerRoute).length,
+        elementsInPlaceCount: overallElementsInPlaceCount,
+        elementsUpTheMapCount: overallElementsUpTheMapCount,
+      });
+    } else {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT,
+        elementsInPlaceCount: overallElementsInPlaceCount,
+        systemsCount: Object.keys(elementsTree).length,
+        subsystemsCount: Object.keys(elementsPerRoute).length,
+      });
+    }
+    return elementsTree;
   };
 
 const toInPlaceElementNode =
@@ -328,6 +199,14 @@ const toInPlaceElementNode =
       tooltip: toElementTooltip(element),
     };
   };
+
+export const toElementTooltip = (element: ElementMapPath): string => {
+  const tooltip =
+    element.configuration && element
+      ? `${element.configuration}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}`
+      : '';
+  return tooltip;
+};
 
 const toUpTheMapElementNode =
   (

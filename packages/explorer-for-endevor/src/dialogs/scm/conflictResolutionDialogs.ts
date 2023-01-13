@@ -31,6 +31,6 @@ export const showConflictResolutionRequiredMessage = async (
   });
   if (messageResult === goToScmViewOption) {
     logger.trace(`Switch to SCM view was selected.`);
-    focusOnView(SCM_VIEW_ID);
+    await focusOnView(SCM_VIEW_ID);
   }
 };

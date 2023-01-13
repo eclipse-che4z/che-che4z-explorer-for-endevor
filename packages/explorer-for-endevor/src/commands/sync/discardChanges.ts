@@ -51,10 +51,8 @@ export const discardChangesCommand =
     if (resourceStates.length > 1) {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
-        commandArguments: {
-          type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-          elementsAmount: resourceStates.length,
-        },
+        commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+        elementsAmount: resourceStates.length,
       });
       if (!(await askForDiscardMultipleChanges(resourceStates.length))) {
         reporter.sendTelemetryEvent({
@@ -85,9 +83,7 @@ export const discardChangesCommand =
     }
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
     });
     const fileName = path.basename(fileUri.fsPath);
     const changedElement = getWorkspaceChangeForFile(fileUri);

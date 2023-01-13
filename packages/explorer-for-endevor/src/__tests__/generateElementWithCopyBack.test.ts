@@ -100,6 +100,7 @@ describe('generating an element with copy back', () => {
     type: 'TYP',
     name: 'ELM',
     extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
   };
   const elementUri = toTreeElementUri({
     serviceId,
@@ -121,21 +122,21 @@ describe('generating an element with copy back', () => {
   const parent: TypeNode = {
     type: 'TYPE',
     name: 'TYP',
-    elements: new Map(),
+    elements: [],
     parent: {
       type: 'SUB',
       name: 'SUB',
       parent: {
         type: 'SYS',
         name: 'SYS',
-        children: new Map(),
+        children: [],
       },
-      children: new Map(),
+      children: [],
     },
     map: {
       type: 'MAP',
       name: 'MAP',
-      elements: new Map(),
+      elements: [],
     },
   };
 
@@ -195,7 +196,6 @@ describe('generating an element with copy back', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-      targetLocation,
       pathUpTheMap: element,
       treePath: {
         serviceId,
@@ -206,6 +206,11 @@ describe('generating an element with copy back', () => {
           system: parent.parent.parent.name,
           subSystem: parent.parent.name,
         },
+      },
+      targetElement: {
+        ...targetLocation,
+        extension: element.extension,
+        lastActionCcid: changeControlValue.ccid.toUpperCase(),
       },
     };
     assert.deepStrictEqual(
@@ -283,7 +288,6 @@ describe('generating an element with copy back', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-      targetLocation,
       pathUpTheMap: element,
       treePath: {
         serviceId,
@@ -294,6 +298,11 @@ describe('generating an element with copy back', () => {
           system: parent.parent.parent.name,
           subSystem: parent.parent.name,
         },
+      },
+      targetElement: {
+        ...targetLocation,
+        extension: element.extension,
+        lastActionCcid: changeControlValue.ccid.toUpperCase(),
       },
     };
     assert.deepStrictEqual(
@@ -433,7 +442,6 @@ describe('generating an element with copy back', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-      targetLocation,
       pathUpTheMap: element,
       treePath: {
         serviceId,
@@ -444,6 +452,11 @@ describe('generating an element with copy back', () => {
           system: parent.parent.parent.name,
           subSystem: parent.parent.name,
         },
+      },
+      targetElement: {
+        ...targetLocation,
+        extension: element.extension,
+        lastActionCcid: changeControlValue.ccid.toUpperCase(),
       },
     };
     assert.deepStrictEqual(
@@ -519,7 +532,6 @@ describe('generating an element with copy back', () => {
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {
       type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-      targetLocation,
       pathUpTheMap: element,
       treePath: {
         serviceId,
@@ -530,6 +542,11 @@ describe('generating an element with copy back', () => {
           system: parent.parent.parent.name,
           subSystem: parent.parent.name,
         },
+      },
+      targetElement: {
+        ...targetLocation,
+        extension: element.extension,
+        lastActionCcid: changeControlValue.ccid.toUpperCase(),
       },
     };
     assert.deepStrictEqual(

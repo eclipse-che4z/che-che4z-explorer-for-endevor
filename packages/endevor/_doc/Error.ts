@@ -25,14 +25,14 @@ import {
   OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN,
   OPENSSL_ERROR_CERT_ISSUER,
   WRONG_CREDENTIALS_SEVERE,
+  NO_COMPONENT_INFO_ERROR,
 } from '../const';
 import { UnreachableCaseError } from '../typeHelpers';
 
 export const enum ErrorContextTypes {
   CONNECTION_ERROR = 'CONNECTION_ERROR',
   API_ERROR = 'API_ERROR',
-  INCORRECT_RESPONSE = 'INCORRECT_RESPONSE',
-  ENDEVOR_RETURN_CODE = 'ENDEVOR_RETURN_CODE',
+  INCORRECT_RESPONSE_ERROR = 'INCORRECT_RESPONSE_ERROR',
   ENDEVOR_RETURN_CODE_AND_MESSAGES = 'ENDEVOR_RETURN_CODE_AND_MESSAGES',
 }
 
@@ -43,15 +43,11 @@ type ErrorContext =
       message: string;
     }>
   | Readonly<{
-      type: ErrorContextTypes.API_ERROR;
+      type:
+        | ErrorContextTypes.API_ERROR
+        | ErrorContextTypes.INCORRECT_RESPONSE_ERROR;
       error: Error;
-    }>
-  | Readonly<{
-      type: ErrorContextTypes.INCORRECT_RESPONSE;
-    }>
-  | Readonly<{
-      type: ErrorContextTypes.ENDEVOR_RETURN_CODE;
-      returnCode: number;
+      returnCode?: number;
     }>
   | Readonly<{
       type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES;
@@ -71,6 +67,8 @@ export class ChangeRegressionError extends Error {}
 
 export class ProcessorStepMaxRcExceededError extends Error {}
 
+export class NoComponentInfoError extends Error {}
+
 export class WrongCredentialsError extends Error {}
 
 export class ConnectionError extends Error {}
@@ -87,6 +85,7 @@ export const makeError =
     | DuplicateElementError
     | ChangeRegressionError
     | ProcessorStepMaxRcExceededError
+    | NoComponentInfoError
     | WrongCredentialsError
     | SelfSignedCertificateError
     | ConnectionError
@@ -106,12 +105,16 @@ export const makeError =
             errorContext.error.message.trim(),
           ].join('\n')}`
         );
-      case ErrorContextTypes.INCORRECT_RESPONSE:
-        return new Error(`${cleanedMessage} because of incorrect response`);
-      case ErrorContextTypes.ENDEVOR_RETURN_CODE:
+      case ErrorContextTypes.INCORRECT_RESPONSE_ERROR: {
+        if (errorContext.returnCode) {
+          return new Error(
+            `${cleanedMessage} because of incorrect response error:\n${errorContext.error}\nwith response code ${errorContext.returnCode}`
+          );
+        }
         return new Error(
-          `${cleanedMessage} because of response code ${errorContext.returnCode}`
+          `${cleanedMessage} because of incorrect response error:\n${errorContext.error}`
         );
+      }
       case ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES:
         return getTypedErrorFromEndevorCode(
           `${cleanedMessage} because of response code ${
@@ -134,6 +137,7 @@ export const getTypedErrorFromEndevorCode = (
   | DuplicateElementError
   | ChangeRegressionError
   | ProcessorStepMaxRcExceededError
+  | NoComponentInfoError
   | WrongCredentialsError
   | GeneralError => {
   switch (true) {
@@ -149,6 +153,8 @@ export const getTypedErrorFromEndevorCode = (
     case errorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR):
     case errorMessage.includes(PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE):
       return new ProcessorStepMaxRcExceededError(errorMessage);
+    case errorMessage.includes(NO_COMPONENT_INFO_ERROR):
+      return new NoComponentInfoError(errorMessage);
     case errorMessage.includes(WRONG_CREDENTIALS_SEVERE):
       return new WrongCredentialsError(errorMessage);
     default:

@@ -24,6 +24,10 @@ import {
   InvalidCredentialsServiceNode,
 } from './_doc/ServiceLocationTree';
 import {
+  ElementCcidsFilter,
+  ElementFilterType,
+  ElementNamesFilter,
+  EndevorId,
   EndevorSearchLocationDescription,
   EndevorSearchLocationDescriptions,
   EndevorSearchLocationStatus,
@@ -41,7 +45,14 @@ import { Source } from '../store/storage/_doc/Storage';
 import { toCompositeKey } from '../store/storage/utils';
 import { toServiceLocationCompositeKey } from '../store/utils';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { byNameOrder } from '../utils';
+import { byNameOrder, isDefined } from '../utils';
+import {
+  FilterNode,
+  FilterValueNode,
+  FilteredNode,
+  FilterNodeType,
+} from './_doc/FilterTree';
+import { FILTER_DELIMITER, FILTER_WILDCARD_ZERO_OR_MORE } from '../constants';
 
 export const addNewSearchLocationButton = (
   serviceNode: ValidServiceNode
@@ -280,15 +291,25 @@ const toSearchLocationNode =
     });
     switch (location.id.source) {
       case Source.INTERNAL:
-        return {
-          ...locationNodeParams,
-          type: 'LOCATION',
-        };
+        return location.searchForFirstFoundElements
+          ? {
+              ...locationNodeParams,
+              type: 'LOCATION/WITH_MAP',
+            }
+          : {
+              ...locationNodeParams,
+              type: 'LOCATION',
+            };
       case Source.SYNCHRONIZED:
-        return {
-          ...locationNodeParams,
-          type: 'LOCATION_PROFILE',
-        };
+        return location.searchForFirstFoundElements
+          ? {
+              ...locationNodeParams,
+              type: 'LOCATION_PROFILE/WITH_MAP',
+            }
+          : {
+              ...locationNodeParams,
+              type: 'LOCATION_PROFILE',
+            };
       default:
         throw new UnreachableCaseError(location.id.source);
     }
@@ -375,6 +396,90 @@ const toInvalidSearchLocationNode =
       default:
         throw new UnreachableCaseError(service);
     }
+  };
+
+export const toFilteredNode =
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (nameFilter: ElementNamesFilter | undefined) =>
+  (ccidFilter: ElementCcidsFilter | undefined): FilteredNode | undefined => {
+    const children = [];
+    if (nameFilter && nameFilter.value.length) {
+      children.push(toFilterNode(serviceId)(searchLocationId)(nameFilter));
+    }
+
+    if (ccidFilter && ccidFilter.value.length) {
+      children.push(toFilterNode(serviceId)(searchLocationId)(ccidFilter));
+    }
+    if (!children.filter(isDefined).length) {
+      return;
+    }
+    return {
+      type: 'FILTERED',
+      name: '<Filtered>',
+      searchLocationName: searchLocationId.name,
+      searchLocationSource: searchLocationId.source,
+      serviceName: serviceId.name,
+      serviceSource: serviceId.source,
+      children: children.filter(isDefined),
+      tooltip: children
+        .filter(isDefined)
+        .map((child) => {
+          return `By ${child.name.toString()}`;
+        })
+        .join(`${FILTER_DELIMITER} `),
+    };
+  };
+
+const toFilterNode =
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (filter: ElementNamesFilter | ElementCcidsFilter): FilterNode | undefined => {
+    let filterType: FilterNodeType;
+    if (
+      filter.value[0] == FILTER_WILDCARD_ZERO_OR_MORE &&
+      filter.value.length == 1
+    )
+      return;
+    switch (filter.type) {
+      case ElementFilterType.ELEMENT_NAMES_FILTER:
+        filterType = FilterNodeType.NAMES_FILTER;
+        break;
+      case ElementFilterType.ELEMENT_CCIDS_FILTER:
+        filterType = FilterNodeType.CCIDS_FILTER;
+        break;
+      default:
+        throw new UnreachableCaseError(filter);
+    }
+    return {
+      type: 'FILTER',
+      name: filterType,
+      filterType,
+      searchLocationName: searchLocationId.name,
+      searchLocationSource: searchLocationId.source,
+      serviceName: serviceId.name,
+      serviceSource: serviceId.source,
+      children: filter.value.map((value) =>
+        toFilterValueNode(serviceId)(searchLocationId)(filterType)(value)
+      ),
+      tooltip: filter.value.join(FILTER_DELIMITER),
+    };
+  };
+
+const toFilterValueNode =
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (filterType: FilterNodeType) =>
+  (value: string): FilterValueNode => {
+    return {
+      type: 'FILTER_VALUE',
+      name: value,
+      filterType,
+      searchLocationName: searchLocationId.name,
+      searchLocationSource: searchLocationId.source,
+      serviceName: serviceId.name,
+      serviceSource: serviceId.source,
+    };
   };
 
 export const emptyMapNode: EmptyMapNode = {

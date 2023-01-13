@@ -23,7 +23,9 @@ import {
   System,
   SystemResponseObject,
   UpdateResponse,
-  UpdateStatus,
+  ResponseStatus,
+  ErrorPrintListingResponse,
+  PrintListingResponse,
 } from './_doc/Endevor';
 import {
   FingerprintMismatchError,
@@ -34,6 +36,7 @@ import {
   SelfSignedCertificateError,
   WrongCredentialsError,
   ConnectionError,
+  NoComponentInfoError,
 } from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
@@ -131,7 +134,13 @@ export const stringifyPretty = (value: unknown): string => {
 export const isErrorUpdateResponse = (
   value: UpdateResponse
 ): value is ErrorUpdateResponse => {
-  return value.status === UpdateStatus.ERROR;
+  return value.status === ResponseStatus.ERROR;
+};
+
+export const isErrorPrintListingResponse = (
+  value: PrintListingResponse
+): value is ErrorPrintListingResponse => {
+  return value.status === ResponseStatus.ERROR;
 };
 
 export const isError = <T>(value: T | Error): value is Error => {
@@ -166,6 +175,12 @@ export const isProcessorStepMaxRcExceededError = <T>(
   value: T | ProcessorStepMaxRcExceededError
 ): value is ProcessorStepMaxRcExceededError => {
   return value instanceof ProcessorStepMaxRcExceededError;
+};
+
+export const isNoComponentInfoError = <T>(
+  value: T | NoComponentInfoError
+): value is NoComponentInfoError => {
+  return value instanceof NoComponentInfoError;
 };
 
 export const isWrongCredentialsError = <T>(

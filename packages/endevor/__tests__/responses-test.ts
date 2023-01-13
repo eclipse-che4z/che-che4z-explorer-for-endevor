@@ -17,7 +17,7 @@ import {
   SuccessListDependenciesResponse,
   SuccessListElementsResponse,
   SuccessListConfigurationsResponse,
-  SuccessPrintResponse,
+  PrintResponse,
   SuccessRetrieveResponse,
   UpdateResponse,
   BaseResponse,
@@ -399,10 +399,11 @@ describe('Endevor responses type parsing', () => {
           returnCode,
           statusCode: 200,
           data: [elementContent],
+          messages: [],
         },
       };
       // act
-      const parsedResponse = parseToType(SuccessPrintResponse, response);
+      const parsedResponse = parseToType(PrintResponse, response);
       // assert
       expect(parsedResponse).toMatchSnapshot();
     });
@@ -417,7 +418,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessPrintResponse, response)
+        parseToType(PrintResponse, response)
       ).toThrowErrorMatchingSnapshot();
     });
     it('should throw an error for a response with incorrect data', () => {
@@ -436,7 +437,7 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessPrintResponse, response)
+        parseToType(PrintResponse, response)
       ).toThrowErrorMatchingSnapshot();
     });
   });

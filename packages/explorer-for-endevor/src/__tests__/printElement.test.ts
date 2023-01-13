@@ -80,6 +80,7 @@ describe('printing element content', () => {
       type: 'TYP',
       name: 'ELM',
       extension: 'ext',
+      lastActionCcid: 'LAST-CCID',
     };
     const searchLocationName = 'searchLocationName';
     const searchLocationId: EndevorId = {

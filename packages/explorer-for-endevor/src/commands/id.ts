@@ -43,6 +43,16 @@ export const CommandId = {
   EDIT_CONNECTION_DETAILS: `${COMMAND_PREFIX}.editConnectionDetails`,
   TEST_CONNECTION_DETAILS: `${COMMAND_PREFIX}.testConnectionDetails`,
   EDIT_CREDENTIALS: `${COMMAND_PREFIX}.editCredentials`,
+  SHOW_FIRST_FOUND: `${COMMAND_PREFIX}.showFirstFoundElements`,
+  SHOW_IN_PLACE: `${COMMAND_PREFIX}.showElementsInPlace`,
+
+  // filter commands
+  CLEAR_SEARCH_LOCATION_FILTERS: `${COMMAND_PREFIX}.clearSearchLocationFilters`,
+  FILTER_SEARCH_LOCATION_BY_ELEMENT_NAME: `${COMMAND_PREFIX}.filterSearchLocationByElementName`,
+  FILTER_SEARCH_LOCATION_BY_ELEMENT_CCID: `${COMMAND_PREFIX}.filterSearchLocationByElementCcid`,
+  CLEAR_SEARCH_LOCATION_FILTER: `${COMMAND_PREFIX}.clearSearchLocationFilter`,
+  CLEAR_SEARCH_LOCATION_FILTER_VALUE: `${COMMAND_PREFIX}.clearSearchLocationFilterValue`,
+  EDIT_SEARCH_LOCATION_FILTER: `${COMMAND_PREFIX}.editSearchLocationFilter`,
 
   // sync commands
   INIT_WORKSPACE: `${COMMAND_PREFIX}.${SYNC_PREFIX}.initWorkspace`,

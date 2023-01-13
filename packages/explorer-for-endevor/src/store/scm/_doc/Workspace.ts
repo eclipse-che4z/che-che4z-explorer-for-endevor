@@ -14,7 +14,7 @@
 import { Element } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
 
-export type EndevorElement = Omit<Element, 'configuration'>;
+export type EndevorElement = Omit<Element, 'configuration' | 'lastActionCcid'>;
 
 export const enum WorkspaceElementType {
   ELEMENT_ADDED = 'ELEMENT/ADDED',

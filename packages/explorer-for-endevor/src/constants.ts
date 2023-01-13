@@ -39,6 +39,7 @@ export const WORKSPACE_SYNC_SETTING = 'workspaceSync';
 export const WORKSPACE_SYNC_DEFAULT = false;
 
 export const TREE_VIEW_ID = `${COMMAND_PREFIX}.treeView`;
+export const TREE_VIEW_INITIALIZED_CONTEXT_NAME = `${TREE_VIEW_ID}.initialized`;
 
 export const FILE_EXT_RESOLUTION_SETTING = 'fileExtensionResolution';
 export const ELM_NAME_VALUE = 'Element name only';
@@ -82,7 +83,6 @@ export const SCM_RESOURCE_CONFLICTED_COLOR =
 export const SCM_VIEW_ID = 'workbench.scm';
 
 export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;
-export const EXT_ACTIVATED_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.activated`;
 export const SCM_STATUS_CONTEXT_NAME = `${COMMAND_PREFIX}.scm.status`;
 
 export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';
@@ -93,6 +93,11 @@ export const EXTENSION_ISSUES_PAGE = pkgjson.bugs.url;
 
 export const ZE_API_MIN_VERSION = '2.2.1';
 export const ZOWE_PROFILE_DESCRIPTION = 'Zowe config';
+
+export const FILTER_DELIMITER = ',';
+export const FILTER_WILDCARD_ZERO_OR_MORE = '*';
+export const FILTER_WILDCARD_SINGLE = '%';
+export const FILTER_VALUE_DEFAULT = FILTER_WILDCARD_ZERO_OR_MORE;
 
 // ms
 // the same time, as VSCode uses to hide notification
@@ -154,3 +159,5 @@ export const ENDEVOR_MESSAGE_CODE_PREFIXES = [
 ];
 
 export const ENDEVOR_CREDENTIAL_VALIDATION_LIMIT = 2;
+
+export const DEFAULT_TREE_IN_PLACE_SEARCH_MODE = false;

@@ -16,7 +16,6 @@ export const TELEMETRY_EVENTS_VERSION = '1';
 export const enum TelemetryEvents {
   ERROR = 'extension error',
   REFRESH_COMMAND_CALLED = 'refresh tree command called',
-  ELEMENTS_PROVIDED = 'elements provided in the tree',
   ELEMENTS_WERE_FETCHED = 'elements were fetched',
   ENDEVOR_MAP_STRUCTURE_BUILT = 'endevor map structure built',
   MISSING_CREDENTIALS_PROMPT_CALLED = 'missing credentials prompt called',
@@ -55,19 +54,6 @@ export const enum TelemetryEvents {
 
 export type RefreshCommandCalledEvent = {
   type: TelemetryEvents.REFRESH_COMMAND_CALLED;
-};
-
-export type ElementsProvidedInTheTreeEvent = {
-  type: TelemetryEvents.ELEMENTS_PROVIDED;
-  elementsInPlace: {
-    elements: number;
-    systems: number;
-    subsystems: number;
-    types: number;
-  };
-  elementsUpTheMap: {
-    elements: number;
-  };
 };
 
 export const enum ElementsFetchingStatus {
@@ -162,6 +148,7 @@ export type ListingContentProviderCalledEvent = {
 
 export const enum ListingContentProviderCompletedStatus {
   SUCCESS = 'SUCCESS',
+  NO_LISTING = 'NO_LISTING',
   GENERIC_ERROR = 'GENERIC_ERROR',
 }
 export type ListingContentProviderCompletedEvent =
@@ -174,7 +161,9 @@ export type ListingContentProviderCompletedEvent =
   | {
       type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED;
       context: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED;
-      status: ListingContentProviderCompletedStatus.SUCCESS;
+      status:
+        | ListingContentProviderCompletedStatus.SUCCESS
+        | ListingContentProviderCompletedStatus.NO_LISTING;
     };
 
 export const enum TreeElementCommandArguments {
@@ -182,19 +171,17 @@ export const enum TreeElementCommandArguments {
   MULTIPLE_ELEMENTS = 'MULTIPLE_ELEMENTS',
 }
 
-export type CommandArguments =
-  | {
-      type: TreeElementCommandArguments.SINGLE_ELEMENT;
-    }
-  | {
-      type: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
-      elementsAmount: number;
-    };
-
 export type CommandViewElementDetailsCalledEvent = {
   type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED;
-  commandArguments: CommandArguments;
-};
+} & (
+  | {
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
+    }
+  | {
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
+      elementsAmount: number;
+    }
+);
 
 export type CommandResolveConflictWithRemoteCallEvent = {
   type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL;
@@ -205,7 +192,6 @@ export type CommandResolveConflictWithRemoteCallEvent = {
 
 export type CommandPrintListingCalledEvent = {
   type: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED;
-  commandArguments: CommandArguments;
 };
 
 export type CommandSignoutErrorRecoverCalledEvent = {
@@ -250,7 +236,6 @@ export type CommandSignoutErrorRecoverCompletedEvent =
 
 export type CommandEditElementCalledEvent = {
   type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
   autoSignOut: true | false;
 };
 
@@ -274,9 +259,16 @@ export type CommandEditElementCompletedEvent =
 
 export type CommandRetrieveElementCalledEvent = {
   type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
   autoSignOut: true | false;
-};
+} & (
+  | {
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
+    }
+  | {
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
+      elementsAmount: number;
+    }
+);
 
 export const enum RetrieveElementCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -321,7 +313,6 @@ export type CommandUploadElementCompletedEvent =
 
 export type CommandSignInElementCalledEvent = {
   type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
 };
 
 export const enum SignOutElementCommandCompletedStatus {
@@ -349,9 +340,16 @@ export type CommandSignInElementCompletedEvent =
 
 export type CommandRetrieveElementWithDepsCalledEvent = {
   type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED;
-  commandArguments: CommandArguments;
   autoSignOut: true | false;
-};
+} & (
+  | {
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
+    }
+  | {
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
+      elementsAmount: number;
+    }
+);
 
 export const enum RetrieveElementWithDepsCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -434,7 +432,6 @@ export type TelemetryEvent =
   | RefreshCommandCalledEvent
   | CommandAddElementCalledEvent
   | CommandAddElementCompletedEvent
-  | ElementsProvidedInTheTreeEvent
   | ElementsFetchedEvent
   | EndevorMapNotBuiltEvent
   | MissingCredentialsPromptCalledEvent

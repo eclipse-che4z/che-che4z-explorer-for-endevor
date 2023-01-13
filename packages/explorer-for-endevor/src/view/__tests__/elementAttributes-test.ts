@@ -27,6 +27,7 @@ describe('renderElementAttributes', () => {
       name: 'ELEMENT',
       extension: 'cbl',
       configuration: 'CFG',
+      lastActionCcid: 'CCID',
     };
 
     // act
