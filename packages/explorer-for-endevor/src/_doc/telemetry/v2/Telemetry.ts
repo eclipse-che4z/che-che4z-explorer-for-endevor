@@ -14,7 +14,7 @@
 import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
 import { FileExtensionResolutions } from '../../../settings/_doc/v2/Settings';
 import { Source } from '../../../store/storage/_doc/Storage';
-import { CommandArguments } from '../../Telemetry';
+import { TreeElementCommandArguments } from '../../Telemetry';
 export const TELEMETRY_EVENTS_VERSION = '2';
 
 export const enum TelemetryEvents {
@@ -24,6 +24,9 @@ export const enum TelemetryEvents {
 
   PROFILES_MIGRATION_COMPLETED = 'profiles migration completed',
   PROFILES_MIGRATION_CALLED = 'profiles migration called',
+
+  ELEMENTS_IN_PLACE_TREE_BUILT = 'elements in place tree built',
+  ELEMENTS_UP_THE_MAP_TREE_BUILT = 'elements up the map tree built',
 
   SERVICE_PROVIDED_INTO_TREE = 'service provided into the tree',
   SEARCH_LOCATION_PROVIDED_INTO_TREE = 'search location provided into the tree',
@@ -90,6 +93,22 @@ export const enum TelemetryEvents {
 
   COMMAND_EDIT_CREDENTIALS_CALLED = 'edit credentials command called',
   COMMAND_EDIT_CREDENTIALS_COMPLETED = 'edit credentials command completed',
+
+  COMMAND_TOGGLE_MAP = 'map view changed in the tree',
+
+  COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL = 'update elements name filter command call performed',
+  COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED = 'update elements name filter command called',
+  COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED = 'update elements name filter command completed',
+
+  COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL = 'update elements CCID filter command call performed',
+  COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED = 'update elements CCID filter command called',
+  COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED = 'update elements CCID filter command completed',
+
+  COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED = 'clear search location filters command called',
+
+  COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED = 'clear search location filter command called',
+
+  COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED = 'clear search location filter value command called',
 }
 
 export type ExtensionActivatedEvent = {
@@ -124,6 +143,20 @@ export const enum ProfileMigrationCompletedStatus {
   NEW_PROFILES_MIGRATED = 'NEW_PROFILES_MIGRATED',
   NO_PROFILES_MIGRATED = 'NO_PROFILES_MIGRATED',
 }
+
+export type ElementsInPlaceTreeBuiltEvent = {
+  type: TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT;
+  elementsInPlaceCount: number;
+  systemsCount: number;
+  subsystemsCount: number;
+};
+
+export type ElementsUpTheMapTreeBuiltEvent = {
+  type: TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT;
+  elementsInPlaceCount: number;
+  elementsUpTheMapCount: number;
+  routesCount: number;
+};
 
 export type ServiceProvidedIntoTreeEvent = {
   type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE;
@@ -366,7 +399,6 @@ export const enum SignOutElementCommandCompletedStatus {
 
 export type CommandSignOutElementCalledEvent = {
   type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
-  commandArguments: CommandArguments;
 };
 
 export type CommandSignOutElementCompletedEvent =
@@ -471,8 +503,15 @@ export const enum SettingChangedStatus {
 
 export type CommandDiscardElementChangesCalledEvent = {
   type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED;
-  commandArguments: CommandArguments;
-};
+} & (
+  | {
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
+    }
+  | {
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
+      elementsAmount: number;
+    }
+);
 
 export const enum DiscardElementChangesCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -500,8 +539,15 @@ export type CommandRevertSectionChangeEvent = {
 
 export type CommandConfirmConflictResolutionCalledEvent = {
   type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED;
-  commandArguments: CommandArguments;
-};
+} & (
+  | {
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
+    }
+  | {
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
+      elementsAmount: number;
+    }
+);
 
 export const enum ConfirmConflictResolutionCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -665,10 +711,88 @@ export type CommandTestConnectionDetailsCompletedEvent =
       status: TestConnectionDetailsCommandCompletedStatus.SUCCESS;
     };
 
+export type MapViewToggled = {
+  type: TelemetryEvents.COMMAND_TOGGLE_MAP;
+  source: Source;
+  showMap: boolean;
+};
+
+export type CommandClearSearchLocationFiltersCalledEvent = {
+  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED;
+};
+
+export type CommandClearSearchLocationFilterCalledEvent = {
+  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED;
+};
+
+export type CommandClearSearchLocationFilterValueCalledEvent = {
+  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED;
+};
+
+export type CommandUpdateElementNameFilterCalledEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED;
+};
+
+export const enum UpdateElementNameFilterCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  UNCHANGED = 'UNCHANGED',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandUpdateElementNameFilterCompletedEvent =
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED;
+      status: UpdateElementNameFilterCommandCompletedStatus.CANCELLED;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED;
+      status:
+        | UpdateElementNameFilterCommandCompletedStatus.SUCCESS
+        | UpdateElementNameFilterCommandCompletedStatus.UNCHANGED;
+      elementsFetched: boolean;
+      patternsCount: number;
+      wildcardUsed: boolean;
+    };
+
+export type CommandUpdateElementCcidFilterCalledEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED;
+};
+
+export const enum UpdateElementCcidFilterCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  UNCHANGED = 'UNCHANGED',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandUpdateElementCcidFilterCompletedEvent =
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED;
+      status: UpdateElementCcidFilterCommandCompletedStatus.CANCELLED;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED;
+      status:
+        | UpdateElementCcidFilterCommandCompletedStatus.SUCCESS
+        | UpdateElementCcidFilterCommandCompletedStatus.UNCHANGED;
+      elementsFetched: boolean;
+      patternsCount: number;
+      wildcardUsed: boolean;
+    };
+
+export type CommandUpdateElementCcidFilterCallEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL;
+};
+
+export type CommandUpdateElementNameFilterCallEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL;
+};
+
 export type TelemetryEvent =
   | ExtensionActivatedEvent
   | ProfileMigrationCompletedEvent
   | ProfileMigrationCalledEvent
+  | ElementsInPlaceTreeBuiltEvent
+  | ElementsUpTheMapTreeBuiltEvent
   | ServiceProvidedIntoTreeEvent
   | SearchLocationProvidedIntoTreeEvent
   | CommandAddNewServiceCalledEvent
@@ -707,4 +831,14 @@ export type TelemetryEvent =
   | CommandEditCredentialsCalledEvent
   | CommandEditConnectionDetailsCalledEvent
   | CommandTestConnectionDetailsCompletedEvent
-  | CommandTestConnectionDetailsCalledEvent;
+  | CommandTestConnectionDetailsCalledEvent
+  | MapViewToggled
+  | CommandClearSearchLocationFiltersCalledEvent
+  | CommandClearSearchLocationFilterCalledEvent
+  | CommandClearSearchLocationFilterValueCalledEvent
+  | CommandUpdateElementNameFilterCalledEvent
+  | CommandUpdateElementNameFilterCompletedEvent
+  | CommandUpdateElementCcidFilterCalledEvent
+  | CommandUpdateElementCcidFilterCompletedEvent
+  | CommandUpdateElementNameFilterCallEvent
+  | CommandUpdateElementCcidFilterCallEvent;

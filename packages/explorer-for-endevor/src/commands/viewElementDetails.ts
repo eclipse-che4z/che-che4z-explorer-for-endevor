@@ -40,10 +40,8 @@ export const viewElementDetails = (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-        elementsAmount: elementNodes.length,
-      },
+      elementsAmount: elementNodes.length,
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
     });
     elementNodes.forEach((elementNode) => showElementAttributes(elementNode));
   } else if (elementNode) {
@@ -52,9 +50,7 @@ export const viewElementDetails = (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
     });
     showElementAttributes(elementNode);
   }

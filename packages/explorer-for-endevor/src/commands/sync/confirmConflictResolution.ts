@@ -35,18 +35,18 @@ export const confirmConflictResolutionCommand =
       );
       return;
     }
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
-      commandArguments:
-        resourceStates.length > 1
-          ? {
-              type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-              elementsAmount: resourceStates.length,
-            }
-          : {
-              type: TreeElementCommandArguments.SINGLE_ELEMENT,
-            },
-    });
+    if (resourceStates.length > 1) {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
+        commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+        elementsAmount: resourceStates.length,
+      });
+    } else {
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
+        commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
+      });
+    }
     const conflictConfirmations = await Promise.all(
       resourceStates.map(async (resourceState) => {
         if (!resourceState.resourceUri) {

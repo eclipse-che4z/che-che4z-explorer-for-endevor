@@ -29,14 +29,14 @@ export type Systems = t.TypeOf<typeof Systems>;
 export type SubSystem = t.TypeOf<typeof SubSystem>;
 export type SubSystems = t.TypeOf<typeof SubSystems>;
 
+export type ElementType = t.TypeOf<typeof ElementType>;
+export type ElementTypes = t.TypeOf<typeof ElementTypes>;
+
 export type Element = t.TypeOf<typeof Element>;
 export type Elements = t.TypeOf<typeof Elements>;
 
-export type DependentElement = t.TypeOf<typeof DependentElement>;
-export type DependentElements = t.TypeOf<typeof DependentElements>;
-
-export type ElementDependency = t.TypeOf<typeof ElementDependency>;
-export type ElementDependencies = t.TypeOf<typeof ElementDependencies>;
+export type Component = t.TypeOf<typeof Component>;
+export type Components = t.TypeOf<typeof Components>;
 
 export type Content = t.TypeOf<typeof Content>;
 
@@ -44,6 +44,7 @@ export type BaseResponse = t.TypeOf<typeof BaseResponse>;
 export type BaseResponseWithUnknownData = t.TypeOf<
   typeof BaseResponseWithUnknownData
 >;
+export type BaseResponseWithContent = t.TypeOf<typeof BaseResponseWithContent>;
 export type BaseResponseWithMessages = t.TypeOf<
   typeof BaseResponseWithMessages
 >;
@@ -52,7 +53,7 @@ export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
 export type V1ApiVersionResponse = t.TypeOf<typeof V1ApiVersionResponse>;
 export type V2ApiVersionResponse = t.TypeOf<typeof V2ApiVersionResponse>;
 
-export type SuccessPrintResponse = t.TypeOf<typeof SuccessPrintResponse>;
+export type PrintResponse = t.TypeOf<typeof PrintResponse>;
 export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
 export type SuccessListElementsResponse = t.TypeOf<
   typeof SuccessListElementsResponse
@@ -68,6 +69,9 @@ export type SuccessListSystemsResponse = t.TypeOf<
 >;
 export type SuccessListSubSystemsResponse = t.TypeOf<
   typeof SuccessListSubSystemsResponse
+>;
+export type SuccessListElementTypesResponse = t.TypeOf<
+  typeof SuccessListElementTypesResponse
 >;
 export type SuccessListDependenciesResponse = t.TypeOf<
   typeof SuccessListDependenciesResponse
@@ -132,6 +136,15 @@ export const SubSystem = t.type({
 });
 export const SubSystems = t.array(SubSystem);
 
+export const ElementType = t.type({
+  envName: t.string,
+  stgId: t.string,
+  sysName: t.string,
+  nextType: t.string,
+  typeName: t.string,
+});
+export const ElementTypes = t.array(ElementType);
+
 const ElementPath = t.type({
   envName: t.string,
   stgNum: new StageNumberType(),
@@ -139,7 +152,6 @@ const ElementPath = t.type({
   sbsName: t.string,
   typeName: t.string,
   elmName: t.string,
-  fullElmName: t.string,
 });
 
 export const EnvironmentStage = t.type({
@@ -152,19 +164,18 @@ export const EnvironmentStage = t.type({
 
 export const Element = t.intersection([
   ElementPath,
+  t.type({
+    fullElmName: t.string,
+    lastActCcid: t.string,
+  }),
   t.partial({
     fileExt: t.union([t.string, t.null]),
   }),
 ]);
 export const Elements = t.array(Element);
 
-export const DependentElement = Element;
-export const DependentElements = t.array(DependentElement);
-
-export const ElementDependency = t.type({
-  components: t.array(DependentElement),
-});
-export const ElementDependencies = t.array(ElementDependency);
+export const Component = ElementPath;
+export const Components = t.array(Component);
 
 export const Content = t.string;
 
@@ -191,6 +202,15 @@ export const BaseResponseWithUnknownData = t.type({
   }),
 });
 
+export const BaseResponseWithContent = t.type({
+  body: t.type({
+    statusCode: t.number,
+    returnCode: new ReturnCodeType(),
+    data: t.array(Content),
+    messages: t.array(t.string),
+  }),
+});
+
 export const ErrorResponse = BaseResponseWithMessages;
 
 export const V1ApiVersionResponse = t.type({
@@ -205,13 +225,7 @@ export const V2ApiVersionResponse = t.type({
   }),
 });
 
-export const SuccessPrintResponse = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-    data: t.array(Content),
-  }),
-});
+export const PrintResponse = BaseResponseWithContent;
 class RetrieveContentType extends t.Type<Buffer> {
   constructor() {
     super(
@@ -245,6 +259,7 @@ export const SuccessListConfigurationsResponse = t.type({
 export const SuccessListEnvironmentStagesResponse = BaseResponseWithUnknownData;
 export const SuccessListSystemsResponse = BaseResponseWithUnknownData;
 export const SuccessListSubSystemsResponse = BaseResponseWithUnknownData;
+export const SuccessListElementTypesResponse = BaseResponseWithUnknownData;
 export const SuccessListElementsResponse = BaseResponseWithUnknownData;
 
 export const SuccessListDependenciesResponse = t.type({

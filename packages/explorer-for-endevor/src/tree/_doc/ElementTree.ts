@@ -13,10 +13,10 @@
 
 import { Uri } from 'vscode';
 
-export type Systems = Map<string, SystemNode>;
-export type SubSystems = Map<string, SubSystemNode>;
-export type Types = Map<string, TypeNode>;
-export type Elements = Map<string, ElementNode>;
+export type Systems = Array<SystemNode>;
+export type SubSystems = Array<SubSystemNode>;
+export type Types = Array<TypeNode>;
+export type Elements = Array<ElementNode>;
 
 export type SystemNode = Readonly<{
   type: 'SYS';
@@ -34,7 +34,7 @@ export type TypeNode = Readonly<{
   name: string;
   parent: SubSystemNode;
   elements: Elements;
-  map: EndevorMapNode;
+  map?: EndevorMapNode;
 }>;
 export type EndevorMapNode = Readonly<{
   type: 'MAP';

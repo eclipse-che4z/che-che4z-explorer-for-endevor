@@ -122,9 +122,7 @@ const retrieveSingleElementWithSignoutOption =
   ): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
+      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
       autoSignOut: true,
     });
     const workspaceUri = await getWorkspaceUri();
@@ -453,9 +451,7 @@ const retrieveSingleElement = async (
 ): Promise<void> => {
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-    commandArguments: {
-      type: TreeElementCommandArguments.SINGLE_ELEMENT,
-    },
+    commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
     autoSignOut: false,
   });
   const workspaceUri = await getWorkspaceUri();
@@ -546,10 +542,8 @@ export const retrieveMultipleElements = async (
 ): Promise<void> => {
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-    commandArguments: {
-      type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: elements.length,
-    },
+    commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+    elementsAmount: elements.length,
     autoSignOut: false,
   });
   const workspaceUri = await getWorkspaceUri();
@@ -737,10 +731,8 @@ const retrieveMultipleElementsWithSignoutOption =
   ): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-        elementsAmount: elements.length,
-      },
+      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
+      elementsAmount: elements.length,
       autoSignOut: true,
     });
     const workspaceUri = await getWorkspaceUri();

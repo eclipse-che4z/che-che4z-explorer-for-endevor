@@ -49,6 +49,10 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
       <td> fileExt </td>
       <td>: ${element.extension ? element.extension : ''} </td>
     </tr>
+    <tr>
+      <td> lastActionCcid </td>
+      <td>: ${element.lastActionCcid} </td>
+    </tr>
   </table>
 </body>
 </html>`;

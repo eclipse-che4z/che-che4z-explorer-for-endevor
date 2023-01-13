@@ -224,5 +224,5 @@ export const showWalkthrough = async (walkthroughId: string): Promise<void> => {
 };
 
 export const focusOnView = async (viewId: string): Promise<void> => {
-  await vscode.commands.executeCommand(`${viewId}.focus`);
+  return vscode.commands.executeCommand(`${viewId}.focus`);
 };

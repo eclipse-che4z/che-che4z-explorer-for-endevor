@@ -21,7 +21,6 @@ import { Action, Actions } from '../store/_doc/Actions';
 import {
   SignInElementCommandCompletedStatus,
   TelemetryEvents,
-  TreeElementCommandArguments,
 } from '../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
@@ -42,9 +41,6 @@ export const signInElementCommand = async (
   }
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
-    commandArguments: {
-      type: TreeElementCommandArguments.SINGLE_ELEMENT,
-    },
   });
   const { serviceId, searchLocationId, service, element } = uriParams;
   const signInResult = await withNotificationProgress(

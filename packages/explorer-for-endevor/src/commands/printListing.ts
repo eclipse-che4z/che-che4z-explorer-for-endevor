@@ -18,19 +18,13 @@ import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '@local/endevor/utils';
 import { toElementListingUri } from '../uri/elementListingUri';
 import { fromTreeElementUri } from '../uri/treeElementUri';
-import {
-  TelemetryEvents,
-  TreeElementCommandArguments,
-} from '../_doc/Telemetry';
+import { TelemetryEvents } from '../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
 
 export const printListingCommand = async (elementNode: SelectedElementNode) => {
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
-    commandArguments: {
-      type: TreeElementCommandArguments.SINGLE_ELEMENT,
-    },
   });
   logger.trace(`Print Listing command was called for ${elementNode.name}.`);
   return withNotificationProgress(

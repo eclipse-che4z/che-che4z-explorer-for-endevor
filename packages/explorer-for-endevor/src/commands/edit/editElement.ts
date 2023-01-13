@@ -20,7 +20,6 @@ import { fromTreeElementUri } from '../../uri/treeElementUri';
 import { isError } from '../../utils';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import {
-  TreeElementCommandArguments,
   EditElementCommandCompletedStatus,
   TelemetryEvents,
 } from '../../_doc/Telemetry';
@@ -31,9 +30,6 @@ export const editSingleElement =
   async (element: ElementNode): Promise<void> => {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
-      commandArguments: {
-        type: TreeElementCommandArguments.SINGLE_ELEMENT,
-      },
       autoSignOut: false,
     });
     const elementUri = fromTreeElementUri(element.uri);

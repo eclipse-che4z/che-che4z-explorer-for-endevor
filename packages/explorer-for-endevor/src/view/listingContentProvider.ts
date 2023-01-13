@@ -11,7 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { stringifyWithHiddenCredential } from '@local/endevor/utils';
+import {
+  isErrorPrintListingResponse,
+  isNoComponentInfoError,
+  stringifyWithHiddenCredential,
+} from '@local/endevor/utils';
 import type {
   Uri,
   CancellationToken,
@@ -49,30 +53,39 @@ export const listingContentProvider: TextDocumentContentProvider = {
       return;
     }
     const { service, element } = uriParams;
-    const listingContent = await printListing({
+    const listingResult = await printListing({
       report: () => {
         // progress bar is already implemented in command
       },
     })(service)(element);
-    if (isError(listingContent)) {
-      const error = listingContent;
-      logger.error(
-        `Unable to print the element ${element.name} listing.`,
-        `${error.message}.`
+    if (isErrorPrintListingResponse(listingResult)) {
+      const error = listingResult.additionalDetails.error;
+      const isNoListing = isNoComponentInfoError(error);
+      const logMessage = isNoListing ? logger.info : logger.error;
+      logMessage(
+        isNoListing
+          ? `Listing for the element ${element.name} is not available, try to generate it first.`
+          : `Unable to print listing for the element ${element.name}.`,
+        `Unable to print listing for the element ${element.name} because of error:\n${error.message}.`
       );
       reporter.sendTelemetryEvent({
-        type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
-        status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-        error,
+        type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
+        context: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
+        status: ListingContentProviderCompletedStatus.NO_LISTING,
       });
       return;
+    }
+    if (listingResult.additionalDetails.returnCode >= 4) {
+      logger.warn(
+        `Listing for ${element.name} was printed with warnings.`,
+        `Listing for ${element.name} was printed with warnings:\n${listingResult.additionalDetails.message}`
+      );
     }
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
       context: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
       status: ListingContentProviderCompletedStatus.SUCCESS,
     });
-    return listingContent;
+    return listingResult.content;
   },
 };
