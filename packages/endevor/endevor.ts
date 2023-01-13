@@ -33,7 +33,7 @@ import {
 } from '@broadcom/endevor-for-zowe-cli/lib/api';
 import {
   ActionChangeControlValue,
-  Dependency,
+  Component,
   Element,
   ElementMapPath,
   ElementSearchLocation,
@@ -42,7 +42,6 @@ import {
   Service,
   ServiceLocation,
   ElementContent,
-  ListingContent,
   ServiceInstance,
   OverrideSignOut,
   ElementWithDependenciesWithSignout,
@@ -59,10 +58,13 @@ import {
   SearchStrategies,
   SDK_FROM_FILE_DESCRIPTION,
   UpdateResponse as InternalUpdateResponse,
-  UpdateStatus,
+  ResponseStatus,
   SystemMapPath,
   EnvironmentStageMapPath,
   SubSystemMapPath,
+  ElementTypeMapPath,
+  ElementTypeResponseObject,
+  PrintListingResponse,
 } from './_doc/Endevor';
 import {
   Session,
@@ -73,11 +75,10 @@ import { CredentialType } from './_doc/Credential';
 import { UnreachableCaseError } from './typeHelpers';
 import { parseToType } from '@local/type-parser/parser';
 import {
-  DependentElement,
-  DependentElements,
+  Component as ExternalComponent,
+  Components as ExternalComponents,
   Element as ExternalElement,
   SuccessListDependenciesResponse,
-  SuccessPrintResponse,
   Configuration as ExternalConfiguration,
   SuccessListElementsResponse,
   ErrorResponse,
@@ -91,9 +92,12 @@ import {
   SubSystem as ExternalSubSystem,
   SuccessListSystemsResponse,
   System as ExternalSystem,
+  ElementType as ExternalType,
   SuccessListSubSystemsResponse,
   V1ApiVersionResponse,
   V2ApiVersionResponse,
+  PrintResponse,
+  SuccessListElementTypesResponse,
 } from './_ext/Endevor';
 import { Logger } from '@local/extension/_doc/Logger';
 import { ANY_VALUE } from './const';
@@ -169,15 +173,13 @@ export const getApiVersion =
         logger.trace(
           `Unable to fetch the Endevor API version because of errors:\n${
             error.message
-          }\nand:\n${e.message}\nof an incorrect response:\n${JSON.stringify(
-            response,
-            null,
-            2
+          }\nand:\n${e.message}\nof an incorrect response:\n${stringifyPretty(
+            response
           )}.`
         );
         progress.report({ increment: 100 });
         return new Error(
-          'Unable to fetch the Endevor API version because of incorrect response'
+          `Unable to fetch the Endevor API version because of incorrect response error:\n${e.message}\nand:\n${error.message}`
         );
       }
     }
@@ -222,9 +224,9 @@ export const getConfigurations =
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Unable to fetch the list of Endevor configurations because of error ${
+          `Unable to fetch the list of Endevor configurations because of error:\n${
             e.message
-          }\nof an incorrect response:\n${JSON.stringify(response, null, 2)}.`
+          }\nof an incorrect response:\n${stringifyPretty(response)}.`
         );
         progress.report({ increment: 100 });
         return new Error(
@@ -235,7 +237,7 @@ export const getConfigurations =
       return new Error(
         `Unable to fetch the list of Endevor configurations because of response code ${
           parsedResponse.body.returnCode
-        } with reason \n${parsedResponse.body.messages.join('\n').trim()}.`
+        } with reason:\n${parsedResponse.body.messages.join('\n').trim()}.`
       );
     }
     let parsedResponse: SuccessListConfigurationsResponse;
@@ -243,13 +245,13 @@ export const getConfigurations =
       parsedResponse = parseToType(SuccessListConfigurationsResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to fetch the list of Endevor configurations because of error ${
+        `Unable to fetch the list of Endevor configurations because of error:\n${
           error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
       );
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to fetch the list of Endevor configurations because of incorrect response`
+        `Unable to fetch the list of Endevor configurations because of incorrect response error:\n${error.message}`
       );
     }
     const configurations = parsedResponse.body.data
@@ -258,9 +260,9 @@ export const getConfigurations =
           return parseToType(ExternalConfiguration, configuration);
         } catch (e) {
           logger.trace(
-            `Unable to fetch the Endevor configuration ${JSON.stringify(
+            `Unable to fetch the Endevor configuration:\n${stringifyPretty(
               configuration
-            )} because of error ${e.message}.`
+            )}\nbecause of error:\n${e.message}.`
           );
           return;
         }
@@ -373,8 +375,9 @@ export const getAllEnvironmentStages =
         );
         progress.report({ increment: 100 });
         return makeErrorWithReason({
-          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
           returnCode: response.body.returnCode,
+          error,
         });
       }
       progress.report({ increment: 100 });
@@ -397,7 +400,9 @@ export const getAllEnvironmentStages =
       );
       progress.report({ increment: 100 });
       return makeErrorWithReason({
-        type: ErrorContextTypes.INCORRECT_RESPONSE,
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
       });
     }
     const environments = parsedResponse.body.data
@@ -436,6 +441,7 @@ export const getAllSystems =
   (progress: ProgressReporter) =>
   (service: Service) =>
   (configuration: Value) =>
+  (searchStrategy: SearchStrategies) =>
   async (
     systemSearchParams?: Partial<SystemMapPath>
   ): Promise<
@@ -446,19 +452,26 @@ export const getAllSystems =
     | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
-    const withSearchUpTheMap =
-      systemSearchParams?.environment !== undefined &&
-      systemSearchParams.stageNumber !== undefined;
+    let searchUpInMap = true;
+    let firstOccurrence = 'FIR';
+    switch (searchStrategy) {
+      case SearchStrategies.IN_PLACE:
+        searchUpInMap = false;
+        break;
+      case SearchStrategies.ALL:
+        firstOccurrence = 'ALL';
+        break;
+      case SearchStrategies.FIRST_FOUND:
+        break;
+      default:
+        throw new UnreachableCaseError(searchStrategy);
+    }
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: withSearchUpTheMap
-        ? systemSearchParams.environment
-        : ANY_VALUE,
-      'stage-number': withSearchUpTheMap
-        ? systemSearchParams.stageNumber
-        : ANY_VALUE,
+      environment: systemSearchParams?.environment || ANY_VALUE,
+      'stage-number': systemSearchParams?.stageNumber || ANY_VALUE,
       system: systemSearchParams?.system || ANY_VALUE,
-      search: withSearchUpTheMap,
-      return: 'ALL',
+      search: searchUpInMap,
+      return: firstOccurrence,
     };
     const errorMessage = `Unable to fetch the systems from the Endevor configuration ${configuration}`;
     const makeErrorWithReason = makeError(errorMessage);
@@ -497,8 +510,9 @@ export const getAllSystems =
         );
         progress.report({ increment: 100 });
         return makeErrorWithReason({
-          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
           returnCode: response.body.returnCode,
+          error,
         });
       }
       progress.report({ increment: 100 });
@@ -518,7 +532,9 @@ export const getAllSystems =
       );
       progress.report({ increment: 100 });
       return makeErrorWithReason({
-        type: ErrorContextTypes.INCORRECT_RESPONSE,
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
       });
     }
     const systems = parsedResponse.body.data
@@ -548,11 +564,286 @@ export const getAllSystems =
     return systems;
   };
 
+export const searchForSystemsInPlace =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value
+  ): Promise<
+    | ReadonlyArray<SystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      environment,
+      stageNumber,
+      system,
+    });
+  };
+
+export const searchForSystemsFromEnvironmentStage =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value
+  ): Promise<
+    | ReadonlyArray<SystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.ALL
+    )({
+      environment,
+      stageNumber,
+      system,
+    });
+  };
+
+export const searchForAllSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (
+    system?: Value
+  ): Promise<
+    | ReadonlyArray<SystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      system,
+    });
+  };
+
+export const getAllTypes =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  (searchStrategy: SearchStrategies) =>
+  async (
+    typeSearchParams?: Partial<ElementTypeMapPath>
+  ): Promise<
+    | ReadonlyArray<ElementTypeResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    const session = toSecuredEndevorSession(logger)(service);
+    let searchUpInMap = true;
+    let firstOccurrence = 'FIR';
+    switch (searchStrategy) {
+      case SearchStrategies.IN_PLACE:
+        searchUpInMap = false;
+        break;
+      case SearchStrategies.ALL:
+        firstOccurrence = 'ALL';
+        break;
+      case SearchStrategies.FIRST_FOUND:
+        break;
+      default:
+        throw new UnreachableCaseError(searchStrategy);
+    }
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: typeSearchParams?.environment || ANY_VALUE,
+      'stage-number': typeSearchParams?.stageNumber || ANY_VALUE,
+      system: typeSearchParams?.system || ANY_VALUE,
+      type: typeSearchParams?.type || ANY_VALUE,
+      search: searchUpInMap,
+      return: firstOccurrence,
+    };
+    const errorMessage = `Unable to fetch the types from the Endevor configuration ${configuration}`;
+    const makeErrorWithReason = makeError(errorMessage);
+    progress.report({ increment: 30 });
+    let response: BaseResponse;
+    try {
+      response = await EndevorClient.listType(session)(configuration)(
+        requestArgs
+      );
+      response = parseToType(BaseResponse, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return makeErrorWithReason({
+          type: ErrorContextTypes.CONNECTION_ERROR,
+          code: errorCode,
+          message: error.causeErrors?.message,
+        });
+      }
+      return makeErrorWithReason({
+        type: ErrorContextTypes.API_ERROR,
+        error,
+      });
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse: SuccessListElementTypesResponse | ErrorResponse;
+    if (response.body.returnCode) {
+      try {
+        parsedResponse = parseToType(ErrorResponse, response);
+      } catch (error) {
+        logger.trace(
+          `Unable to provide a failed response reason because of error:\n${
+            error.message
+          }\nof incorrect response:\n${stringifyPretty(response)}.`
+        );
+        progress.report({ increment: 100 });
+        return makeErrorWithReason({
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+          returnCode: response.body.returnCode,
+          error,
+        });
+      }
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.ENDEVOR_RETURN_CODE_AND_MESSAGES,
+        returnCode: parsedResponse.body.returnCode,
+        messages: parsedResponse.body.messages,
+      });
+    }
+    try {
+      parsedResponse = parseToType(SuccessListElementTypesResponse, response);
+    } catch (error) {
+      logger.trace(
+        `${errorMessage} because of error:\n${
+          error.message
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return makeErrorWithReason({
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
+      });
+    }
+    const types = parsedResponse.body.data
+      .map((type) => {
+        try {
+          return parseToType(ExternalType, type);
+        } catch (e) {
+          logger.trace(
+            `Unable to fetch the types:\n${stringifyPretty(
+              type
+            )}\nbecause of error in the response:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .map((type) => {
+        if (!type) return;
+        return {
+          environment: type.envName,
+          stageId: type.stgId,
+          system: type.sysName,
+          type: type.typeName,
+          nextType: type.nextType,
+        };
+      })
+      .filter(isDefined);
+    progress.report({ increment: 20 });
+    return types;
+  };
+
+export const searchForTypesInPlace =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value,
+    typeName?: Value
+  ): Promise<
+    | ReadonlyArray<ElementTypeResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllTypes(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      environment,
+      stageNumber,
+      system,
+      type: typeName,
+    });
+  };
+
+export const searchForTypesFromEnvironmentStage =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value,
+    typeName?: Value
+  ): Promise<
+    | ReadonlyArray<ElementTypeResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllTypes(logger)(progress)(service)(configuration)(
+      SearchStrategies.ALL
+    )({
+      environment,
+      stageNumber,
+      system,
+      type: typeName,
+    });
+  };
+
+export const searchForAllTypes =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (
+    system?: Value,
+    typeName?: Value
+  ): Promise<
+    | ReadonlyArray<ElementTypeResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllTypes(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      system,
+      type: typeName,
+    });
+  };
+
 export const getAllSubSystems =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
   (configuration: Value) =>
+  (searchStrategy: SearchStrategies) =>
   async (
     subSystemSearchParams?: Partial<SubSystemMapPath>
   ): Promise<
@@ -563,20 +854,27 @@ export const getAllSubSystems =
     | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
-    const withSearchUpTheMap =
-      subSystemSearchParams?.environment !== undefined &&
-      subSystemSearchParams.stageNumber !== undefined;
+    let searchUpInMap = true;
+    let firstOccurrence = 'FIR';
+    switch (searchStrategy) {
+      case SearchStrategies.IN_PLACE:
+        searchUpInMap = false;
+        break;
+      case SearchStrategies.ALL:
+        firstOccurrence = 'ALL';
+        break;
+      case SearchStrategies.FIRST_FOUND:
+        break;
+      default:
+        throw new UnreachableCaseError(searchStrategy);
+    }
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
-      environment: withSearchUpTheMap
-        ? subSystemSearchParams.environment
-        : ANY_VALUE,
-      'stage-number': withSearchUpTheMap
-        ? subSystemSearchParams.stageNumber
-        : ANY_VALUE,
+      environment: subSystemSearchParams?.environment || ANY_VALUE,
+      'stage-number': subSystemSearchParams?.stageNumber || ANY_VALUE,
       system: subSystemSearchParams?.system || ANY_VALUE,
       subsystem: subSystemSearchParams?.subSystem || ANY_VALUE,
-      search: withSearchUpTheMap,
-      return: 'ALL',
+      search: searchUpInMap,
+      return: firstOccurrence,
     };
     const errorMessage = `Unable to fetch the subsystems from the Endevor configuration ${configuration}`;
     const makeErrorWithReason = makeError(errorMessage);
@@ -615,8 +913,9 @@ export const getAllSubSystems =
         );
         progress.report({ increment: 100 });
         return makeErrorWithReason({
-          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
           returnCode: response.body.returnCode,
+          error,
         });
       }
       progress.report({ increment: 100 });
@@ -630,13 +929,15 @@ export const getAllSubSystems =
       parsedResponse = parseToType(SuccessListSubSystemsResponse, response);
     } catch (error) {
       logger.trace(
-        `${errorMessage} because of error ${
+        `${errorMessage} because of error:\n${
           error.message
         }\nof an incorrect response:\n${stringifyPretty(response)}.`
       );
       progress.report({ increment: 100 });
       return makeErrorWithReason({
-        type: ErrorContextTypes.INCORRECT_RESPONSE,
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
       });
     }
     const subSystems = parsedResponse.body.data
@@ -667,6 +968,81 @@ export const getAllSubSystems =
     return subSystems;
   };
 
+export const searchForSubSystemsInPlace =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value,
+    subsystem?: Value
+  ): Promise<
+    | ReadonlyArray<SubSystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSubSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      environment,
+      stageNumber,
+      system,
+      subSystem: subsystem,
+    });
+  };
+
+export const searchForSubSystemsFromEnvironmentStage =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  async (
+    system?: Value,
+    subsystem?: Value
+  ): Promise<
+    | ReadonlyArray<SubSystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSubSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.ALL
+    )({
+      environment,
+      stageNumber,
+      system,
+      subSystem: subsystem,
+    });
+  };
+
+export const searchForAllSubSystems =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (
+    system?: Value,
+    subsystem?: Value
+  ): Promise<
+    | ReadonlyArray<SubSystemResponseObject>
+    | WrongCredentialsError
+    | SelfSignedCertificateError
+    | ConnectionError
+    | Error
+  > => {
+    return getAllSubSystems(logger)(progress)(service)(configuration)(
+      SearchStrategies.IN_PLACE
+    )({
+      system,
+      subSystem: subsystem,
+    });
+  };
+
 export const searchForElements =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
@@ -690,17 +1066,17 @@ export const searchForElements =
     | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
-    const minimalElementInfo = 'BAS';
+    const allElementInfo = 'ALL';
     let searchUpInMap = true;
     let firstOccurrence = 'FIR';
     switch (searchStrategy) {
-      case SearchStrategies.SEARCH_IN_PLACE:
+      case SearchStrategies.IN_PLACE:
         searchUpInMap = false;
         break;
-      case SearchStrategies.SEARCH_ALL:
+      case SearchStrategies.ALL:
         firstOccurrence = 'ALL';
         break;
-      case SearchStrategies.SEARCH_WITH_FIRST_FOUND:
+      case SearchStrategies.FIRST_FOUND:
         break;
       default:
         throw new UnreachableCaseError(searchStrategy);
@@ -712,7 +1088,7 @@ export const searchForElements =
       subsystem: subsystem || ANY_VALUE,
       type: type || ANY_VALUE,
       element: element || ANY_VALUE,
-      data: minimalElementInfo,
+      data: allElementInfo,
       search: searchUpInMap,
       return: firstOccurrence,
     };
@@ -753,8 +1129,9 @@ export const searchForElements =
         );
         progress.report({ increment: 100 });
         return makeErrorWithReason({
-          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
           returnCode: response.body.returnCode,
+          error,
         });
       }
       progress.report({ increment: 100 });
@@ -774,7 +1151,9 @@ export const searchForElements =
       );
       progress.report({ increment: 100 });
       return makeErrorWithReason({
-        type: ErrorContextTypes.INCORRECT_RESPONSE,
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
       });
     }
     const elements = parsedResponse.body.data
@@ -800,6 +1179,7 @@ export const searchForElements =
           type: element.typeName,
           name: element.fullElmName,
           extension: element.fileExt ? element.fileExt : undefined,
+          lastActionCcid: element.lastActCcid,
           configuration,
         };
       });
@@ -834,7 +1214,7 @@ export const searchForElementsInPlace =
       subsystem,
       type,
       element,
-    })(SearchStrategies.SEARCH_IN_PLACE);
+    })(SearchStrategies.IN_PLACE);
   };
 
 export const searchForFirstFoundElements =
@@ -864,7 +1244,7 @@ export const searchForFirstFoundElements =
       subsystem,
       type,
       element,
-    })(SearchStrategies.SEARCH_WITH_FIRST_FOUND);
+    })(SearchStrategies.FIRST_FOUND);
   };
 
 export const searchForAllElements =
@@ -894,7 +1274,7 @@ export const searchForAllElements =
       subsystem,
       type,
       element,
-    })(SearchStrategies.SEARCH_ALL);
+    })(SearchStrategies.ALL);
   };
 
 export const printElement =
@@ -909,8 +1289,8 @@ export const printElement =
     subSystem,
     type,
     name,
-  }: Element): Promise<ElementContent | Error> => {
-    const requestParms: ElmSpecDictionary & PrintElmCompDictionary = {
+  }: ElementMapPath): Promise<ElementContent | Error> => {
+    const requestParams: ElmSpecDictionary & PrintElmCompDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
       system,
@@ -923,13 +1303,13 @@ export const printElement =
     let response: BaseResponse;
     try {
       response = await EndevorClient.printElement(session)(configuration)(
-        requestParms
+        requestParams
       );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error:\n${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -945,7 +1325,7 @@ export const printElement =
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to print the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode}`
+          `Unable to print the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${e.message}\nwith response code ${response.body.returnCode}`
         );
       }
       // TODO move messages processing to some util function
@@ -954,7 +1334,7 @@ export const printElement =
         '',
         ...parsedResponse.body.messages.map((message) => message.trim()),
       ].join('\n');
-      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`;
+      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:\n${errorResponseAsString}`;
       return getTypedErrorFromEndevorError(
         {
           elementName: name,
@@ -963,29 +1343,29 @@ export const printElement =
         errorMessage
       );
     }
-    let parsedResponse: SuccessPrintResponse;
+    let parsedResponse: PrintResponse;
     try {
-      parsedResponse = parseToType(SuccessPrintResponse, response);
+      parsedResponse = parseToType(PrintResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error ${
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of error:\n${
           error.message
         }\nof an incorrect response ${JSON.stringify(response)}.`
       );
       return new Error(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${error.message}`
       );
     }
     const [elementContent] = parsedResponse.body.data;
     if (!elementContent) {
       progress.report({ increment: 100 });
       logger.trace(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response ${JSON.stringify(
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response:\n${stringifyPretty(
           response
         )}.`
       );
       return new Error(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
+        `Unable to print the element ${system}/${subSystem}/${type}/${name} because of an incorrect response error:\nContent is not presented in the response`
       );
     }
     progress.report({ increment: 20 });
@@ -1004,8 +1384,8 @@ export const printListing =
     subSystem,
     type,
     name,
-  }: Element): Promise<ListingContent | Error> => {
-    const requestParms: ElmSpecDictionary & PrintElmCompDictionary = {
+  }: ElementMapPath): Promise<PrintListingResponse> => {
+    const requestParams: ElmSpecDictionary & PrintElmCompDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
       system,
@@ -1019,57 +1399,95 @@ export const printListing =
     let response;
     try {
       response = await EndevorClient.printElement(session)(configuration)(
-        requestParms
+        requestParams
       );
     } catch (error) {
-      progress.report({ increment: 100 });
-      return new Error(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${error.message}`
-      );
-    }
-    let parsedResponse: SuccessPrintResponse | ErrorResponse;
-    try {
-      parsedResponse = parseToType(SuccessPrintResponse, response);
-    } catch (e) {
-      logger.trace(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${
-          e.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
-      );
-      try {
-        parsedResponse = parseToType(ErrorResponse, response);
-      } catch (e) {
-        logger.trace(
-          `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of error ${
-            e.message
-          }\n of an incorrect error response ${JSON.stringify(response)}.`
-        );
-        progress.report({ increment: 100 });
-        return new Error(
-          `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of incorrect response`
-        );
+      const errorCode = error.causeErrors?.code;
+      if (errorCode) {
+        return {
+          status: ResponseStatus.ERROR,
+          additionalDetails: {
+            error: getTypedErrorFromHttpCode(error.causeErrors?.message),
+          },
+        };
       }
-      const errorMessage = `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of response code ${
-        parsedResponse.body.returnCode
-      } with reason\n${parsedResponse.body.messages.join('\n').trim()}`;
       progress.report({ increment: 100 });
-      return new Error(errorMessage);
+      return {
+        status: ResponseStatus.ERROR,
+        additionalDetails: {
+          error,
+        },
+      };
     }
     progress.report({ increment: 50 });
-    const [listingContent] = parsedResponse.body.data;
-    if (!listingContent) {
+    let parsedResponse: PrintResponse;
+    try {
+      parsedResponse = parseToType(PrintResponse, response);
+    } catch (e) {
       logger.trace(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because the content is not presented in the response ${JSON.stringify(
-          response
-        )}.`
+        `Unable to parse the Endevor response because of an error:\n${
+          e.message
+        }\nog incorrect response format:\n${stringifyPretty(response)}.`
       );
       progress.report({ increment: 100 });
-      return new Error(
-        `Unable to print the element ${system}/${subSystem}/${type}/${name} listing because of incorrect response`
+      return {
+        status: ResponseStatus.ERROR,
+        additionalDetails: {
+          error: new Error(
+            `Unable to parse the Endevor response because of incorrect response error:\n${e.message}`
+          ),
+        },
+      };
+    }
+    const successHttpStatusStart = '2';
+    const updateFailed = !parsedResponse.body.statusCode
+      .toString()
+      .startsWith(successHttpStatusStart);
+    if (updateFailed) {
+      logger.trace(
+        `Got the Endevor error response:\n${stringifyPretty(response)}.`
       );
+      progress.report({ increment: 100 });
+      return {
+        status: ResponseStatus.ERROR,
+        additionalDetails: {
+          returnCode: parsedResponse.body.returnCode,
+          error: getTypedErrorFromEndevorCode(
+            [
+              '',
+              ...parsedResponse.body.messages.map((message) => message.trim()),
+            ].join('\n')
+          ),
+        },
+      };
+    }
+    const [content] = parsedResponse.body.data;
+    if (!content) {
+      logger.trace(
+        `Got the Endevor error response:\n${stringifyPretty(response)}.`
+      );
+      progress.report({ increment: 100 });
+      return {
+        status: ResponseStatus.ERROR,
+        additionalDetails: {
+          error: new Error(
+            `Unable to parse the Endevor response because the content is not presented`
+          ),
+        },
+      };
     }
     progress.report({ increment: 20 });
-    return listingContent;
+    return {
+      status: ResponseStatus.OK,
+      content,
+      additionalDetails: {
+        returnCode: parsedResponse.body.returnCode,
+        message: [
+          '',
+          ...parsedResponse.body.messages.map((message) => message.trim()),
+        ].join('\n'),
+      },
+    };
   };
 
 // TODO: think about specifying only part of the type
@@ -1099,12 +1517,12 @@ export const retrieveElementWithFingerprint =
     subSystem,
     type,
     name,
-  }: Element): retrieveElementWithFingerprint =>
+  }: ElementMapPath): retrieveElementWithFingerprint =>
   async (
     signoutChangeControlValue?: ActionChangeControlValue,
     overrideSignOut?: OverrideSignOut
   ): Promise<ElementWithFingerprint | SignoutError | Error> => {
-    const requestParms: ElmSpecDictionary & RetrieveElmDictionary = {
+    const requestParams: ElmSpecDictionary & RetrieveElmDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
       system,
@@ -1121,13 +1539,13 @@ export const retrieveElementWithFingerprint =
     let response: BaseResponse;
     try {
       response = await EndevorClient.retrieveElement(session)(configuration)(
-        requestParms
+        requestParams
       );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progressReporter.report({ increment: 100 });
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an error ${error.message}`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an error:\n${error.message}`
       );
     }
     progressReporter.report({ increment: 50 });
@@ -1137,13 +1555,13 @@ export const retrieveElementWithFingerprint =
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Unable to provide a failed response reason because of error ${
+          `Unable to provide a failed response reason because of error:\n${
             e.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
+          }\nof an incorrect response ${stringifyPretty(response)}.`
         );
         progressReporter.report({ increment: 100 });
         return new Error(
-          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode}`
+          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${e.message}\nwith response code ${response.body.returnCode}`
         );
       }
       // TODO move messages processing to some util function
@@ -1152,7 +1570,7 @@ export const retrieveElementWithFingerprint =
         '',
         ...parsedResponse.body.messages.map((message) => message.trim()),
       ].join('\n');
-      const errorMessage = `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason ${errorResponseAsString}`;
+      const errorMessage = `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:\n${errorResponseAsString}`;
       return getTypedErrorFromEndevorError(
         {
           elementName: name,
@@ -1166,24 +1584,24 @@ export const retrieveElementWithFingerprint =
       parsedResponse = parseToType(SuccessRetrieveResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of error ${
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of error:\n${
           error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
       );
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of incorrect response`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${error.message}`
       );
     }
     const [elementContent] = parsedResponse.body.data;
     if (!elementContent) {
       progressReporter.report({ increment: 100 });
       logger.trace(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response ${JSON.stringify(
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because the content is not presented in the response:\n${stringifyPretty(
           response
         )}.`
       );
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an incorrect response`
+        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of an incorrect response error:\nContent is not presented in the response`
       );
     }
     progressReporter.report({ increment: 20 });
@@ -1197,7 +1615,7 @@ export const retrieveElementWithoutSignout =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
-  async (element: Element): Promise<ElementContent | Error> => {
+  async (element: ElementMapPath): Promise<ElementContent | Error> => {
     const elementContent = await retrieveElementWithFingerprint(logger)(
       progress
     )(service)(element)();
@@ -1212,7 +1630,7 @@ export const retrieveElementWithSignout =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
-  (element: Element) =>
+  (element: ElementMapPath) =>
   async ({
     signoutChangeControlValue,
     overrideSignOut,
@@ -1236,7 +1654,7 @@ export const signOutElement =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
-  (element: Element) =>
+  (element: ElementMapPath) =>
   async ({
     signoutChangeControlValue,
     overrideSignOut,
@@ -1266,7 +1684,7 @@ export const signInElement =
     name,
   }: ElementMapPath): Promise<void | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms: ElmSpecDictionary & SigninElmDictionary = {
+    const requestParams: ElmSpecDictionary & SigninElmDictionary = {
       element: name,
       environment,
       'stage-number': stageNumber,
@@ -1278,7 +1696,7 @@ export const signInElement =
     let response: BaseResponse;
     try {
       response = await EndevorClient.signinElement(session)(configuration)(
-        requestParms
+        requestParams
       );
       response = parseToType(BaseResponse, response);
     } catch (error) {
@@ -1300,7 +1718,7 @@ export const signInElement =
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode}`
+          `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${error.message}\nwith response code ${response.body.returnCode}`
         );
       }
       progress.report({ increment: 100 });
@@ -1311,7 +1729,7 @@ export const signInElement =
         ...parsedResponse.body.messages.map((message) => message.trim()),
       ].join('\n');
       return new Error(
-        `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:${errorResponseAsString}`
+        `Unable to sign in the element ${system}/${subSystem}/${type}/${name} because of response code ${parsedResponse.body.returnCode} with reason:\n${errorResponseAsString}`
       );
     }
     progress.report({ increment: 20 });
@@ -1331,7 +1749,7 @@ const retrieveElementWithDependencies =
   (logger: Logger) =>
   (progressReporter: ProgressReporter) =>
   (serviceInstance: ServiceInstance) =>
-  (element: Element): retrieveElementWithDependencies =>
+  (element: ElementMapPath): retrieveElementWithDependencies =>
   async (
     signoutChangeControlValue?: ActionChangeControlValue
   ): Promise<ElementWithDependenciesWithSignout | SignoutError | Error> => {
@@ -1350,12 +1768,12 @@ const retrieveElementWithDependencies =
       const error = elementContent;
       return error;
     }
-    const dependenciesRequestProgressRatio = 4;
-    const dependentElements = await retrieveDependentElements(logger)(
-      toSeveralTasksProgress(progressReporter)(dependenciesRequestProgressRatio)
+    const componentsRequestProgressRatio = 4;
+    const components = await retrieveComponentsUsedByElement(logger)(
+      toSeveralTasksProgress(progressReporter)(componentsRequestProgressRatio)
     )(serviceInstance.service)(element);
-    if (isError(dependentElements)) {
-      const error = dependentElements;
+    if (isError(components)) {
+      const error = components;
       logger.trace(`${error.message}.`);
       return {
         content: elementContent,
@@ -1363,17 +1781,31 @@ const retrieveElementWithDependencies =
       };
     }
     logger.trace(
-      `Element ${element.name} has dependencies: ${JSON.stringify(
-        dependentElements
+      `Element ${element.name} has dependencies: ${stringifyPretty(
+        components
       )}.`
     );
-    const dependenciesProgressRatio = 2;
-    const dependencies = await retrieveElementDependencies(logger)(undefined)(
-      toSeveralTasksProgress(progressReporter)(dependenciesProgressRatio)
-    )(serviceInstance)(dependentElements);
+    const componentsProgressRatio = 2;
+    const componentsWithContent = await retrieveComponentsContent(logger)(
+      undefined
+    )(toSeveralTasksProgress(progressReporter)(componentsProgressRatio))(
+      serviceInstance
+    )(components);
     return {
       content: elementContent,
-      dependencies,
+      dependencies: componentsWithContent.map(([component, content]) => {
+        return [
+          {
+            ...component,
+            // TODO: provide more data from separate element meta request
+            lastActionCcid: '',
+            // extension: undefined,
+            // TODO use full (long) names from the meta request instead
+            name: component.name,
+          },
+          content,
+        ];
+      }),
     };
   };
 
@@ -1381,7 +1813,7 @@ export const retrieveElementWithDependenciesWithoutSignout =
   (logger: Logger) =>
   (progressReporter: ProgressReporter) =>
   (serviceInstance: ServiceInstance) =>
-  async (element: Element): Promise<ElementWithDependencies | Error> => {
+  async (element: ElementMapPath): Promise<ElementWithDependencies | Error> => {
     return retrieveElementWithDependencies(logger)(progressReporter)(
       serviceInstance
     )(element)();
@@ -1391,7 +1823,7 @@ export const retrieveElementWithDependenciesWithSignout =
   (logger: Logger) =>
   (progressReporter: ProgressReporter) =>
   (serviceInstance: ServiceInstance) =>
-  (element: Element) =>
+  (element: ElementMapPath) =>
   async ({
     signoutChangeControlValue,
     overrideSignOut,
@@ -1406,14 +1838,12 @@ export const retrieveElementWithDependenciesWithSignout =
         const error = elementContent;
         return error;
       }
-      const dependenciesRequestProgressRatio = 4;
-      const dependentElements = await retrieveDependentElements(logger)(
-        toSeveralTasksProgress(progressReporter)(
-          dependenciesRequestProgressRatio
-        )
+      const componentsRequestProgressRatio = 4;
+      const components = await retrieveComponentsUsedByElement(logger)(
+        toSeveralTasksProgress(progressReporter)(componentsRequestProgressRatio)
       )(serviceInstance.service)(element);
-      if (isError(dependentElements)) {
-        const error = dependentElements;
+      if (isError(components)) {
+        const error = components;
         logger.trace(`${error.message}.`);
         return {
           content: elementContent.content,
@@ -1421,17 +1851,31 @@ export const retrieveElementWithDependenciesWithSignout =
         };
       }
       logger.trace(
-        `Element ${element.name} has dependencies: ${JSON.stringify(
-          dependentElements
+        `Element ${element.name} has dependencies: ${stringifyPretty(
+          components
         )}.`
       );
-      const dependenciesProgressRatio = 2;
-      const dependencies = await retrieveElementDependencies(logger)(undefined)(
-        toSeveralTasksProgress(progressReporter)(dependenciesProgressRatio)
-      )(serviceInstance)(dependentElements);
+      const componentsProgressRatio = 2;
+      const componentsWithContent = await retrieveComponentsContent(logger)(
+        undefined
+      )(toSeveralTasksProgress(progressReporter)(componentsProgressRatio))(
+        serviceInstance
+      )(components);
       return {
         content: elementContent.content,
-        dependencies,
+        dependencies: componentsWithContent.map(([component, content]) => {
+          return [
+            {
+              ...component,
+              // TODO: provide more data from separate element meta request
+              lastActionCcid: '',
+              // extension: undefined,
+              // TODO use full (long) names from the meta request instead
+              name: component.name,
+            },
+            content,
+          ];
+        }),
       };
     } else {
       return retrieveElementWithDependencies(logger)(progressReporter)(
@@ -1440,7 +1884,7 @@ export const retrieveElementWithDependenciesWithSignout =
     }
   };
 
-const retrieveDependentElements =
+const retrieveComponentsUsedByElement =
   (logger: Logger) =>
   (progressReporter: ProgressReporter) =>
   (service: Service) =>
@@ -1452,8 +1896,8 @@ const retrieveDependentElements =
     type,
     name,
     configuration,
-  }: Element): Promise<ReadonlyArray<Dependency> | Error> => {
-    const requestParms: ElmSpecDictionary & QueryAcmDictionary = {
+  }: ElementMapPath): Promise<ReadonlyArray<Component> | Error> => {
+    const requestParams: ElmSpecDictionary & QueryAcmDictionary = {
       environment,
       'stage-number': fromStageNumber(stageNumber),
       system,
@@ -1469,12 +1913,12 @@ const retrieveDependentElements =
     let response;
     try {
       response = await EndevorClient.queryAcmComponent(session)(configuration)(
-        requestParms
+        requestParams
       );
     } catch (error) {
       progressReporter.report({ increment: 100 });
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${error.message}`
+        `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of error:\n${error.message}`
       );
     }
     progressReporter.report({ increment: 50 });
@@ -1483,51 +1927,51 @@ const retrieveDependentElements =
       parsedResponse = parseToType(SuccessListDependenciesResponse, response);
     } catch (error) {
       logger.trace(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${
+        `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of error:\n${
           error.message
-        }\nof an incorrect response ${JSON.stringify(response)}.`
+        }\nof an incorrect response:\n${stringifyPretty(response)}.`
       );
       try {
         parsedResponse = parseToType(ErrorResponse, response);
       } catch (e) {
         logger.trace(
-          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of error ${
+          `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of error:\n${
             error.message
-          }\nof an incorrect error response ${JSON.stringify(response)}.`
+          }\nof an incorrect error response:\n${stringifyPretty(response)}.`
         );
         progressReporter.report({ increment: 100 });
         return new Error(
-          `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of incorrect response`
+          `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${e.message}\nand:\n${error.message}`
         );
       }
       progressReporter.report({ increment: 100 });
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of response code ${
+        `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of response code ${
           parsedResponse.body.returnCode
-        } with reason: ${parsedResponse.body.messages.join('\n').trim()}`
+        } with reason:\n${parsedResponse.body.messages.join('\n').trim()}`
       );
     }
     const [elementResponse] = parsedResponse.body.data;
     if (!elementResponse || !elementResponse.components) {
       logger.trace(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because the components are not presented in the response ${JSON.stringify(
+        `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because the components are not presented in the response:\n${JSON.stringify(
           response
         )}.`
       );
       progressReporter.report({ increment: 100 });
       return new Error(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} dependencies because of incorrect response`
+        `Unable to retrieve components used by the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\nComponents are not presented in the response`
       );
     }
-    const dependencies: DependentElements = elementResponse.components
+    const dependencies: ExternalComponents = elementResponse.components
       .map((element) => {
         try {
-          return parseToType(DependentElement, element);
+          return parseToType(ExternalComponent, element);
         } catch (error) {
           logger.trace(
-            `Unable to retrieve the dependency for the element ${system}/${subSystem}/${type}/${name} because of error ${
+            `Unable to retrieve component used by the element ${system}/${subSystem}/${type}/${name} because of error:\n${
               error.message
-            }\nof an unexpected response format ${JSON.stringify(element)}.`
+            }\nof an unexpected response format:\n${stringifyPretty(element)}.`
           );
           return;
         }
@@ -1542,43 +1986,41 @@ const retrieveDependentElements =
         system: dependency.sysName,
         subSystem: dependency.sbsName,
         type: dependency.typeName,
-        name: dependency.fullElmName,
-        extension: dependency.fileExt ? dependency.fileExt : undefined,
+        name: dependency.elmName,
       };
     });
   };
 
-const retrieveElementDependencies =
+const retrieveComponentsContent =
   (logger: Logger) =>
   (signoutChangeControlValue: ActionChangeControlValue | undefined) =>
   (progressReporter: ProgressReporter) =>
   ({ service, requestPoolMaxSize }: ServiceInstance) =>
   async (
-    dependencies: ReadonlyArray<Dependency>
+    components: ReadonlyArray<Component>
   ): Promise<
-    ReadonlyArray<[Dependency, ElementContent | SignoutError | Error]>
+    ReadonlyArray<[Component, ElementContent | SignoutError | Error]>
   > => {
-    const dependenciesNumber = dependencies.length;
+    const dependenciesNumber = components.length;
     const dependenciesReporter: ProgressReporter =
       toSeveralTasksProgress(progressReporter)(dependenciesNumber);
     let contents: (string | Error)[];
     if (!isDefined(signoutChangeControlValue)) {
       contents = await new PromisePool(
-        dependencies
-          .filter((dependency) => dependency.name.trim()) // endevor can return name with space inside
+        components
+          .filter((component) => component.name.trim()) // endevor can return name with space inside
           .map(
-            (dependency) => () =>
+            (component) => () =>
               retrieveElementWithoutSignout(logger)(dependenciesReporter)(
                 service
               )({
-                environment: dependency.environment,
-                stageNumber: dependency.stageNumber,
-                system: dependency.system,
-                subSystem: dependency.subSystem,
-                type: dependency.type,
-                name: dependency.name,
-                configuration: dependency.configuration,
-                extension: dependency.extension,
+                environment: component.environment,
+                stageNumber: component.stageNumber,
+                system: component.system,
+                subSystem: component.subSystem,
+                type: component.type,
+                name: component.name,
+                configuration: component.configuration,
               })
           ),
         {
@@ -1587,20 +2029,19 @@ const retrieveElementDependencies =
       ).start();
     } else {
       contents = await new PromisePool(
-        dependencies
-          .filter((dependency) => dependency.name.trim()) // endevor can return name with space inside
+        components
+          .filter((component) => component.name.trim()) // endevor can return name with space inside
           .map(
-            (dependency) => () =>
+            (component) => () =>
               retrieveElementWithSignout(logger)(dependenciesReporter)(service)(
                 {
-                  environment: dependency.environment,
-                  stageNumber: dependency.stageNumber,
-                  system: dependency.system,
-                  subSystem: dependency.subSystem,
-                  type: dependency.type,
-                  name: dependency.name,
-                  configuration: dependency.configuration,
-                  extension: dependency.extension,
+                  environment: component.environment,
+                  stageNumber: component.stageNumber,
+                  system: component.system,
+                  subSystem: component.subSystem,
+                  type: component.type,
+                  name: component.name,
+                  configuration: component.configuration,
                 }
               )({ signoutChangeControlValue })
           ),
@@ -1609,10 +2050,10 @@ const retrieveElementDependencies =
         }
       ).start();
     }
-    return dependencies.map((dependency, index) => {
+    return components.map((component, index) => {
       const dependencyContent = contents[index];
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return [dependency, dependencyContent!];
+      return [component, dependencyContent!];
     });
   };
 
@@ -1638,7 +2079,7 @@ const generateElement =
     void | SignoutError | ProcessorStepMaxRcExceededError | Error
   > => {
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms: ElmSpecDictionary & GenerateElmDictionary = {
+    const requestParams: ElmSpecDictionary & GenerateElmDictionary = {
       element: name,
       environment,
       'stage-number': stageNumber,
@@ -1657,13 +2098,13 @@ const generateElement =
     let response: BaseResponse;
     try {
       response = await EndevorClient.generateElement(session)(configuration)(
-        requestParms
+        requestParams
       );
       response = parseToType(BaseResponse, response);
     } catch (error) {
       progress.report({ increment: 100 });
       return new Error(
-        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
+        `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of error:\n${error.message}`
       );
     }
     progress.report({ increment: 50 });
@@ -1675,11 +2116,11 @@ const generateElement =
         logger.trace(
           `Unable to provide a failed response reason because of error ${
             error.message
-          }\nof an incorrect response ${JSON.stringify(response)}.`
+          }\nof an incorrect response ${stringifyPretty(response)}.`
         );
         progress.report({ increment: 100 });
         return new Error(
-          `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode}`
+          `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of incorrect response error:\n${error.message}\nwith response code ${response.body.returnCode}`
         );
       }
       // TODO move messages processing to some util function
@@ -1688,7 +2129,7 @@ const generateElement =
         '',
         ...parsedResponse.body.messages.map((message) => message.trim()),
       ].join('\n');
-      const errorMessage = `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode} with reason:${errorResponseAsString}`;
+      const errorMessage = `Unable to generate the element ${system}/${subSystem}/${type}/${name} because of response code ${response.body.returnCode} with reason:\n${errorResponseAsString}`;
       const typedError = getTypedErrorFromEndevorError(
         {
           elementName: name,
@@ -1768,7 +2209,7 @@ export const updateElement =
       type,
     };
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms = {
+    const requestParams = {
       fromFile: Readable.from(content),
       fromFileDescription: SDK_FROM_FILE_DESCRIPTION,
       ccid,
@@ -1782,38 +2223,38 @@ export const updateElement =
         session,
         configuration,
         elementData,
-        requestParms
+        requestParams
       );
     } catch (error) {
       progress.report({ increment: 100 });
       const errorCode = error.causeErrors?.code;
       if (errorCode) {
         return {
-          status: UpdateStatus.ERROR,
+          status: ResponseStatus.ERROR,
           additionalDetails: {
             error: getTypedErrorFromHttpCode(error.causeErrors?.message),
           },
         };
       }
       return {
-        status: UpdateStatus.ERROR,
+        status: ResponseStatus.ERROR,
         additionalDetails: {
           error,
         },
       };
     }
-    logger.trace(`Update response:\n${JSON.stringify(response, null, 2)}.`);
     progress.report({ increment: 50 });
     let parsedResponse: UpdateResponse;
     try {
       parsedResponse = parseToType(UpdateResponse, response);
-    } catch (e) {
+    } catch (error) {
       progress.report({ increment: 100 });
+      logger.trace(`Update response:\n${stringifyPretty(response)}.`);
       return {
-        status: UpdateStatus.ERROR,
+        status: ResponseStatus.ERROR,
         additionalDetails: {
           error: new Error(
-            `Endevor response parsing is failed:\n${e.message}\nbecause of an incorrect response.`
+            `Endevor response parsing is failed because of incorrect response error:\n${error.message}`
           ),
         },
       };
@@ -1825,7 +2266,7 @@ export const updateElement =
     if (updateFailed) {
       progress.report({ increment: 100 });
       return {
-        status: UpdateStatus.ERROR,
+        status: ResponseStatus.ERROR,
         additionalDetails: {
           returnCode: parsedResponse.body.returnCode,
           error: getTypedErrorFromEndevorCode(
@@ -1839,7 +2280,7 @@ export const updateElement =
     }
     progress.report({ increment: 20 });
     return {
-      status: UpdateStatus.OK,
+      status: ResponseStatus.OK,
       additionalDetails: {
         returnCode: parsedResponse.body.returnCode,
         message: [
@@ -1876,13 +2317,13 @@ export const addElement =
       type,
     };
     const session = toSecuredEndevorSession(logger)(service);
-    const requestParms = {
+    const requestParams = {
       fromFile: Readable.from(content),
       ccid,
       comment,
     };
-    if (isError(requestParms)) {
-      const error = requestParms;
+    if (isError(requestParams)) {
+      const error = requestParams;
       return new Error(
         `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${error.message}`
       );
@@ -1896,7 +2337,7 @@ export const addElement =
         session,
         configuration,
         elementData,
-        requestParms
+        requestParams
       );
     } catch (error) {
       progress.report({ increment: 100 });
@@ -1926,8 +2367,9 @@ export const addElement =
         );
         progress.report({ increment: 100 });
         return makeErrorWithReason({
-          type: ErrorContextTypes.ENDEVOR_RETURN_CODE,
+          type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
           returnCode: response.body.returnCode,
+          error,
         });
       }
       progress.report({ increment: 100 });
@@ -1939,15 +2381,17 @@ export const addElement =
     }
     try {
       parsedResponse = parseToType(AddResponse, response);
-    } catch (e) {
+    } catch (error) {
       logger.trace(
-        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error ${
-          e.message
-        }\nof an incorrect error response ${JSON.stringify(response)}.`
+        `Unable to add the element ${system}/${subSystem}/${type}/${name} because of error:\n${
+          error.message
+        }\nof an incorrect error response:\n${stringifyPretty(response)}.`
       );
       progress.report({ increment: 100 });
       return makeErrorWithReason({
-        type: ErrorContextTypes.INCORRECT_RESPONSE,
+        type: ErrorContextTypes.INCORRECT_RESPONSE_ERROR,
+        returnCode: response.body.returnCode,
+        error,
       });
     }
     progress.report({ increment: 20 });

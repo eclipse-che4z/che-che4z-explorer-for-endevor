@@ -74,7 +74,7 @@ export const addNewService = async (
       status: CommandAddNewServiceCompletedStatus.EXISTING_SERVICE_ADDED,
       source: serviceId.source,
     });
-    focusOnView(TREE_VIEW_ID);
+    await focusOnView(TREE_VIEW_ID);
     return serviceId;
   }
   const createdService = dialogResult;
@@ -121,6 +121,6 @@ export const addNewService = async (
     status: CommandAddNewServiceCompletedStatus.NEW_SERVICE_CREATED,
     source: createdService.id.source,
   });
-  focusOnView(TREE_VIEW_ID);
+  await focusOnView(TREE_VIEW_ID);
   return createdService.id;
 };

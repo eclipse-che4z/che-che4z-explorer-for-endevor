@@ -93,6 +93,7 @@ describe('generating an element in place', () => {
     type: 'TYP',
     name: 'ELM',
     extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
   };
   const elementUri = toTreeElementUri({
     serviceId,

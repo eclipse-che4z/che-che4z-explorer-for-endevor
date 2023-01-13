@@ -12,14 +12,24 @@
  */
 
 import { ANY_VALUE } from '@local/endevor/const';
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
 import {
   ElementMapPath,
   ElementSearchLocation,
   ServiceLocation,
 } from '@local/endevor/_doc/Endevor';
+import { isDefined } from '../utils';
 import { toCompositeKey as toStorageCompositeKey } from './storage/utils';
-import { EndevorId } from './_doc/v2/Store';
+import {
+  CachedElement,
+  ElementCcidsFilter,
+  ElementFilter,
+  ElementFilterType,
+  ElementNamesFilter,
+  ElementsUpTheMapFilter,
+  EndevorId,
+} from './_doc/v2/Store';
 
 export const toServiceLocationCompositeKey =
   (serviceId: EndevorId) =>
@@ -105,3 +115,78 @@ export const normalizeSearchLocation = (
     comment: searchLocation.comment,
   };
 };
+
+export const isElementsNameFilter = (
+  filter: ElementFilter
+): filter is ElementNamesFilter => {
+  return filter.type === ElementFilterType.ELEMENT_NAMES_FILTER;
+};
+
+export const isElementsCcidFilter = (
+  filter: ElementFilter
+): filter is ElementCcidsFilter => {
+  return filter.type === ElementFilterType.ELEMENT_CCIDS_FILTER;
+};
+
+export const isElementsUpTheMapFilter = (
+  filter: ElementFilter
+): filter is ElementsUpTheMapFilter => {
+  return filter.type === ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER;
+};
+
+const prepareFilterPattern = (items: ReadonlyArray<string>): RegExp => {
+  const validationPattern = items
+    .map((item) =>
+      item
+        // make mainframers happy
+        .replace(/%/g, '.')
+        // replace * to proper regex symbol
+        .replace(/\*/g, '.*')
+        // escape the rest (probably) of regex reserved symbols
+        .replace(/[+?^${}()[\]\\]/g, '\\$&')
+    )
+    .map((item) => ['^', item, '$'].join(''))
+    .join('|');
+
+  return new RegExp(validationPattern, 'i');
+};
+
+const filterElement =
+  (filterType: ElementFilterType) =>
+  (regExp: RegExp) =>
+  (cachedElement: CachedElement) => {
+    let match;
+    switch (filterType) {
+      case ElementFilterType.ELEMENT_NAMES_FILTER:
+        match = regExp.exec(cachedElement.element.name);
+        break;
+      case ElementFilterType.ELEMENT_CCIDS_FILTER:
+        match = regExp.exec(cachedElement.element.lastActionCcid);
+        break;
+      case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
+        return;
+      default:
+        throw new UnreachableCaseError(filterType);
+    }
+    return match ? cachedElement : undefined;
+  };
+
+export const getAllFilteredElements =
+  (cachedElements: ReadonlyArray<CachedElement>) =>
+  (
+    filter: ElementNamesFilter | ElementCcidsFilter
+  ): ReadonlyArray<CachedElement> => {
+    return cachedElements
+      .map(filterElement(filter.type)(prepareFilterPattern(filter.value)))
+      .filter(isDefined);
+  };
+
+export const getFirstFoundFilteredElement =
+  (cachedElements: ReadonlyArray<CachedElement>) =>
+  (
+    filter: ElementNamesFilter | ElementCcidsFilter
+  ): CachedElement | undefined => {
+    return cachedElements.find(
+      filterElement(filter.type)(prepareFilterPattern(filter.value))
+    );
+  };

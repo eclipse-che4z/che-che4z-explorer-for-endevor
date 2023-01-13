@@ -17,8 +17,8 @@ import {
   SubSystemMapPath,
   ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
+import { EndevorMap } from '../../_doc/Endevor';
 import {
-  EndevorCacheItem,
   EndevorService,
   EndevorId,
   EndevorSearchLocation,
@@ -27,6 +27,10 @@ import {
   EndevorCredential,
   EndevorConnection,
   CachedElements,
+  ElementCcidsFilter,
+  ElementNamesFilter,
+  ElementsUpTheMapFilter,
+  ElementFilterType,
 } from '../_doc/v2/Store';
 
 export const enum Actions {
@@ -42,12 +46,10 @@ export const enum Actions {
   ENDEVOR_SEARCH_LOCATION_ADDED = 'ENDEVOR_SEARCH_LOCATION/ADDED',
   ENDEVOR_SEARCH_LOCATION_HIDDEN = 'ENDEVOR_SEARCH_LOCATION/HIDDEN',
   ENDEVOR_SEARCH_LOCATION_DELETED = 'ENDEVOR_SEARCH_LOCATION/DELETED',
-  ENDEVOR_CACHE_FETCHED = 'ENDEVOR_CACHE_FETCHED',
-  ENDEVOR_CACHE_FETCH_CANCELED = 'ENDEVOR_CACHE_FETCH_CANCELED',
-  ENDEVOR_CACHE_FETCH_FAILED = 'ENDEVOR_CACHE_FETCH_FAILED',
-  ENDEVOR_ELEMENTS_FETCHED = 'ENDEVOR_ELEMENTS_FETCHED',
-  ENDEVOR_ELEMENTS_FETCH_CANCELED = 'ENDEVOR_ELEMENTS_FETCH_CANCELED',
-  ENDEVOR_ELEMENTS_FETCH_FAILED = 'ENDEVOR_ELEMENTS_FETCH_FAILED',
+  ELEMENTS_UP_THE_MAP_FETCHED = 'ELEMENTS_UP_THE_MAP_FETCHED',
+  ELEMENTS_IN_PLACE_FETCHED = 'ELEMENTS_IN_PLACE_FETCHED',
+  ELEMENTS_FETCH_CANCELED = 'ELEMENTS_FETCH_CANCELED',
+  ELEMENTS_FETCH_FAILED = 'ELEMENTS_FETCH_FAILED',
   REFRESH = 'REFRESH',
   ELEMENT_ADDED = 'ELEMENT_ADDED',
   ELEMENT_UPDATED_IN_PLACE = 'ELEMENT_UPDATED_IN_PLACE',
@@ -56,6 +58,10 @@ export const enum Actions {
   ELEMENT_SIGNED_IN = 'ELEMENT_SIGNED_IN',
   ELEMENT_GENERATED_IN_PLACE = 'ELEMENT_GENERATED_IN_PLACE',
   ELEMENT_GENERATED_WITH_COPY_BACK = 'ELEMENT_GENERATED_WITH_COPY_BACK',
+  ELEMENT_NAMES_FILTER_UPDATED = 'ELEMENT_NAMES_FILTER_UPDATED',
+  ELEMENT_CCIDS_FILTER_UPDATED = 'ELEMENT_CCIDS_FILTER_UPDATED',
+  ELEMENT_UP_THE_MAP_FILTER_UPDATED = 'ELEMENT_UP_THE_MAP_FILTER_UPDATED',
+  ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED = 'ENDEVOR_SEARCH_LOCATION/FILTERS_CLEARED',
 }
 
 export interface SessionEndevorCredentialsAdded {
@@ -131,6 +137,27 @@ export interface EndevorSearchLocationAdded {
   searchLocationId: EndevorId;
 }
 
+export interface ElementNamesFilterUpdated {
+  type: Actions.ELEMENT_NAMES_FILTER_UPDATED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  updatedFilter: ElementNamesFilter;
+}
+
+export interface ElementCcidsFilterUpdated {
+  type: Actions.ELEMENT_CCIDS_FILTER_UPDATED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  updatedFilter: ElementCcidsFilter;
+}
+
+export interface ElementsUpTheMapFilterUpdated {
+  type: Actions.ELEMENT_UP_THE_MAP_FILTER_UPDATED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  updatedFilter: ElementsUpTheMapFilter;
+}
+
 export interface EndevorSearchLocationHidden {
   type: Actions.ENDEVOR_SEARCH_LOCATION_HIDDEN;
   serviceId: EndevorId;
@@ -141,46 +168,38 @@ export interface EndevorSearchLocationDeleted {
   searchLocationId: EndevorId;
 }
 
-export interface EndevorCacheFetched {
-  type: Actions.ENDEVOR_CACHE_FETCHED;
+export interface ElementsUpTheMapFetched {
+  type: Actions.ELEMENTS_UP_THE_MAP_FETCHED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  endevorCachedItem: Omit<EndevorCacheItem, 'cacheVersion'> | undefined;
-  connection: EndevorConnection;
-  credential: EndevorCredential;
-}
-
-export interface EndevorCacheFetchCanceled {
-  type: Actions.ENDEVOR_CACHE_FETCH_CANCELED;
-  serviceId: EndevorId;
-  searchLocationId: EndevorId;
-}
-
-export interface EndevorCacheFetchFailed {
-  type: Actions.ENDEVOR_CACHE_FETCH_FAILED;
-  serviceId: EndevorId;
-  searchLocationId: EndevorId;
+  elements: CachedElements;
+  endevorMap?: EndevorMap;
   connection?: EndevorConnection;
   credential?: EndevorCredential;
 }
 
-export interface EndevorElementsFetched {
-  type: Actions.ENDEVOR_ELEMENTS_FETCHED;
+export interface ElementsInPlaceFetched {
+  type: Actions.ELEMENTS_IN_PLACE_FETCHED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
   elements: CachedElements;
+  subSystemsInPlace?: ReadonlyArray<SubSystemMapPath>;
+  connection?: EndevorConnection;
+  credential?: EndevorCredential;
 }
 
-export interface EndevorElementsFetchCanceled {
-  type: Actions.ENDEVOR_ELEMENTS_FETCH_CANCELED;
+export interface ElementsFetchCanceled {
+  type: Actions.ELEMENTS_FETCH_CANCELED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
 }
 
-export interface EndevorElementsFetchFailed {
-  type: Actions.ENDEVOR_ELEMENTS_FETCH_FAILED;
+export interface ElementsFetchFailed {
+  type: Actions.ELEMENTS_FETCH_FAILED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
+  connection?: EndevorConnection;
+  credential?: EndevorCredential;
 }
 
 export interface Refresh {
@@ -216,16 +235,16 @@ type ElementTreePath = Readonly<{
 
 export interface ElementGeneratedWithCopyBack {
   type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK;
-  targetLocation: ElementMapPath;
   pathUpTheMap: ElementMapPath;
   treePath: ElementTreePath;
+  targetElement: Element;
 }
 
 export interface ElementUpdatedFromUpTheMap {
   type: Actions.ELEMENT_UPDATED_FROM_UP_THE_MAP;
-  targetLocation: ElementMapPath;
   pathUpTheMap: ElementMapPath;
   treePath: ElementTreePath;
+  targetElement: Element;
 }
 
 export type SignedOutElementsPayload = {
@@ -246,6 +265,13 @@ export interface ElementSignedIn {
   serviceId: EndevorId;
   searchLocationId: EndevorId;
   element: Element;
+}
+
+export interface EndevorSearchLocationFiltersCleared {
+  type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  filtersCleared: ReadonlyArray<ElementFilterType>;
 }
 
 export type Action =
@@ -269,9 +295,11 @@ export type Action =
   | ElementGeneratedInPlace
   | ElementGeneratedWithCopyBack
   | ElementSignedIn
-  | EndevorCacheFetched
-  | EndevorCacheFetchCanceled
-  | EndevorCacheFetchFailed
-  | EndevorElementsFetched
-  | EndevorElementsFetchCanceled
-  | EndevorElementsFetchFailed;
+  | ElementsUpTheMapFetched
+  | ElementsFetchCanceled
+  | ElementsFetchFailed
+  | ElementsInPlaceFetched
+  | ElementCcidsFilterUpdated
+  | ElementNamesFilterUpdated
+  | ElementsUpTheMapFilterUpdated
+  | EndevorSearchLocationFiltersCleared;

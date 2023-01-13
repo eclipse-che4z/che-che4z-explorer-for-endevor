@@ -12,7 +12,7 @@
  */
 
 import { Element, ServiceApiVersion } from '@local/endevor/_doc/Endevor';
-import { EndevorMap } from '../../../_doc/Endevor';
+import { EndevorMap, SubsystemMapPathId } from '../../../_doc/Endevor';
 import {
   ConnectionKey,
   ConnectionName,
@@ -35,30 +35,42 @@ export type EndevorId = Id;
 export type EndevorServiceKey = ConnectionKey;
 export type EndevorLocationKey = InventoryLocationKey;
 
-export type CachedElement = {
-  element: Element;
-  lastRefreshTimestamp: number;
-};
-type ElementId = string;
-export type CachedElements = Readonly<{
-  [id: ElementId]: CachedElement;
-}>;
-
 export const enum EndevorCacheVersion {
   UP_TO_DATE = 'UP_TO_DATE',
   OUTDATED = 'OUTDATED',
 }
-export type EndevorCacheItem = {
+
+export type CachedEndevorMap = Readonly<{
   cacheVersion: EndevorCacheVersion;
-} & Partial<{
-  endevorMap: EndevorMap;
+  value: EndevorMap;
+}>;
+
+export type CachedElement = {
+  element: Element;
+  lastRefreshTimestamp: number;
+};
+export type ElementId = string;
+export type CachedElements = Readonly<{
+  [id: ElementId]: CachedElement;
+}>;
+
+export type EndevorCachedElements = Readonly<{
+  cacheVersion: EndevorCacheVersion;
   elements: CachedElements;
 }>;
+
 // key based on service name and search location name
 type CompositeKey = string;
-export type EndevorCache = {
-  [id: CompositeKey]: EndevorCacheItem | undefined;
+type EndevorMapItem = SubsystemMapPathId;
+export type CacheItem = {
+  endevorMap: CachedEndevorMap;
+  mapItemsContent: Readonly<{
+    [endevorMapItem: EndevorMapItem]: EndevorCachedElements | undefined;
+  }>;
 };
+export type EndevorCache = Readonly<{
+  [id: CompositeKey]: CacheItem | undefined;
+}>;
 
 export type EndevorApiVersion = ServiceApiVersion.V1 | ServiceApiVersion.V2;
 export const enum EndevorConnectionStatus {
@@ -107,10 +119,46 @@ export type EndevorCredential =
   | ValidEndevorCredential
   | InvalidEndevorCredential;
 
+export const enum ElementFilterType {
+  ELEMENT_NAMES_FILTER = 'ELEMENT_NAMES_FILTER',
+  ELEMENT_CCIDS_FILTER = 'ELEMENT_CCIDS_FILTER',
+  ELEMENTS_UP_THE_MAP_FILTER = 'ELEMENTS_UP_THE_MAP_FILTER',
+}
+
+type Pattern = string;
+export type ElementNamesFilter = {
+  type: ElementFilterType.ELEMENT_NAMES_FILTER;
+  value: ReadonlyArray<Pattern>;
+};
+
+export type ElementCcidsFilter = {
+  type: ElementFilterType.ELEMENT_CCIDS_FILTER;
+  value: ReadonlyArray<Pattern>;
+};
+
+export type ElementsUpTheMapFilter = {
+  type: ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER;
+  value: boolean;
+};
+
+export type ElementFilter =
+  | ElementNamesFilter
+  | ElementCcidsFilter
+  | ElementsUpTheMapFilter;
+
+export type ServiceLocationFilters = Partial<{
+  [key in ElementFilterType]: ElementFilter;
+}>;
+
+export type ElementFilters = {
+  [id: CompositeKey]: ServiceLocationFilters;
+};
+
 export type EndevorSession = Partial<{
   connection: EndevorConnection;
   credentials: EndevorCredential;
 }>;
+
 export type EndevorSessions = {
   [key: EndevorServiceKey]: EndevorSession | undefined;
 };
@@ -129,6 +177,7 @@ export type EndevorSearchLocations = {
 };
 
 export type State = {
+  filters: ElementFilters;
   sessions: EndevorSessions;
   caches: EndevorCache;
   services: EndevorServices;
@@ -201,6 +250,7 @@ export type ValidEndevorSearchLocationDescription = Readonly<{
   duplicated: boolean;
   id: EndevorId;
   path: string;
+  searchForFirstFoundElements: boolean;
 }>;
 
 export type InvalidEndevorSearchLocationDescription = Readonly<{
@@ -232,3 +282,7 @@ export type EndevorServiceLocation = {
 export type EndevorServiceLocations = {
   [key: EndevorServiceKey]: EndevorServiceLocation;
 };
+
+export type ElementsPerRoute = Readonly<{
+  [searchLocation: SubsystemMapPathId]: ReadonlyArray<CachedElement>;
+}>;

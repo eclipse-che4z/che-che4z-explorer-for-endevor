@@ -11,4 +11,4 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export const ENDEVOR_V2_BASE_PATH = '/EndevorService/api/v2/';
+export const ZOWE_EXTENSION_ID = 'Zowe.vscode-extension-for-zowe';

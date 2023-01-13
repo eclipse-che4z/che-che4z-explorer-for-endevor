@@ -33,7 +33,7 @@ export const toSubsystemMapPathId = ({
   return `${environment}/${stageNumber}/${system}/${subSystem}`;
 };
 
-const fromSubsystemMapPathId = (
+export const fromSubsystemMapPathId = (
   subsystemMapPathId: SubsystemMapPathId
 ): SubSystemMapPath | undefined => {
   const [environment, stageNumber, system, subSystem] =

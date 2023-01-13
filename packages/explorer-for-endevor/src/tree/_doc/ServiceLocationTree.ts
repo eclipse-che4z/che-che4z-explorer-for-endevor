@@ -14,6 +14,7 @@
 import { Command } from 'vscode';
 import { Source } from '../../store/storage/_doc/Storage';
 import { ElementLocationNode } from './ElementTree';
+import { LocationFilterNode } from './FilterTree';
 
 export type ServiceNodes = ServiceNode[];
 export type LocationNodes = LocationNode[];
@@ -65,22 +66,23 @@ export type ServiceNode =
 
 export type InternalLocationNode = Readonly<{
   id: string;
-  type: 'LOCATION';
+  type: 'LOCATION' | 'LOCATION/WITH_MAP';
   name: string;
   source: Source;
   serviceName: string;
   serviceSource: Source;
   tooltip: string;
   duplicated: boolean;
+  // showMap: boolean;
   // baseUrl: EndevorUrl;
 }>;
 export type SyncedLocationNode = Omit<InternalLocationNode, 'type'> &
   Readonly<{
-    type: 'LOCATION_PROFILE';
+    type: 'LOCATION_PROFILE/WITH_MAP' | 'LOCATION_PROFILE';
   }>;
 
 export type ValidLocationNode = InternalLocationNode | SyncedLocationNode;
-export type InvalidLocationNode = Omit<SyncedLocationNode, 'type'> &
+export type InvalidLocationNode = Omit<SyncedLocationNode, 'type' | 'showMap'> &
   Readonly<{
     type:
       | 'LOCATION_PROFILE/NON_EXISTING'
@@ -95,7 +97,9 @@ export type InvalidLocationNode = Omit<SyncedLocationNode, 'type'> &
 export type LocationNode = ValidLocationNode | InvalidLocationNode;
 
 export type Node =
+  | LocationFilterNode
   | AddNewSearchLocationNode
   | ServiceNode
   | LocationNode
-  | ElementLocationNode;
+  | ElementLocationNode
+  | LocationFilterNode;

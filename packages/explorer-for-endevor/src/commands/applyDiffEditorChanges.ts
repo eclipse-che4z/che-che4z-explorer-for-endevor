@@ -90,11 +90,15 @@ export const applyDiffEditorChanges = async (
   );
   const {
     uploadTargetLocation,
+    uploadChangeControlValue,
+    endevorConnectionDetails,
     element,
+    fingerprint,
     initialSearchContext: {
       serviceId,
       searchLocationId,
       initialSearchLocation,
+      overallSearchLocation,
     },
   } = uriParms;
   const content = await readComparedElementContent();
@@ -113,16 +117,13 @@ export const applyDiffEditorChanges = async (
     return;
   }
   const uploadResult = await uploadElement(dispatch)(
-    uriParms.initialSearchContext.serviceId,
-    uriParms.initialSearchContext.searchLocationId,
-    uriParms.initialSearchContext.initialSearchLocation
-  )(
-    uriParms.endevorConnectionDetails,
-    uriParms.initialSearchContext.overallSearchLocation
-  )(uriParms.uploadChangeControlValue, uriParms.uploadTargetLocation)(
-    uriParms.element,
-    comparedElementUri
-  )(uriParms.fingerprint, content);
+    serviceId,
+    searchLocationId,
+    initialSearchLocation
+  )(endevorConnectionDetails, overallSearchLocation)(
+    uploadChangeControlValue,
+    uploadTargetLocation
+  )(element, comparedElementUri)(fingerprint, content);
   if (isError(uploadResult)) {
     const error = uploadResult;
     logger.error(
@@ -151,6 +152,7 @@ export const applyDiffEditorChanges = async (
       element: {
         ...uploadTargetLocation,
         extension: element.extension,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
       },
     });
     return;
@@ -174,7 +176,11 @@ export const applyDiffEditorChanges = async (
       searchLocation: initialSearchLocation,
     },
     pathUpTheMap: element,
-    targetLocation: uploadTargetLocation,
+    targetElement: {
+      ...uploadTargetLocation,
+      extension: element.extension,
+      lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+    },
   });
   logger.info(
     `Applying changes for the element ${uploadTargetLocation.name} was successful!`

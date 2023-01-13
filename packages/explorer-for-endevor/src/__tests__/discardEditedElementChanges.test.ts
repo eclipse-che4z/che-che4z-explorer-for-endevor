@@ -84,6 +84,7 @@ describe('discarding local changes in compared element', () => {
       type: 'TYP',
       name: 'ELM',
       extension: 'ext',
+      lastActionCcid: 'LAST-CCID',
     };
     const uploadChangeControlValue: ChangeControlValue = {
       ccid: 'some_ccid',

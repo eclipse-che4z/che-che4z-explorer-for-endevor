@@ -11,9 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { SessConstants } from '@zowe/imperative';
 import * as t from 'io-ts';
-import { ServiceProtocol, StageNumber } from '@local/endevor/_doc/Endevor';
 
 export enum ProfileTypes {
   BASE = 'base',
@@ -21,6 +19,15 @@ export enum ProfileTypes {
   ENDEVOR_LOCATION = 'endevor-location',
   BRIDGE_FOR_GIT = 'ebg',
 }
+
+export type ServiceProtocol = 'http' | 'https';
+
+export type ProfileTokenType =
+  | 'LtpaToken2'
+  | 'jwtToken'
+  | 'apimlAuthenticationToken';
+
+export type StageNumber = '1' | '2';
 
 export type Profile = t.TypeOf<typeof Profile>;
 
@@ -54,14 +61,14 @@ export const BfgProfile = t.partial({
   rejectUnauthorized: t.boolean,
 });
 
-class TokenType extends t.Type<SessConstants.TOKEN_TYPE_CHOICES> {
+class TokenType extends t.Type<ProfileTokenType> {
   constructor() {
     super(
-      'Token',
-      (value): value is SessConstants.TOKEN_TYPE_CHOICES =>
-        value === SessConstants.TOKEN_TYPE_APIML ||
-        value === SessConstants.TOKEN_TYPE_JWT ||
-        value === SessConstants.TOKEN_TYPE_LTPA,
+      'TokenType',
+      (value): value is ProfileTokenType =>
+        value === 'LtpaToken2' ||
+        value === 'jwtToken' ||
+        value === 'apimlAuthenticationToken',
       (value, context) =>
         this.is(value) ? t.success(value) : t.failure(value, context),
       (value) => value

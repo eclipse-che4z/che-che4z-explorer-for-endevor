@@ -17,6 +17,7 @@ import { CommandId } from '../commands/id';
 import { ZOWE_PROFILE_DESCRIPTION } from '../constants';
 import { Source } from '../store/storage/_doc/Storage';
 import { ElementNode } from './_doc/ElementTree';
+import { FilteredNode, FilterNode, FilterValueNode } from './_doc/FilterTree';
 import { AddNewSearchLocationNode, Node } from './_doc/ServiceLocationTree';
 
 class ButtonItem extends vscode.TreeItem {
@@ -105,14 +106,33 @@ class ElementItem extends vscode.TreeItem {
   }
 }
 
+class FilterItem extends vscode.TreeItem {
+  constructor(node: FilteredNode | FilterNode) {
+    super(node.name, vscode.TreeItemCollapsibleState.Collapsed);
+    this.contextValue = node.type;
+    this.tooltip = node.tooltip;
+    if (node.type === 'FILTERED')
+      this.iconPath = new vscode.ThemeIcon('filter');
+  }
+}
+
+class FilterValue extends vscode.TreeItem {
+  constructor(node: FilterValueNode) {
+    super(node.name, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = node.type;
+  }
+}
+
 export const toTreeItem = (node: Node): vscode.TreeItem => {
   switch (node.type) {
     case 'BUTTON_ADD_SEARCH_LOCATION':
       return new ButtonItem(node);
     case 'SERVICE':
     case 'LOCATION':
+    case 'LOCATION/WITH_MAP':
     case 'SERVICE_PROFILE':
     case 'LOCATION_PROFILE':
+    case 'LOCATION_PROFILE/WITH_MAP':
       return new ServiceLocationItem(
         node.name,
         node.source,
@@ -157,6 +177,11 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
       return new BasicItem(node.name, node.type);
     case 'EMPTY_MAP_NODE':
       return new EmptyMapItem();
+    case 'FILTERED':
+    case 'FILTER':
+      return new FilterItem(node);
+    case 'FILTER_VALUE':
+      return new FilterValue(node);
     case 'ELEMENT_UP_THE_MAP':
     case 'ELEMENT_IN_PLACE':
       return new ElementItem(node);

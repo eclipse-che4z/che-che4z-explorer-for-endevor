@@ -16,12 +16,13 @@ import {
   Element,
   ElementSearchLocation,
   ServiceApiVersion,
+  SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { logger } from '../globals';
 import { isDefined, isError, isUnique } from '../utils';
 import { Action, Actions } from './_doc/Actions';
 import { Node } from '../tree/_doc/ServiceLocationTree';
-import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
+import { SubsystemMapPathId, toSubsystemMapPathId } from '../_doc/Endevor';
 import {
   ConnectionLocations,
   Connections,
@@ -33,8 +34,6 @@ import {
   StorageGetters,
 } from './storage/_doc/Storage';
 import {
-  CachedElement,
-  EndevorCacheItem,
   EndevorService,
   EndevorServiceLocations,
   EndevorSearchLocation,
@@ -60,6 +59,18 @@ import {
   ValidEndevorConnection,
   EndevorServices,
   EndevorCacheVersion,
+  CachedElement,
+  CacheItem,
+  ElementId,
+  ElementsPerRoute,
+  ElementFilter,
+  ElementsUpTheMapFilter,
+  ElementCcidsFilter,
+  ElementNamesFilter,
+  ElementFilterType,
+  CachedEndevorMap,
+  ElementFilters,
+  ServiceLocationFilters,
 } from './_doc/v2/Store';
 import {
   normalizeSearchLocation,
@@ -67,8 +78,13 @@ import {
   toElementCompositeKey,
   toSearchPath,
   toServiceUrl,
+  isElementsCcidFilter,
+  isElementsNameFilter,
+  isElementsUpTheMapFilter,
+  getAllFilteredElements,
 } from './utils';
 import { toCompositeKey } from './storage/utils';
+import { DEFAULT_TREE_IN_PLACE_SEARCH_MODE } from '../constants';
 
 export const make =
   (storageGetters: StorageGetters) =>
@@ -81,6 +97,17 @@ export const make =
     refreshTree();
 
     const dispatch = async (action: Action): Promise<void> => {
+      type ElementsAccum = {
+        [elementsLocation: SubsystemMapPathId]: {
+          cacheVersion: EndevorCacheVersion;
+          elements: {
+            [id: ElementId]: CachedElement;
+          };
+        };
+      };
+      type MapAccum = {
+        [endevorMapNode: SubsystemMapPathId]: [];
+      };
       switch (action.type) {
         case Actions.SESSION_ENDEVOR_CREDENTIAL_ADDED: {
           const serviceKey = toCompositeKey(action.sessionId);
@@ -240,80 +267,340 @@ export const make =
           }
           break;
         }
-        case Actions.ENDEVOR_CACHE_FETCHED: {
-          updateState(
-            endevorCacheReducer(state())(action.serviceId)(
-              action.searchLocationId
-            )({
-              ...action.endevorCachedItem,
-              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-            })
-          );
-          updateState(
-            sessionReducer(state())(action.serviceId)({
-              connection: action.connection,
-              credentials: action.credential,
-            })
-          );
-          refreshTree();
-          break;
-        }
-        case Actions.ENDEVOR_ELEMENTS_FETCHED: {
+        case Actions.ELEMENTS_FETCH_CANCELED: {
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.serviceId)(
                 action.searchLocationId
               )
             ];
-          if (!existingCache) break;
+          if (!existingCache) {
+            updateState(
+              endevorCacheReducer(state())(action.serviceId)(
+                action.searchLocationId
+              )({
+                endevorMap: {
+                  value: {},
+                  cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                },
+                mapItemsContent: {},
+              })
+            );
+            refreshTree();
+            break;
+          }
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
             )({
-              ...existingCache,
-              elements: action.elements,
-              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              endevorMap: {
+                ...existingCache.endevorMap,
+                cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              },
+              mapItemsContent: {
+                ...Object.entries(existingCache.mapItemsContent).reduce(
+                  (acc: ElementsAccum, [entryId, entryValue]) => {
+                    if (entryValue) {
+                      acc[entryId] = {
+                        ...entryValue,
+                        cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                      };
+                    }
+                    return acc;
+                  },
+                  {}
+                ),
+              },
             })
           );
           refreshTree();
           break;
         }
-        case Actions.ENDEVOR_ELEMENTS_FETCH_CANCELED:
-        case Actions.ENDEVOR_CACHE_FETCH_CANCELED: {
+        case Actions.ELEMENTS_FETCH_FAILED: {
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.serviceId)(
                 action.searchLocationId
               )
             ];
+          if (!existingCache) {
+            updateState(
+              endevorCacheReducer(state())(action.serviceId)(
+                action.searchLocationId
+              )({
+                endevorMap: {
+                  value: {},
+                  cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                },
+                mapItemsContent: {},
+              })
+            );
+            if (action.connection) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  connection: action.connection,
+                })
+              );
+            }
+            if (action.credential) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  credentials: action.credential,
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
             )({
-              ...existingCache,
-              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              endevorMap: {
+                ...existingCache.endevorMap,
+                cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              },
+              mapItemsContent: {
+                ...Object.entries(existingCache.mapItemsContent).reduce(
+                  (acc: ElementsAccum, [entryId, entryValue]) => {
+                    if (entryValue) {
+                      acc[entryId] = {
+                        ...entryValue,
+                        cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                      };
+                    }
+                    return acc;
+                  },
+                  {}
+                ),
+              },
             })
           );
+          if (action.connection) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                connection: action.connection,
+              })
+            );
+          }
+          if (action.credential) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                credentials: action.credential,
+              })
+            );
+          }
           refreshTree();
           break;
         }
-        case Actions.ENDEVOR_ELEMENTS_FETCH_FAILED: {
+        case Actions.ELEMENTS_IN_PLACE_FETCHED: {
+          if (!action.elements) {
+            if (action.connection) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  connection: action.connection,
+                })
+              );
+            }
+            if (action.credential) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  credentials: action.credential,
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
+          const endevorMap = action.subSystemsInPlace
+            ? {
+                value: action.subSystemsInPlace.reduce(
+                  (acc: MapAccum, subSystem: SubSystemMapPath) => {
+                    acc[toSubsystemMapPathId(subSystem)] = [];
+                    return acc;
+                  },
+                  {}
+                ),
+                cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              }
+            : state().caches[
+                toServiceLocationCompositeKey(action.serviceId)(
+                  action.searchLocationId
+                )
+              ]?.endevorMap;
+          if (endevorMap) {
+            const actionMapItems = Object.entries(action.elements).reduce(
+              (acc: ElementsAccum, [elementId, element]) => {
+                const elementsLocation = toSubsystemMapPathId(element.element);
+                const elementLocationNotInMap =
+                  !endevorMap.value[elementsLocation];
+                if (elementLocationNotInMap) return acc;
+                const existingElementsLocation = acc[elementsLocation];
+                if (existingElementsLocation) {
+                  existingElementsLocation.elements[elementId] = element;
+                  return acc;
+                }
+                acc[elementsLocation] = {
+                  cacheVersion: endevorMap.cacheVersion,
+                  elements: {
+                    [elementId]: element,
+                  },
+                };
+                return acc;
+              },
+              {}
+            );
+            updateState(
+              endevorCacheReducer(state())(action.serviceId)(
+                action.searchLocationId
+              )({
+                endevorMap,
+                mapItemsContent: actionMapItems,
+              })
+            );
+            if (action.connection) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  connection: action.connection,
+                })
+              );
+            }
+            if (action.credential) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  credentials: action.credential,
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
-            )({
-              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-            })
+            )(
+              Object.entries(action.elements).reduce(
+                (
+                  acc: {
+                    endevorMap: {
+                      cacheVersion: EndevorCacheVersion;
+                      value: MapAccum;
+                    };
+                    mapItemsContent: ElementsAccum;
+                  },
+                  [elementId, element]
+                ) => {
+                  const elementsLocation = toSubsystemMapPathId(
+                    element.element
+                  );
+                  const existingElementsLocation =
+                    acc.endevorMap.value[elementsLocation];
+                  const existingItemsContent =
+                    acc.mapItemsContent[elementsLocation];
+                  if (existingElementsLocation && existingItemsContent) {
+                    existingItemsContent.elements[elementId] = element;
+                    return acc;
+                  }
+                  acc.endevorMap.value[elementsLocation] = [];
+                  acc.mapItemsContent[elementsLocation] = {
+                    cacheVersion: acc.endevorMap.cacheVersion,
+                    elements: {
+                      [elementId]: element,
+                    },
+                  };
+                  return acc;
+                },
+                {
+                  endevorMap: {
+                    cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                    value: {},
+                  },
+                  mapItemsContent: {},
+                }
+              )
+            )
           );
+          if (action.connection) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                connection: action.connection,
+              })
+            );
+          }
+          if (action.credential) {
+            updateState(
+              sessionReducer(state())(action.serviceId)({
+                credentials: action.credential,
+              })
+            );
+          }
           refreshTree();
           break;
         }
-        case Actions.ENDEVOR_CACHE_FETCH_FAILED: {
+        case Actions.ELEMENTS_UP_THE_MAP_FETCHED: {
+          if (!action.elements) {
+            if (action.connection) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  connection: action.connection,
+                })
+              );
+            }
+            if (action.credential) {
+              updateState(
+                sessionReducer(state())(action.serviceId)({
+                  credentials: action.credential,
+                })
+              );
+            }
+            refreshTree();
+            break;
+          }
+          const existingCache =
+            state().caches[
+              toServiceLocationCompositeKey(action.serviceId)(
+                action.searchLocationId
+              )
+            ];
+          const endevorMap = action.endevorMap
+            ? {
+                cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+                value: action.endevorMap,
+              }
+            : existingCache?.endevorMap;
+          if (!endevorMap) break;
+          const fullMap = Object.entries(endevorMap.value).flatMap(
+            ([searchLocationItem, route]) => {
+              return [searchLocationItem, ...route];
+            }
+          );
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
             )({
-              cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+              endevorMap,
+              mapItemsContent: Object.entries(action.elements).reduce(
+                (acc: ElementsAccum, [elementId, element]) => {
+                  const elementLocation = toSubsystemMapPathId(element.element);
+                  const elementLocationNotInMap = !fullMap.find(
+                    (mapLocation) => mapLocation === elementLocation
+                  );
+                  if (elementLocationNotInMap) return acc;
+                  const existingElementsLocation = acc[elementLocation];
+                  if (existingElementsLocation) {
+                    existingElementsLocation.elements[elementId] = element;
+                    return acc;
+                  }
+                  acc[elementLocation] = {
+                    cacheVersion: endevorMap.cacheVersion,
+                    elements: {
+                      [elementId]: element,
+                    },
+                  };
+                  return acc;
+                },
+                {}
+              ),
             })
           );
           if (action.connection) {
@@ -343,21 +630,48 @@ export const make =
                     toServiceLocationCompositeKey(service.id)(searchLocation.id)
                   ];
                 if (existingCache) {
-                  actionState = endevorCacheReducer(actionState)(service.id)(
+                  const emptyMap =
+                    Object.keys(existingCache.endevorMap.value).length === 0;
+                  actionState = endevorCacheReducer(state())(service.id)(
                     searchLocation.id
                   )({
-                    ...existingCache,
-                    cacheVersion: EndevorCacheVersion.OUTDATED,
+                    // TODO: switch to a more understandable map status (EMPTY or something like this),
+                    // because the check for empty object is not reliable enough
+                    endevorMap: emptyMap
+                      ? {
+                          value: {},
+                          cacheVersion: EndevorCacheVersion.OUTDATED,
+                        }
+                      : existingCache.endevorMap,
+                    mapItemsContent: {
+                      ...Object.entries(existingCache.mapItemsContent).reduce(
+                        (acc: ElementsAccum, [entryId, entryValue]) => {
+                          if (entryValue) {
+                            acc[entryId] = {
+                              ...entryValue,
+                              cacheVersion: EndevorCacheVersion.OUTDATED,
+                            };
+                          }
+                          return acc;
+                        },
+                        {}
+                      ),
+                    },
                   });
+                  updateState(actionState);
                 }
               });
             }
           );
-          updateState(actionState);
           refreshTree();
           break;
         }
         case Actions.ELEMENT_ADDED: {
+          const optimisticStateUpdate = updateElementReducer(state())(
+            action.serviceId
+          )(action.searchLocationId)(action.element);
+          updateState(optimisticStateUpdate);
+          refreshTree();
           const existingCache =
             state().caches[
               toServiceLocationCompositeKey(action.serviceId)(
@@ -365,21 +679,25 @@ export const make =
               )
             ];
           if (!existingCache) break;
-          const optimisticStateUpdate = updateElementReducer(state())(
-            action.serviceId
-          )(action.searchLocationId)(action.element);
-          updateState(optimisticStateUpdate);
-          refreshTree();
           updateState(
             endevorCacheReducer(state())(action.serviceId)(
               action.searchLocationId
             )({
-              ...optimisticStateUpdate.caches[
-                toServiceLocationCompositeKey(action.serviceId)(
-                  action.searchLocationId
-                )
-              ],
-              cacheVersion: EndevorCacheVersion.OUTDATED,
+              endevorMap: existingCache.endevorMap,
+              mapItemsContent: {
+                ...Object.entries(existingCache.mapItemsContent).reduce(
+                  (acc: ElementsAccum, [entryId, entryValue]) => {
+                    if (entryValue) {
+                      acc[entryId] = {
+                        ...entryValue,
+                        cacheVersion: EndevorCacheVersion.OUTDATED,
+                      };
+                    }
+                    return acc;
+                  },
+                  {}
+                ),
+              },
             })
           );
           refreshTree();
@@ -415,69 +733,98 @@ export const make =
                 action.treePath.searchLocationId
               )
             ];
-          if (
-            !existingCache ||
-            !existingCache.elements ||
-            !existingCache.endevorMap
-          ) {
+          if (!existingCache) {
             break;
           }
+          const oldElementLocationId = toSubsystemMapPathId(
+            action.pathUpTheMap
+          );
+          const oldElementLocation =
+            existingCache.mapItemsContent[oldElementLocationId];
+          if (!oldElementLocation) break;
           const oldElementId = toElementCompositeKey(action.treePath.serviceId)(
             action.treePath.searchLocationId
           )(action.pathUpTheMap);
-          const oldELement = existingCache.elements[oldElementId];
-          if (!oldELement) {
+          const oldElement = oldElementLocation.elements[oldElementId];
+          if (!oldElement) {
             break;
           }
-          const searchLocationEntry = toSubsystemMapPathId(
-            action.treePath.searchLocation
+          const targetElementLocationId = toSubsystemMapPathId(
+            action.targetElement
           );
-          const existingRoute = existingCache.endevorMap[searchLocationEntry];
-          if (!existingRoute) {
-            break;
-          }
-          const treeLocation = [searchLocationEntry, ...existingRoute].find(
-            (route) => route === toSubsystemMapPathId(action.targetLocation)
-          );
-          if (!treeLocation) {
-            break;
-          }
           const {
             [oldElementId]: matchingCashedElement,
             ...existingCachedElements
-          } = existingCache.elements;
+          } = oldElementLocation.elements;
           const newElement: Element = {
-            ...action.targetLocation,
-            extension: oldELement.element.extension,
-            name: oldELement.element.name,
+            ...action.targetElement,
+            extension: oldElement.element.extension,
+            name: oldElement.element.name,
           };
           const optimisticStateUpdate = endevorCacheReducer(state())(
             action.treePath.serviceId
           )(action.treePath.searchLocationId)({
             endevorMap: existingCache.endevorMap,
-            elements: {
-              ...existingCachedElements,
-              [toElementCompositeKey(action.treePath.serviceId)(
-                action.treePath.searchLocationId
-              )(newElement)]: {
-                element: newElement,
-                lastRefreshTimestamp: Date.now(),
-              },
+            mapItemsContent: {
+              ...Object.entries(existingCache.mapItemsContent).reduce(
+                (acc: ElementsAccum, [entryId, elementsInMapPart]) => {
+                  if (!elementsInMapPart) return acc;
+                  if (entryId === oldElementLocationId) {
+                    acc[entryId] = {
+                      cacheVersion: elementsInMapPart.cacheVersion,
+                      elements: existingCachedElements,
+                    };
+                    return acc;
+                  }
+                  if (entryId === targetElementLocationId) {
+                    acc[entryId] = {
+                      cacheVersion: elementsInMapPart.cacheVersion,
+                      elements: {
+                        ...elementsInMapPart.elements,
+                        [toElementCompositeKey(action.treePath.serviceId)(
+                          action.treePath.searchLocationId
+                        )(newElement)]: {
+                          element: newElement,
+                          lastRefreshTimestamp: Date.now(),
+                        },
+                      },
+                    };
+                    return acc;
+                  }
+                  acc[entryId] = elementsInMapPart;
+                  return acc;
+                },
+                {}
+              ),
             },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           });
           updateState(optimisticStateUpdate);
           refreshTree();
+          const optimisticlyUpdatedCache =
+            optimisticStateUpdate.caches[
+              toServiceLocationCompositeKey(action.treePath.serviceId)(
+                action.treePath.searchLocationId
+              )
+            ];
+          if (!optimisticlyUpdatedCache) break;
           updateState(
             endevorCacheReducer(state())(action.treePath.serviceId)(
               action.treePath.searchLocationId
             )({
-              ...optimisticStateUpdate.caches[
-                toServiceLocationCompositeKey(action.treePath.serviceId)(
-                  action.treePath.searchLocationId
-                )
-              ],
-              cacheVersion: EndevorCacheVersion.OUTDATED,
+              endevorMap: optimisticlyUpdatedCache.endevorMap,
+              mapItemsContent: {
+                ...Object.entries(
+                  optimisticlyUpdatedCache.mapItemsContent
+                ).reduce((acc: ElementsAccum, [entryId, entryValue]) => {
+                  if (entryValue) {
+                    acc[entryId] = {
+                      ...entryValue,
+                      cacheVersion: EndevorCacheVersion.OUTDATED,
+                    };
+                  }
+                  return acc;
+                }, {}),
+              },
             })
           );
           refreshTree();
@@ -571,6 +918,57 @@ export const make =
           persistState(storageGetters)(state());
           break;
         }
+        case Actions.ELEMENT_CCIDS_FILTER_UPDATED:
+        case Actions.ELEMENT_NAMES_FILTER_UPDATED: {
+          updateState(
+            filtersReducer(state())(action.serviceId)(action.searchLocationId)(
+              action.updatedFilter
+            )
+          );
+          refreshTree();
+          break;
+        }
+        case Actions.ELEMENT_UP_THE_MAP_FILTER_UPDATED: {
+          const stateWithUpdatedFilters = filtersReducer(state())(
+            action.serviceId
+          )(action.searchLocationId)(action.updatedFilter);
+          updateState(stateWithUpdatedFilters);
+          const serviceLocationId = toServiceLocationCompositeKey(
+            action.serviceId
+          )(action.searchLocationId);
+          const switchToFirstFound = action.updatedFilter.value === true;
+          if (switchToFirstFound) {
+            const existingCache = state().caches[serviceLocationId];
+            if (!existingCache) {
+              refreshTree();
+              break;
+            }
+            updateState(
+              endevorCacheReducer(stateWithUpdatedFilters)(action.serviceId)(
+                action.searchLocationId
+              )({
+                ...existingCache,
+                endevorMap: {
+                  cacheVersion: EndevorCacheVersion.OUTDATED,
+                  value: existingCache.endevorMap.value,
+                },
+              })
+            );
+            refreshTree();
+            break;
+          }
+          refreshTree();
+          break;
+        }
+        case Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED: {
+          updateState(
+            clearFiltersReducer(state())(action.serviceId)(
+              action.searchLocationId
+            )(action.filtersCleared)
+          );
+          refreshTree();
+          break;
+        }
         case Actions.ENDEVOR_SEARCH_LOCATION_HIDDEN: {
           updateState(
             removeServiceLocationReducer(state())(action.serviceId)(
@@ -611,6 +1009,7 @@ const readLatestState = async (
   const state: State = {
     caches: {},
     services: {},
+    filters: {},
     sessions: {},
     searchLocations: {},
     serviceLocations: {},
@@ -775,6 +1174,66 @@ const sessionReducer =
           ...initialState.sessions[serviceKey],
           ...updatedSession,
         },
+      },
+    };
+  };
+
+const filtersReducer =
+  (initialState: State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (updatedFilter: ElementFilter): State => {
+    const serviceLocationKey =
+      toServiceLocationCompositeKey(serviceId)(searchLocationId);
+    const existingFilters = initialState.filters[serviceLocationKey];
+    if (existingFilters) {
+      return {
+        ...initialState,
+        filters: {
+          ...initialState.filters,
+          [serviceLocationKey]: {
+            ...existingFilters,
+            [updatedFilter.type]: updatedFilter,
+          },
+        },
+      };
+    }
+    return {
+      ...initialState,
+      filters: {
+        ...initialState.filters,
+        [serviceLocationKey]: {
+          [updatedFilter.type]: updatedFilter,
+        },
+      },
+    };
+  };
+
+const clearFiltersReducer =
+  (initialState: State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (clearedFilters: ReadonlyArray<ElementFilterType>): State => {
+    const serviceLocationKey =
+      toServiceLocationCompositeKey(serviceId)(searchLocationId);
+    const existingFilters = initialState.filters[serviceLocationKey];
+    if (!existingFilters) return initialState;
+    const updatedFilters = Object.entries(existingFilters).reduce(
+      (acc: ElementFilters, [filterName, filterValue]) => {
+        if (clearedFilters.includes(filterValue.type)) return acc;
+        acc[serviceLocationKey] = {
+          ...acc[serviceLocationKey],
+          [filterName]: filterValue,
+        };
+        return acc;
+      },
+      { [serviceLocationKey]: {} }
+    );
+    return {
+      ...initialState,
+      filters: {
+        ...initialState.filters,
+        ...updatedFilters,
       },
     };
   };
@@ -974,7 +1433,7 @@ const endevorCacheReducer =
   (initialState: State) =>
   (serviceId: EndevorId) =>
   (searchLocationId: EndevorId) =>
-  (updatedCache: EndevorCacheItem | undefined): State => {
+  (updatedCache: CacheItem | undefined): State => {
     const existingService =
       initialState.serviceLocations[toCompositeKey(serviceId)];
     if (!existingService) return initialState;
@@ -1021,17 +1480,36 @@ const updateElementReducer =
         toServiceLocationCompositeKey(serviceId)(searchLocationId)
       ];
     if (!existingCache) return initialState;
+    const elementsLocation = toSubsystemMapPathId(element);
+    const elementLocationNotInMap = !Object.entries(
+      existingCache.endevorMap.value
+    )
+      .flatMap(([searchLocationItem, route]) => {
+        return [searchLocationItem, ...route];
+      })
+      .find((mapLocation) => mapLocation === elementsLocation);
+    if (elementLocationNotInMap) return initialState;
+    const elementsInTheSameLocation =
+      existingCache.mapItemsContent[elementsLocation];
     return {
       ...initialState,
       caches: {
         ...initialState.caches,
         [toServiceLocationCompositeKey(serviceId)(searchLocationId)]: {
           ...existingCache,
-          elements: {
-            ...existingCache.elements,
-            [toElementCompositeKey(serviceId)(searchLocationId)(element)]: {
-              element,
-              lastRefreshTimestamp: Date.now(),
+          mapItemsContent: {
+            ...existingCache.mapItemsContent,
+            [elementsLocation]: {
+              cacheVersion:
+                elementsInTheSameLocation?.cacheVersion ||
+                EndevorCacheVersion.UP_TO_DATE,
+              elements: {
+                ...elementsInTheSameLocation?.elements,
+                [toElementCompositeKey(serviceId)(searchLocationId)(element)]: {
+                  element,
+                  lastRefreshTimestamp: Date.now(),
+                },
+              },
             },
           },
         },
@@ -1040,6 +1518,49 @@ const updateElementReducer =
   };
 
 // public API
+
+export const getElementNamesFilterValue =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId): ElementNamesFilter | undefined => {
+    const existingFilters =
+      state().filters[
+        toServiceLocationCompositeKey(serviceId)(searchLocationId)
+      ];
+    if (!existingFilters) return;
+    const filter = existingFilters[ElementFilterType.ELEMENT_NAMES_FILTER];
+    if (!filter || !isElementsNameFilter(filter)) return undefined;
+    return filter;
+  };
+
+export const getElementCcidsFilterValue =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId): ElementCcidsFilter | undefined => {
+    const existingFilters =
+      state().filters[
+        toServiceLocationCompositeKey(serviceId)(searchLocationId)
+      ];
+    if (!existingFilters) return;
+    const filter = existingFilters[ElementFilterType.ELEMENT_CCIDS_FILTER];
+    if (!filter || !isElementsCcidFilter(filter)) return undefined;
+    return filter;
+  };
+
+export const getElementsUpTheMapFilterValue =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId): ElementsUpTheMapFilter | undefined => {
+    const existingFilters =
+      state().filters[
+        toServiceLocationCompositeKey(serviceId)(searchLocationId)
+      ];
+    if (!existingFilters) return;
+    const filter =
+      existingFilters[ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER];
+    if (!filter || !isElementsUpTheMapFilter(filter)) return undefined;
+    return filter;
+  };
 
 export const getAllServiceNames = (
   state: () => State
@@ -1484,23 +2005,27 @@ export const getAllServiceDescriptionsBySearchLocationId =
 export const getAllServiceLocations = (
   state: () => State
 ): EndevorServiceLocations => {
-  const toSearchLocationDescriptions = (
-    inventoryLocationNames: InventoryLocationNames
-  ): EndevorSearchLocationDescriptions => {
-    return Object.entries(inventoryLocationNames).reduce(
-      (
-        acc: EndevorSearchLocationDescriptions,
-        [searchLocationKey, searchLocationValue]
-      ) => {
-        const searchLocation = state().searchLocations[searchLocationKey];
-        acc[searchLocationKey] = searchLocation
-          ? toValidLocationDescription(state)(searchLocation)
-          : toInvalidLocationDescription(state)(searchLocationValue.id);
-        return acc;
-      },
-      {}
-    );
-  };
+  const toSearchLocationDescriptions =
+    (inventoryLocationNames: InventoryLocationNames) =>
+    (serviceId: Id): EndevorSearchLocationDescriptions => {
+      return Object.entries(inventoryLocationNames).reduce(
+        (
+          acc: EndevorSearchLocationDescriptions,
+          [searchLocationKey, searchLocationValue]
+        ) => {
+          const searchLocation = state().searchLocations[searchLocationKey];
+          acc[searchLocationKey] = searchLocation
+            ? toValidLocationDescription(state)(searchLocation)(
+                state().filters[
+                  toServiceLocationCompositeKey(serviceId)(searchLocation.id)
+                ]
+              )
+            : toInvalidLocationDescription(state)(searchLocationValue.id);
+          return acc;
+        },
+        {}
+      );
+    };
   return Object.entries(state().serviceLocations).reduce(
     (acc: EndevorServiceLocations, [serviceKey, serviceLocation]) => {
       const service = state().services[serviceKey];
@@ -1518,7 +2043,9 @@ export const getAllServiceLocations = (
               service.value.location,
               service.credential?.value
             ),
-            value: toSearchLocationDescriptions(serviceLocation.value),
+            value: toSearchLocationDescriptions(serviceLocation.value)(
+              service.id
+            ),
           };
           return acc;
         }
@@ -1533,7 +2060,9 @@ export const getAllServiceLocations = (
               service.value.location,
               service.credential?.value
             ),
-            value: toSearchLocationDescriptions(serviceLocation.value),
+            value: toSearchLocationDescriptions(serviceLocation.value)(
+              service.id
+            ),
           };
           return acc;
         }
@@ -1549,7 +2078,9 @@ export const getAllServiceLocations = (
               service.value.location,
               service.credential?.value
             ),
-            value: toSearchLocationDescriptions(serviceLocation.value),
+            value: toSearchLocationDescriptions(serviceLocation.value)(
+              service.id
+            ),
           };
           return acc;
         }
@@ -1564,7 +2095,9 @@ export const getAllServiceLocations = (
               service.value.location,
               service.credential?.value
             ),
-            value: toSearchLocationDescriptions(serviceLocation.value),
+            value: toSearchLocationDescriptions(serviceLocation.value)(
+              service.id
+            ),
           };
           return acc;
         }
@@ -1572,7 +2105,9 @@ export const getAllServiceLocations = (
         acc[serviceKey] = {
           ...serviceDescription,
           url: toServiceUrl(service.value.location, service.credential?.value),
-          value: toSearchLocationDescriptions(serviceLocation.value),
+          value: toSearchLocationDescriptions(serviceLocation.value)(
+            serviceLocation.id
+          ),
         };
         return acc;
       }
@@ -1581,7 +2116,9 @@ export const getAllServiceLocations = (
       );
       acc[serviceKey] = {
         ...serviceDescription,
-        value: toSearchLocationDescriptions(serviceLocation.value),
+        value: toSearchLocationDescriptions(serviceLocation.value)(
+          serviceLocation.id
+        ),
       };
       return acc;
     },
@@ -1591,8 +2128,9 @@ export const getAllServiceLocations = (
 
 const toValidLocationDescription =
   (state: () => State) =>
+  (endevorSearchLocation: EndevorSearchLocation) =>
   (
-    endevorSearchLocation: EndevorSearchLocation
+    availableFilters: ServiceLocationFilters | undefined
   ): ValidEndevorSearchLocationDescription => {
     const duplicated =
       Object.values(Source)
@@ -1616,11 +2154,28 @@ const toValidLocationDescription =
               )
           );
         }).length >= 1;
+    if (availableFilters) {
+      const firstFoundSearchFilter =
+        availableFilters[ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER];
+      if (
+        firstFoundSearchFilter &&
+        isElementsUpTheMapFilter(firstFoundSearchFilter)
+      ) {
+        return {
+          id: endevorSearchLocation.id,
+          duplicated,
+          status: EndevorSearchLocationStatus.VALID,
+          path: toSearchPath(endevorSearchLocation.value) + '',
+          searchForFirstFoundElements: firstFoundSearchFilter.value,
+        };
+      }
+    }
     return {
       id: endevorSearchLocation.id,
       duplicated,
       status: EndevorSearchLocationStatus.VALID,
       path: toSearchPath(endevorSearchLocation.value) + '',
+      searchForFirstFoundElements: DEFAULT_TREE_IN_PLACE_SEARCH_MODE,
     };
   };
 
@@ -1697,37 +2252,73 @@ export const getAllSearchLocationDescriptions = (
   state: () => State
 ): EndevorSearchLocationDescriptions => {
   return Object.values(state().serviceLocations)
-    .flatMap((value) => Object.entries(value.value))
-    .reduce(
-      (
-        acc: EndevorSearchLocationDescriptions,
-        [searchLocationKey, searchLocationValue]
-      ) => {
-        const searchLocation = state().searchLocations[searchLocationKey];
-        acc[searchLocationKey] = searchLocation
-          ? toValidLocationDescription(state)(searchLocation)
-          : toInvalidLocationDescription(state)(searchLocationValue.id);
-        return acc;
-      },
-      {}
-    );
+    .flatMap((serviceLocation) =>
+      Object.entries(serviceLocation.value).map(
+        ([locationKey, locationValue]) => {
+          return {
+            serviceId: serviceLocation.id,
+            location: {
+              key: locationKey,
+              searchLocationId: locationValue.id,
+            },
+          };
+        }
+      )
+    )
+    .reduce((acc: EndevorSearchLocationDescriptions, serviceLocationItem) => {
+      const searchLocationValue =
+        state().searchLocations[serviceLocationItem.location.key];
+      acc[serviceLocationItem.location.key] = searchLocationValue
+        ? toValidLocationDescription(state)(searchLocationValue)(
+            state().filters[
+              toServiceLocationCompositeKey(serviceLocationItem.serviceId)(
+                searchLocationValue.id
+              )
+            ]
+          )
+        : toInvalidLocationDescription(state)(
+            serviceLocationItem.location.searchLocationId
+          );
+      return acc;
+    }, {});
 };
 
 export const getAllValidSearchLocationDescriptions = (
   state: () => State
 ): ValidEndevorSearchLocationDescriptions => {
-  return Object.entries(state().searchLocations).reduce(
-    (
-      acc: ValidEndevorSearchLocationDescriptions,
-      [searchLocationKey, searchLocation]
-    ) => {
-      if (!isDefined(searchLocation)) return acc;
-      acc[searchLocationKey] =
-        toValidLocationDescription(state)(searchLocation);
-      return acc;
-    },
-    {}
-  );
+  return Object.values(state().serviceLocations)
+    .flatMap((serviceLocation) =>
+      Object.entries(serviceLocation.value).map(
+        ([locationKey, locationValue]) => {
+          return {
+            serviceId: serviceLocation.id,
+            location: {
+              key: locationKey,
+              searchLocationId: locationValue.id,
+            },
+          };
+        }
+      )
+    )
+    .reduce(
+      (acc: ValidEndevorSearchLocationDescriptions, serviceLocationItem) => {
+        const searchLocationValue =
+          state().searchLocations[serviceLocationItem.location.key];
+        if (searchLocationValue) {
+          acc[serviceLocationItem.location.key] = toValidLocationDescription(
+            state
+          )(searchLocationValue)(
+            state().filters[
+              toServiceLocationCompositeKey(serviceLocationItem.serviceId)(
+                searchLocationValue.id
+              )
+            ]
+          );
+        }
+        return acc;
+      },
+      {}
+    );
 };
 
 export const getValidUnusedSearchLocationDescriptionsForService =
@@ -1746,47 +2337,240 @@ export const getValidUnusedSearchLocationDescriptionsForService =
           [searchLocationKey, searchLocation]
         ) => {
           if (!isDefined(searchLocation)) return acc;
-          acc[searchLocationKey] =
-            toValidLocationDescription(state)(searchLocation);
+          acc[searchLocationKey] = toValidLocationDescription(state)(
+            searchLocation
+          )(
+            state().filters[
+              toServiceLocationCompositeKey(serviceId)(searchLocation.id)
+            ]
+          );
           return acc;
         },
         {}
       );
   };
 
-export const getElements =
+export const getAllElements =
   (state: () => State) =>
   (serviceId: EndevorId) =>
-  (searchLocationId: EndevorId): ReadonlyArray<CachedElement> | undefined => {
+  (
+    searchLocationId: EndevorId
+  ):
+    | Readonly<{
+        cacheVersion: EndevorCacheVersion;
+        elements: ReadonlyArray<CachedElement>;
+      }>
+    | undefined => {
     const cache =
       state().caches[
         toServiceLocationCompositeKey(serviceId)(searchLocationId)
       ];
-    if (!cache || !cache.elements) {
+    if (!cache) {
       return undefined;
     }
-    return Object.values(cache.elements);
+    type ElementsCacheAccum = {
+      cacheVersion: EndevorCacheVersion;
+      elements: Array<CachedElement>;
+    };
+    const initialVersion = EndevorCacheVersion.UP_TO_DATE;
+    return Object.values(cache.mapItemsContent).reduce(
+      (acc: ElementsCacheAccum, elementsInMapPart) => {
+        if (!elementsInMapPart) {
+          return acc;
+        }
+        if (elementsInMapPart.cacheVersion !== initialVersion) {
+          acc.cacheVersion = elementsInMapPart.cacheVersion;
+        }
+        acc.elements.push(...Object.values(elementsInMapPart.elements));
+        return acc;
+      },
+      {
+        elements: [],
+        cacheVersion: initialVersion,
+      }
+    );
+  };
+
+const filterCachedElements =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (searchLocationId: EndevorId) =>
+  (
+    cachedElements: ReadonlyArray<CachedElement>
+  ): ReadonlyArray<CachedElement> => {
+    const elementNamesFilter =
+      getElementNamesFilterValue(state)(serviceId)(searchLocationId);
+    const elementCcidsFilter =
+      getElementCcidsFilterValue(state)(serviceId)(searchLocationId);
+    let filteredElements: ReadonlyArray<CachedElement> = cachedElements;
+    if (elementNamesFilter) {
+      filteredElements =
+        getAllFilteredElements(filteredElements)(elementNamesFilter);
+    }
+    if (elementCcidsFilter) {
+      filteredElements =
+        getAllFilteredElements(filteredElements)(elementCcidsFilter);
+    }
+    return filteredElements;
+  };
+
+export const getElementsInPlace =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (
+    searchLocationId: EndevorId
+  ):
+    | Readonly<{
+        cacheVersion: EndevorCacheVersion;
+        elementsPerRoute: ElementsPerRoute;
+      }>
+    | undefined => {
+    const cache =
+      state().caches[
+        toServiceLocationCompositeKey(serviceId)(searchLocationId)
+      ];
+    if (!cache) {
+      return;
+    }
+    type RoutesAccum = {
+      [routeId: SubsystemMapPathId]: ReadonlyArray<CachedElement>;
+    };
+    const initialCacheVersion = EndevorCacheVersion.UP_TO_DATE;
+    let overallCacheVersion: EndevorCacheVersion | undefined;
+    const elementsPerRoute = Object.keys(cache.endevorMap.value).reduce(
+      (acc: RoutesAccum, inPlaceLocation) => {
+        const elements = cache.mapItemsContent[inPlaceLocation];
+        if (!elements) {
+          acc[inPlaceLocation] = [];
+          return acc;
+        }
+        if (!overallCacheVersion) {
+          overallCacheVersion = initialCacheVersion;
+        }
+        if (elements.cacheVersion !== initialCacheVersion) {
+          overallCacheVersion = elements.cacheVersion;
+        }
+        acc[inPlaceLocation] = filterCachedElements(state)(serviceId)(
+          searchLocationId
+        )(Object.values(elements.elements));
+        return acc;
+      },
+      {}
+    );
+    const mapVersion = cache.endevorMap.cacheVersion;
+    if (overallCacheVersion) {
+      if (mapVersion !== initialCacheVersion) {
+        overallCacheVersion = mapVersion;
+      }
+      return {
+        cacheVersion: overallCacheVersion,
+        elementsPerRoute,
+      };
+    }
+    if (mapVersion && !overallCacheVersion) {
+      return {
+        cacheVersion: mapVersion,
+        elementsPerRoute,
+      };
+    }
+    return;
+  };
+
+export const getFirstFoundElements =
+  (state: () => State) =>
+  (serviceId: EndevorId) =>
+  (
+    searchLocationId: EndevorId
+  ):
+    | Readonly<{
+        cacheVersion: EndevorCacheVersion;
+        elementsPerRoute: ElementsPerRoute;
+      }>
+    | undefined => {
+    const cache =
+      state().caches[
+        toServiceLocationCompositeKey(serviceId)(searchLocationId)
+      ];
+    if (!cache) {
+      return;
+    }
+    type ElementsAccum = {
+      [elementName: string]: CachedElement;
+    };
+    type RoutesAccum = {
+      [routeId: SubsystemMapPathId]: ElementsAccum;
+    };
+    const initialCacheVersion = EndevorCacheVersion.UP_TO_DATE;
+    let overallCacheVersion: EndevorCacheVersion | undefined;
+    const elementsPerRoute = Object.entries(
+      Object.entries(cache.endevorMap.value).reduce(
+        (acc: RoutesAccum, [inPlaceLocation, routeItems]) => {
+          const reversedRoute = [...[...routeItems].reverse(), inPlaceLocation];
+          reversedRoute.forEach((location) => {
+            const locationData = cache.mapItemsContent[location];
+            if (!locationData) return acc;
+            if (!overallCacheVersion) {
+              overallCacheVersion = initialCacheVersion;
+            }
+            if (locationData.cacheVersion !== initialCacheVersion) {
+              overallCacheVersion = locationData.cacheVersion;
+            }
+            const elementsInLocation = Object.values(locationData.elements);
+            const elementsInRoute = acc[inPlaceLocation] ?? {};
+            elementsInLocation.forEach((element) => {
+              elementsInRoute[element.element.name] = element;
+            });
+            acc[inPlaceLocation] = elementsInRoute;
+            return;
+          });
+          const noElementsInRoute = !acc[inPlaceLocation];
+          if (noElementsInRoute) {
+            acc[inPlaceLocation] = {};
+          }
+          return acc;
+        },
+        {}
+      )
+    ).reduce(
+      (
+        acc: {
+          [searchLocation: SubsystemMapPathId]: ReadonlyArray<CachedElement>;
+        },
+        [routeId, elementsAccum]
+      ) => {
+        acc[routeId] = filterCachedElements(state)(serviceId)(searchLocationId)(
+          Object.values(elementsAccum)
+        );
+        return acc;
+      },
+      {}
+    );
+    const mapVersion = cache.endevorMap.cacheVersion;
+    if (overallCacheVersion) {
+      if (mapVersion !== initialCacheVersion) {
+        overallCacheVersion = mapVersion;
+      }
+      return {
+        cacheVersion: overallCacheVersion,
+        elementsPerRoute,
+      };
+    }
+    if (mapVersion && !overallCacheVersion) {
+      return {
+        cacheVersion: mapVersion,
+        elementsPerRoute,
+      };
+    }
+    return;
   };
 
 export const getEndevorMap =
   (state: () => State) =>
   (serviceId: EndevorId) =>
-  (searchLocationId: EndevorId): EndevorMap | undefined => {
+  (searchLocationId: EndevorId): CachedEndevorMap | undefined => {
     const cache =
       state().caches[
         toServiceLocationCompositeKey(serviceId)(searchLocationId)
       ];
-    if (cache && cache.endevorMap) {
-      return cache.endevorMap;
-    }
-    return;
-  };
-
-export const getEndevorCache =
-  (state: () => State) =>
-  (serviceId: EndevorId) =>
-  (searchLocationId: EndevorId): EndevorCacheItem | undefined => {
-    return state().caches[
-      toServiceLocationCompositeKey(serviceId)(searchLocationId)
-    ];
+    return cache?.endevorMap;
   };

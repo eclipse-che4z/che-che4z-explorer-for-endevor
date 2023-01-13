@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without element name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/elmName: string"`;
+
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without environment name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/envName: string"`;
+
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without stage number 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/stgNum: StageNumber"`;
+
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without subsystem name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sbsName: string"`;
+
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without system name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sysName: string"`;
+
+exports[`external Endevor data type parsing component type parsing should throw an error for a component without type name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/typeName: string"`;
+
 exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration with incorrect description 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/description: string"`;
 
 exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration with incorrect name 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/name: string"`;
@@ -7,3 +19,72 @@ exports[`external Endevor data type parsing configuration type parsing should th
 exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration without description 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/description: string"`;
 
 exports[`external Endevor data type parsing configuration type parsing should throw an error for a configuration without name 1`] = `"Invalid value undefined supplied to : { name: string, description: string }/name: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without element name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/elmName: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without environment name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/envName: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without full element name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/1: { fullElmName: string, lastActCcid: string }/fullElmName: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without last action CCID 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/1: { fullElmName: string, lastActCcid: string }/lastActCcid: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without stage number 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/stgNum: StageNumber"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without subsystem name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sbsName: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without system name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/sysName: string"`;
+
+exports[`external Endevor data type parsing element type parsing should throw an error for an element without type name 1`] = `"Invalid value undefined supplied to : ({ envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string } & { fullElmName: string, lastActCcid: string } & Partial<{ fileExt: (string | null) }>)/0: { envName: string, stgNum: StageNumber, sysName: string, sbsName: string, typeName: string, elmName: string }/typeName: string"`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage with the incorrect next stage number 1`] = `
+"Invalid value \\"T\\" supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextStgNum: (StageNumber | null)/0: StageNumber
+Invalid value \\"T\\" supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextStgNum: (StageNumber | null)/1: null"
+`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage without the envinronment name 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/envName: string"`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage without the next environment 1`] = `
+"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextEnv: (string | null)/0: string
+Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextEnv: (string | null)/1: null"
+`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage without the next stage number 1`] = `
+"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextStgNum: (StageNumber | null)/0: StageNumber
+Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/nextStgNum: (StageNumber | null)/1: null"
+`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage without the stage id 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/stgId: string"`;
+
+exports[`external Endevor data type parsing environment stage type parsing should throw an error for a environment stage without the stage number 1`] = `"Invalid value undefined supplied to : { envName: string, stgNum: StageNumber, stgId: string, nextEnv: (string | null), nextStgNum: (StageNumber | null) }/stgNum: StageNumber"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem with an incorrect stage id 1`] = `"Invalid value 3 supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/stgId: string"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem without a next subsystem name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/nextSbs: string"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem without a stage id 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/stgId: string"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem without a subsystem name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/sbsName: string"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem without a system name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/sysName: string"`;
+
+exports[`external Endevor data type parsing subsystem type parsing should throw an error for a subsystem without an environment name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, sbsName: string, nextSbs: string }/envName: string"`;
+
+exports[`external Endevor data type parsing system type parsing should throw an error for a system without a next system name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextSys: string }/nextSys: string"`;
+
+exports[`external Endevor data type parsing system type parsing should throw an error for a system without a stage id 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextSys: string }/stgId: string"`;
+
+exports[`external Endevor data type parsing system type parsing should throw an error for a system without a system name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextSys: string }/sysName: string"`;
+
+exports[`external Endevor data type parsing system type parsing should throw an error for a system without an environment name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextSys: string }/envName: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a element type with an incorrect stage id 1`] = `"Invalid value 3 supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/stgId: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a element type without a stage id 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/stgId: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a element type without a system name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/sysName: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a element type without a type name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/typeName: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a element type without an environment name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/envName: string"`;
+
+exports[`external Endevor data type parsing type type parsing should throw an error for a subsystem without a next type name 1`] = `"Invalid value undefined supplied to : { envName: string, stgId: string, sysName: string, nextType: string, typeName: string }/nextType: string"`;

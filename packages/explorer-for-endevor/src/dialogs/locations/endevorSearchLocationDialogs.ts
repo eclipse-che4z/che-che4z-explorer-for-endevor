@@ -18,6 +18,7 @@ import {
   showVscodeQuickPick,
   createVscodeQuickPick,
   showModalWithOptions,
+  showMessageWithOptions,
 } from '@local/vscode-wrapper/window';
 import {
   ElementSearchLocation,
@@ -25,18 +26,31 @@ import {
   StageNumber,
 } from '@local/endevor/_doc/Endevor';
 import { ANY_VALUE } from '@local/endevor/const';
-import { isDefined, isError } from '../../utils';
 import {
+  isDefined,
+  isError,
+  isTimeoutError,
+  toPromiseWithTimeout,
+} from '../../utils';
+import {
+  CachedElement,
+  ElementFilterType,
   EndevorId,
   ValidEndevorSearchLocationDescription,
   ValidEndevorSearchLocationDescriptions,
 } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ZOWE_PROFILE_DESCRIPTION } from '../../constants';
+import {
+  FILTER_VALUE_DEFAULT,
+  FILTER_DELIMITER,
+  NOTIFICATION_TIMEOUT,
+  ZOWE_PROFILE_DESCRIPTION,
+} from '../../constants';
 import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
 import { ConnectionError } from '@local/endevor/_doc/Error';
 import { isConnectionError } from '@local/endevor/utils';
+import { getFirstFoundFilteredElement } from '../../store/utils';
 
 const enum DialogResultTypes {
   CREATED = 'CREATED',
@@ -570,4 +584,194 @@ export const askToDeleteSearchLocationForAllServices = async (
     };
   }
   return undefined;
+};
+
+export const askForSearchLocationFilterByElementName =
+  (searchLocationName: string, value?: string) =>
+  async (
+    elements?: ReadonlyArray<CachedElement>
+  ): Promise<string | undefined> => {
+    let filterValue = await askForElementNameFilter(
+      searchLocationName,
+      value ? value : FILTER_VALUE_DEFAULT
+    );
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (operationCancelled(filterValue)) {
+        logger.trace('Operation cancelled.');
+        return;
+      }
+      if (filterValue === '') filterValue = FILTER_VALUE_DEFAULT;
+      if (!elements) return filterValue;
+      const filteredElement = getFirstFoundFilteredElement(elements)({
+        type: ElementFilterType.ELEMENT_NAMES_FILTER,
+        value: filterValue.split(FILTER_DELIMITER),
+      });
+      if (filteredElement) return filterValue;
+      logger.warn('No Element names match the specified filter.');
+      const tryAgain = await askForTryAgainOrContinue();
+      if (tryAgain) {
+        filterValue = await askForElementNameFilter(
+          searchLocationName,
+          filterValue
+        );
+        continue;
+      }
+      return filterValue;
+    }
+  };
+
+export const askForElementNameFilter = async (
+  searchLocationName: string,
+  value?: string
+): Promise<string | undefined> => {
+  logger.trace(
+    `Prompt for filter by Element name pattern(s) for the inventory location ${searchLocationName}.`
+  );
+  return showInputBox({
+    title: `Edit Element name filter for ${searchLocationName}`,
+    prompt:
+      'Enter a list of Element name pattern(s) to filter by. Use a comma to separate multiple values.',
+    placeHolder: 'Pattern(s) with or without %, *: PATTERN1,PAT%ERN2,PAT*',
+    value,
+    validateInput: (value) => {
+      const filters = buildFilter(value.split(FILTER_DELIMITER));
+      if (isError(filters)) {
+        const validationError = filters;
+        return validationError.message;
+      }
+      return undefined;
+    },
+  });
+};
+
+export const askForSearchLocationFilterByElementCcid =
+  (searchLocationName: string, value?: string) =>
+  async (elements?: ReadonlyArray<CachedElement>) => {
+    let filterValue = await askForElementLastActionCcidFilter(
+      searchLocationName,
+      value ? value : FILTER_VALUE_DEFAULT
+    );
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (operationCancelled(filterValue)) {
+        logger.trace('Operation cancelled.');
+        return;
+      }
+      if (filterValue === '') filterValue = FILTER_VALUE_DEFAULT;
+      if (!elements) return filterValue;
+      const filteredElements = getFirstFoundFilteredElement(elements)({
+        type: ElementFilterType.ELEMENT_CCIDS_FILTER,
+        value: filterValue.split(FILTER_DELIMITER),
+      });
+      if (filteredElements) return filterValue;
+      logger.warn('No Element last action CCID match the specified filter.');
+      const tryAgain = await askForTryAgainOrContinue();
+      if (tryAgain) {
+        filterValue = await askForElementLastActionCcidFilter(
+          searchLocationName,
+          filterValue
+        );
+        continue;
+      }
+      return filterValue;
+    }
+  };
+
+export const askForElementLastActionCcidFilter = async (
+  searchLocationName: string,
+  value?: string
+): Promise<string | undefined> => {
+  logger.trace(
+    `Prompt for filter by Element last action CCID pattern(s) for the inventory location ${searchLocationName}.`
+  );
+  return showInputBox({
+    title: `Edit Element last action CCID filter for ${searchLocationName}`,
+    prompt:
+      'Enter a list of Element last action CCID pattern(s) to filter by. Use a comma to separate multiple values.',
+    placeHolder:
+      'Pattern(s) with or without wildcards %, *: PATTERN1,PAT%ERN2,PAT*',
+    value,
+    validateInput: (value) => {
+      const filters = buildFilter(value.split(FILTER_DELIMITER));
+      if (isError(filters)) {
+        const validationError = filters;
+        return validationError.message;
+      }
+      return undefined;
+    },
+  });
+};
+
+export const askForTryAgainOrContinue = async (): Promise<boolean> => {
+  logger.trace('Prompt user to try again or continue.');
+  const tryAgainOption = 'Try again';
+  const continueOption = 'Continue';
+  const dialogResult = await toPromiseWithTimeout(NOTIFICATION_TIMEOUT)(
+    showMessageWithOptions({
+      message:
+        'Would you want to correct the filter pattern(s) or to continue with the provided value?',
+      options: [tryAgainOption, continueOption],
+    })
+  );
+  if (isTimeoutError(dialogResult)) {
+    logger.trace('Nothing was selected, try again.');
+    return true;
+  }
+  if (dialogResult === tryAgainOption) {
+    logger.trace('Try again was selected.');
+    return true;
+  }
+  if (dialogResult === continueOption) {
+    logger.trace('Continue with current filter was selected.');
+    return false;
+  }
+  logger.trace('Dialog was closed, try again.');
+  return true;
+};
+
+const buildFilter = (filters: string[]): void | Error => {
+  for (let index = 0; index < filters.length; index++) {
+    const filter = filters[index];
+    if (filter !== undefined) {
+      const validatedFilter = validateFilterValue(
+        index,
+        filter,
+        filters.length
+      );
+      if (isError(validatedFilter)) {
+        const error = validatedFilter;
+        return error;
+      }
+    }
+  }
+};
+
+const validateFilterValue = (
+  index: number,
+  value: string,
+  numberOfFilters: number
+): void | Error => {
+  const validationPattern = '^[^/<>|:&?]{0,255}$';
+  const maxLength = 256;
+  const actualPatternNumber = index + 1;
+  if ((value.length > 0 || numberOfFilters > 1) && value.trim() === '') {
+    return new Error(
+      `Pattern number ${actualPatternNumber} cannot be empty or contain only whitespace(s).`
+    );
+  }
+  if (value.endsWith(' ') || value.startsWith(' ')) {
+    return new Error(
+      `Pattern ${value} cannot start or end with whitespace(s).`
+    );
+  }
+  if (value.length > maxLength) {
+    return new Error(
+      `Pattern number ${actualPatternNumber} cannot be longer than 255 symbols.`
+    );
+  }
+  if (!value.match(validationPattern)) {
+    return new Error(`Pattern ${value} cannot contain forbidden symbols.`);
+  }
+  return;
 };

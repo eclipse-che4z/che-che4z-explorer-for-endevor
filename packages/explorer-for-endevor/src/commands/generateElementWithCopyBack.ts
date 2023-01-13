@@ -96,6 +96,7 @@ const generateSingleElementWithCopyBack =
     const copiedBackElement: Element = {
       ...targetLocation,
       extension: element.extension,
+      lastActionCcid: actionChangeControlValue.ccid.toUpperCase(),
     };
     const treePath: SubSystemMapPath = {
       environment: targetLocation.environment,
@@ -142,12 +143,16 @@ const generateSingleElementWithCopyBack =
       if (isElementInSearchLocation(copiedBackElement)(treePath)) {
         await dispatch({
           type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-          targetLocation,
           pathUpTheMap: element,
           treePath: {
             serviceId,
             searchLocationId,
             searchLocation: treePath,
+          },
+          targetElement: {
+            ...targetLocation,
+            extension: element.extension,
+            lastActionCcid: actionChangeControlValue.ccid.toUpperCase(),
           },
         });
         await printListingCommand(generatedElementNode);
@@ -190,12 +195,16 @@ const generateSingleElementWithCopyBack =
     if (isElementInSearchLocation(copiedBackElement)(treePath)) {
       await dispatch({
         type: Actions.ELEMENT_GENERATED_WITH_COPY_BACK,
-        targetLocation,
         pathUpTheMap: element,
         treePath: {
           serviceId,
           searchLocationId,
           searchLocation: treePath,
+        },
+        targetElement: {
+          ...targetLocation,
+          extension: element.extension,
+          lastActionCcid: actionChangeControlValue.ccid.toUpperCase(),
         },
       });
       reporter.sendTelemetryEvent({

@@ -239,6 +239,7 @@ export const addElementFromFileSystem = async (
       subSystem: addLocation.subSystem,
       type: addLocation.type,
       name: addLocation.name,
+      lastActionCcid: actionControlValue.ccid.toUpperCase(),
     },
   });
   reporter.sendTelemetryEvent({

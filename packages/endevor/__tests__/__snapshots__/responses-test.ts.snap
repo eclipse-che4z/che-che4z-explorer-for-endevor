@@ -158,15 +158,22 @@ Object {
     "data": Array [
       "very important content",
     ],
+    "messages": Array [],
     "returnCode": 0,
     "statusCode": 200,
   },
 }
 `;
 
-exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response with incorrect data 1`] = `"Invalid value {\\"firstParagraph\\":\\"blah\\",\\"secondParagraph\\":\\"blahblah\\"} supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string> }/data: Array<string>/0: string"`;
+exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response with incorrect data 1`] = `
+"Invalid value {\\"firstParagraph\\":\\"blah\\",\\"secondParagraph\\":\\"blahblah\\"} supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> }/data: Array<string>/0: string
+Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> }/messages: Array<string>"
+`;
 
-exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response without data 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string> }/data: Array<string>"`;
+exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response without data 1`] = `
+"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> }/data: Array<string>
+Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, data: Array<string>, messages: Array<string> }/messages: Array<string>"
+`;
 
 exports[`Endevor responses type parsing Endevor retrieve element response type parsing should parse a proper response 1`] = `
 Object {

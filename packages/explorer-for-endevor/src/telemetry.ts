@@ -122,7 +122,19 @@ const getTelemetryEventProperties = (
     case V2TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED:
     case V2TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED:
     case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED:
-    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED: {
+    case V2TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT:
+    case V2TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT:
+    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED:
+    case V2TelemetryEvents.COMMAND_TOGGLE_MAP:
+    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED:
+    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED:
+    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL: {
       return {
         ...Object.entries(event)
           .map(([key, value]) => {
@@ -145,7 +157,6 @@ const getTelemetryEventProperties = (
       };
     }
     case V1TelemetryEvents.ELEMENTS_WERE_FETCHED:
-    case V1TelemetryEvents.ELEMENTS_PROVIDED:
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED:
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
     case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED:
@@ -205,19 +216,23 @@ const getTelemetryEventProperties = (
 // TODO: add errors type check for more reliability
 export const getRedactedError = (error: Error): Error => {
   let redactedError: Error | undefined = undefined;
-  [redactEndevorErrorMessage, redactPathErrorMessage].forEach(
-    (redactErrorMessage) => {
-      const redactedMessage = redactErrorMessage(
-        redactedError ? redactedError : error
-      );
-      if (redactedMessage) {
-        if (!redactedError) {
-          redactedError = deepCopyError(error);
-        }
-        redactedError.message = redactedMessage;
+  [
+    redactEndevorErrorMessage,
+    redactPathErrorMessage,
+    redactIPErrorMessage,
+    redactHostErrorMessage,
+    redactTypeParsingErrorMessage,
+  ].forEach((redactErrorMessage) => {
+    const redactedMessage = redactErrorMessage(
+      redactedError ? redactedError : error
+    );
+    if (redactedMessage) {
+      if (!redactedError) {
+        redactedError = deepCopyError(error);
       }
+      redactedError.message = redactedMessage;
     }
-  );
+  });
   return redactedError ? redactedError : error;
 };
 
@@ -243,5 +258,33 @@ const redactPathErrorMessage = (error: Error): string | undefined => {
     /(file:\/\/)?([a-zA-Z]:(\\\\|\\|\/)|(\\\\|\\|\/))?([\w-._]+(\\\\|\\|\/))+[\w-._]*(\?\S*)?/g;
   return fileRegex.test(error.message)
     ? error.message.replace(fileRegex, '<REDACTED: user-path>')
+    : undefined;
+};
+
+// replace user IP in error messages if any
+const redactIPErrorMessage = (error: Error): string | undefined => {
+  // this regular expression is a modified version taken from:
+  // https://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses
+  const ipv4AndPortRegex =
+    /((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]):\d{1,5}\b/g;
+  return ipv4AndPortRegex.test(error.message)
+    ? error.message.replace(ipv4AndPortRegex, '<REDACTED: user-ip>')
+    : undefined;
+};
+
+// replace user host in error messages if any
+const redactHostErrorMessage = (error: Error): string | undefined => {
+  // this regular expression is a modified version taken from:
+  // https://stackoverflow.com/questions/106179/regular-expression-to-match-dns-hostname-or-ip-address
+  const hostRegex = /\w+(?:\.\w+){2,}/g;
+  return hostRegex.test(error.message)
+    ? error.message.replace(hostRegex, '<REDACTED: user-host>')
+    : undefined;
+};
+
+const redactTypeParsingErrorMessage = (error: Error): string | undefined => {
+  const hostRegex = /Invalid value .* supplied to/g;
+  return hostRegex.test(error.message)
+    ? error.message.replace(hostRegex, '<REDACTED: user-response>')
     : undefined;
 };

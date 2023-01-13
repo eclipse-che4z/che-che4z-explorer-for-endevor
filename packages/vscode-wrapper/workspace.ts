@@ -158,6 +158,13 @@ export const getFileContent = async (
   return await vscode.workspace.fs.readFile(fileUri);
 };
 
+export const writeFileContent = async (
+  fileUri: vscode.Uri,
+  content: Uint8Array
+): Promise<void> => {
+  return await vscode.workspace.fs.writeFile(fileUri, content);
+};
+
 export interface FileSystemWatcherContract {
   (track: TrackOptions.TRACK_CHANGED): {
     onDidChange: FileSystemWatcher['onDidChange'];
