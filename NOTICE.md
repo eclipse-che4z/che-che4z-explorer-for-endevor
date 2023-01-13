@@ -62,16 +62,6 @@ This project leverages the following third party content.
 - License: MIT
 - Project: https://www.npmjs.com/package/@vscode/extension-telemetry
 
-@zowe/cli (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/cli
-
-@zowe/core-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/core-for-zowe-sdk
-
 @zowe/imperative (5.3.3)
 
 - License: EPL-2.0
@@ -81,51 +71,6 @@ This project leverages the following third party content.
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/perf-timing
-
-@zowe/provisioning-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/provisioning-for-zowe-sdk
-
-@zowe/zos-console-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-console-for-zowe-sdk
-
-@zowe/zos-files-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-files-for-zowe-sdk
-
-@zowe/zos-jobs-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-jobs-for-zowe-sdk
-
-@zowe/zos-tso-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-tso-for-zowe-sdk
-
-@zowe/zos-uss-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-uss-for-zowe-sdk
-
-@zowe/zos-workflows-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zos-workflows-for-zowe-sdk
-
-@zowe/zosmf-for-zowe-sdk (7.2.3)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zosmf-for-zowe-sdk
-
-@zowe/zowe-explorer-api (2.2.1)
-
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/zowe-explorer-api
 
 ansi-regex (5.0.1)
 
@@ -142,11 +87,6 @@ array-timsort (1.0.3)
 - License: MIT
 - Project: https://www.npmjs.com/package/array-timsort
 
-asn1 (0.2.6)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/asn1
-
 asynckit (0.4.0)
 
 - License: MIT
@@ -156,11 +96,6 @@ balanced-match (1.0.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/balanced-match
-
-bcrypt-pbkdf (1.0.2)
-
-- License: BSD-3-Clause
-- Project: https://www.npmjs.com/package/bcrypt-pbkdf
 
 brace-expansion (1.1.11)
 
@@ -342,7 +277,7 @@ glob (7.2.0)
 - License: ISC
 - Project: https://www.npmjs.com/package/glob
 
-glob-parent (5.1.2)
+glob-parent (6.0.2)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/glob-parent
@@ -627,12 +562,7 @@ run-parallel (1.2.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/run-parallel
 
-safer-buffer (2.1.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/safer-buffer
-
-semver (7.3.5)
+semver (7.3.8)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/semver
@@ -641,11 +571,6 @@ set-blocking (2.0.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/set-blocking
-
-ssh2 (1.4.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/ssh2
 
 stack-trace (0.0.10)
 
@@ -676,11 +601,6 @@ to-regex-range (5.0.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/to-regex-range
-
-tweetnacl (0.14.5)
-
-- License: Unlicense
-- Project: https://www.npmjs.com/package/tweetnacl
 
 uc.micro (1.0.6)
 
