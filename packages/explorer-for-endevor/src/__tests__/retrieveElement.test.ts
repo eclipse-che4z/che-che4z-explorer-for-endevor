@@ -136,6 +136,7 @@ describe('retrieve element', () => {
       type: 'TYP',
       name: 'ELM',
       extension: 'ext',
+      lastActionCcid: 'LAST-CCID',
     };
     const searchLocation: ElementSearchLocation = {
       configuration: 'ANY-CONFIG',
@@ -307,6 +308,7 @@ describe('retrieve element', () => {
       type: 'TYP',
       name: 'ELM',
       extension: 'ext',
+      lastActionCcid: 'LAST-CCID',
     };
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {
@@ -517,6 +519,7 @@ describe('retrieve element', () => {
       type: 'TYP',
       name: 'ELM',
       extension: 'ext',
+      lastActionCcid: 'LAST-CCID',
     };
     const searchLocationName = 'searchLocationName';
     const searchLocation: ElementSearchLocation = {

@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`parseToType profiles common profile cases should report for wrong typed profile 1`] = `"Invalid value 42 supplied to : Partial<{ host: string, port: number, user: string, password: string, tokenValue: string, tokenType: TokenType }>/host: string"`;

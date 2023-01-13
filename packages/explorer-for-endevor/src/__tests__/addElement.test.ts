@@ -181,6 +181,7 @@ describe('adding new element', () => {
       stageNumber: addLocation.stageNumber,
       type: addLocation.type,
       name: addLocation.name,
+      lastActionCcid: addChangeControlValue.ccid.toUpperCase(),
     };
     const expectedAddedElementAction = {
       type: Actions.ELEMENT_ADDED,

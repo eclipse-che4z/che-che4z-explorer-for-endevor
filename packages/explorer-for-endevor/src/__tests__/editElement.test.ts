@@ -116,6 +116,7 @@ describe('starting edit session for element', () => {
     type: 'TYP',
     name: 'ELM',
     extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
   };
   const searchLocationName = 'searchLocationName';
   const searchLocation: ElementSearchLocation = {
@@ -199,21 +200,21 @@ describe('starting edit session for element', () => {
     const parent: TypeNode = {
       type: 'TYPE',
       name: element.type,
-      elements: new Map(),
+      elements: [],
       parent: {
         type: 'SUB',
         name: element.subSystem,
         parent: {
           type: 'SYS',
           name: element.system,
-          children: new Map(),
+          children: [],
         },
-        children: new Map(),
+        children: [],
       },
       map: {
         type: 'MAP',
         name: 'MAP',
-        elements: new Map(),
+        elements: [],
       },
     };
     try {
@@ -367,21 +368,21 @@ describe('starting edit session for element', () => {
     const parent: TypeNode = {
       type: 'TYPE',
       name: element.type,
-      elements: new Map(),
+      elements: [],
       parent: {
         type: 'SUB',
         name: element.subSystem,
         parent: {
           type: 'SYS',
           name: element.system,
-          children: new Map(),
+          children: [],
         },
-        children: new Map(),
+        children: [],
       },
       map: {
         type: 'MAP',
         name: 'MAP',
-        elements: new Map(),
+        elements: [],
       },
     };
     try {
@@ -567,21 +568,21 @@ describe('starting edit session for element', () => {
     const parent: TypeNode = {
       type: 'TYPE',
       name: element.type,
-      elements: new Map(),
+      elements: [],
       parent: {
         type: 'SUB',
         name: element.subSystem,
         parent: {
           type: 'SYS',
           name: element.system,
-          children: new Map(),
+          children: [],
         },
-        children: new Map(),
+        children: [],
       },
       map: {
         type: 'MAP',
         name: 'MAP',
-        elements: new Map(),
+        elements: [],
       },
     };
     try {
@@ -763,21 +764,21 @@ describe('starting edit session for element', () => {
     const parent: TypeNode = {
       type: 'TYPE',
       name: element.type,
-      elements: new Map(),
+      elements: [],
       parent: {
         type: 'SUB',
         name: element.subSystem,
         parent: {
           type: 'SYS',
           name: element.system,
-          children: new Map(),
+          children: [],
         },
-        children: new Map(),
+        children: [],
       },
       map: {
         type: 'MAP',
         name: 'MAP',
-        elements: new Map(),
+        elements: [],
       },
     };
     try {

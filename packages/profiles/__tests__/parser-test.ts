@@ -35,10 +35,9 @@ describe('parseToType profiles', () => {
         host: 42,
       };
       // act && assert
-      expect(() => parseToType(BaseProfile, wrongTypedProfile)).toThrow(
-        'Invalid value 42 supplied to : ' +
-          'Partial<{ host: string, port: number, user: string, password: string, tokenValue: string, tokenType: Token }>/host: string'
-      );
+      expect(() =>
+        parseToType(BaseProfile, wrongTypedProfile)
+      ).toThrowErrorMatchingSnapshot();
     });
   });
   describe('parseToType base profile', () => {

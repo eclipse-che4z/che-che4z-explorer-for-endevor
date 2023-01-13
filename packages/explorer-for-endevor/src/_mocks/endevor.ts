@@ -34,25 +34,30 @@ import {
 export type PrintingElementStub = [
   sinon.SinonStub<
     [progress: ProgressReporter],
-    (service: Service) => (element: Element) => Promise<ElementContent | Error>
+    (
+      service: Service
+    ) => (element: ElementMapPath) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Service],
-    (element: Element) => Promise<ElementContent | Error>
+    (element: ElementMapPath) => Promise<ElementContent | Error>
   >,
-  sinon.SinonStub<[Element], Promise<ElementContent | Error>>
+  sinon.SinonStub<[ElementMapPath], Promise<ElementContent | Error>>
 ];
 
 export const mockPrintingElementWith =
-  (serviceArg: Service, elementArg: Element) =>
+  (serviceArg: Service, elementArg: ElementMapPath) =>
   (mockResult: ElementContent | Error): PrintingElementStub => {
     const anyProgressReporter = sinon.match.any;
     const withContentStub = sinon
-      .stub<[element: Element], Promise<ElementContent | Error>>()
+      .stub<[element: ElementMapPath], Promise<ElementContent | Error>>()
       .withArgs(elementArg)
       .returns(Promise.resolve(mockResult));
     const withServiceStub = sinon
-      .stub<[Service], (element: Element) => Promise<ElementContent | Error>>()
+      .stub<
+        [Service],
+        (element: ElementMapPath) => Promise<ElementContent | Error>
+      >()
       .withArgs(serviceArg)
       .returns(withContentStub);
     const generalFunctionStub = sinon
@@ -239,25 +244,30 @@ export const mockAddingElement =
 export type RetrieveElementStub = [
   sinon.SinonStub<
     [progress: ProgressReporter],
-    (service: Service) => (element: Element) => Promise<ElementContent | Error>
+    (
+      service: Service
+    ) => (element: ElementMapPath) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Service],
-    (element: Element) => Promise<ElementContent | Error>
+    (element: ElementMapPath) => Promise<ElementContent | Error>
   >,
-  sinon.SinonStub<[Element], Promise<ElementContent | Error>>
+  sinon.SinonStub<[ElementMapPath], Promise<ElementContent | Error>>
 ];
 
 export const mockRetrieveElementWithoutSignout =
-  (serviceArg: Service, elementArg: Element) =>
+  (serviceArg: Service, elementArg: ElementMapPath) =>
   (mockResult: ElementContent | Error): RetrieveElementStub => {
     const anyProgressReporter = sinon.match.any;
     const withContentStub = sinon
-      .stub<[element: Element], Promise<ElementContent | Error>>()
+      .stub<[element: ElementMapPath], Promise<ElementContent | Error>>()
       .withArgs(elementArg)
       .returns(Promise.resolve(mockResult));
     const withServiceStub = sinon
-      .stub<[Service], (element: Element) => Promise<ElementContent | Error>>()
+      .stub<
+        [Service],
+        (element: ElementMapPath) => Promise<ElementContent | Error>
+      >()
       .withArgs(serviceArg)
       .returns(withContentStub);
     const generalFunctionStub = sinon
@@ -273,7 +283,7 @@ export type RetrieveElementWithFingerprint = [
     (
       service: Service
     ) => (
-      element: Element
+      element: ElementMapPath
     ) => (
       signoutChangeControlValue?: ActionChangeControlValue,
       overrideSignOut?: boolean
@@ -282,14 +292,14 @@ export type RetrieveElementWithFingerprint = [
   sinon.SinonStub<
     [service: Service],
     (
-      element: Element
+      element: ElementMapPath
     ) => (
       signoutChangeControlValue?: ActionChangeControlValue,
       overrideSignOut?: boolean
     ) => Promise<ElementWithFingerprint | SignoutError | Error>
   >,
   sinon.SinonStub<
-    [element: Element],
+    [element: ElementMapPath],
     (
       signoutChangeControlValue?: ActionChangeControlValue,
       overrideSignOut?: boolean
@@ -302,7 +312,7 @@ export type RetrieveElementWithFingerprint = [
 ];
 
 export const mockRetrievingElementWithFingerprint =
-  (serviceArg: Service, elementArg: Element) =>
+  (serviceArg: Service, elementArg: ElementMapPath) =>
   (
     mockResults: ReadonlyArray<{
       signoutArg?: {
@@ -336,7 +346,7 @@ export const mockRetrievingElementWithFingerprint =
     });
     const withElementStub = sinon
       .stub<
-        [element: Element],
+        [element: ElementMapPath],
         (
           signoutChangeControlValue?: ActionChangeControlValue,
           overrideSignout?: boolean
@@ -348,7 +358,7 @@ export const mockRetrievingElementWithFingerprint =
       .stub<
         [service: Service],
         (
-          element: Element
+          element: ElementMapPath
         ) => (
           signoutChangeControlValue?: ActionChangeControlValue,
           overrideSignout?: boolean
@@ -381,24 +391,24 @@ type RetrieveElementWithSignoutStub = [
     (
       service: Service
     ) => (
-      element: Element
+      element: ElementMapPath
     ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
     [Service],
     (
-      element: Element
+      element: ElementMapPath
     ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<
-    [Element],
+    [ElementMapPath],
     (signOutParams: SignOutParams) => Promise<ElementContent | Error>
   >,
   sinon.SinonStub<[SignOutParams], Promise<ElementContent | Error>>
 ];
 
 export const mockRetrieveElementWithSignout =
-  (serviceArg: Service, elementArg: Element) =>
+  (serviceArg: Service, elementArg: ElementMapPath) =>
   (
     signOutParamsArg: SignOutParams,
     signOutMockResult: ElementContent | Error
@@ -430,7 +440,7 @@ export const mockRetrieveElementWithSignout =
     }
     const withSignoutParamsStub = sinon
       .stub<
-        [element: Element],
+        [element: ElementMapPath],
         (signOutParams: SignOutParams) => Promise<ElementContent | Error>
       >()
       .withArgs(elementArg)
@@ -439,7 +449,7 @@ export const mockRetrieveElementWithSignout =
       .stub<
         [Service],
         (
-          element: Element
+          element: ElementMapPath
         ) => (signOutParams: SignOutParams) => Promise<ElementContent | Error>
       >()
       .withArgs(serviceArg)
@@ -462,24 +472,24 @@ type SignOutElementStub = [
     (
       service: Service
     ) => (
-      element: Element
+      element: ElementMapPath
     ) => (signOutParams: SignOutParams) => Promise<void | Error | SignoutError>
   >,
   sinon.SinonStub<
     [Service],
     (
-      element: Element
+      element: ElementMapPath
     ) => (signOutParams: SignOutParams) => Promise<void | Error | SignoutError>
   >,
   sinon.SinonStub<
-    [Element],
+    [ElementMapPath],
     (signOutParams: SignOutParams) => Promise<void | Error | SignoutError>
   >,
   sinon.SinonStub<[SignOutParams], Promise<void | Error | SignoutError>>
 ];
 
 export const mockSignOutElement =
-  (serviceArg: Service, elementArg: Element) =>
+  (serviceArg: Service, elementArg: ElementMapPath) =>
   (
     mockResults: ReadonlyArray<{
       signoutArg?: SignOutParams;
@@ -502,7 +512,7 @@ export const mockSignOutElement =
     });
     const withSignoutParamsStub = sinon
       .stub<
-        [element: Element],
+        [element: ElementMapPath],
         (signOutParams: SignOutParams) => Promise<void | Error>
       >()
       .withArgs(elementArg)
@@ -511,7 +521,7 @@ export const mockSignOutElement =
       .stub<
         [Service],
         (
-          element: Element
+          element: ElementMapPath
         ) => (signOutParams: SignOutParams) => Promise<void | Error>
       >()
       .withArgs(serviceArg)
