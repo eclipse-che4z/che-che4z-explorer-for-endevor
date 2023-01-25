@@ -1,7 +1,7 @@
 {
   "name": "explorer-for-endevor",
   "displayName": "Explorer for Endevor",
-  "description": "Explorer for Endevor",
+  "description": "Extension that modernizes the way you interact with Endevor inventory locations and elements",
   "author": "Broadcom",
   "version": "1.4.0",
   "publisher": "BroadcomMFD",
