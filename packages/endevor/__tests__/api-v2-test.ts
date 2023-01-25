@@ -6672,7 +6672,6 @@ describe('endevor public API v2', () => {
         type: 'TEST-TYP2',
         // TODO add proper, extension, ccid, and full name check
         name: 'TEST-EL2',
-        lastActionCcid: '',
       };
       const elementDepsResponse: MockResponse<unknown> = {
         status: 200,
@@ -6911,7 +6910,6 @@ describe('endevor public API v2', () => {
         type: 'TEST-TYP2',
         // TODO add proper, extension, ccid, and full name check
         name: 'TEST-EL2',
-        lastActionCcid: '',
       };
       const elementDepsResponse: MockResponse<unknown> = {
         status: 200,
