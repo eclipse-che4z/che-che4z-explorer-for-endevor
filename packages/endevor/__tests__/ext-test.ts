@@ -481,6 +481,63 @@ describe('external Endevor data type parsing', () => {
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
+    it('should parse an element without last action CCID', () => {
+      // arrange
+      const element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fullElmName: 'ELM1',
+        fileExt: 'cbl',
+        // lastActCcid: 'CCID',
+      };
+      // act
+      const parsedElement = parseToType(Element, element);
+      // assert
+      const expectedElement: Element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fullElmName: 'ELM1',
+        fileExt: 'cbl',
+      };
+      expect(parsedElement).toStrictEqual(expectedElement);
+    });
+    it('should parse an element with null last action CCID', () => {
+      // arrange
+      const element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fileExt: 'cbl',
+        fullElmName: 'ELM1',
+        lastActCcid: null,
+      };
+      // act
+      const parsedElement = parseToType(Element, element);
+      // assert
+      const expectedElement: Element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fileExt: 'cbl',
+        fullElmName: 'ELM1',
+        lastActCcid: null,
+      };
+      expect(parsedElement).toStrictEqual(expectedElement);
+    });
     it('should throw an error for an element without element name', () => {
       // arrange
       const element = {
@@ -594,23 +651,6 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(Element, element)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for an element without last action CCID', () => {
-      // arrange
-      const element = {
-        envName: 'ENV',
-        typeName: 'TYPE',
-        sysName: 'SYS',
-        sbsName: 'SBS',
-        elmName: 'ELM1',
-        stgNum: '2',
-        fullElmName: 'ELM1',
-        // lastActCcid: 'CCID',
       };
       // act && assert
       expect(() =>

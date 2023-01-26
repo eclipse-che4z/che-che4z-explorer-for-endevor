@@ -1179,7 +1179,7 @@ export const searchForElements =
           type: element.typeName,
           name: element.fullElmName,
           extension: element.fileExt ? element.fileExt : undefined,
-          lastActionCcid: element.lastActCcid,
+          lastActionCcid: element.lastActCcid ? element.lastActCcid : undefined,
           configuration,
         };
       });
@@ -1798,7 +1798,6 @@ const retrieveElementWithDependencies =
           {
             ...component,
             // TODO: provide more data from separate element meta request
-            lastActionCcid: '',
             // extension: undefined,
             // TODO use full (long) names from the meta request instead
             name: component.name,
@@ -1868,7 +1867,6 @@ export const retrieveElementWithDependenciesWithSignout =
             {
               ...component,
               // TODO: provide more data from separate element meta request
-              lastActionCcid: '',
               // extension: undefined,
               // TODO use full (long) names from the meta request instead
               name: component.name,

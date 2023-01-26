@@ -166,9 +166,9 @@ export const Element = t.intersection([
   ElementPath,
   t.type({
     fullElmName: t.string,
-    lastActCcid: t.string,
   }),
   t.partial({
+    lastActCcid: t.union([t.string, t.null]),
     fileExt: t.union([t.string, t.null]),
   }),
 ]);

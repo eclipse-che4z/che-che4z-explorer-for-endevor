@@ -51,7 +51,7 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
     </tr>
     <tr>
       <td> lastActionCcid </td>
-      <td>: ${element.lastActionCcid} </td>
+      <td>: ${element.lastActionCcid ? element.lastActionCcid : ''} </td>
     </tr>
   </table>
 </body>

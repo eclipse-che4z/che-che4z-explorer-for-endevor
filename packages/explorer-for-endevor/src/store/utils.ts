@@ -161,7 +161,7 @@ const filterElement =
         match = regExp.exec(cachedElement.element.name);
         break;
       case ElementFilterType.ELEMENT_CCIDS_FILTER:
-        match = regExp.exec(cachedElement.element.lastActionCcid);
+        match = regExp.exec(cachedElement.element.lastActionCcid || '');
         break;
       case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
         return;

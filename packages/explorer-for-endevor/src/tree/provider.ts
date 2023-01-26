@@ -368,11 +368,16 @@ const endevorCacheEffect =
                 status: EndevorConnectionStatus.INVALID,
                 value: connection.value,
               };
+              const unknownCredential: UnknownEndevorCredential = {
+                status: EndevorCredentialStatus.UNKNOWN,
+                value: credential.value,
+              };
               dispatch({
                 type: Actions.ELEMENTS_FETCH_FAILED,
                 serviceId,
                 searchLocationId,
                 connection: testedConnection,
+                credential: unknownCredential,
               });
               resolve(undefined);
               return error;

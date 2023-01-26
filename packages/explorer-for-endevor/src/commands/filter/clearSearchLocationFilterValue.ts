@@ -12,7 +12,6 @@
  */
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { FILTER_WILDCARD_ZERO_OR_MORE } from '../../constants';
 import { logger, reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
@@ -77,17 +76,23 @@ export const clearSearchLocationFilterValueCommand =
         const updatedFilter = existingCcidFilter.value.filter(
           (value) => value != node.name
         );
-
+        if (updatedFilter.length) {
+          dispatch({
+            type: Actions.ELEMENT_CCIDS_FILTER_UPDATED,
+            serviceId,
+            searchLocationId,
+            updatedFilter: {
+              type: ElementFilterType.ELEMENT_CCIDS_FILTER,
+              value: updatedFilter,
+            },
+          });
+          break;
+        }
         dispatch({
-          type: Actions.ELEMENT_CCIDS_FILTER_UPDATED,
+          type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED,
           serviceId,
           searchLocationId,
-          updatedFilter: {
-            type: ElementFilterType.ELEMENT_CCIDS_FILTER,
-            value: updatedFilter.length
-              ? updatedFilter
-              : [FILTER_WILDCARD_ZERO_OR_MORE],
-          },
+          filtersCleared: [ElementFilterType.ELEMENT_CCIDS_FILTER],
         });
         break;
       }
@@ -101,16 +106,23 @@ export const clearSearchLocationFilterValueCommand =
         const updatedFilter = existingNameFilter.value.filter(
           (value) => value != node.name
         );
+        if (updatedFilter.length) {
+          dispatch({
+            type: Actions.ELEMENT_NAMES_FILTER_UPDATED,
+            serviceId,
+            searchLocationId,
+            updatedFilter: {
+              type: ElementFilterType.ELEMENT_NAMES_FILTER,
+              value: updatedFilter,
+            },
+          });
+          break;
+        }
         dispatch({
-          type: Actions.ELEMENT_NAMES_FILTER_UPDATED,
+          type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED,
           serviceId,
           searchLocationId,
-          updatedFilter: {
-            type: ElementFilterType.ELEMENT_NAMES_FILTER,
-            value: updatedFilter.length
-              ? updatedFilter
-              : [FILTER_WILDCARD_ZERO_OR_MORE],
-          },
+          filtersCleared: [ElementFilterType.ELEMENT_NAMES_FILTER],
         });
         break;
       }
