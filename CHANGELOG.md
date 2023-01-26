@@ -2,7 +2,17 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
-## [1.4.0] &ndash; 2023-01-26
+## [1.4.1] &ndash; 2023-01-26
+
+### Fixed
+
+- Fixed an issue with the element fetching stuck in a loop after recovering from invalid credentials.
+
+### Changed
+
+- Element CCID is now optional element attribute because with the certain Endevor configurations the CCID may not be specified at all.
+
+## [1.4.0] &ndash; 2023-01-13
 
 ### Added
 
