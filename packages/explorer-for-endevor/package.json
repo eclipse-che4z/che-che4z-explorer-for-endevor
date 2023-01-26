@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Extension that modernizes the way you interact with Endevor inventory locations and elements",
   "author": "Broadcom",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
