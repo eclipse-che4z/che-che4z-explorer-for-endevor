@@ -737,12 +737,15 @@ export const enum UpdateElementNameFilterCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   UNCHANGED = 'UNCHANGED',
   CANCELLED = 'CANCELLED',
+  CLEARED = 'CLEARED',
 }
 
 export type CommandUpdateElementNameFilterCompletedEvent =
   | {
       type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED;
-      status: UpdateElementNameFilterCommandCompletedStatus.CANCELLED;
+      status:
+        | UpdateElementNameFilterCommandCompletedStatus.CANCELLED
+        | UpdateElementNameFilterCommandCompletedStatus.CLEARED;
     }
   | {
       type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED;
@@ -762,12 +765,15 @@ export const enum UpdateElementCcidFilterCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   UNCHANGED = 'UNCHANGED',
   CANCELLED = 'CANCELLED',
+  CLEARED = 'CLEARED',
 }
 
 export type CommandUpdateElementCcidFilterCompletedEvent =
   | {
       type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED;
-      status: UpdateElementCcidFilterCommandCompletedStatus.CANCELLED;
+      status:
+        | UpdateElementCcidFilterCommandCompletedStatus.CANCELLED
+        | UpdateElementCcidFilterCommandCompletedStatus.CLEARED;
     }
   | {
       type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED;

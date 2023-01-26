@@ -13,6 +13,7 @@
 
 import {
   FILTER_DELIMITER,
+  FILTER_VALUE_DEFAULT,
   FILTER_WILDCARD_SINGLE,
   FILTER_WILDCARD_ZERO_OR_MORE,
 } from '../../constants';
@@ -76,7 +77,7 @@ export const filterSearchLocationByElementNameCommand =
       ?.value.join(FILTER_DELIMITER);
     const filter = await askForSearchLocationFilterByElementName(
       locationName,
-      existingFilter
+      existingFilter ? existingFilter : FILTER_VALUE_DEFAULT
     )(allElements);
     if (!filter) {
       logger.trace('No filter pattern provided.');
@@ -96,6 +97,19 @@ export const filterSearchLocationByElementNameCommand =
         wildcardUsed:
           existingFilter.includes(FILTER_WILDCARD_ZERO_OR_MORE) ||
           existingFilter.includes(FILTER_WILDCARD_SINGLE),
+      });
+      return;
+    }
+    if (filter === FILTER_VALUE_DEFAULT) {
+      dispatch({
+        type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED,
+        serviceId,
+        searchLocationId,
+        filtersCleared: [ElementFilterType.ELEMENT_NAMES_FILTER],
+      });
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED,
+        status: UpdateElementNameFilterCommandCompletedStatus.CLEARED,
       });
       return;
     }

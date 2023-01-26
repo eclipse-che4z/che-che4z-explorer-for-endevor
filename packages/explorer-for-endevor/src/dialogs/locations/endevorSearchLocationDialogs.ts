@@ -591,10 +591,7 @@ export const askForSearchLocationFilterByElementName =
   async (
     elements?: ReadonlyArray<CachedElement>
   ): Promise<string | undefined> => {
-    let filterValue = await askForElementNameFilter(
-      searchLocationName,
-      value ? value : FILTER_VALUE_DEFAULT
-    );
+    let filterValue = await askForElementNameFilter(searchLocationName, value);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       if (operationCancelled(filterValue)) {
@@ -650,7 +647,7 @@ export const askForSearchLocationFilterByElementCcid =
   async (elements?: ReadonlyArray<CachedElement>) => {
     let filterValue = await askForElementLastActionCcidFilter(
       searchLocationName,
-      value ? value : FILTER_VALUE_DEFAULT
+      value
     );
     // eslint-disable-next-line no-constant-condition
     while (true) {

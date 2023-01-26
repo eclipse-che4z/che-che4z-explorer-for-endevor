@@ -423,11 +423,7 @@ export const make =
                 ),
                 cacheVersion: EndevorCacheVersion.UP_TO_DATE,
               }
-            : state().caches[
-                toServiceLocationCompositeKey(action.serviceId)(
-                  action.searchLocationId
-                )
-              ]?.endevorMap;
+            : undefined;
           if (endevorMap) {
             const actionMapItems = Object.entries(action.elements).reduce(
               (acc: ElementsAccum, [elementId, element]) => {
@@ -567,7 +563,11 @@ export const make =
                 cacheVersion: EndevorCacheVersion.UP_TO_DATE,
                 value: action.endevorMap,
               }
-            : existingCache?.endevorMap;
+            : existingCache?.endevorMap === undefined
+            ? undefined
+            : Object.values(existingCache.endevorMap.value).length === 0
+            ? undefined
+            : existingCache.endevorMap;
           if (!endevorMap) break;
           const fullMap = Object.entries(endevorMap.value).flatMap(
             ([searchLocationItem, route]) => {

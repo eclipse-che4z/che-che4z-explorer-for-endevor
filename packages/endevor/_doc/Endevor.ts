@@ -187,11 +187,9 @@ export type ElementMapPath = Readonly<{
 export type Component = ElementMapPath;
 
 export type Element = ElementMapPath &
-  Readonly<{
-    lastActionCcid: Value;
-  }> &
   Partial<
     Readonly<{
+      lastActionCcid: Value;
       extension: Value;
     }>
   >;

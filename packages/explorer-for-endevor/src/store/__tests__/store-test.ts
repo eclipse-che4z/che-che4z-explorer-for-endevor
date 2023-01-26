@@ -182,175 +182,6 @@ describe('store actions callbacks', () => {
         expect(actualElements?.elements[elementId]).toBeDefined();
       });
     });
-    it('should put elements with version from the existing map structure', async () => {
-      // arrange
-      let storeState: State = {
-        filters: {},
-        sessions: {},
-        searchLocations: {},
-        serviceLocations: {},
-        services: {},
-        caches: {},
-      };
-      const dispatch = await makeStore(mockedGetters)(
-        () => storeState,
-        () => {
-          // do nothing
-        },
-        (updatedValue) => {
-          storeState = updatedValue;
-        }
-      );
-      const elementsInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const endevorMapCacheVersion = EndevorCacheVersion.OUTDATED;
-      storeState.caches = {
-        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(elementsInPlaceLocation)]: [],
-            },
-            cacheVersion: endevorMapCacheVersion,
-          },
-          mapItemsContent: {},
-        },
-      };
-      // act
-      const elementInPlace: CachedElement = {
-        element: {
-          configuration: 'CONFIG',
-          ...elementsInPlaceLocation,
-          type: 'TEST-TYPE',
-          name: 'ELM',
-          lastActionCcid: 'LAST-CCID',
-        },
-        lastRefreshTimestamp: Date.now(),
-      };
-      const fetchedElements: CachedElements = {
-        [toElementCompositeKey(serviceId)(inventoryLocationId)(
-          elementInPlace.element
-        )]: elementInPlace,
-      };
-      await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
-        serviceId,
-        searchLocationId: inventoryLocationId,
-        elements: fetchedElements,
-      });
-      // assert
-      const actualCache =
-        storeState.caches[
-          toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ];
-
-      const actualElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementsInPlaceLocation)
-        ];
-      expect(actualElements?.cacheVersion).toEqual(endevorMapCacheVersion);
-    });
-    it('should put elements only for locations from the known map structure', async () => {
-      // arrange
-      let storeState: State = {
-        filters: {},
-        sessions: {},
-        searchLocations: {},
-        serviceLocations: {},
-        services: {},
-        caches: {},
-      };
-      const dispatch = await makeStore(mockedGetters)(
-        () => storeState,
-        () => {
-          // do nothing
-        },
-        (updatedValue) => {
-          storeState = updatedValue;
-        }
-      );
-      const elementsInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-
-      const endevorMapCacheVersion = EndevorCacheVersion.UP_TO_DATE;
-      storeState.caches = {
-        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(elementsInPlaceLocation)]: [],
-            },
-            cacheVersion: endevorMapCacheVersion,
-          },
-          mapItemsContent: {},
-        },
-      };
-      // act
-      const elementInPlace: CachedElement = {
-        element: {
-          configuration: 'CONFIG',
-          ...elementsInPlaceLocation,
-          type: 'TEST-TYPE',
-          name: 'ELM',
-          lastActionCcid: 'LAST-CCID',
-        },
-        lastRefreshTimestamp: Date.now(),
-      };
-      const elementFromDifferentSystem: CachedElement = {
-        element: {
-          configuration: 'CONFIG',
-          ...elementsInPlaceLocation,
-          system: 'ANOTHER',
-          type: 'TEST-TYPE',
-          name: 'ELM',
-          lastActionCcid: 'LAST-CCID',
-        },
-        lastRefreshTimestamp: Date.now(),
-      };
-      const fetchedElements: CachedElements = {
-        [toElementCompositeKey(serviceId)(inventoryLocationId)(
-          elementInPlace.element
-        )]: elementInPlace,
-        [toElementCompositeKey(serviceId)(inventoryLocationId)(
-          elementFromDifferentSystem.element
-        )]: elementFromDifferentSystem,
-      };
-      await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
-        serviceId,
-        searchLocationId: inventoryLocationId,
-        elements: fetchedElements,
-      });
-      // assert
-      const actualCache =
-        storeState.caches[
-          toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ];
-
-      const actualElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementsInPlaceLocation)
-        ];
-      expect(
-        actualElements?.elements[
-          toElementCompositeKey(serviceId)(inventoryLocationId)(
-            elementInPlace.element
-          )
-        ]
-      ).toBeDefined();
-
-      const notCoveredByMapElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementFromDifferentSystem.element)
-        ];
-      expect(notCoveredByMapElements).toBeUndefined();
-    });
     it('should put elements using provided map structure', async () => {
       // arrange
       let storeState: State = {
@@ -1138,6 +969,92 @@ describe('store actions callbacks', () => {
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
       expect(actualCache).toBeUndefined();
+    });
+    it('should not put elements with empty map structure', async () => {
+      // arrange
+      let storeState: State = {
+        filters: {},
+        sessions: {},
+        searchLocations: {},
+        serviceLocations: {},
+        services: {},
+        caches: {},
+      };
+      const dispatch = await makeStore(mockedGetters)(
+        () => storeState,
+        () => {
+          // do nothing
+        },
+        (updatedValue) => {
+          storeState = updatedValue;
+        }
+      );
+      const inPlaceLocation: SubSystemMapPath = {
+        environment: 'ENV',
+        stageNumber: '1',
+        system: 'SYS',
+        subSystem: 'SUBSYS',
+      };
+      storeState.caches = {
+        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
+          endevorMap: {
+            value: {},
+            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+          },
+          mapItemsContent: {},
+        },
+      };
+      const upTheMapLocation: SubSystemMapPath = {
+        ...inPlaceLocation,
+        stageNumber: '2',
+      };
+      // act
+      const elementInPlace: CachedElement = {
+        element: {
+          configuration: 'CONFIG',
+          ...inPlaceLocation,
+          type: 'TEST-TYPE',
+          name: 'ELM',
+          lastActionCcid: 'LAST-CCID',
+        },
+        lastRefreshTimestamp: Date.now(),
+      };
+      const elementUpTheMap: CachedElement = {
+        element: {
+          configuration: 'CONFIG',
+          ...upTheMapLocation,
+          type: 'TEST-TYPE',
+          name: 'ELM',
+          lastActionCcid: 'LAST-CCID',
+        },
+        lastRefreshTimestamp: Date.now(),
+      };
+      const fetchedElements: CachedElements = {
+        [toElementCompositeKey(serviceId)(inventoryLocationId)(
+          elementInPlace.element
+        )]: elementInPlace,
+        [toElementCompositeKey(serviceId)(inventoryLocationId)(
+          elementUpTheMap.element
+        )]: elementUpTheMap,
+      };
+      await dispatch({
+        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        serviceId,
+        searchLocationId: inventoryLocationId,
+        elements: fetchedElements,
+      });
+      // assert
+      const actualCache =
+        storeState.caches[
+          toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
+        ];
+      expect(actualCache).toEqual({
+        endevorMap: {
+          value: {},
+          cacheVersion: EndevorCacheVersion.UP_TO_DATE,
+        },
+        mapItemsContent: {},
+      });
     });
     it('should put elements using provided map structure', async () => {
       // arrange
