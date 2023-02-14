@@ -2568,19 +2568,41 @@ describe('store getters', () => {
         element: elementInPlace,
         lastRefreshTimestamp: Date.now(),
       };
-      const upTheMapLocation: SubSystemMapPath = {
+      const upTheMapFirstLocation: SubSystemMapPath = {
         ...inPlaceLocation,
         stageNumber: '2',
       };
-      const elementUpTheMap: Element = {
+      const elementUpTheMapOne: Element = {
         configuration: 'TEST',
-        ...upTheMapLocation,
+        ...upTheMapFirstLocation,
         type: elementInPlace.type,
         name: elementInPlace.name,
         lastActionCcid: 'LAST-CCID',
       };
-      const cachedUpTheMapElementVersion = {
-        element: elementUpTheMap,
+      const elementUpTheMapTwo: Element = {
+        configuration: 'TEST',
+        ...upTheMapFirstLocation,
+        type: elementInPlace.type,
+        name: 'ELM2',
+        lastActionCcid: 'LAST-CCID',
+      };
+      const elementUpTheMapThree: Element = {
+        configuration: 'TEST',
+        ...upTheMapFirstLocation,
+        type: 'TYPE2',
+        name: elementUpTheMapTwo.name,
+        lastActionCcid: 'LAST-CCID',
+      };
+      const cachedUpTheMapElementOneVersion = {
+        element: elementUpTheMapOne,
+        lastRefreshTimestamp: Date.now(),
+      };
+      const cachedUpTheMapElementTwoVersion = {
+        element: elementUpTheMapTwo,
+        lastRefreshTimestamp: Date.now(),
+      };
+      const cachedUpTheMapElementThreeVersion = {
+        element: elementUpTheMapThree,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2588,7 +2610,7 @@ describe('store getters', () => {
           endevorMap: {
             value: {
               [toSubsystemMapPathId(inPlaceLocation)]: [
-                toSubsystemMapPathId(upTheMapLocation),
+                toSubsystemMapPathId(upTheMapFirstLocation),
               ],
             },
             cacheVersion: EndevorCacheVersion.OUTDATED,
@@ -2602,12 +2624,18 @@ describe('store getters', () => {
                 )]: cachedInPlaceElementVersion,
               },
             },
-            [toSubsystemMapPathId(upTheMapLocation)]: {
+            [toSubsystemMapPathId(upTheMapFirstLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
               elements: {
                 [toElementCompositeKey(serviceId)(inventoryLocationId)(
-                  elementUpTheMap
-                )]: cachedUpTheMapElementVersion,
+                  elementUpTheMapOne
+                )]: cachedUpTheMapElementOneVersion,
+                [toElementCompositeKey(serviceId)(inventoryLocationId)(
+                  elementUpTheMapTwo
+                )]: cachedUpTheMapElementTwoVersion,
+                [toElementCompositeKey(serviceId)(inventoryLocationId)(
+                  elementUpTheMapThree
+                )]: cachedUpTheMapElementThreeVersion,
               },
             },
           },
@@ -2620,7 +2648,11 @@ describe('store getters', () => {
       // assert
       expect(
         actualElements?.elementsPerRoute[toSubsystemMapPathId(inPlaceLocation)]
-      ).toEqual([cachedInPlaceElementVersion]);
+      ).toEqual([
+        cachedInPlaceElementVersion,
+        cachedUpTheMapElementTwoVersion,
+        cachedUpTheMapElementThreeVersion,
+      ]);
     });
     it('should return elements from several independent routes', () => {
       // arrange
