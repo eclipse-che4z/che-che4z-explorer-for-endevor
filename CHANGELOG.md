@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.4.2] &ndash; 2023-02-14
+
+### Fixed
+
+- Fixed an issue with the up-the-map view which showed an incomplete list of the elements if the same element name is used for different types.
+
 ## [1.4.1] &ndash; 2023-01-26
 
 ### Fixed
