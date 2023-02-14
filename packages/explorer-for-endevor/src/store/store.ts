@@ -2518,7 +2518,9 @@ export const getFirstFoundElements =
             const elementsInLocation = Object.values(locationData.elements);
             const elementsInRoute = acc[inPlaceLocation] ?? {};
             elementsInLocation.forEach((element) => {
-              elementsInRoute[element.element.name] = element;
+              elementsInRoute[
+                `${element.element.type}/${element.element.name}`
+              ] = element;
             });
             acc[inPlaceLocation] = elementsInRoute;
             return;
