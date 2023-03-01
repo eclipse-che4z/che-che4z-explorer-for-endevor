@@ -5,7 +5,7 @@
     "@broadcom/endevor-for-zowe-cli": "^7.1.0",
     "@local/extension": "1.0.0",
     "@local/type-parser": "1.0.0",
-    "@zowe/imperative": "^5.3.3"
+    "@zowe/imperative": "^5.9.0"
   },
   "scripts": {
     "build": "echo No Build for 'endevor' Package",
