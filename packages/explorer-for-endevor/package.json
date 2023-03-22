@@ -1023,7 +1023,7 @@
     "@local/profiles": "1.0.0",
     "@local/type-parser": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
-    "@zowe/imperative": "^5.3.3"
+    "@zowe/imperative": "^5.7.1"
   },
   "extensionDependencies": [
     "Zowe.vscode-extension-for-zowe"
