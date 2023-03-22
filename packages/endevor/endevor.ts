@@ -1509,15 +1509,18 @@ export const retrieveElementWithFingerprint =
   (logger: Logger) =>
   (progressReporter: ProgressReporter) =>
   (service: Service) =>
-  ({
-    configuration,
-    environment,
-    stageNumber,
-    system,
-    subSystem,
-    type,
-    name,
-  }: ElementMapPath): retrieveElementWithFingerprint =>
+  (
+    {
+      configuration,
+      environment,
+      stageNumber,
+      system,
+      subSystem,
+      type,
+      name,
+    }: ElementMapPath,
+    searchUpTheMap?: boolean
+  ): retrieveElementWithFingerprint =>
   async (
     signoutChangeControlValue?: ActionChangeControlValue,
     overrideSignOut?: OverrideSignOut
@@ -1533,6 +1536,7 @@ export const retrieveElementWithFingerprint =
       signout: isDefined(signoutChangeControlValue),
       ccid: signoutChangeControlValue?.ccid,
       comment: signoutChangeControlValue?.comment,
+      search: searchUpTheMap,
     };
     const session = toSecuredEndevorSession(logger)(service);
     progressReporter.report({ increment: 30 });
@@ -1624,6 +1628,21 @@ export const retrieveElementWithoutSignout =
       return error;
     }
     return elementContent.content;
+  };
+
+export const retrieveElementWithFingerprintFirstFound =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  async (element: ElementMapPath): Promise<ElementWithFingerprint | Error> => {
+    const elementContent = await retrieveElementWithFingerprint(logger)(
+      progress
+    )(service)(element, true)();
+    if (isError(elementContent)) {
+      const error = elementContent;
+      return error;
+    }
+    return elementContent;
   };
 
 export const retrieveElementWithSignout =

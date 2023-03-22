@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.4.3] &ndash; 2023-03-22
+
+### Fixed
+
+- Fixed an issue with retrieval of the remote elements for conflict resolution.
+
 ## [1.4.2] &ndash; 2023-02-14
 
 ### Fixed

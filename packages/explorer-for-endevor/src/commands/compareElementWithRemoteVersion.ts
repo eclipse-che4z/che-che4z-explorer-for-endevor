@@ -26,7 +26,7 @@ import {
 import { saveFileIntoWorkspaceFolder } from '@local/vscode-wrapper/workspace';
 import * as path from 'path';
 import { Uri } from 'vscode';
-import { retrieveElementWithFingerprint } from '../endevor';
+import { retrieveElementWithFingerprintFirstFound } from '../endevor';
 import { reporter } from '../globals';
 import { toComparedElementUri } from '../uri/comparedElementUri';
 import { isError } from '../utils';
@@ -135,9 +135,9 @@ const retrieveRemoteVersionIntoFolder =
     const remoteElementVersion = await withNotificationProgress(
       `Retrieving a remote version of the element ${element.name}...`
     )((progressReporter) => {
-      return retrieveElementWithFingerprint(progressReporter)(service)(
-        element
-      )();
+      return retrieveElementWithFingerprintFirstFound(progressReporter)(
+        service
+      )(element);
     });
     if (isError(remoteElementVersion)) {
       const error = remoteElementVersion;

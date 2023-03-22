@@ -56,6 +56,8 @@ export const retrieveElementWithDependenciesWithSignout =
   endevor.retrieveElementWithDependenciesWithSignout(logger);
 export const retrieveElementWithFingerprint =
   endevor.retrieveElementWithFingerprint(logger);
+export const retrieveElementWithFingerprintFirstFound =
+  endevor.retrieveElementWithFingerprintFirstFound(logger);
 export const printElement = endevor.printElement(logger);
 export const printListing = endevor.printListing(logger);
 export const updateElement = endevor.updateElement(logger);
