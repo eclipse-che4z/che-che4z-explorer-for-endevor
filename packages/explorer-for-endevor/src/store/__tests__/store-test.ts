@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,7 +13,6 @@
 
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { Element, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
-import { toSubsystemMapPathId } from '../../_doc/Endevor';
 import { toCompositeKey } from '../storage/utils';
 import {
   ConnectionLocationsStorage,
@@ -28,7 +27,11 @@ import {
   getFirstFoundElements,
   make as makeStore,
 } from '../store';
-import { toElementCompositeKey, toServiceLocationCompositeKey } from '../utils';
+import {
+  toElementCompositeKey,
+  toServiceLocationCompositeKey,
+  toSubsystemMapPathId,
+} from '../utils';
 import { Actions } from '../_doc/Actions';
 import {
   CachedElement,
@@ -149,12 +152,14 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...elementsInPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -210,12 +215,14 @@ describe('store actions callbacks', () => {
       };
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...elementsInPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -322,12 +329,14 @@ describe('store actions callbacks', () => {
       };
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...elementsInPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -393,12 +402,14 @@ describe('store actions callbacks', () => {
       };
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...elementsInPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -470,12 +481,14 @@ describe('store actions callbacks', () => {
       );
       const existingElement: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...searchLocation,
           type: 'TEST-TYPE',
           name: 'EXISTING-ELM',
+          id: 'EXISTING-ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -502,12 +515,14 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...searchLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -641,22 +656,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -748,22 +767,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -846,23 +869,27 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementFromDifferentRoute: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           system: 'SYSSSS',
           type: 'TEST-TYPE',
           name: 'I"m from different system',
+          id: 'BLAHBLAH',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -931,22 +958,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -1011,22 +1042,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -1088,22 +1123,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -1205,22 +1244,26 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const elementUpTheMap: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...upTheMapLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -1283,22 +1326,26 @@ describe('store actions callbacks', () => {
       };
       const outdatedInPlaceElement: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'I"m outdated :(',
+          id: 'BLAHBLAH',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const nonRelatedElement: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...nonRelatedLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -1333,12 +1380,14 @@ describe('store actions callbacks', () => {
       // act
       const elementInPlace: CachedElement = {
         element: {
-          configuration: 'CONFIG',
           ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
+          id: 'ELM',
+          noSource: false,
           lastActionCcid: 'LAST-CCID',
         },
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const fetchedElements: CachedElements = {
@@ -1460,14 +1509,16 @@ describe('store actions callbacks', () => {
         subSystem: 'SUBSYS',
       };
       const element: Element = {
-        configuration: 'TEST',
         ...location,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedElementVersion = {
         element,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -1678,14 +1729,16 @@ describe('store actions callbacks', () => {
         subSystem: 'SUBSYS',
       };
       const element: Element = {
-        configuration: 'TEST',
         ...location,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedElementVersion = {
         element,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -1943,14 +1996,16 @@ describe('store actions callbacks', () => {
         subSystem: 'SUBSYS',
       };
       const element: Element = {
-        configuration: 'TEST',
         ...location,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedElementVersion = {
         element,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2157,14 +2212,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const elementInPlace: Element = {
-        configuration: 'TEST',
         ...inPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedElementVersion = {
         element: elementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2213,14 +2270,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const firstElementInPlace: Element = {
-        configuration: 'TEST',
         ...firstInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedFirstElementVersion = {
         element: firstElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const secondInPlaceLocation: SubSystemMapPath = {
@@ -2230,14 +2289,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const secondElementInPlace: Element = {
-        configuration: 'TEST',
         ...secondInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedSecondElementVersion = {
         element: secondElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2406,14 +2467,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const firstElementInPlace: Element = {
-        configuration: 'TEST',
         ...firstInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedFirstElementVersion = {
         element: firstElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
@@ -2558,14 +2621,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const elementInPlace: Element = {
-        configuration: 'TEST',
         ...inPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedInPlaceElementVersion = {
         element: elementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const upTheMapFirstLocation: SubSystemMapPath = {
@@ -2573,36 +2638,42 @@ describe('store getters', () => {
         stageNumber: '2',
       };
       const elementUpTheMapOne: Element = {
-        configuration: 'TEST',
         ...upTheMapFirstLocation,
         type: elementInPlace.type,
         name: elementInPlace.name,
+        id: elementInPlace.name,
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const elementUpTheMapTwo: Element = {
-        configuration: 'TEST',
         ...upTheMapFirstLocation,
         type: elementInPlace.type,
         name: 'ELM2',
+        id: 'ELM2',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const elementUpTheMapThree: Element = {
-        configuration: 'TEST',
         ...upTheMapFirstLocation,
         type: 'TYPE2',
         name: elementUpTheMapTwo.name,
+        id: elementUpTheMapTwo.name,
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedUpTheMapElementOneVersion = {
         element: elementUpTheMapOne,
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const cachedUpTheMapElementTwoVersion = {
         element: elementUpTheMapTwo,
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       const cachedUpTheMapElementThreeVersion = {
         element: elementUpTheMapThree,
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2671,14 +2742,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const firstElementInPlace: Element = {
-        configuration: 'TEST',
         ...firstInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedFirstInPlaceElementVersion = {
         element: firstElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const secondInPlaceLocation: SubSystemMapPath = {
@@ -2686,14 +2759,16 @@ describe('store getters', () => {
         system: 'SYS2',
       };
       const secondElementInPlace: Element = {
-        configuration: 'TEST',
         ...secondInPlaceLocation,
         type: 'TYPE2',
         name: 'ELM2',
+        id: 'ELM2',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedSecondElementInPlaceVersion = {
         element: secondElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2758,14 +2833,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const firstElementInPlace: Element = {
-        configuration: 'TEST',
         ...firstInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedFirstInPlaceElementVersion = {
         element: firstElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const emptySecondInPlaceLocation: SubSystemMapPath = {
@@ -2777,14 +2854,16 @@ describe('store getters', () => {
         stageNumber: '2',
       };
       const elementUpTheMap: Element = {
-        configuration: 'TEST',
         ...commonUpTheMapLocation,
         type: firstElementInPlace.type,
         name: firstElementInPlace.name,
+        id: firstElementInPlace.name,
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedUpTheMapElementVersion = {
         element: elementUpTheMap,
+        elementIsUpTheMap: true,
         lastRefreshTimestamp: Date.now(),
       };
       storeState.caches = {
@@ -2953,14 +3032,16 @@ describe('store getters', () => {
         subSystem: 'SUBSYS',
       };
       const firstElementInPlace: Element = {
-        configuration: 'TEST',
         ...firstInPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
+        id: 'ELM',
+        noSource: false,
         lastActionCcid: 'LAST-CCID',
       };
       const cachedFirstInPlaceElementVersion = {
         element: firstElementInPlace,
+        elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
       const secondEmptyInPlaceLocation: SubSystemMapPath = {

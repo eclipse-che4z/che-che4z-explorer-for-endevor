@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -260,10 +260,13 @@ export const WorkspaceActionResults = t.array(WorkspaceActionResult);
 
 const WorkspaceResponseSignificantPart = t.type({
   actions: WorkspaceActionResults,
-  messages: t.array(t.string),
+  errorMessages: t.array(t.string),
+  warningMessages: t.array(t.string),
+  infoMessages: t.array(t.string),
   inSync: t.boolean,
   unresolvedMergeConflicts: t.boolean,
   signoutOverrideNeeded: t.boolean,
+  status: new ElementActionStatusType(),
 });
 
 export const WorkspaceResponse = t.intersection([

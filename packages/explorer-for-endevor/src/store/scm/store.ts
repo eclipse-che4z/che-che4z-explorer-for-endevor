@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -14,7 +14,6 @@
 import {
   WorkspaceElementType,
   State,
-  WorkspaceElements,
   OriginalElementCacheVersion,
   ChangedElement,
   ChangedElements,
@@ -23,51 +22,74 @@ import {
 import { getWorkspaceState, isWorkspace } from './workspace';
 import { isDefined, isError } from '../../utils';
 import { logger } from '../../globals';
-import { SyncAction } from './_doc/Actions';
+import { SyncAction, SyncActions } from './_doc/Actions';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Uri } from 'vscode';
+import { Id } from '../storage/_doc/Storage';
 
 export const make =
   (
+    state: () => State,
     renderTree: (action?: SyncAction) => void,
     updateState: (state: State) => void
   ) =>
   async (folderUri: Uri) => {
-    updateState(await fetchWorkspaceElementsReducer(folderUri));
+    updateState(await fetchWorkspaceElementsReducer(state())(folderUri));
     renderTree();
     const dispatch = async (action: SyncAction): Promise<void> => {
-      updateState(await fetchWorkspaceElementsReducer(folderUri));
-      renderTree(action);
+      switch (action.type) {
+        case SyncActions.ELEMENTS_UPDATED:
+        case SyncActions.WORKSPACE_META_UPDATED:
+          updateState(await fetchWorkspaceElementsReducer(state())(folderUri));
+          renderTree(action);
+          break;
+        case SyncActions.UPDATE_LAST_USED:
+          updateState(
+            lastUsedReducer(state())(
+              action.lastUsedServiceId,
+              action.lastUsedSearchLocationId
+            )
+          );
+          break;
+        default:
+          throw new UnreachableCaseError(action);
+      }
     };
     return dispatch;
   };
 
-const fetchWorkspaceElementsReducer = async (
-  folderUri: Uri
-): Promise<WorkspaceElements> => {
-  if (!isWorkspace(folderUri)) {
-    logger.trace(
-      `The workspace ${folderUri.fsPath} is not an endevor workspace.`
-    );
-    return [];
-  }
-  const workspaceState = await getWorkspaceState(folderUri);
-  if (isError(workspaceState)) {
-    const error = workspaceState;
-    logger.trace(
-      `Unable to retrieve workspace state because of ${error.message}`
-    );
-    return [];
-  }
-  return workspaceState;
-};
+const fetchWorkspaceElementsReducer =
+  (initialState: State) =>
+  async (folderUri: Uri): Promise<State> => {
+    if (!isWorkspace(folderUri)) {
+      logger.trace(
+        `The workspace ${folderUri.fsPath} is not an endevor workspace.`
+      );
+      return { ...initialState, workspaceElements: [] };
+    }
+    const workspaceState = await getWorkspaceState(folderUri);
+    if (isError(workspaceState)) {
+      const error = workspaceState;
+      logger.trace(
+        `Unable to retrieve workspace state because of ${error.message}`
+      );
+      return { ...initialState, workspaceElements: [] };
+    }
+    return { ...initialState, workspaceElements: workspaceState };
+  };
+
+const lastUsedReducer =
+  (initialState: State) =>
+  (lastUsedServiceId: Id, lastUsedSearchLocationId: Id): State => {
+    return { ...initialState, lastUsedServiceId, lastUsedSearchLocationId };
+  };
 
 // public API
 
 export const getNonConflictedWorkspaceChangeForFile =
   (state: () => State) =>
   (fileUri: Uri): NonConflictedChangedElement | undefined => {
-    for (const workspaceElement of state()) {
+    for (const workspaceElement of state().workspaceElements) {
       switch (workspaceElement.elementType) {
         case WorkspaceElementType.ELEMENT_ADDED:
         case WorkspaceElementType.ELEMENT_MODIFIED:
@@ -89,7 +111,7 @@ export const getNonConflictedWorkspaceChangeForFile =
 export const getWorkspaceChangeForFile =
   (state: () => State) =>
   (fileUri: Uri): ChangedElement | undefined => {
-    for (const workspaceElement of state()) {
+    for (const workspaceElement of state().workspaceElements) {
       switch (workspaceElement.elementType) {
         case WorkspaceElementType.ELEMENT_ADDED:
         case WorkspaceElementType.ELEMENT_MODIFIED:
@@ -110,7 +132,7 @@ export const getWorkspaceChangeForFile =
 
 export const getAllWorkspaceChanges = (state: () => State): ChangedElements => {
   return state()
-    .map((workspaceElement) => {
+    .workspaceElements.map((workspaceElement) => {
       switch (workspaceElement.elementType) {
         case WorkspaceElementType.ELEMENT_ADDED:
         case WorkspaceElementType.ELEMENT_MODIFIED:
@@ -130,7 +152,7 @@ export const getElementOriginalVersions = (
   state: () => State
 ): ReadonlyArray<OriginalElementCacheVersion> => {
   return state()
-    .map((workspaceElement) => {
+    .workspaceElements.map((workspaceElement) => {
       switch (workspaceElement.elementType) {
         case WorkspaceElementType.ELEMENT_SYNCED:
         case WorkspaceElementType.ELEMENT_MODIFIED:
@@ -149,7 +171,7 @@ export const getElementOriginalVersions = (
 export const getElementOriginalVersionForFile =
   (state: () => State) =>
   (fileUri: Uri): OriginalElementCacheVersion | undefined => {
-    for (const workspaceElement of state()) {
+    for (const workspaceElement of state().workspaceElements) {
       switch (workspaceElement.elementType) {
         case WorkspaceElementType.ELEMENT_SYNCED:
         case WorkspaceElementType.ELEMENT_MODIFIED:
@@ -167,3 +189,13 @@ export const getElementOriginalVersionForFile =
     }
     return;
   };
+
+export const getLastUsedServiceId = (state: () => State): Id | undefined => {
+  return state().lastUsedServiceId;
+};
+
+export const getLastUsedSearchLocationId = (
+  state: () => State
+): Id | undefined => {
+  return state().lastUsedSearchLocationId;
+};

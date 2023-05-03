@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,9 +24,8 @@ import {
   InvalidCredentialsServiceNode,
 } from './_doc/ServiceLocationTree';
 import {
-  ElementCcidsFilter,
+  ElementFilter,
   ElementFilterType,
-  ElementNamesFilter,
   EndevorId,
   EndevorSearchLocationDescription,
   EndevorSearchLocationDescriptions,
@@ -53,6 +52,7 @@ import {
   FilterNodeType,
 } from './_doc/FilterTree';
 import { FILTER_DELIMITER, FILTER_WILDCARD_ZERO_OR_MORE } from '../constants';
+import { toSearchLocationTooltip, toServiceTooltip } from './utils';
 
 export const addNewSearchLocationButton = (
   serviceNode: ValidServiceNode
@@ -107,7 +107,11 @@ const toValidServiceNode =
       name: service.id.name,
       source: service.id.source,
       duplicated: service.duplicated,
-      tooltip: service.url ? service.url : service.id.name,
+      tooltip: toServiceTooltip({
+        serviceId: service.id,
+        serviceLocation: service.serviceLocation,
+        credential: service.credential,
+      }),
       children: Object.values(locations)
         .map((location) => {
           switch (location.status) {
@@ -146,7 +150,11 @@ const toEmptyServiceNode = (
     name: service.id.name,
     source: service.id.source,
     duplicated: service.duplicated,
-    tooltip: service.url ? service.url : service.id.name,
+    tooltip: toServiceTooltip({
+      serviceId: service.id,
+      serviceLocation: service.serviceLocation,
+      credential: service.credential,
+    }),
     children: [],
   };
   reporter.sendTelemetryEvent({
@@ -178,8 +186,14 @@ const toInvalidConnectionServiceNode =
       name: service.id.name,
       source: service.id.source,
       duplicated: service.duplicated,
-      tooltip:
-        'Unable validate Endevor connection. Edit the configuration or just hide it.',
+      tooltip: toServiceTooltip(
+        {
+          serviceId: service.id,
+          serviceLocation: service.serviceLocation,
+          credential: service.credential,
+        },
+        'Unable to validate this Endevor connection. Edit the configuration or hide the connection.'
+      ),
       children: Object.entries(locations)
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
@@ -211,8 +225,12 @@ const toNonExistingServiceNode =
       name: service.id.name,
       source: service.id.source,
       duplicated: service.duplicated,
-      tooltip:
-        'Unable to locate this Endevor connection. Check out the configuration or just hide it.',
+      tooltip: toServiceTooltip(
+        {
+          serviceId: service.id,
+        },
+        'Unable to locate this Endevor connection. Review the configuration or delete the connection.'
+      ),
       children: Object.entries(locations)
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
@@ -247,7 +265,14 @@ const toWrongCredentialsServiceNode =
       name: service.id.name,
       source: service.id.source,
       duplicated: service.duplicated,
-      tooltip: 'Unable to validate credentials for this Endevor connection.',
+      tooltip: toServiceTooltip(
+        {
+          serviceId: service.id,
+          serviceLocation: service.serviceLocation,
+          credential: service.credential,
+        },
+        'Unable to validate credentials for this Endevor connection.'
+      ),
       children: Object.entries(locations)
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
@@ -282,7 +307,10 @@ const toSearchLocationNode =
       serviceName: service.id.name,
       serviceSource: service.id.source,
       duplicated: location.duplicated,
-      tooltip: location.path ? location.path : location.id.name,
+      tooltip: toSearchLocationTooltip({
+        locationId: location.id,
+        location: location.location,
+      }),
     };
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE,
@@ -338,8 +366,12 @@ const toInvalidSearchLocationNode =
           location.id.source === Source.INTERNAL
             ? 'LOCATION/NON_EXISTING'
             : 'LOCATION_PROFILE/NON_EXISTING',
-        tooltip:
-          'Unable to locate this inventory location. Check out the configuration or just hide it.',
+        tooltip: toSearchLocationTooltip(
+          {
+            locationId: location.id,
+          },
+          'Unable to locate this Endevor inventory location. Review the configuration or delete the inventory location.'
+        ),
       };
     }
     switch (service.status) {
@@ -352,8 +384,12 @@ const toInvalidSearchLocationNode =
             location.id.source === Source.INTERNAL
               ? 'LOCATION/NON_EXISTING'
               : 'LOCATION_PROFILE/NON_EXISTING',
-          tooltip:
-            'Unable to locate this inventory location. Check out the configuration or just hide it.',
+          tooltip: toSearchLocationTooltip(
+            {
+              locationId: location.id,
+            },
+            'Unable to locate this Endevor inventory location. Review the configuration or delete the inventory location.'
+          ),
         };
       case EndevorServiceStatus.NON_EXISTING:
         return {
@@ -362,8 +398,13 @@ const toInvalidSearchLocationNode =
             location.id.source === Source.INTERNAL
               ? 'LOCATION/NON_EXISTING'
               : 'LOCATION_PROFILE/NON_EXISTING',
-          tooltip:
-            'Unable to use this inventory location because corresponding Endevor connection not found. Check out the configuration.',
+          tooltip: toSearchLocationTooltip(
+            {
+              locationId: location.id,
+              location: location.location,
+            },
+            'Unable to use this inventory location because the corresponding Endevor connection is not found. Review the configuration.'
+          ),
         };
       case EndevorServiceStatus.INVALID_CREDENTIAL:
         return {
@@ -372,7 +413,13 @@ const toInvalidSearchLocationNode =
             location.id.source === Source.INTERNAL
               ? 'LOCATION/INVALID_CREDENTIALS'
               : 'LOCATION_PROFILE/INVALID_CREDENTIALS',
-          tooltip: `Wrong credentials provided for ${service.id.name}. Click on any inventory location to input new credentials.`,
+          tooltip: toSearchLocationTooltip(
+            {
+              locationId: location.id,
+              location: location.location,
+            },
+            `Incorrect credentials provided for ${service.id.name}. Click on the inventory location to enter new credentials.`
+          ),
           command: {
             command: CommandId.EDIT_CREDENTIALS,
             title: 'Prompt for Credentials',
@@ -386,7 +433,13 @@ const toInvalidSearchLocationNode =
             location.id.source === Source.INTERNAL
               ? 'LOCATION/INVALID_CONNECTION'
               : 'LOCATION_PROFILE/INVALID_CONNECTION',
-          tooltip: `Wrong connection details provided for ${service.id.name}. Click on any inventory location to input new details.`,
+          tooltip: toSearchLocationTooltip(
+            {
+              locationId: location.id,
+              location: location.location,
+            },
+            `Incorrect connection details provided for ${service.id.name}. Click on the inventory location to enter new details.`
+          ),
           command: {
             command: CommandId.EDIT_CONNECTION_DETAILS,
             title: 'Prompt for Connection Details',
@@ -401,19 +454,12 @@ const toInvalidSearchLocationNode =
 export const toFilteredNode =
   (serviceId: EndevorId) =>
   (searchLocationId: EndevorId) =>
-  (nameFilter: ElementNamesFilter | undefined) =>
-  (ccidFilter: ElementCcidsFilter | undefined): FilteredNode | undefined => {
-    const children = [];
-    if (nameFilter && nameFilter.value.length) {
-      children.push(toFilterNode(serviceId)(searchLocationId)(nameFilter));
-    }
-
-    if (ccidFilter && ccidFilter.value.length) {
-      children.push(toFilterNode(serviceId)(searchLocationId)(ccidFilter));
-    }
-    if (!children.filter(isDefined).length) {
-      return;
-    }
+  (filters: ReadonlyArray<ElementFilter>): FilteredNode | undefined => {
+    if (!filters.length) return;
+    const children = filters
+      .map((filter) => toFilterNode(serviceId)(searchLocationId)(filter))
+      .filter(isDefined);
+    if (!children.length) return;
     return {
       type: 'FILTERED',
       name: '<Filtered>',
@@ -423,7 +469,6 @@ export const toFilteredNode =
       serviceSource: serviceId.source,
       children: children.filter(isDefined),
       tooltip: children
-        .filter(isDefined)
         .map((child) => {
           return `By ${child.name.toString()}`;
         })
@@ -434,23 +479,28 @@ export const toFilteredNode =
 const toFilterNode =
   (serviceId: EndevorId) =>
   (searchLocationId: EndevorId) =>
-  (filter: ElementNamesFilter | ElementCcidsFilter): FilterNode | undefined => {
+  (filter: ElementFilter): FilterNode | undefined => {
     let filterType: FilterNodeType;
+    switch (filter.type) {
+      case ElementFilterType.ELEMENT_NAMES_FILTER:
+        filterType = FilterNodeType.NAMES_FILTER;
+        break;
+      case ElementFilterType.ELEMENT_TYPES_FILTER:
+        filterType = FilterNodeType.TYPES_FILTER;
+        break;
+      case ElementFilterType.ELEMENT_CCIDS_FILTER:
+        filterType = FilterNodeType.CCIDS_FILTER;
+        break;
+      case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
+        return;
+      default:
+        throw new UnreachableCaseError(filter);
+    }
     if (
       filter.value[0] == FILTER_WILDCARD_ZERO_OR_MORE &&
       filter.value.length == 1
     )
       return;
-    switch (filter.type) {
-      case ElementFilterType.ELEMENT_NAMES_FILTER:
-        filterType = FilterNodeType.NAMES_FILTER;
-        break;
-      case ElementFilterType.ELEMENT_CCIDS_FILTER:
-        filterType = FilterNodeType.CCIDS_FILTER;
-        break;
-      default:
-        throw new UnreachableCaseError(filter);
-    }
     return {
       type: 'FILTER',
       name: filterType,

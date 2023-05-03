@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -18,13 +18,7 @@ import {
   TypeNode,
   ElementNode,
 } from './_doc/ElementTree';
-import {
-  ElementMapPath,
-  ElementSearchLocation,
-  Service,
-} from '@local/endevor/_doc/Endevor';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { isElementUpTheMap, isError } from '../utils';
+import { isError } from '../utils';
 import { logger, reporter } from '../globals';
 import {
   CachedElement,
@@ -32,24 +26,34 @@ import {
   EndevorId,
 } from '../store/_doc/v2/Store';
 import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
-import { fromSubsystemMapPathId } from '../_doc/Endevor';
-import { toServiceLocationCompositeKey } from '../store/utils';
+import { fromSubsystemMapPathId } from '../store/utils';
+import {
+  ChangeLevelNode,
+  ChangeLevels,
+  HistoryLine,
+  HistoryLines,
+} from './_doc/ChangesTree';
+import { Uri } from 'vscode';
+import { toElementTooltip } from './utils';
 
 type ElementsTreeOptions = Readonly<{
   withElementsUpTheMap: boolean;
   showEmptyRoutes: boolean;
 }>;
 
+export const HISTORY_LINE_PATTERN =
+  '^\\s*(%{0,1})\\+([0-9]{4})(?:-| )([0-9]{4}|\\s{4}) (.*)$';
+const SOURCE_CHANGE_LINE_PATTERN =
+  '^\\s*([0-9]{4})\\s+([A-Z]{0,1})\\s+(.{1,8})\\s+(\\S{7})' +
+  '\\s+(\\S{5})\\s+([0-9]+) (.{1,12}) (.*)';
+const SOURCE_CHANGE_LINE_HEADER =
+  'VVLL SYNC USER     DATE    TIME     STMTS CCID         COMMENT';
+
 /**
  * Converts list element result into a tree for tree view
  */
 export const buildTree =
-  (
-    serviceId: EndevorId,
-    service: Service,
-    searchLocationId: EndevorId,
-    elementsSearchLocation: ElementSearchLocation
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   (elementsPerRoute: ElementsPerRoute) =>
   ({ withElementsUpTheMap, showEmptyRoutes }: ElementsTreeOptions): Systems => {
     let overallElementsInPlaceCount = 0;
@@ -79,6 +83,9 @@ export const buildTree =
           name: parsedSearchSubsystem.subSystem,
           parent: systemNode,
           children: [],
+          subSystemMapPath: parsedSearchSubsystem,
+          serviceId,
+          searchLocationId,
         };
         systemNode.children.push(subsystemNode);
         const addTypeNode = (name: string): TypeNode => {
@@ -104,18 +111,13 @@ export const buildTree =
         };
         const addElement = (cachedElement: CachedElement): void => {
           const element = cachedElement.element;
-          if (
-            isElementUpTheMap(elementsSearchLocation)(element) &&
-            withElementsUpTheMap
-          ) {
+          if (cachedElement.elementIsUpTheMap && withElementsUpTheMap) {
             overallElementsUpTheMapCount++;
             const typeNode = addTypeNode(element.type);
             const elementName = element.name;
             const elementNode = toUpTheMapElementNode(
               serviceId,
-              service,
-              searchLocationId,
-              elementsSearchLocation
+              searchLocationId
             )(cachedElement)(typeNode)(
               elementName + ` [${element.environment}/${element.stageNumber}]`
             );
@@ -133,9 +135,7 @@ export const buildTree =
             const typeNode = addTypeNode(element.type);
             const elementNode = toInPlaceElementNode(
               serviceId,
-              service,
-              searchLocationId,
-              elementsSearchLocation
+              searchLocationId
             )(cachedElement)(typeNode)();
             if (isError(elementNode)) {
               const error = elementNode;
@@ -169,73 +169,97 @@ export const buildTree =
   };
 
 const toInPlaceElementNode =
-  (
-    serviceId: EndevorId,
-    service: Service,
-    searchLocationId: EndevorId,
-    searchLocation: ElementSearchLocation
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
-    const serializedUri = toTreeElementUri({
+    return {
+      type: 'ELEMENT_IN_PLACE',
       serviceId,
       searchLocationId,
-      service,
-      element,
-      searchLocation,
-    })(lastRefreshTimestamp.toString());
-    if (isError(serializedUri)) {
-      const error = serializedUri;
-      return error;
-    }
-    return {
-      searchLocationId:
-        toServiceLocationCompositeKey(serviceId)(searchLocationId),
-      type: 'ELEMENT_IN_PLACE',
       name: nodeName ?? element.name,
-      uri: serializedUri,
+      element,
+      timestamp: lastRefreshTimestamp.toString(),
       parent,
       tooltip: toElementTooltip(element),
+      noSource: element.noSource,
     };
   };
-
-export const toElementTooltip = (element: ElementMapPath): string => {
-  const tooltip =
-    element.configuration && element
-      ? `${element.configuration}/${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}`
-      : '';
-  return tooltip;
-};
 
 const toUpTheMapElementNode =
-  (
-    serviceId: EndevorId,
-    service: Service,
-    searchLocationId: EndevorId,
-    searchLocation: ElementSearchLocation
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   ({ element, lastRefreshTimestamp }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
-    const serializedUri = toTreeElementUri({
+    return {
+      type: 'ELEMENT_UP_THE_MAP',
       serviceId,
       searchLocationId,
-      service,
-      element,
-      searchLocation,
-    })(lastRefreshTimestamp.toString());
-    if (isError(serializedUri)) {
-      const error = serializedUri;
-      return error;
-    }
-    return {
-      searchLocationId:
-        toServiceLocationCompositeKey(serviceId)(searchLocationId),
-      type: 'ELEMENT_UP_THE_MAP',
       name: nodeName ?? element.name,
-      uri: serializedUri,
+      element,
+      timestamp: lastRefreshTimestamp.toString(),
       parent,
       tooltip: toElementTooltip(element),
+      noSource: element.noSource,
     };
   };
+
+export const parseHistory = (
+  content: string,
+  uri: Uri
+): { changeLevels: ChangeLevels; historyLines: HistoryLines } | Error => {
+  const contentLines = content.split(/\r?\n/);
+  const changeLevels = Array<ChangeLevelNode>();
+  const historyLines = Array<HistoryLine>();
+
+  let lineIndex = 0;
+  let isHeader = contentLines[lineIndex]?.indexOf(SOURCE_CHANGE_LINE_HEADER);
+  while (lineIndex < contentLines.length && isHeader && isHeader < 0) {
+    lineIndex++;
+    isHeader = contentLines[lineIndex]?.indexOf(SOURCE_CHANGE_LINE_HEADER);
+  }
+  if (!isHeader || isHeader < 0) {
+    return new Error('History Change Level metadata header does not match.');
+  }
+  while (
+    lineIndex < contentLines.length &&
+    !contentLines[lineIndex]?.match(HISTORY_LINE_PATTERN)
+  ) {
+    const matcher = contentLines[lineIndex]?.match(SOURCE_CHANGE_LINE_PATTERN);
+    if (matcher && matcher[1]) {
+      const node = {
+        uri,
+        vvll: matcher[1].trim(),
+        user: matcher[3]?.trim(),
+        date: matcher[4]?.trim(),
+        time: matcher[5]?.trim(),
+        ccid: matcher[7]?.trim(),
+        comment: matcher[8]?.trim(),
+        lineNums: [],
+      };
+      changeLevels.push(node);
+    }
+    lineIndex++;
+  }
+  while (lineIndex < contentLines.length) {
+    const matcher = contentLines[lineIndex]?.match(HISTORY_LINE_PATTERN);
+    if (matcher) {
+      const historyLine = {
+        changed: matcher[1] === '%',
+        addedVersion: matcher[2]?.trim() || '',
+        removedVersion: matcher[3]?.trim() || '',
+        line: lineIndex,
+        lineLength: contentLines[lineIndex]?.length,
+      };
+      historyLines.push(historyLine);
+    }
+    lineIndex++;
+  }
+  if (!changeLevels || !historyLines) {
+    return new Error('Could not find any history data');
+  }
+  return {
+    changeLevels,
+    historyLines,
+  };
+};

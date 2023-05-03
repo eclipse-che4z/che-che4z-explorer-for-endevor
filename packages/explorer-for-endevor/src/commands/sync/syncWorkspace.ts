@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -37,10 +37,13 @@ import {
   ValidEndevorSearchLocationDescriptions,
   ExistingEndevorServiceDescriptions,
 } from '../../store/_doc/v2/Store';
-import { ElementSearchLocation } from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
-import { SyncActions, WorkspaceSynced } from '../../store/scm/_doc/Actions';
+import {
+  SyncActions,
+  UpdateLastUsed,
+  WorkspaceSynced,
+} from '../../store/scm/_doc/Actions';
 import {
   SyncWorkspaceCommandCompletedStatus,
   TelemetryEvents,
@@ -50,6 +53,8 @@ import {
   isWorkspaceSyncErrorResponse,
 } from '../../store/scm/utils';
 import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
+import { SearchLocation } from '../../_doc/Endevor';
+import { Id } from '../../store/storage/_doc/Storage';
 
 export const syncWorkspace = async (
   configurations: {
@@ -70,9 +75,11 @@ export const syncWorkspace = async (
     ) => Promise<ValidEndevorCredential | undefined>;
     getSearchLocation: (
       searchLocationId: EndevorId
-    ) => Promise<Omit<ElementSearchLocation, 'configuration'> | undefined>;
+    ) => Promise<SearchLocation | undefined>;
   },
-  dispatch: (action: WorkspaceSynced) => Promise<void>
+  dispatch: (action: WorkspaceSynced | UpdateLastUsed) => Promise<void>,
+  getLastUsedServiceId: () => Id | undefined,
+  getLastUsedSearchLocationId: () => Id | undefined
 ): Promise<void> => {
   logger.trace('Synchronization of an Endevor workspace called.');
   reporter.sendTelemetryEvent({
@@ -106,7 +113,9 @@ export const syncWorkspace = async (
     return;
   }
   const serviceDialogResult = await askForService(
-    configurations.getValidServiceDescriptions()
+    configurations.getValidServiceDescriptions(),
+    getLastUsedServiceId(),
+    'Last Used'
   );
   if (serviceDialogCancelled(serviceDialogResult)) {
     logger.trace('No Endevor connection was selected.');
@@ -134,7 +143,9 @@ export const syncWorkspace = async (
     return;
   }
   const locationDialogResult = await askForSearchLocation(
-    configurations.getValidSearchLocationDescriptions()
+    configurations.getValidSearchLocationDescriptions(),
+    getLastUsedSearchLocationId(),
+    'Last Used'
   );
   if (locationDialogCancelled(locationDialogResult)) {
     logger.trace('No Endevor inventory location was selected.');
@@ -145,6 +156,11 @@ export const syncWorkspace = async (
     return;
   }
   const searchLocationId = locationDialogResult.id;
+  dispatch({
+    type: SyncActions.UPDATE_LAST_USED,
+    lastUsedServiceId: serviceId,
+    lastUsedSearchLocationId: searchLocationId,
+  });
   const configuration = await configurations.getEndevorConfiguration(
     serviceId,
     searchLocationId
@@ -213,9 +229,10 @@ export const syncWorkspace = async (
     syncEndevorWorkspace(progressReporter)({
       ...connectionDetails.value,
       credential: credential.value,
-    })({
+    })(configuration)({
       ...searchLocation,
-      configuration,
+      subSystem: searchLocation.subsystem,
+      id: searchLocation.element,
     })(syncChangeControlValue)(folderUri)
   );
   if (isError(syncResult)) {
@@ -233,8 +250,7 @@ export const syncWorkspace = async (
     return;
   }
   // always dump the result messages
-  // TODO: consider not to use the result messages since they include internal CLI info sometimes
-  logger.trace(syncResult.messages.join('\n'));
+  syncResult.messages.forEach((message) => logger.trace(message));
   if (isWorkspaceSyncErrorResponse(syncResult)) {
     const syncError = syncResult;
     logger.error(
@@ -280,8 +296,5 @@ export const syncWorkspace = async (
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
     status: SyncWorkspaceCommandCompletedStatus.SUCCESS,
-  });
-  dispatch({
-    type: SyncActions.WORKSPACE_SYNCED,
   });
 };

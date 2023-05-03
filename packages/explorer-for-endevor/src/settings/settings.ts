@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -28,6 +28,8 @@ import {
   WORKSPACE_SYNC_DEFAULT,
   WORKSPACE_SYNC_SETTING,
   EXPERIMENTAL_CONFIGURATION,
+  AUTH_WITH_TOKEN_SETTING_DEFAULT,
+  AUTH_WITH_TOKEN_SETTING,
 } from '../constants';
 import { logger, reporter } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
@@ -42,6 +44,7 @@ import {
   FileExtensionsResolution,
   MaxParallelRequests,
   SyncWithProfiles,
+  AuthWithToken,
   WorkspaceSync,
 } from './_ext/v2/Settings';
 import {
@@ -57,6 +60,14 @@ export const getAutomaticSignOutSettingsValue = (): boolean => {
     AUTOMATIC_SIGN_OUT_DEFAULT
   );
   return parseToType(AutoSignOut, autoSignOut);
+};
+
+export const getAuthWithTokenValue = (): boolean => {
+  const authWithToken = getSettingsValue(ENDEVOR_CONFIGURATION)(
+    AUTH_WITH_TOKEN_SETTING,
+    AUTH_WITH_TOKEN_SETTING_DEFAULT
+  );
+  return parseToType(AuthWithToken, authWithToken);
 };
 
 export const getSyncWithProfilesSettingValue = (): boolean => {
@@ -130,6 +141,43 @@ export const watchForAutoSignoutChanges = () => {
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext: TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
+    }
+  });
+};
+
+export const watchForAuthWithTokenChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration(
+        `${ENDEVOR_CONFIGURATION}.${AUTH_WITH_TOKEN_SETTING}`
+      )
+    ) {
+      let updatedUseToken;
+      try {
+        updatedUseToken = getAuthWithTokenValue();
+        logger.trace(
+          `Setting ${AUTH_WITH_TOKEN_SETTING} updated with the ${updatedUseToken} value.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN,
+          status: SettingChangedStatus.SUCCESS,
+          value: updatedUseToken,
+        });
+        const reloadNow = await askToReloadWindowAfterSettingsChanged();
+        if (reloadNow) {
+          await reloadWindow();
+        }
+      } catch (e) {
+        logger.trace(
+          `Setting ${AUTH_WITH_TOKEN_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN,
           error: e,
           status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
         });
@@ -282,6 +330,18 @@ export const isAutomaticSignOut = (): boolean => {
       `Reading settings error: ${e.message}.`
     );
     return AUTOMATIC_SIGN_OUT_DEFAULT;
+  }
+};
+
+export const isAuthWithToken = (): boolean => {
+  try {
+    return getAuthWithTokenValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for token authorization, default: ${AUTH_WITH_TOKEN_SETTING_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return AUTH_WITH_TOKEN_SETTING_DEFAULT;
   }
 };
 

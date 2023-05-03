@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -36,7 +36,6 @@ import {
 } from '@local/vscode-wrapper/workspace';
 import { isDefined, isError, parseFilePath } from '../../utils';
 import { toCachedElementUri } from '../../uri/cachedElementUri';
-import { SyncActions, SyncAction } from '../../store/scm/_doc/Actions';
 import { stringifyPretty } from '@local/endevor/utils';
 
 export const discardChangesCommand =
@@ -45,7 +44,6 @@ export const discardChangesCommand =
       fileUri: Uri
     ) => NonConflictedChangedElement | undefined
   ) =>
-  (scmDispatch: (_action: SyncAction) => Promise<void>) =>
   async (resourceStates: SourceControlResourceState[]): Promise<void> => {
     logger.trace('Discard element changes command called.');
     if (resourceStates.length > 1) {
@@ -61,13 +59,9 @@ export const discardChangesCommand =
         });
         return;
       }
-      const discardedWorkspaceElementUris = await discardMultipleElementChanges(
-        getWorkspaceChangeForFile
-      )(resourceStates);
-      await scmDispatch({
-        type: SyncActions.SYNC_ELEMENTS_DISCARDED,
-        discardedWorkspaceElementUris,
-      });
+      await discardMultipleElementChanges(getWorkspaceChangeForFile)(
+        resourceStates
+      );
       return;
     }
     const [resourceState] = resourceStates;
@@ -152,10 +146,6 @@ export const discardChangesCommand =
       );
       return;
     }
-    await scmDispatch({
-      type: SyncActions.SYNC_ELEMENTS_DISCARDED,
-      discardedWorkspaceElementUris: [changedElement.workspaceElementUri],
-    });
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
       status: DiscardElementChangesCommandCompletedStatus.SUCCESS,

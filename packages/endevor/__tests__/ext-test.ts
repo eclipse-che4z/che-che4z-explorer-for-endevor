@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -80,6 +80,139 @@ describe('external Endevor data type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
+  describe('environment stage type parsing', () => {
+    it('should parse a proper environment stage', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: '1',
+        stgId: '2',
+      };
+      // act
+      const parsedEnvironment = parseToType(EnvironmentStage, environment);
+      // assert
+      const expectedEnvironment: EnvironmentStage = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: '1',
+        stgId: '2',
+      };
+      expect(parsedEnvironment).toStrictEqual(expectedEnvironment);
+    });
+    it('should parse a proper final environment stage', () => {
+      // arrange
+      const finalEnvironmentStage = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: null,
+        nextStgNum: null,
+        stgId: '2',
+      };
+      // act
+      const parsedEnvironment = parseToType(
+        EnvironmentStage,
+        finalEnvironmentStage
+      );
+      // assert
+      const expectedEnvironment: EnvironmentStage = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: null,
+        nextStgNum: null,
+        stgId: '2',
+      };
+      expect(parsedEnvironment).toStrictEqual(expectedEnvironment);
+    });
+    it('should throw an error for a environment stage without the envinronment name', () => {
+      // arrange
+      const environment = {
+        // envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: '1',
+        stgId: '2',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a environment stage without the stage number', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        // stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: '1',
+        stgId: '2',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a environment stage without the stage id', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: '1',
+        // stgId: '2',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a environment stage without the next environment', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        stgNum: '2',
+        // nextEnv: 'ENV2',
+        nextStgNum: '1',
+        stgId: '2',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a environment stage without the next stage number', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        // nextStgNum: '1'
+        stgId: '1',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for a environment stage with the incorrect next stage number', () => {
+      // arrange
+      const environment = {
+        envName: 'ENV',
+        stgNum: '2',
+        nextEnv: 'ENV2',
+        nextStgNum: 'T',
+        stgId: '1',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(EnvironmentStage, environment)
+      ).toThrowErrorMatchingSnapshot();
+    });
+  });
+
   describe('system type parsing', () => {
     it('should parse a proper system', () => {
       // arrange
@@ -145,6 +278,7 @@ describe('external Endevor data type parsing', () => {
       expect(() => parseToType(System, system)).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('subsystem type parsing', () => {
     it('should parse a proper subsystem', () => {
       // arrange
@@ -258,7 +392,8 @@ describe('external Endevor data type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
-  describe('type type parsing', () => {
+
+  describe('"element type" type parsing', () => {
     it('should parse a proper element type', () => {
       // arrange
       const elementType = {
@@ -365,6 +500,7 @@ describe('external Endevor data type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('element type parsing', () => {
     it('should parse a proper element', () => {
       // arrange
@@ -378,6 +514,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -392,6 +529,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -407,6 +545,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -421,6 +560,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -436,6 +576,7 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         // fileExt: 'cbl',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -449,6 +590,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -464,6 +606,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: null,
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -478,6 +621,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: null,
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -492,6 +636,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         fileExt: 'cbl',
+        nosource: 'N',
         // lastActCcid: 'CCID',
       };
       // act
@@ -506,6 +651,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         fileExt: 'cbl',
+        nosource: 'N',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -521,6 +667,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: null,
+        nosource: 'Y',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -535,6 +682,7 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         fullElmName: 'ELM1',
         lastActCcid: null,
+        nosource: 'Y',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -549,6 +697,7 @@ describe('external Endevor data type parsing', () => {
         // elmName: 'ELM1',
         stgNum: '2',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -566,6 +715,7 @@ describe('external Endevor data type parsing', () => {
         elmName: 'ELM1',
         stgNum: '2',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -583,6 +733,7 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         // stgNum: '2',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -600,6 +751,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -617,6 +769,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -634,6 +787,7 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
       };
       // act && assert
       expect(() =>
@@ -651,6 +805,43 @@ describe('external Endevor data type parsing', () => {
         stgNum: '2',
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
+        nosource: 'N',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(Element, element)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for an element without nosource', () => {
+      // arrange
+      const element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fullElmName: 'ELM1',
+        lastActCcid: 'CCID',
+        //nosource: 'N',
+      };
+      // act && assert
+      expect(() =>
+        parseToType(Element, element)
+      ).toThrowErrorMatchingSnapshot();
+    });
+    it('should throw an error for an element with incorrect nosource', () => {
+      // arrange
+      const element = {
+        envName: 'ENV',
+        typeName: 'TYPE',
+        sysName: 'SYS',
+        sbsName: 'SBS',
+        elmName: 'ELM1',
+        stgNum: '2',
+        fullElmName: 'ELM1',
+        lastActCcid: 'CCID',
+        nosource: true,
       };
       // act && assert
       expect(() =>
@@ -794,138 +985,6 @@ describe('external Endevor data type parsing', () => {
       // act && assert
       expect(() =>
         parseToType(Component, component)
-      ).toThrowErrorMatchingSnapshot();
-    });
-  });
-
-  describe('environment stage type parsing', () => {
-    it('should parse a proper environment stage', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: '1',
-        stgId: '2',
-      };
-      // act
-      const parsedEnvironment = parseToType(EnvironmentStage, environment);
-      // assert
-      const expectedEnvironment: EnvironmentStage = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: '1',
-        stgId: '2',
-      };
-      expect(parsedEnvironment).toStrictEqual(expectedEnvironment);
-    });
-    it('should parse a proper final environment stage', () => {
-      // arrange
-      const finalEnvironmentStage = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: null,
-        nextStgNum: null,
-        stgId: '2',
-      };
-      // act
-      const parsedEnvironment = parseToType(
-        EnvironmentStage,
-        finalEnvironmentStage
-      );
-      // assert
-      const expectedEnvironment: EnvironmentStage = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: null,
-        nextStgNum: null,
-        stgId: '2',
-      };
-      expect(parsedEnvironment).toStrictEqual(expectedEnvironment);
-    });
-    it('should throw an error for a environment stage without the envinronment name', () => {
-      // arrange
-      const environment = {
-        // envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: '1',
-        stgId: '2',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a environment stage without the stage number', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        // stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: '1',
-        stgId: '2',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a environment stage without the stage id', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: '1',
-        // stgId: '2',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a environment stage without the next environment', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        stgNum: '2',
-        // nextEnv: 'ENV2',
-        nextStgNum: '1',
-        stgId: '2',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a environment stage without the next stage number', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        // nextStgNum: '1'
-        stgId: '1',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a environment stage with the incorrect next stage number', () => {
-      // arrange
-      const environment = {
-        envName: 'ENV',
-        stgNum: '2',
-        nextEnv: 'ENV2',
-        nextStgNum: 'T',
-        stgId: '1',
-      };
-      // act && assert
-      expect(() =>
-        parseToType(EnvironmentStage, environment)
       ).toThrowErrorMatchingSnapshot();
     });
   });
