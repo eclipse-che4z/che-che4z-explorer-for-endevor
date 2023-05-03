@@ -280,7 +280,7 @@ version(s), and exceptions or additional permissions here}."
 
 ---
 
-SEE LICENSE IN LICENSE
+Broadcom Internal
 (@broadcom/endevor-for-zowe-cli 7.4.0)
 
 Copyright (c) 2019 Broadcom.  All Rights Reserved.  The term

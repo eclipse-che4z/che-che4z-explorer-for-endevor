@@ -34,7 +34,7 @@ This project leverages the following third party content.
 
 @broadcom/endevor-for-zowe-cli (7.4.0)
 
-- License: SEE LICENSE IN LICENSE
+- License: Broadcom Internal
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @colors/colors (1.5.0)
