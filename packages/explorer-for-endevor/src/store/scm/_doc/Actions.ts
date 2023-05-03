@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,34 +11,26 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Uri } from 'vscode';
+import { Id } from '../../storage/_doc/Storage';
 
 export const enum SyncActions {
-  SYNC_ELEMENTS_UPDATED = 'SYNC_ELEMENTS/UPDATED',
-  WORKSPACE_SYNCED = 'WORKSPACE/SYNCED',
-  WORKSPACE_SYNCED_ONEWAY = 'WORKSPACE/SYNCED_ONEWAY',
-  SYNC_ELEMENTS_DISCARDED = 'SYNC_ELEMENTS/DISCARDED',
+  ELEMENTS_UPDATED = 'ELEMENTS_UPDATED',
+  WORKSPACE_META_UPDATED = 'WORKSPACE_META_UPDATED',
+  UPDATE_LAST_USED = 'UPDATE_LAST_USED',
 }
 
 export type SyncElementsUpdated = Readonly<{
-  type: SyncActions.SYNC_ELEMENTS_UPDATED;
-}>;
-
-export type ElementsChangesDiscarded = Readonly<{
-  type: SyncActions.SYNC_ELEMENTS_DISCARDED;
-  discardedWorkspaceElementUris: Uri[];
+  type: SyncActions.ELEMENTS_UPDATED;
 }>;
 
 export type WorkspaceSynced = Readonly<{
-  type: SyncActions.WORKSPACE_SYNCED;
+  type: SyncActions.WORKSPACE_META_UPDATED;
 }>;
 
-export type WorkspaceSyncedOneWay = Readonly<{
-  type: SyncActions.WORKSPACE_SYNCED_ONEWAY;
+export type UpdateLastUsed = Readonly<{
+  type: SyncActions.UPDATE_LAST_USED;
+  lastUsedServiceId: Id;
+  lastUsedSearchLocationId: Id;
 }>;
 
-export type SyncAction =
-  | SyncElementsUpdated
-  | ElementsChangesDiscarded
-  | WorkspaceSynced
-  | WorkspaceSyncedOneWay;
+export type SyncAction = SyncElementsUpdated | WorkspaceSynced | UpdateLastUsed;

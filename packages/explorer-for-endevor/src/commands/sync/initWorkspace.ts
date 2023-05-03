@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -72,8 +72,7 @@ export const initWorkspace = async (): Promise<void> => {
     return;
   }
   // always dump the result messages
-  // TODO: consider not to use the result messages since they include internal CLI info sometimes
-  logger.trace(initResult.messages.join('\n'));
+  initResult.messages.forEach((message) => logger.trace(message));
   switch (initResult.status) {
     case WorkspaceResponseStatus.ERROR:
       logger.error('Unable to initialize workspace.');
@@ -84,7 +83,6 @@ export const initWorkspace = async (): Promise<void> => {
       );
       break;
   }
-  logger.trace(initResult.messages.join('\n'));
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED,
     status: InitWorkspaceCommandCompletedStatus.SUCCESS,

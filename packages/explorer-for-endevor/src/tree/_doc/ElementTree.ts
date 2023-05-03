@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,7 +11,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Uri } from 'vscode';
+import { Element, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
+import { MarkdownString } from 'vscode';
+import { Id as EndevorId } from '../../store/storage/_doc/Storage';
 
 export type Systems = Array<SystemNode>;
 export type SubSystems = Array<SubSystemNode>;
@@ -28,6 +30,9 @@ export type SubSystemNode = Readonly<{
   name: string;
   parent: SystemNode;
   children: Types;
+  subSystemMapPath: SubSystemMapPath;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
 }>;
 export type TypeNode = Readonly<{
   type: 'TYPE';
@@ -42,23 +47,26 @@ export type EndevorMapNode = Readonly<{
   elements: Elements;
 }>;
 
-type ElementInPlaceNode = Readonly<{
-  searchLocationId: string;
-  type: 'ELEMENT_IN_PLACE';
+type BaseElementNode = Readonly<{
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
   name: string;
-  uri: Uri;
+  element: Element;
+  timestamp: string;
   parent: TypeNode;
-  tooltip: string;
+  tooltip?: MarkdownString | string;
+  noSource?: boolean;
 }>;
 
-type ElementUpTheMapNode = Readonly<{
-  searchLocationId: string;
-  type: 'ELEMENT_UP_THE_MAP';
-  name: string;
-  uri: Uri;
-  parent: TypeNode;
-  tooltip: string;
-}>;
+type ElementInPlaceNode = BaseElementNode &
+  Readonly<{
+    type: 'ELEMENT_IN_PLACE';
+  }>;
+
+type ElementUpTheMapNode = BaseElementNode &
+  Readonly<{
+    type: 'ELEMENT_UP_THE_MAP';
+  }>;
 
 export type ElementNode = ElementInPlaceNode | ElementUpTheMapNode;
 

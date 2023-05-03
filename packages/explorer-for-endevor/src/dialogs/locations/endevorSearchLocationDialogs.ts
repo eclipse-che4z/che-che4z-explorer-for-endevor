@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -20,17 +20,13 @@ import {
   showModalWithOptions,
   showMessageWithOptions,
 } from '@local/vscode-wrapper/window';
-import {
-  ElementSearchLocation,
-  Configuration,
-  StageNumber,
-} from '@local/endevor/_doc/Endevor';
+import { Configuration, StageNumber } from '@local/endevor/_doc/Endevor';
 import { ANY_VALUE } from '@local/endevor/const';
 import {
   isDefined,
   isError,
-  isTimeoutError,
-  toPromiseWithTimeout,
+  moveItemInFrontOfArray,
+  toSearchLocationPath,
 } from '../../utils';
 import {
   CachedElement,
@@ -39,7 +35,7 @@ import {
   ValidEndevorSearchLocationDescription,
   ValidEndevorSearchLocationDescriptions,
 } from '../../store/_doc/v2/Store';
-import { Source } from '../../store/storage/_doc/Storage';
+import { Id, Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import {
   FILTER_VALUE_DEFAULT,
@@ -48,9 +44,9 @@ import {
   ZOWE_PROFILE_DESCRIPTION,
 } from '../../constants';
 import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
-import { ConnectionError } from '@local/endevor/_doc/Error';
-import { isConnectionError } from '@local/endevor/utils';
 import { getFirstFoundFilteredElement } from '../../store/utils';
+import { ElementSearchLocation } from '../../_doc/Endevor';
+import { isTimeoutError, toPromiseWithTimeout } from '../utils';
 
 const enum DialogResultTypes {
   CREATED = 'CREATED',
@@ -94,18 +90,16 @@ export const askForSearchLocationOrCreateNew =
     allExistingLocationNames: ReadonlyArray<string>;
   }) =>
   async (
-    getConfigurations: () => Promise<
-      ReadonlyArray<Configuration> | Error | undefined
-    >
-  ): Promise<DialogResult | ConnectionError> => {
+    getConfigurations: () => Promise<ReadonlyArray<Configuration> | undefined>
+  ): Promise<DialogResult> => {
     const createNewLocationItem: QuickPickItem = {
       label: '+ Create a new inventory location',
       alwaysShow: true,
     };
     const choice = await showLocationsInQuickPick([
       createNewLocationItem,
-      ...Object.values(dialogRestrictions.locationsToChoose).map(
-        toLocationQuickPickItem
+      ...Object.values(dialogRestrictions.locationsToChoose).map((location) =>
+        toLocationQuickPickItem(location)
       ),
     ]);
     if (
@@ -145,27 +139,6 @@ export const askForSearchLocationOrCreateNew =
         logger.trace('Operation cancelled.');
         return undefined;
       }
-      if (isConnectionError(existingConfigurations)) {
-        const error = existingConfigurations;
-        return error;
-      }
-      if (isError(existingConfigurations)) {
-        const error = existingConfigurations;
-        logger.error(
-          'Unable to fetch the list of Endevor configurations.',
-          `${error.message}.`
-        );
-        logger.trace('Operation cancelled.');
-        return undefined;
-      }
-      if (!existingConfigurations.length) {
-        logger.error(
-          'Unable to fetch the list of Endevor configurations.',
-          'The list of Endevor configurations is empty.'
-        );
-        logger.trace('Operation cancelled.');
-        return undefined;
-      }
       const locationValue = await askForLocationValue(existingConfigurations);
       if (
         operationCancelled(locationValue) ||
@@ -193,15 +166,30 @@ export const askForSearchLocationOrCreateNew =
   };
 
 export const askForSearchLocation = async (
-  locationsToChoose: ValidEndevorSearchLocationDescriptions
+  locationsToChoose: ValidEndevorSearchLocationDescriptions,
+  defaultLocationId?: Id,
+  defaultLocationDesc?: string
 ): Promise<ChooseDialogResult> => {
+  let defaultQuickPickItem;
   const locationQuickPickItems = Object.values(locationsToChoose).map(
-    toLocationQuickPickItem
+    (location) => {
+      const isDefault = defaultLocationId === location.id;
+      const quickPickItem = toLocationQuickPickItem(
+        location,
+        isDefault,
+        isDefault ? defaultLocationDesc : undefined
+      );
+      if (isDefault) {
+        defaultQuickPickItem = quickPickItem;
+      }
+      return quickPickItem;
+    }
   );
   if (!locationQuickPickItems.length) {
     logger.warn('No inventory locations to select from.');
     return undefined;
   }
+  moveItemInFrontOfArray(locationQuickPickItems, defaultQuickPickItem);
   const quickPickOptions: QuickPickOptions = {
     title: 'Select from the available inventory locations',
     placeholder: 'Start typing a name to filter...',
@@ -228,15 +216,17 @@ export const askForSearchLocation = async (
   };
 };
 
-const toLocationQuickPickItem = ({
-  id,
-  path,
-  duplicated,
-}: ValidEndevorSearchLocationDescription): LocationQuickPickItem => {
+const toLocationQuickPickItem = (
+  { id, duplicated, location }: ValidEndevorSearchLocationDescription,
+  isDefault?: boolean,
+  description?: string
+): LocationQuickPickItem => {
   const locationQuickPickItem: LocationQuickPickItem = {
     label: id.name,
-    detail: path,
+    detail: toSearchLocationPath(location),
     id,
+    picked: !!isDefault,
+    description,
   };
   switch (id.source) {
     case Source.INTERNAL:
@@ -629,6 +619,65 @@ export const askForElementNameFilter = async (
     title: `Edit Element name filter for ${searchLocationName}`,
     prompt:
       'Enter a list of Element name pattern(s) to filter by. Use a comma to separate multiple values.',
+    placeHolder: 'Pattern(s) with or without %, *: PATTERN1,PAT%ERN2,PAT*',
+    value,
+    validateInput: (value) => {
+      const filters = buildFilter(value.split(FILTER_DELIMITER));
+      if (isError(filters)) {
+        const validationError = filters;
+        return validationError.message;
+      }
+      return undefined;
+    },
+  });
+};
+
+export const askForSearchLocationFilterByElementType =
+  (searchLocationName: string, value?: string) =>
+  async (
+    elements?: ReadonlyArray<CachedElement>
+  ): Promise<string | undefined> => {
+    let filterValue = await askForElementTypeFilter(
+      searchLocationName,
+      value ? value : FILTER_VALUE_DEFAULT
+    );
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (operationCancelled(filterValue)) {
+        logger.trace('Operation cancelled.');
+        return;
+      }
+      if (filterValue === '') filterValue = FILTER_VALUE_DEFAULT;
+      if (!elements) return filterValue;
+      const filteredElement = getFirstFoundFilteredElement(elements)({
+        type: ElementFilterType.ELEMENT_TYPES_FILTER,
+        value: filterValue.split(FILTER_DELIMITER),
+      });
+      if (filteredElement) return filterValue;
+      logger.warn('No Element names match the specified filter.');
+      const tryAgain = await askForTryAgainOrContinue();
+      if (tryAgain) {
+        filterValue = await askForElementTypeFilter(
+          searchLocationName,
+          filterValue
+        );
+        continue;
+      }
+      return filterValue;
+    }
+  };
+
+export const askForElementTypeFilter = async (
+  searchLocationName: string,
+  value?: string
+): Promise<string | undefined> => {
+  logger.trace(
+    `Prompt for filter by Element type pattern(s) for the inventory location ${searchLocationName}.`
+  );
+  return showInputBox({
+    title: `Edit Element type filter for ${searchLocationName}`,
+    prompt:
+      'Enter a list of Element type pattern(s) to filter by. Use a comma to separate multiple values.',
     placeHolder: 'Pattern(s) with or without %, *: PATTERN1,PAT%ERN2,PAT*',
     value,
     validateInput: (value) => {

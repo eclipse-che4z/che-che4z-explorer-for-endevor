@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,14 +13,13 @@
 
 export const ANY_VALUE = '*';
 
+export const MS_IN_MIN = 60000;
+export const TEN_SEC_IN_MS = 10000;
+
 export const FINGERPRINT_MISMATCH_ERROR = 'C1G0410E';
 export const FINGERPRINT_SIGNOUT_ERROR = 'C1G0167E';
 export const NOT_SIGNOUT_ERROR = 'C1G0168E';
 export const DUPLICATE_ELEMENT_ERROR = 'C1G0024E';
-
-// it is an informational message according to:
-// https://techdocs.broadcom.com/us/en/ca-mainframe-software/devops/ca-endevor-scm-messages/1-0/smgr-messages/smgr123c.html
-export const CHANGE_REGRESSION_INFO = 'SMGR123C';
 
 export const PROCESSOR_STEP_MAX_RC_EXCEEDED_ERROR = 'C1G0129E';
 export const PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE = 'C1G0129S';
@@ -38,3 +37,6 @@ export const OPENSSL_ERROR_SELF_SIGNED_CERT_IN_CHAIN =
   'SELF_SIGNED_CERT_IN_CHAIN';
 export const OPENSSL_ERROR_DEPTH_ZERO_SELF_SIGNED_CERT =
   'DEPTH_ZERO_SELF_SIGNED_CERT';
+
+// HTTP status codes
+export const HTTP_STATUS_UNAUTHORIZED = 401;

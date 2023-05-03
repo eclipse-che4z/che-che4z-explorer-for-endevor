@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,16 +11,25 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { BaseCredential, CredentialType } from '@local/endevor/_doc/Credential';
-import { PasswordLengthPolicy } from '../../_doc/Credential';
+import {
+  BaseCredential,
+  CredentialType,
+  TokenCredential,
+} from '@local/endevor/_doc/Credential';
 import { showInputBox } from '@local/vscode-wrapper/window';
 import { logger } from '../../globals';
-import {
-  EndevorCredential,
-  EndevorCredentialStatus,
-} from '../../store/_doc/v2/Store';
+import { EndevorCredentialStatus } from '../../store/_doc/v2/Store';
 
-type CredentialValue = EndevorCredential;
+type CredentialValue =
+  | {
+      status: EndevorCredentialStatus.VALID;
+      value: BaseCredential;
+      token?: TokenCredential;
+    }
+  | {
+      status: EndevorCredentialStatus.INVALID;
+      value: BaseCredential;
+    };
 type OperationCancelled = undefined;
 type DialogResult = CredentialValue | OperationCancelled;
 
@@ -30,16 +39,26 @@ export const dialogCancelled = (
   return dialogResult === undefined;
 };
 
-export const askForCredential =
+type PasswordLengthPolicy = Readonly<{
+  maxLength: number;
+  minLength: number;
+}>;
+
+const askForCredential =
   (passwordLengthPolicy: PasswordLengthPolicy) =>
   (validationPolicy: {
-    validateCredential: (value: BaseCredential) => Promise<boolean>;
+    validateCredential: (
+      value: BaseCredential
+    ) => Promise<CredentialValue | undefined>;
     validationAttempts: number;
   }) =>
-  async (prefilledValue?: {
-    user?: string;
-    password?: string;
-  }): Promise<DialogResult> => {
+  async (
+    prefilledValue?: {
+      user?: string;
+      password?: string;
+    },
+    prompt?: string
+  ): Promise<DialogResult> => {
     let lastCredential = prefilledValue;
     for (
       let attempt = validationPolicy.validationAttempts;
@@ -47,7 +66,8 @@ export const askForCredential =
       attempt--
     ) {
       const credential = await askForCredentialValue(passwordLengthPolicy)(
-        lastCredential
+        lastCredential,
+        prompt
       );
       if (!credential) {
         logger.trace('Operation cancelled.');
@@ -55,12 +75,7 @@ export const askForCredential =
       }
       lastCredential = credential;
       const result = await validationPolicy.validateCredential(credential);
-      if (result) {
-        return {
-          status: EndevorCredentialStatus.VALID,
-          value: credential,
-        };
-      }
+      if (result) return result;
       logger.warn('Credential validation was not successful.');
       continue;
     }
@@ -82,10 +97,13 @@ export const askForCredential =
 
 const askForCredentialValue =
   (passwordLengthPolicy: PasswordLengthPolicy) =>
-  async (prefilledValue?: {
-    user?: string;
-    password?: string;
-  }): Promise<BaseCredential | OperationCancelled> => {
+  async (
+    prefilledValue?: {
+      user?: string;
+      password?: string;
+    },
+    prompt?: string
+  ): Promise<BaseCredential | OperationCancelled> => {
     const user = await askForUsername({
       prefilledValue: prefilledValue?.user,
       allowEmpty: false,
@@ -98,6 +116,7 @@ const askForCredentialValue =
       allowEmpty: false,
       passwordLengthPolicy,
       prefilledValue: prefilledValue?.password,
+      prompt,
     });
     if (operationIsCancelled(password) || emptyValueProvided(password)) {
       logger.trace('No password was provided.');
@@ -120,7 +139,10 @@ export const askForCredentialWithDefaultPasswordPolicy = askForCredential(
 
 export const askForCredentialWithoutValidation =
   askForCredentialWithDefaultPasswordPolicy({
-    validateCredential: () => Promise.resolve(true),
+    validateCredential: async (credential) => ({
+      status: EndevorCredentialStatus.VALID,
+      value: credential,
+    }),
     validationAttempts: 1,
   });
 
@@ -161,6 +183,7 @@ export const askForPassword = async (options: {
   passwordLengthPolicy: PasswordLengthPolicy;
   allowEmpty: boolean;
   prefilledValue?: string;
+  prompt?: string;
 }): Promise<string | EmptyValue | OperationCancelled> => {
   logger.trace('Prompt for password.');
   const result = await showInputBox({
@@ -168,6 +191,7 @@ export const askForPassword = async (options: {
     value: options.prefilledValue,
     password: true,
     placeHolder: options.allowEmpty ? '(Optional) Password' : 'Password',
+    prompt: options.prompt,
     validateInput: (input) => {
       const validInput = undefined;
       const emptyInputMessage = 'Password must not be empty.';

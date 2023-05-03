@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -18,6 +18,7 @@ export type Filters = ReadonlyArray<FilterNode>;
 
 export const enum FilterNodeType {
   NAMES_FILTER = 'Name',
+  TYPES_FILTER = 'Type',
   CCIDS_FILTER = 'Last Action CCID',
 }
 

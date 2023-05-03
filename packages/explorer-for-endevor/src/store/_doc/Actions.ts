@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -17,6 +17,7 @@ import {
   SubSystemMapPath,
   ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
+import { Uri } from 'vscode';
 import { EndevorMap } from '../../_doc/Endevor';
 import {
   EndevorService,
@@ -29,17 +30,24 @@ import {
   CachedElements,
   ElementCcidsFilter,
   ElementNamesFilter,
+  ElementTypesFilter,
   ElementsUpTheMapFilter,
   ElementFilterType,
+  ElementHistoryData,
+  EndevorConfiguration,
+  EndevorToken,
 } from '../_doc/v2/Store';
 
 export const enum Actions {
+  SESSION_ENDEVOR_TOKEN_ADDED = 'SESSION_ENDEVOR_TOKEN/ADDED',
   SESSION_ENDEVOR_CREDENTIAL_ADDED = 'SESSION_ENDEVOR_CREDENTIAL/ADDED',
   SESSION_ENDEVOR_CONNECTION_ADDED = 'SESSION_ENDEVOR_CONNECTION/ADDED',
   ENDEVOR_CREDENTIAL_TESTED = 'ENDEVOR_CREDENTIAL/TESTED',
   ENDEVOR_CONNECTION_TESTED = 'ENDEVOR_CONNECTION_DETAILS/TESTED',
   ENDEVOR_SERVICE_ADDED = 'ENDEVOR_SERVICE/ADDED',
   ENDEVOR_SERVICE_CREATED = 'ENDEVOR_SERVICE/CREATED',
+  ENDEVOR_SERVICE_UPDATED = 'ENDEVOR_SERVICE/UPDATED',
+  ENDEVOR_SERVICE_CREDENTIALS_UPDATED = 'ENDEVOR_SERVICE_CREDENTIALS/UPDATED',
   ENDEVOR_SERVICE_HIDDEN = 'ENDEVOR_SERVICE/HIDDEN',
   ENDEVOR_SERVICE_DELETED = 'ENDEVOR_SERVICE/DELETED',
   ENDEVOR_SEARCH_LOCATION_CREATED = 'ENDEVOR_SEARCH_LOCATION/CREATED',
@@ -59,9 +67,21 @@ export const enum Actions {
   ELEMENT_GENERATED_IN_PLACE = 'ELEMENT_GENERATED_IN_PLACE',
   ELEMENT_GENERATED_WITH_COPY_BACK = 'ELEMENT_GENERATED_WITH_COPY_BACK',
   ELEMENT_NAMES_FILTER_UPDATED = 'ELEMENT_NAMES_FILTER_UPDATED',
+  ELEMENT_TYPES_FILTER_UPDATED = 'ELEMENT_TYPES_FILTER_UPDATED',
   ELEMENT_CCIDS_FILTER_UPDATED = 'ELEMENT_CCIDS_FILTER_UPDATED',
   ELEMENT_UP_THE_MAP_FILTER_UPDATED = 'ELEMENT_UP_THE_MAP_FILTER_UPDATED',
+  ELEMENT_HISTORY_PRINTED = 'ELEMENT_HISTORY_PRINTED',
   ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED = 'ENDEVOR_SEARCH_LOCATION/FILTERS_CLEARED',
+  SUBSYSTEM_ELEMENTS_UPDATED_IN_PLACE = 'SUBSYSTEM_ELEMENTS_UPDATED_IN_PLACE',
+  SELECTED_ELEMENTS_UPDATED = 'SELECTED_ELEMENTS_UPDATED_IN_PLACE',
+}
+
+export interface SessionEndevorTokenAdded {
+  type: Actions.SESSION_ENDEVOR_TOKEN_ADDED;
+  sessionId: EndevorId;
+  configuration: EndevorConfiguration;
+  token: EndevorToken;
+  credential?: EndevorCredential;
 }
 
 export interface SessionEndevorCredentialsAdded {
@@ -125,6 +145,19 @@ export interface EndevorServiceCreated {
       };
 }
 
+export interface EndevorServiceUpdated {
+  type: Actions.ENDEVOR_SERVICE_UPDATED;
+  serviceId: EndevorId;
+  connection: EndevorConnection;
+  credential?: EndevorCredential;
+}
+
+export interface EndevorServiceCredentialsUpdated {
+  type: Actions.ENDEVOR_SERVICE_CREDENTIALS_UPDATED;
+  serviceId: EndevorId;
+  credential: EndevorCredential;
+}
+
 export interface EndevorSearchLocationCreated {
   type: Actions.ENDEVOR_SEARCH_LOCATION_CREATED;
   serviceId: EndevorId;
@@ -142,6 +175,13 @@ export interface ElementNamesFilterUpdated {
   serviceId: EndevorId;
   searchLocationId: EndevorId;
   updatedFilter: ElementNamesFilter;
+}
+
+export interface ElementTypesFilterUpdated {
+  type: Actions.ELEMENT_TYPES_FILTER_UPDATED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  updatedFilter: ElementTypesFilter;
 }
 
 export interface ElementCcidsFilterUpdated {
@@ -174,8 +214,6 @@ export interface ElementsUpTheMapFetched {
   searchLocationId: EndevorId;
   elements: CachedElements;
   endevorMap?: EndevorMap;
-  connection?: EndevorConnection;
-  credential?: EndevorCredential;
 }
 
 export interface ElementsInPlaceFetched {
@@ -184,8 +222,6 @@ export interface ElementsInPlaceFetched {
   searchLocationId: EndevorId;
   elements: CachedElements;
   subSystemsInPlace?: ReadonlyArray<SubSystemMapPath>;
-  connection?: EndevorConnection;
-  credential?: EndevorCredential;
 }
 
 export interface ElementsFetchCanceled {
@@ -198,8 +234,6 @@ export interface ElementsFetchFailed {
   type: Actions.ELEMENTS_FETCH_FAILED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  connection?: EndevorConnection;
-  credential?: EndevorCredential;
 }
 
 export interface Refresh {
@@ -267,6 +301,15 @@ export interface ElementSignedIn {
   element: Element;
 }
 
+export interface ElementHistoryPrinted {
+  type: Actions.ELEMENT_HISTORY_PRINTED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  element: Element;
+  uri: Uri;
+  historyData: ElementHistoryData;
+}
+
 export interface EndevorSearchLocationFiltersCleared {
   type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED;
   serviceId: EndevorId;
@@ -274,13 +317,30 @@ export interface EndevorSearchLocationFiltersCleared {
   filtersCleared: ReadonlyArray<ElementFilterType>;
 }
 
+export interface SubsystemElementsUpdatedInPlace {
+  type: Actions.SUBSYSTEM_ELEMENTS_UPDATED_IN_PLACE;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  subSystemMapPath: SubSystemMapPath;
+  lastActionCcid?: string;
+}
+
+export type SelectedElementsUpdated = {
+  type: Actions.SELECTED_ELEMENTS_UPDATED;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  elements: ReadonlyArray<Omit<Element, 'id' | 'noSource'>>;
+};
+
 export type Action =
+  | SessionEndevorTokenAdded
   | SessionEndevorCredentialsAdded
   | SessionEndevorConnectionAdded
   | EndevorConnectionTested
   | EndevorCredentialTested
   | EndevorServiceCreated
   | EndevorServiceAdded
+  | EndevorServiceUpdated
   | EndevorServiceHidden
   | EndevorServiceDeleted
   | EndevorSearchLocationCreated
@@ -299,7 +359,11 @@ export type Action =
   | ElementsFetchCanceled
   | ElementsFetchFailed
   | ElementsInPlaceFetched
+  | ElementHistoryPrinted
   | ElementCcidsFilterUpdated
   | ElementNamesFilterUpdated
+  | ElementTypesFilterUpdated
   | ElementsUpTheMapFilterUpdated
-  | EndevorSearchLocationFiltersCleared;
+  | EndevorSearchLocationFiltersCleared
+  | SubsystemElementsUpdatedInPlace
+  | SelectedElementsUpdated;

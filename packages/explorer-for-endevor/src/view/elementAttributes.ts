@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -53,6 +53,10 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
       <td> lastActionCcid </td>
       <td>: ${element.lastActionCcid ? element.lastActionCcid : ''} </td>
     </tr>
+    <tr>
+      <td> noSource </td>
+      <td>: ${element.noSource ? 'yes' : 'no'} </td>
+    </tr>    
   </table>
 </body>
 </html>`;

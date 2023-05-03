@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,33 +11,30 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Logger } from '@local/extension/_doc/Logger';
+import { Session } from '@zowe/imperative/lib/rest/src/session/Session';
 import { URL } from 'url';
+import { TEN_SEC_IN_MS } from './const';
 import { UnreachableCaseError } from './typeHelpers';
+import { AuthType } from './_doc/Auth';
+import { CredentialType, TokenCredential } from './_doc/Credential';
 import {
   EnvironmentStageResponseObject,
-  ErrorUpdateResponse,
   ServiceProtocol,
   StageNumber,
   SubSystem,
   SubSystemResponseObject,
   System,
   SystemResponseObject,
-  UpdateResponse,
   ResponseStatus,
-  ErrorPrintListingResponse,
-  PrintListingResponse,
+  ElementMapPath,
+  ErrorEndevorResponse,
+  ErrorResponseType,
+  EndevorResponse,
+  Service,
+  ServiceLocation,
+  ServiceApiVersion,
 } from './_doc/Endevor';
-import {
-  FingerprintMismatchError,
-  ChangeRegressionError,
-  SignoutError,
-  DuplicateElementError,
-  ProcessorStepMaxRcExceededError,
-  SelfSignedCertificateError,
-  WrongCredentialsError,
-  ConnectionError,
-  NoComponentInfoError,
-} from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
 export const toUrlParms = (
@@ -98,6 +95,74 @@ export const toEndevorProtocol = (
   return undefined;
 };
 
+export const toServiceApiVersion = (
+  apiVersionString: string | undefined
+): ServiceApiVersion | undefined => {
+  if (!apiVersionString) return;
+  const cleanedApiVersionString = apiVersionString.trim();
+  switch (true) {
+    case cleanedApiVersionString.startsWith('2'):
+      return ServiceApiVersion.V2;
+    case cleanedApiVersionString.startsWith('1'):
+      return ServiceApiVersion.V1;
+    default:
+      return;
+  }
+};
+
+export const toEndevorSession =
+  ({ protocol, hostname, port, basePath }: ServiceLocation) =>
+  (rejectUnauthorized: boolean): Session => {
+    return new Session({
+      protocol,
+      hostname,
+      port,
+      basePath: toCorrectBasePathFormat(basePath),
+      rejectUnauthorized,
+    });
+  };
+
+export const toSecuredEndevorSession =
+  (logger: Logger) =>
+  ({ location, credential, rejectUnauthorized }: Service): Session => {
+    const commonSession =
+      toEndevorSession(location)(rejectUnauthorized).ISession;
+    let securedSession;
+    switch (credential.type) {
+      case CredentialType.TOKEN_BEARER:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.BEARER,
+          tokenValue: credential.tokenValue,
+        });
+        break;
+      case CredentialType.TOKEN_COOKIE:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.COOKIE,
+          tokenType: credential.tokenType,
+          tokenValue: credential.tokenValue,
+        });
+        break;
+      case CredentialType.BASE:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.BASIC,
+          user: credential.user,
+          password: credential.password,
+        });
+        break;
+      default:
+        throw new UnreachableCaseError(credential);
+    }
+    logger.trace(
+      `Setup Endevor session:\n${stringifyWithHiddenCredential(
+        securedSession.ISession
+      )}`
+    );
+    return securedSession;
+  };
+
 export const toEndevorStageNumber = (
   value: string | number
 ): StageNumber | undefined => {
@@ -121,7 +186,7 @@ export const isDefined = <T>(value: T | undefined): value is T => {
 
 export const stringifyWithHiddenCredential = (value: unknown): string => {
   return JSON.stringify(value, (key, value) =>
-    key === 'password' || key === 'token' || key === 'base64EncodedAuth'
+    key === 'password' || key === 'tokenValue' || key === 'base64EncodedAuth'
       ? '*****'
       : value
   );
@@ -131,74 +196,13 @@ export const stringifyPretty = (value: unknown): string => {
   return JSON.stringify(value, null, 2);
 };
 
-export const isErrorUpdateResponse = (
-  value: UpdateResponse
-): value is ErrorUpdateResponse => {
+export const isErrorEndevorResponse = <
+  E extends ErrorResponseType | undefined,
+  R
+>(
+  value: EndevorResponse<E, R>
+): value is ErrorEndevorResponse<E> => {
   return value.status === ResponseStatus.ERROR;
-};
-
-export const isErrorPrintListingResponse = (
-  value: PrintListingResponse
-): value is ErrorPrintListingResponse => {
-  return value.status === ResponseStatus.ERROR;
-};
-
-export const isError = <T>(value: T | Error): value is Error => {
-  return value instanceof Error;
-};
-
-export const isSignoutError = <T>(
-  value: T | SignoutError
-): value is SignoutError => {
-  return value instanceof SignoutError;
-};
-
-export const isFingerprintMismatchError = <T>(
-  value: T | FingerprintMismatchError
-): value is FingerprintMismatchError => {
-  return value instanceof FingerprintMismatchError;
-};
-
-export const isDuplicateElementError = <T>(
-  value: T | DuplicateElementError
-): value is DuplicateElementError => {
-  return value instanceof DuplicateElementError;
-};
-
-export const isChangeRegressionError = <T>(
-  value: T | ChangeRegressionError
-): value is ChangeRegressionError => {
-  return value instanceof ChangeRegressionError;
-};
-
-export const isProcessorStepMaxRcExceededError = <T>(
-  value: T | ProcessorStepMaxRcExceededError
-): value is ProcessorStepMaxRcExceededError => {
-  return value instanceof ProcessorStepMaxRcExceededError;
-};
-
-export const isNoComponentInfoError = <T>(
-  value: T | NoComponentInfoError
-): value is NoComponentInfoError => {
-  return value instanceof NoComponentInfoError;
-};
-
-export const isWrongCredentialsError = <T>(
-  value: T | WrongCredentialsError
-): value is WrongCredentialsError => {
-  return value instanceof WrongCredentialsError;
-};
-
-export const isSelfSignedCertificateError = <T>(
-  value: T | SelfSignedCertificateError
-): value is SelfSignedCertificateError => {
-  return value instanceof SelfSignedCertificateError;
-};
-
-export const isConnectionError = <T>(
-  value: T | ConnectionError
-): value is ConnectionError => {
-  return value instanceof ConnectionError;
 };
 
 export const toSeveralTasksProgress =
@@ -262,3 +266,56 @@ export const systemStageIdToStageNumber =
       })
       .filter(isDefined);
   };
+
+export const isUnique = <T>(
+  value: T,
+  index: number,
+  self: ReadonlyArray<T>
+): boolean => self.indexOf(value) == index;
+
+export const toSearchPath = (elementMapPath: ElementMapPath): string => {
+  const env = elementMapPath.environment;
+  const stage = elementMapPath.stageNumber;
+  const sys = elementMapPath.system;
+  const subSys = elementMapPath.subSystem;
+  const type = elementMapPath.type;
+  return [env, stage, sys, subSys, type].join('/');
+};
+
+export const fromEndevorMapPath = (
+  elementMapPath: string
+): Omit<ElementMapPath, 'id'> | undefined => {
+  const [environment, stageNumber, system, subSystem, type] =
+    elementMapPath.split('/');
+  if (!environment || !system || !subSystem || !type || !stageNumber) {
+    return;
+  }
+  const stageNum = toEndevorStageNumber(stageNumber);
+  if (!stageNum) return;
+  return {
+    type,
+    environment,
+    system,
+    subSystem,
+    stageNumber: stageNum,
+  };
+};
+
+export const isResponseSuccessful = (response: {
+  statusCode: number;
+}): boolean => {
+  const successHttpStatusStart = '2';
+  return response.statusCode.toString().startsWith(successHttpStatusStart);
+};
+
+export const toEndevorReportId = (value: string): string => {
+  const matcher = value.match('^(?:http.*)?/reports/(.*)$');
+  if (matcher && matcher[1]) {
+    return matcher[1];
+  }
+  return value;
+};
+
+export const isTokenCredentialExpired = (token: TokenCredential): boolean =>
+  // decrease token validity time for 10 seconds to lower a probability of immediate invalidation
+  Date.now() - token.tokenCreatedMs >= token.tokenValidForMs - TEN_SEC_IN_MS;

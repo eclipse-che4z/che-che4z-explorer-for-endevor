@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,13 +11,34 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-export enum CredentialType {
+export const enum CredentialType {
   BASE = 'base-credential',
-  TOKEN = 'token-credential',
+  TOKEN_BEARER = 'token-bearer-credential',
+  TOKEN_COOKIE = 'token-cookie-credential',
+  // another authentication possibilities for the future
+  // BASE64 = 'base64-credential',
+  // CERT = 'certificate-credential',
 }
 
+export type BaseCredential = Readonly<{
+  type: CredentialType.BASE;
+  user: string;
+  password: string;
+}>;
+
+type TokenValidityParams = Readonly<{
+  tokenCreatedMs: number;
+  tokenValidForMs: number;
+}>;
+
+export type BearerTokenCredential = TokenValidityParams &
+  Readonly<{
+    type: CredentialType.TOKEN_BEARER;
+    tokenValue: string;
+  }>;
+
 // our own enum for token types not to expose imperative types
-export enum CredentialTokenType {
+export const enum CredentialTokenType {
   // SessConstants.TOKEN_TYPE_LTPA
   LTPA = 'LtpaToken2',
   // SessConstants.TOKEN_TYPE_JWT
@@ -26,16 +47,13 @@ export enum CredentialTokenType {
   APIML = 'apimlAuthenticationToken',
 }
 
-export interface BaseCredential {
-  type: CredentialType.BASE;
-  readonly user: string;
-  readonly password: string;
-}
+export type CookieTokenCredential = TokenValidityParams &
+  Readonly<{
+    type: CredentialType.TOKEN_COOKIE;
+    tokenType: CredentialTokenType;
+    tokenValue: string;
+  }>;
 
-export interface TokenCredential {
-  type: CredentialType.TOKEN;
-  readonly tokenType: CredentialTokenType;
-  readonly tokenValue: string;
-}
+export type TokenCredential = BearerTokenCredential | CookieTokenCredential;
 
 export type Credential = BaseCredential | TokenCredential;

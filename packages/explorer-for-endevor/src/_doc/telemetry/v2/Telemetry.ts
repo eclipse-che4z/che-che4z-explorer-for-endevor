@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -38,6 +38,8 @@ export const enum TelemetryEvents {
 
   SERVICE_HIDDEN = 'service hidden from the tree',
   SEARCH_LOCATION_HIDDEN = 'search location hidden from the tree',
+
+  COMMAND_EDIT_SERVICE_COMPLETED = 'edit service command completed',
 
   COMMAND_DELETE_SERVICE_CALLED = 'delete service command called',
   COMMAND_DELETE_SERVICE_COMPLETED = 'delete service command completed',
@@ -84,6 +86,7 @@ export const enum TelemetryEvents {
   SETTING_CHANGED_SYNC_WITH_PROFILES = 'sync with profiles setting changed',
   SETTING_CHANGED_FILE_EXT_RESOLUTION = 'file extension resolution setting changed',
   SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
+  SETTING_CHANGED_AUTH_WITH_TOKEN = 'auth with token setting changed',
 
   COMMAND_EDIT_CONNECTION_DETAILS_CALLED = 'edit connection details command called',
   COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED = 'edit connection details command completed',
@@ -100,15 +103,31 @@ export const enum TelemetryEvents {
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED = 'update elements name filter command called',
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED = 'update elements name filter command completed',
 
+  COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL = 'update elements type filter command call performed',
+  COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED = 'update elements type filter command called',
+  COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED = 'update elements type filter command completed',
+
   COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL = 'update elements CCID filter command call performed',
   COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED = 'update elements CCID filter command called',
   COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED = 'update elements CCID filter command completed',
+
+  COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED = 'generate subsystem elements in place command called',
+  COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED = 'generate subsystem elements in place command completed',
 
   COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED = 'clear search location filters command called',
 
   COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED = 'clear search location filter command called',
 
   COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED = 'clear search location filter value command called',
+
+  COMMAND_PRINT_RESULT_TABLE_CALL = 'print result table command call performed',
+  COMMAND_PRINT_RESULT_TABLE_CALLED = 'print result table command called',
+
+  COMMAND_PRINT_ENDEVOR_REPORT_CALL = 'print Endevor report command call performed',
+  COMMAND_PRINT_ENDEVOR_REPORT_CALLED = 'print Endevor report command called',
+
+  REPORT_CONTENT_PROVIDER_CALLED = 'Endevor report content provider called',
+  REPORT_CONTENT_PROVIDER_COMPLETED = 'Endevor report content provider completed',
 }
 
 export type ExtensionActivatedEvent = {
@@ -254,6 +273,24 @@ export type SearchLocationHiddenEvent = {
   type: TelemetryEvents.SEARCH_LOCATION_HIDDEN;
   source: Source;
 };
+
+export const enum CommandEditServiceCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  VALIDATION_UNSUCCESSFUL = 'VALIDATION_UNSUCCESSFUL',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandEditServiceCompletedEvent =
+  | {
+      type: TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED;
+      status: CommandEditServiceCompletedStatus.CANCELLED;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED;
+      status:
+        | CommandEditServiceCompletedStatus.SUCCESS
+        | CommandEditServiceCompletedStatus.VALIDATION_UNSUCCESSFUL;
+    };
 
 export type CommandDeleteServiceCalledEvent = {
   type: TelemetryEvents.COMMAND_DELETE_SERVICE_CALLED;
@@ -471,7 +508,8 @@ export type SettingChangedEvent =
         | TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT
         | TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION
         | TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS
-        | TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES;
+        | TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES
+        | TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN;
       status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR;
       error: Error;
     }
@@ -494,6 +532,11 @@ export type SettingChangedEvent =
       type: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS;
       status: SettingChangedStatus.SUCCESS;
       value: number;
+    }
+  | {
+      type: TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN;
+      status: SettingChangedStatus.SUCCESS;
+      value: boolean;
     };
 
 export const enum SettingChangedStatus {
@@ -757,6 +800,61 @@ export type CommandUpdateElementNameFilterCompletedEvent =
       wildcardUsed: boolean;
     };
 
+export const enum GenerateSubsystemElementsInPlaceCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandGenerateSubsystemElementsInPlaceCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED;
+      status: GenerateSubsystemElementsInPlaceCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED;
+      status:
+        | GenerateSubsystemElementsInPlaceCompletedStatus.SUCCESS
+        | GenerateSubsystemElementsInPlaceCompletedStatus.GENERIC_ERROR
+        | GenerateSubsystemElementsInPlaceCompletedStatus.CANCELLED;
+    };
+
+export type CommandGenerateSubsystemElementsInPlaceCalledEvent = {
+  type: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED;
+};
+
+export const enum ElementNameFilterCompletedElementsFetched {
+  ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
+  ELEMENTS_NOT_FETCHED = 'ELEMENTS_NOT_FETCHED',
+}
+
+export type CommandUpdateElementTypeFilterCalledEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED;
+};
+
+export const enum UpdateElementTypeFilterCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  UNCHANGED = 'UNCHANGED',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandUpdateElementTypeFilterCompletedEvent =
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED;
+      status: UpdateElementTypeFilterCommandCompletedStatus.CANCELLED;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED;
+      status:
+        | UpdateElementTypeFilterCommandCompletedStatus.SUCCESS
+        | UpdateElementTypeFilterCommandCompletedStatus.UNCHANGED;
+      elementsFetched: boolean;
+      patternsCount: number;
+      wildcardUsed: boolean;
+    };
+
 export type CommandUpdateElementCcidFilterCalledEvent = {
   type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED;
 };
@@ -793,6 +891,56 @@ export type CommandUpdateElementNameFilterCallEvent = {
   type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL;
 };
 
+export type CommandUpdateElementTypeFilterCallEvent = {
+  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL;
+};
+
+export type ReportContentProviderCalledEvent = {
+  type: TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED;
+};
+
+export const enum ReportContentProviderCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type ReportContentProviderCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext:
+        | TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED
+        | TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED;
+      status: ReportContentProviderCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.REPORT_CONTENT_PROVIDER_COMPLETED;
+      context:
+        | TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED
+        | TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED;
+      status: ReportContentProviderCompletedStatus.SUCCESS;
+    };
+
+export type CommandPrintResultTableCallEvent = {
+  type: TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALL;
+  context: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED;
+};
+
+export type CommandPrintResultTableCalledEvent = {
+  type: TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED;
+};
+
+export type CommandPrintEndevorReportCallEvent = {
+  type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL;
+  context:
+    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED
+    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED;
+};
+
+export type CommandPrintEndevorReportCalledEvent = {
+  type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED;
+};
+
 export type TelemetryEvent =
   | ExtensionActivatedEvent
   | ProfileMigrationCompletedEvent
@@ -807,12 +955,15 @@ export type TelemetryEvent =
   | CommandAddNewSearchLocationCompletedEvent
   | ServiceHiddenEvent
   | SearchLocationHiddenEvent
+  | CommandEditServiceCompletedEvent
   | CommandDeleteServiceCalledEvent
   | CommandDeleteServiceCompletedEvent
   | CommandDeleteSearchLocationCalledEvent
   | CommandDeleteSearchLocationCompletedEvent
   | CommandGenerateElementCalledEvent
   | CommandGenerateElementCompletedEvent
+  | CommandGenerateSubsystemElementsInPlaceCalledEvent
+  | CommandGenerateSubsystemElementsInPlaceCompletedEvent
   | CommandPrintListingCallEvent
   | CommandSignoutErrorRecoverCalledEvent
   | CommandSignoutErrorRecoverCompletedEvent
@@ -844,7 +995,16 @@ export type TelemetryEvent =
   | CommandClearSearchLocationFilterValueCalledEvent
   | CommandUpdateElementNameFilterCalledEvent
   | CommandUpdateElementNameFilterCompletedEvent
+  | CommandUpdateElementTypeFilterCalledEvent
+  | CommandUpdateElementTypeFilterCompletedEvent
   | CommandUpdateElementCcidFilterCalledEvent
   | CommandUpdateElementCcidFilterCompletedEvent
   | CommandUpdateElementNameFilterCallEvent
-  | CommandUpdateElementCcidFilterCallEvent;
+  | CommandUpdateElementTypeFilterCallEvent
+  | CommandUpdateElementCcidFilterCallEvent
+  | ReportContentProviderCalledEvent
+  | ReportContentProviderCompletedEvent
+  | CommandPrintResultTableCallEvent
+  | CommandPrintResultTableCalledEvent
+  | CommandPrintEndevorReportCallEvent
+  | CommandPrintEndevorReportCalledEvent;

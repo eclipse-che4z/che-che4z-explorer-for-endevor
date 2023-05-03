@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,14 +12,11 @@
  */
 
 import { ANY_VALUE } from '@local/endevor/const';
-import {
-  ElementMapPath,
-  ElementSearchLocation,
-  StageNumber,
-} from '@local/endevor/_doc/Endevor';
+import { ElementMapPath, StageNumber } from '@local/endevor/_doc/Endevor';
 import { showInputBox } from '@local/vscode-wrapper/window';
 import { logger } from '../../globals';
 import { isError } from '../../utils';
+import { SearchLocation } from '../../_doc/Endevor';
 
 type OperationCancelled = undefined;
 type DialogResult = ElementMapPath | OperationCancelled;
@@ -31,7 +28,7 @@ export const dialogCancelled = (
 };
 
 export const askForUploadLocation = async (
-  defaultValue: ElementSearchLocation
+  defaultValue: SearchLocation
 ): Promise<DialogResult> => {
   logger.trace('Prompt for upload location for the element.');
   const pathDelimiter = '/';
@@ -105,8 +102,8 @@ export const askForUploadLocation = async (
       system,
       subSystem,
       type,
-      name,
-      configuration: defaultValue.configuration,
+      // TODO: refactor the result somehow to indicate that we are actually working with name, not id
+      id: name,
     };
   };
   const validateValue = (
@@ -147,7 +144,7 @@ export const askForUploadLocation = async (
   };
 
   const buildPrefilledValue =
-    (value: ElementSearchLocation) =>
+    (value: SearchLocation) =>
     (delimiter: string): string => {
       const env = value.environment;
       const stage = value.stageNumber;
