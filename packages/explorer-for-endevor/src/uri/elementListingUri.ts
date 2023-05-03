@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -15,7 +15,7 @@ import { Uri } from 'vscode';
 import { ElementListingUriQuery, Schemas, Extensions } from '../_doc/Uri';
 
 export const toElementListingUri =
-  ({ element, service }: ElementListingUriQuery) =>
+  ({ serviceId, searchLocationId, element }: ElementListingUriQuery) =>
   (uniqueFragment: string): Uri | Error => {
     try {
       const elementFragment = { fragment: uniqueFragment };
@@ -25,7 +25,8 @@ export const toElementListingUri =
         path: [element.name, Extensions.ELEMENT_LISTING].join('.'),
         query: encodeURIComponent(
           JSON.stringify({
-            service,
+            serviceId,
+            searchLocationId,
             element,
             elementFragment,
           })

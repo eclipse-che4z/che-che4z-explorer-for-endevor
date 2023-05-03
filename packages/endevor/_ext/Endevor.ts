@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,79 +12,61 @@
  */
 
 import * as t from 'io-ts';
-import { toEndevorStageNumber } from '../utils';
+import { toEndevorReportId, toEndevorStageNumber } from '../utils';
 import { StageNumber } from '../_doc/Endevor';
 
 // "What makes io-ts uniquely valuable is that it simultaneously defines a runtime validator and a static type."
 // https://www.olioapps.com/blog/checking-types-real-world-typescript/
 
 export type Configuration = t.TypeOf<typeof Configuration>;
-export type Configurations = t.TypeOf<typeof Configurations>;
 
 export type EnvironmentStage = t.TypeOf<typeof EnvironmentStage>;
 
 export type System = t.TypeOf<typeof System>;
-export type Systems = t.TypeOf<typeof Systems>;
 
 export type SubSystem = t.TypeOf<typeof SubSystem>;
-export type SubSystems = t.TypeOf<typeof SubSystems>;
 
 export type ElementType = t.TypeOf<typeof ElementType>;
-export type ElementTypes = t.TypeOf<typeof ElementTypes>;
 
 export type Element = t.TypeOf<typeof Element>;
-export type Elements = t.TypeOf<typeof Elements>;
 
 export type Component = t.TypeOf<typeof Component>;
 export type Components = t.TypeOf<typeof Components>;
 
 export type Content = t.TypeOf<typeof Content>;
 
-export type BaseResponse = t.TypeOf<typeof BaseResponse>;
-export type BaseResponseWithUnknownData = t.TypeOf<
-  typeof BaseResponseWithUnknownData
->;
-export type BaseResponseWithContent = t.TypeOf<typeof BaseResponseWithContent>;
-export type BaseResponseWithMessages = t.TypeOf<
-  typeof BaseResponseWithMessages
->;
-export type ErrorResponse = t.TypeOf<typeof ErrorResponse>;
-
 export type V1ApiVersionResponse = t.TypeOf<typeof V1ApiVersionResponse>;
 export type V2ApiVersionResponse = t.TypeOf<typeof V2ApiVersionResponse>;
 
 export type PrintResponse = t.TypeOf<typeof PrintResponse>;
-export type SuccessRetrieveResponse = t.TypeOf<typeof SuccessRetrieveResponse>;
-export type SuccessListElementsResponse = t.TypeOf<
-  typeof SuccessListElementsResponse
+export type RetrieveResponse = t.TypeOf<typeof RetrieveResponse>;
+
+export type ConfigurationsResponse = t.TypeOf<typeof ConfigurationsResponse>;
+export type EnvironmentStagesResponse = t.TypeOf<
+  typeof EnvironmentStagesResponse
 >;
-export type SuccessListConfigurationsResponse = t.TypeOf<
-  typeof SuccessListConfigurationsResponse
->;
-export type SuccessListEnvironmentStagesResponse = t.TypeOf<
-  typeof SuccessListEnvironmentStagesResponse
->;
-export type SuccessListSystemsResponse = t.TypeOf<
-  typeof SuccessListSystemsResponse
->;
-export type SuccessListSubSystemsResponse = t.TypeOf<
-  typeof SuccessListSubSystemsResponse
->;
-export type SuccessListElementTypesResponse = t.TypeOf<
-  typeof SuccessListElementTypesResponse
->;
-export type SuccessListDependenciesResponse = t.TypeOf<
-  typeof SuccessListDependenciesResponse
->;
+export type SystemsResponse = t.TypeOf<typeof SystemsResponse>;
+export type SubSystemsResponse = t.TypeOf<typeof SubSystemsResponse>;
+export type ElementTypesResponse = t.TypeOf<typeof ElementTypesResponse>;
+export type ElementsResponse = t.TypeOf<typeof ElementsResponse>;
+
+export type ComponentsResponse = t.TypeOf<typeof ComponentsResponse>;
 export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
 
 export type AddResponse = t.TypeOf<typeof AddResponse>;
+
+export type GenerateResponse = t.TypeOf<typeof GenerateResponse>;
+
+export type SignInElementResponse = t.TypeOf<typeof SignInElementResponse>;
+
+export type AuthenticationTokenResponse = t.TypeOf<
+  typeof AuthenticationTokenResponse
+>;
 
 export const Configuration = t.type({
   name: t.string,
   description: t.string,
 });
-export const Configurations = t.array(Configuration);
 
 class StageNumberType extends t.Type<StageNumber> {
   constructor() {
@@ -119,13 +101,36 @@ class ReturnCodeType extends t.Type<number> {
   }
 }
 
+class ReportIdType extends t.Type<string> {
+  constructor(reportName: string) {
+    super(
+      reportName,
+      (value): value is string => value != null && typeof value !== 'number',
+      (value, context) =>
+        this.is(value)
+          ? t.success(this.encode(value))
+          : t.failure(value, context),
+      // it will be already checked within type guard
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      (value) => toEndevorReportId(value)
+    );
+  }
+}
+
+export const EnvironmentStage = t.type({
+  envName: t.string,
+  stgNum: new StageNumberType(),
+  stgId: t.string,
+  nextEnv: t.union([t.string, t.null]),
+  nextStgNum: t.union([new StageNumberType(), t.null]),
+});
+
 export const System = t.type({
   envName: t.string,
   stgId: t.string,
   sysName: t.string,
   nextSys: t.string,
 });
-export const Systems = t.array(System);
 
 export const SubSystem = t.type({
   envName: t.string,
@@ -134,16 +139,14 @@ export const SubSystem = t.type({
   sbsName: t.string,
   nextSbs: t.string,
 });
-export const SubSystems = t.array(SubSystem);
 
 export const ElementType = t.type({
   envName: t.string,
   stgId: t.string,
   sysName: t.string,
-  nextType: t.string,
   typeName: t.string,
+  nextType: t.string,
 });
-export const ElementTypes = t.array(ElementType);
 
 const ElementPath = t.type({
   envName: t.string,
@@ -154,64 +157,65 @@ const ElementPath = t.type({
   elmName: t.string,
 });
 
-export const EnvironmentStage = t.type({
-  envName: t.string,
-  stgNum: new StageNumberType(),
-  stgId: t.string,
-  nextEnv: t.union([t.string, t.null]),
-  nextStgNum: t.union([new StageNumberType(), t.null]),
-});
-
 export const Element = t.intersection([
   ElementPath,
   t.type({
     fullElmName: t.string,
+    nosource: t.string,
   }),
   t.partial({
     lastActCcid: t.union([t.string, t.null]),
     fileExt: t.union([t.string, t.null]),
   }),
 ]);
-export const Elements = t.array(Element);
 
 export const Component = ElementPath;
 export const Components = t.array(Component);
 
 export const Content = t.string;
 
-// new type for general response parsing
-export const BaseResponse = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-  }),
+const BaseResponseValues = t.type({
+  statusCode: t.number,
+  returnCode: new ReturnCodeType(),
+  // TODO add extra response info
+  // reasonCode: new ReturnCodeType(),
+  // reports: t.type({
+  //  TODO add report types
+  // }),
+  messages: t.array(t.string),
 });
 
-export const BaseResponseWithMessages = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-    messages: t.array(t.string),
-  }),
+const BaseResponseWithNoData = t.type({
+  body: BaseResponseValues,
 });
 
-export const BaseResponseWithUnknownData = t.type({
-  body: t.type({
-    statusCode: t.number,
-    data: t.array(t.unknown),
-  }),
+const BaseResponseWithUnknownData = t.type({
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.array(t.unknown),
+    }),
+  ]),
 });
 
-export const BaseResponseWithContent = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-    data: t.array(Content),
-    messages: t.array(t.string),
-  }),
+// TODO: to be compatible with some v1 api error response types, remove when unnecessary
+const BaseResponseWithUnknownDataOrNull = t.type({
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.union([t.array(t.unknown), t.null]),
+    }),
+  ]),
 });
 
-export const ErrorResponse = BaseResponseWithMessages;
+const BaseResponseWithContentOrNull = t.type({
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.union([t.array(Content), t.null]),
+    }),
+  ]),
+});
 
 export const V1ApiVersionResponse = t.type({
   headers: t.type({
@@ -225,7 +229,47 @@ export const V2ApiVersionResponse = t.type({
   }),
 });
 
-export const PrintResponse = BaseResponseWithContent;
+export const ConfigurationsResponse = BaseResponseWithUnknownData;
+
+class StringWithNumberType extends t.Type<string, number> {
+  constructor() {
+    super(
+      'StringWithNumber',
+      (value): value is string =>
+        value != null && typeof value === 'string' && !isNaN(Number(value)),
+      (value, context) =>
+        this.is(value) ? t.success(value) : t.failure(value, context),
+      (value) => parseInt(value, 10)
+    );
+  }
+}
+
+export const AuthenticationTokenResponse = t.type({
+  headers: t.partial({
+    'api-version': t.string,
+    version: t.string,
+  }),
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.array(
+        t.type({
+          token: t.string,
+          tokenValidFor: new StringWithNumberType(),
+        })
+      ),
+    }),
+  ]),
+});
+// TODO: temporarily use relaxed type to be compatible with v1 api, remove when unnecessary
+export const EnvironmentStagesResponse = BaseResponseWithUnknownDataOrNull;
+export const SystemsResponse = BaseResponseWithUnknownDataOrNull;
+export const SubSystemsResponse = BaseResponseWithUnknownDataOrNull;
+export const ElementTypesResponse = BaseResponseWithUnknownDataOrNull;
+export const ElementsResponse = BaseResponseWithUnknownDataOrNull;
+
+export const PrintResponse = BaseResponseWithContentOrNull;
+
 class RetrieveContentType extends t.Type<Buffer> {
   constructor() {
     super(
@@ -238,41 +282,42 @@ class RetrieveContentType extends t.Type<Buffer> {
   }
 }
 
-export const SuccessRetrieveResponse = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-    data: t.array(new RetrieveContentType()),
-  }),
-  headers: t.type({
+export const RetrieveResponse = t.type({
+  headers: t.partial({
     fingerprint: t.string,
   }),
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.array(new RetrieveContentType()),
+    }),
+  ]),
 });
 
-export const SuccessListConfigurationsResponse = t.type({
-  body: t.type({
-    returnCode: new ReturnCodeType(),
-    data: t.array(t.unknown),
-  }),
+export const ComponentsResponse = t.type({
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      data: t.array(
+        t.type({
+          components: t.union([t.array(t.unknown), t.undefined]),
+        })
+      ),
+    }),
+  ]),
 });
 
-export const SuccessListEnvironmentStagesResponse = BaseResponseWithUnknownData;
-export const SuccessListSystemsResponse = BaseResponseWithUnknownData;
-export const SuccessListSubSystemsResponse = BaseResponseWithUnknownData;
-export const SuccessListElementTypesResponse = BaseResponseWithUnknownData;
-export const SuccessListElementsResponse = BaseResponseWithUnknownData;
-
-export const SuccessListDependenciesResponse = t.type({
-  body: t.type({
-    statusCode: t.number,
-    returnCode: new ReturnCodeType(),
-    data: t.array(
-      t.type({
-        components: t.union([t.array(t.unknown), t.undefined]),
-      })
-    ),
-  }),
+export const GenerateResponse = t.type({
+  body: t.intersection([
+    BaseResponseValues,
+    t.type({
+      reports: t.type({
+        C1MSGS1: new ReportIdType('C1MSGS1'),
+      }),
+    }),
+  ]),
 });
 
-export const UpdateResponse = BaseResponseWithMessages;
-export const AddResponse = BaseResponseWithMessages;
+export const UpdateResponse = BaseResponseWithNoData;
+export const AddResponse = BaseResponseWithNoData;
+export const SignInElementResponse = BaseResponseWithNoData;

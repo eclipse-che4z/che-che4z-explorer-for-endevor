@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,25 +13,45 @@
 
 import { logger } from './globals';
 import * as endevor from '@local/endevor/endevor';
-import { Service } from '@local/endevor/_doc/Endevor';
-import { isError } from './utils';
+import { ErrorResponseType, Service } from '@local/endevor/_doc/Endevor';
+import { formatWithNewLines } from './utils';
 import { Credential } from '@local/endevor/_doc/Credential';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
-import { isWrongCredentialsError } from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
+import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 
 export const getApiVersion = endevor.getApiVersion(logger);
 export const getConfigurations = endevor.getConfigurations(logger);
+export const getAuthenticationToken = endevor.getAuthenticationToken(logger);
 export const validateCredentials =
   (progress: ProgressReporter) =>
   (connectionDetails: Omit<Service, 'credential'>) =>
   (configuration: string) =>
   async (credential: Credential): Promise<boolean | Error> => {
-    const result = await endevor.getAllEnvironmentStages(logger)(progress)({
+    const response = await endevor.getAllEnvironmentStages(logger)(progress)({
       ...connectionDetails,
       credential,
     })(configuration)();
-    if (isWrongCredentialsError(result)) return false;
-    if (isError(result)) return result;
+    if (isErrorEndevorResponse(response)) {
+      const errorResponse = response;
+      // TODO: format using all possible error details
+      const error = new Error(
+        `Unable to validate Endevor credentials because of an error:${formatWithNewLines(
+          errorResponse.details.messages
+        )}`
+      );
+      switch (errorResponse.type) {
+        case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
+        case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
+          return false;
+        case ErrorResponseType.CERT_VALIDATION_ERROR:
+        case ErrorResponseType.CONNECTION_ERROR:
+        case ErrorResponseType.GENERIC_ERROR:
+          return error;
+        default:
+          throw new UnreachableCaseError(errorResponse.type);
+      }
+    }
     return true;
   };
 export const getAllEnvironmentStages = endevor.getAllEnvironmentStages(logger);
@@ -45,26 +65,23 @@ export const searchForSubSystemsFromEnvironmentStage =
 export const searchForAllElements = endevor.searchForAllElements(logger);
 export const searchForElementsInPlace =
   endevor.searchForElementsInPlace(logger);
-export const viewElement = endevor.viewElement(logger);
-export const retrieveElement = endevor.retrieveElementWithoutSignout(logger);
 export const generateElementInPlace = endevor.generateElementInPlace(logger);
+export const generateSubsystemElementsInPlace =
+  endevor.generateSubSystemElementsInPlace(logger);
 export const generateElementWithCopyBack =
   endevor.generateElementWithCopyBack(logger);
-export const retrieveElementWithDependenciesWithoutSignout =
-  endevor.retrieveElementWithDependenciesWithoutSignout(logger);
-export const retrieveElementWithDependenciesWithSignout =
-  endevor.retrieveElementWithDependenciesWithSignout(logger);
-export const retrieveElementWithFingerprint =
-  endevor.retrieveElementWithFingerprint(logger);
-export const retrieveElementWithFingerprintFirstFound =
-  endevor.retrieveElementWithFingerprintFirstFound(logger);
+export const retrieveElementComponents =
+  endevor.retrieveElementComponents(logger);
+export const retrieveElementFirstFound =
+  endevor.retrieveElementFirstFound(logger);
 export const printElement = endevor.printElement(logger);
 export const printListing = endevor.printListing(logger);
+export const printHistory = endevor.printHistory(logger);
 export const updateElement = endevor.updateElement(logger);
-export const retrieveElementWithoutSignout =
-  endevor.retrieveElementWithoutSignout(logger);
+export const retrieveElement = endevor.retrieveElementWithoutSignout(logger);
 export const retrieveElementWithSignout =
   endevor.retrieveElementWithSignout(logger);
 export const signOutElement = endevor.signOutElement(logger);
 export const signInElement = endevor.signInElement(logger);
 export const addElement = endevor.addElement(logger);
+export const downloadReportById = endevor.downloadReportById(logger);

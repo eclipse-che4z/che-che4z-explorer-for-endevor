@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -16,6 +16,7 @@ export const TELEMETRY_EVENTS_VERSION = '1';
 export const enum TelemetryEvents {
   ERROR = 'extension error',
   REFRESH_COMMAND_CALLED = 'refresh tree command called',
+  REFRESH_HISTORY_COMMAND_CALLED = 'refresh history command called',
   ELEMENTS_WERE_FETCHED = 'elements were fetched',
   ENDEVOR_MAP_STRUCTURE_BUILT = 'endevor map structure built',
   MISSING_CREDENTIALS_PROMPT_CALLED = 'missing credentials prompt called',
@@ -27,6 +28,8 @@ export const enum TelemetryEvents {
   ELEMENT_CONTENT_PROVIDER_COMPLETED = 'element content provider completed',
   LISTING_CONTENT_PROVIDER_CALLED = 'listing content provider called',
   LISTING_CONTENT_PROVIDER_COMPLETED = 'listing content provider completed',
+  HISTORY_CONTENT_PROVIDER_CALLED = 'history content provider called',
+  HISTORY_CONTENT_PROVIDER_COMPLETED = 'history content provider completed',
   COMMAND_VIEW_ELEMENT_DETAILS_CALLED = 'view element details command called',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED = 'resolve conflict with remote command called',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED = 'resolve conflict with remote command completed',
@@ -34,7 +37,8 @@ export const enum TelemetryEvents {
   COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED = 'signout error recover command completed',
   COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL = 'resolve conflict with remote call performed',
   COMMAND_PRINT_LISTING_CALLED = 'print listing command called',
-  COMMAND_PRINT_LISTING_COMPLETED = 'print listing command completed',
+  COMMAND_PRINT_HISTORY_CALLED = 'print history command called',
+  COMMAND_SHOW_CHANGE_LEVEL_CALLED = 'show change level command called',
   COMMAND_EDIT_ELEMENT_CALLED = 'edit element command called',
   COMMAND_EDIT_ELEMENT_COMPLETED = 'edit element command completed',
   COMMAND_UPLOAD_ELEMENT_CALLED = 'upload element command called',
@@ -54,6 +58,10 @@ export const enum TelemetryEvents {
 
 export type RefreshCommandCalledEvent = {
   type: TelemetryEvents.REFRESH_COMMAND_CALLED;
+};
+
+export type RefreshHistoryCommandCalledEvent = {
+  type: TelemetryEvents.REFRESH_HISTORY_COMMAND_CALLED;
 };
 
 export const enum ElementsFetchingStatus {
@@ -166,6 +174,27 @@ export type ListingContentProviderCompletedEvent =
         | ListingContentProviderCompletedStatus.NO_LISTING;
     };
 
+export type HistoryContentProviderCalledEvent = {
+  type: TelemetryEvents.HISTORY_CONTENT_PROVIDER_CALLED;
+};
+
+export const enum HistoryContentProviderCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+export type HistoryContentProviderCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED;
+      status: HistoryContentProviderCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED;
+      context: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED;
+      status: HistoryContentProviderCompletedStatus.SUCCESS;
+    };
+
 export const enum TreeElementCommandArguments {
   SINGLE_ELEMENT = 'SINGLE_ELEMENT',
   MULTIPLE_ELEMENTS = 'MULTIPLE_ELEMENTS',
@@ -192,6 +221,14 @@ export type CommandResolveConflictWithRemoteCallEvent = {
 
 export type CommandPrintListingCalledEvent = {
   type: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED;
+};
+
+export type CommandPrintHistoryCalledEvent = {
+  type: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED;
+};
+
+export type CommandShowChangeLevelCalledEvent = {
+  type: TelemetryEvents.COMMAND_SHOW_CHANGE_LEVEL_CALLED;
 };
 
 export type CommandSignoutErrorRecoverCalledEvent = {
@@ -430,6 +467,7 @@ export type CommandApplyDiffEditorChangesCompletedEvent = {
 
 export type TelemetryEvent =
   | RefreshCommandCalledEvent
+  | RefreshHistoryCommandCalledEvent
   | CommandAddElementCalledEvent
   | CommandAddElementCompletedEvent
   | ElementsFetchedEvent
@@ -439,11 +477,15 @@ export type TelemetryEvent =
   | CommandViewElementDetailsCalledEvent
   | CommandResolveConflictWithRemoteCallEvent
   | CommandPrintListingCalledEvent
+  | CommandPrintHistoryCalledEvent
   | CommandPrintElementCalledEvent
+  | CommandShowChangeLevelCalledEvent
   | ElementContentProviderCalledEvent
   | ElementContentProviderCompletedEvent
   | ListingContentProviderCalledEvent
   | ListingContentProviderCompletedEvent
+  | HistoryContentProviderCalledEvent
+  | HistoryContentProviderCompletedEvent
   | CommandSignoutErrorRecoverCalledEvent
   | CommandSignoutErrorRecoverCompletedEvent
   | CommandEditElementCalledEvent

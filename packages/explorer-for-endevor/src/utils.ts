@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -15,17 +15,19 @@ import { ElementNode } from './tree/_doc/ElementTree';
 import { Node } from './tree/_doc/ServiceLocationTree';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TimeoutError } from './_doc/Error';
 import {
   Element,
-  ElementSearchLocation,
   IntermediateEnvironmentStage,
+  ServiceLocation,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 import { EnvironmentStage } from '../../endevor/_doc/Endevor';
 import { Id } from './store/storage/_doc/Storage';
 import { setContextVariable } from '@local/vscode-wrapper/window';
+import { ElementSearchLocation } from './_doc/Endevor';
+import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
+import { ANY_VALUE } from '@local/endevor/const';
 
 const isElementNode = (node: Node): node is ElementNode => {
   switch (node.type) {
@@ -151,57 +153,19 @@ export const parseFilePath = (
   };
 };
 
-export const isTimeoutError = <T>(
-  value: T | TimeoutError
-): value is TimeoutError => {
-  return value instanceof TimeoutError;
-};
-
-export const toPromiseWithTimeout =
-  (timeout: number) =>
-  async <T>(inputPromise: Promise<T>): Promise<T | TimeoutError> => {
-    return Promise.race([
-      inputPromise,
-      new Promise<TimeoutError>((resolve) =>
-        setTimeout(() => resolve(new TimeoutError()), timeout)
-      ),
-    ]);
-  };
-
 export const replaceWith =
   <T>(initialSource: ReadonlyArray<T>) =>
   (
     isReplacement: (t1: T, t2: T) => boolean,
     replacement: T
   ): ReadonlyArray<T> => {
-    const accumulator: ReadonlyArray<T> = [];
-    return initialSource.reduce((acc, existingItem) => {
-      if (isReplacement(existingItem, replacement)) {
-        return [...acc, replacement];
-      }
-      return [...acc, existingItem];
-    }, accumulator);
+    return initialSource.reduce((acc: Array<T>, existingItem) => {
+      acc.push(
+        isReplacement(existingItem, replacement) ? replacement : existingItem
+      );
+      return acc;
+    }, []);
   };
-
-type GroupedElementNodes = Readonly<{
-  [searchLocationId: string]: ReadonlyArray<ElementNode>;
-}>;
-
-export const groupBySearchLocationId = (
-  elementNodes: ReadonlyArray<ElementNode>
-): GroupedElementNodes => {
-  const accumulator: GroupedElementNodes = {};
-  return elementNodes.reduce(
-    (acc, currentNode) => ({
-      ...acc,
-      [currentNode.searchLocationId]: [
-        ...(acc[currentNode.searchLocationId] || []),
-        currentNode,
-      ],
-    }),
-    accumulator
-  );
-};
 
 export const isElementUpTheMap =
   (elementsSearchLocation: ElementSearchLocation) => (element: Element) => {
@@ -233,3 +197,55 @@ export const getElementExtension = (element: {
   type: string;
   extension?: string;
 }): string => (element.extension ? element.extension : element.type);
+
+export const formatWithNewLines = (lines: ReadonlyArray<string>): string =>
+  ['', ...lines].join('\n');
+
+export const toServiceUrl = (
+  service: ServiceLocation,
+  credential?: Credential
+): string => {
+  let basePath = service.basePath;
+  if (basePath.startsWith('/')) basePath = basePath.slice(1);
+  if (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
+  let user;
+  if (credential) {
+    switch (credential.type) {
+      case CredentialType.BASE:
+        user = credential.user;
+        break;
+    }
+  }
+  return `${service.protocol}://${user ? user + '@' : ''}${service.hostname}:${
+    service.port
+  }/${basePath}`;
+};
+
+export const toSearchLocationPath = (
+  elementSearchLocation: ElementSearchLocation
+): string => {
+  const configuration = elementSearchLocation.configuration;
+  const env = elementSearchLocation.environment;
+  const stage = elementSearchLocation.stageNumber;
+  const sys = elementSearchLocation.system;
+  const subsys = elementSearchLocation.subsystem;
+  const type = elementSearchLocation.type;
+  return [
+    configuration,
+    env ? env : ANY_VALUE,
+    stage ?? ANY_VALUE,
+    sys ? sys : ANY_VALUE,
+    subsys ? subsys : ANY_VALUE,
+    type ? type : ANY_VALUE,
+  ].join('/');
+};
+
+export const moveItemInFrontOfArray = <T>(array: T[], item?: T): Array<T> => {
+  if (!item) {
+    return array;
+  }
+  const foundIndex = array.findIndex((element) => element === item);
+  array.splice(foundIndex, 1);
+  array.unshift(item);
+  return array;
+};

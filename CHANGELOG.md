@@ -2,6 +2,28 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.5.0] &ndash; 2023-05-02
+
+### Added
+
+- Enhanced the filtering functionality for an Endevor inventory location. You can now also apply filters by element type.
+- Added the generate a sandbox/subsystem feature with a summary batch report table.
+- Added the history view feature. You can now see the list of element revisions and specific changes in every revision.
+- Added the feature that enables you to view the C1MSGS1 Endevor batch report as a result of the generate element action.
+- Added the Token Authentication feature through PassTickets.
+- Added the feature that enables you to edit the Endevor connection details.
+
+### Fixed
+
+- Fixed the VS Code source control manager issue that prevented the diff editor for modified elements from being available after conflict resolution.
+
+### Changed
+
+- Added the no-source description indicator to the tree elements.
+- Enhanced the tooltips for service, location, and element nodes.
+- Removed Zowe CLI profiles now have the **Delete** option, instead of **Hide**.
+- Headers are removed for all printed content, excluding listings.
+
 ## [1.4.3] &ndash; 2023-03-22
 
 ### Fixed

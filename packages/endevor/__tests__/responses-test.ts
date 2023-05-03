@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,23 +13,26 @@
 
 import { parseToType } from '@local/type-parser/parser';
 import {
-  ErrorResponse,
-  SuccessListDependenciesResponse,
-  SuccessListElementsResponse,
-  SuccessListConfigurationsResponse,
+  ComponentsResponse,
   PrintResponse,
-  SuccessRetrieveResponse,
+  RetrieveResponse,
   UpdateResponse,
-  BaseResponse,
-  SuccessListEnvironmentStagesResponse,
-  SuccessListSystemsResponse,
-  SuccessListSubSystemsResponse,
   V1ApiVersionResponse,
   V2ApiVersionResponse,
+  ConfigurationsResponse,
+  EnvironmentStagesResponse,
+  SystemsResponse,
+  SubSystemsResponse,
+  ElementTypesResponse,
+  ElementsResponse,
 } from '../_ext/Endevor';
 
 describe('Endevor responses type parsing', () => {
-  describe('Endevor API v1 response type parsing', () => {
+  const statusCode = 200;
+  const returnCode = 8;
+  const messages = ['message 1', 'message 2'];
+
+  describe('Endevor v1 api response type parsing', () => {
     it('should parse a response with version header', () => {
       // arrange
       const response = {
@@ -65,7 +68,8 @@ describe('Endevor responses type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
-  describe('Endevor API v2 response type parsing', () => {
+
+  describe('Endevor v2 api response type parsing', () => {
     it('should parse a response with version header', () => {
       // arrange
       const response = {
@@ -101,294 +105,381 @@ describe('Endevor responses type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor configurations response type parsing', () => {
-    it('should parse a response with any data and correct return code', () => {
+    const anyData = [
+      {
+        some_name: 'blah',
+      },
+      {
+        some_different_name: 'blah',
+      },
+      {
+        name: 'real_name',
+        description: 'real description',
+      },
+    ];
+
+    it('should parse a response with any data', () => {
       // arrange
-      const anyData = [
-        {
-          some_name: 'blah',
-        },
-        {
-          some_different_name: 'blah',
-        },
-        {
-          name: 'real_name',
-        },
-      ];
-      const returnCode = 8;
       const response = {
         body: {
+          statusCode,
+          returnCode,
+          data: anyData,
+          messages,
+        },
+      };
+      // act
+      const parsedResponse = parseToType(ConfigurationsResponse, response);
+      // assert
+      expect(parsedResponse).toMatchSnapshot();
+    });
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
+      // arrange
+      const response = {
+        body: {
+          statusCode,
+          returnCode,
+          data: null,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(ConfigurationsResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+
+    it('should throw an error for a response without or incorrect status code', () => {
+      // arrange
+      const noStatusCodeResponse = {
+        body: {
+          returnCode,
+          data: anyData,
+          messages,
+        },
+      };
+      const incorrectStatusCodeResponse = {
+        body: {
+          statusCode: statusCode.toString(),
+          returnCode,
+          data: anyData,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(ConfigurationsResponse, noStatusCodeResponse)
+      ).toThrowErrorMatchingSnapshot();
+      expect(() =>
+        parseToType(ConfigurationsResponse, incorrectStatusCodeResponse)
+      ).toThrowErrorMatchingSnapshot();
+    });
+
+    it('should throw an error for a response without or incorrect return code', () => {
+      // arrange
+      const noReturnCodeResponse = {
+        body: {
+          statusCode,
+          data: anyData,
+          messages,
+        },
+      };
+      const incorrectReturnCodeResponse = {
+        body: {
+          statusCode,
+          returnCode: returnCode.toString(),
+          data: anyData,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(ConfigurationsResponse, noReturnCodeResponse)
+      ).toThrowErrorMatchingSnapshot();
+      expect(() =>
+        parseToType(ConfigurationsResponse, incorrectReturnCodeResponse)
+      ).toThrowErrorMatchingSnapshot();
+    });
+
+    it('should throw an error for a response without or incorrect messages', () => {
+      // arrange
+      const noMessagesResponse = {
+        body: {
+          statusCode,
           returnCode,
           data: anyData,
         },
       };
-      // act
-      const parsedResponse = parseToType(
-        SuccessListConfigurationsResponse,
-        response
-      );
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
-    });
-    it('should throw an error for a response without return code', () => {
-      // arrange
-      const anyData = [
-        {
-          some_name: 'blah',
-        },
-        {
-          some_different_name: 'blah',
-        },
-      ];
-      const response = {
+      const incorrectMessagesResponse = {
         body: {
+          statusCode,
+          returnCode,
           data: anyData,
+          messages: [1234, { invalid: 'invalid' }],
         },
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessListConfigurationsResponse, response)
+        parseToType(ConfigurationsResponse, noMessagesResponse)
       ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with incorrect return code', () => {
-      // arrange
-      const anyData = [
-        {
-          some_name: 'blah',
-        },
-        {
-          some_different_name: 'blah',
-        },
-      ];
-      const response = {
-        body: {
-          returnCode: '8',
-          data: anyData,
-        },
-      };
-      // act && assert
       expect(() =>
-        parseToType(SuccessListConfigurationsResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with only return code', () => {
-      // arrange
-      const response = {
-        body: {
-          returnCode: 8,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(SuccessListConfigurationsResponse, response)
+        parseToType(ConfigurationsResponse, incorrectMessagesResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });
-  describe('Endevor base response type parsing', () => {
-    it('should parse a response with correct return code', () => {
+
+  describe('Endevor environment stages response type parsing', () => {
+    const anyData = [
+      {
+        whaaat: 'whaaaat???',
+      },
+      {
+        whatttttt: 'whattttt??',
+      },
+      {
+        envName: 'test',
+        stgNum: 1,
+        stgId: 'D',
+        nextEnv: 'next-test',
+        nextStgNum: 2,
+      },
+    ];
+
+    it('should parse a response with any data', () => {
       // arrange
       const response = {
         body: {
-          returnCode: 42,
-          statusCode: 200,
+          statusCode,
+          returnCode,
+          data: anyData,
+          messages,
         },
       };
-      // act
-      const parsedResponse = parseToType(BaseResponse, response);
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
+      // act && assert
+      expect(
+        parseToType(EnvironmentStagesResponse, response)
+      ).toMatchSnapshot();
     });
-    it('should throw an error for a response with incorrect return code', () => {
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
       // arrange
-      const response = {
+      const errorResponse = {
         body: {
-          statusCode: 200,
-          returnCode: '8',
+          statusCode,
+          returnCode,
+          data: null,
+          messages,
         },
       };
       // act && assert
       expect(() =>
-        parseToType(BaseResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with nullable status code', () => {
-      // arrange
-      const response = {
-        body: {
-          statusCode: null,
-          returnCode: 8,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(BaseResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with nullable return code', () => {
-      // arrange
-      const response = {
-        body: {
-          statusCode: 200,
-          returnCode: null,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(BaseResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response without return code', () => {
-      // arrange
-      const response = {
-        body: {
-          statusCode: 200,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(BaseResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response without status code', () => {
-      // arrange
-      const response = {
-        body: {
-          returnCode: 8,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(BaseResponse, response)
+        parseToType(EnvironmentStagesResponse, errorResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor systems response type parsing', () => {
-    it('should parse a response with any systems', () => {
+    const anyData = [
+      {
+        whaaat: 'whaaaat???',
+      },
+      {
+        whatttttt: 'whattttt??',
+      },
+      {
+        envName: 'test',
+        stgId: 'D',
+        sysName: 'test-sys',
+        nextSys: 'next-sys',
+      },
+    ];
+
+    it('should parse a response with any data', () => {
       // arrange
-      const anyData = [
-        {
-          whaaat: 'whaaaat???',
-        },
-        {
-          whatttttt: 'whattttt??',
-        },
-        {
-          envName: 'test',
-          sysName: 'test-sys',
-          stgSeqNum: 1,
-        },
-      ];
-      const successResponse = {
+      const response = {
         body: {
+          statusCode,
+          returnCode,
           data: anyData,
-          statusCode: 200,
+          messages,
         },
       };
-      // act
-      const parsedResponse = parseToType(
-        SuccessListSystemsResponse,
-        successResponse
-      );
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
+      // // act && assert
+      expect(parseToType(SystemsResponse, response)).toMatchSnapshot();
     });
-    it('should throw an error for a response without systems', () => {
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
       // arrange
       const errorResponse = {
         body: {
-          returnCode: 8,
-          statusCode: 400,
+          statusCode,
+          returnCode,
           data: null,
+          messages,
         },
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessListSystemsResponse, errorResponse)
+        parseToType(SystemsResponse, errorResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor subsystems response type parsing', () => {
-    it('should parse a response with any subsystems', () => {
+    const anyData = [
+      {
+        whaaat: 'whaaaat???',
+      },
+      {
+        whatttttt: 'whattttt??',
+      },
+      {
+        envName: 'test',
+        stgId: 'D',
+        sysName: 'test-sys',
+        sbsName: 'test-subsys',
+        nextSbs: 'next-subsys',
+      },
+    ];
+
+    it('should parse a response with any data', () => {
       // arrange
-      const anyData = [
-        {
-          whaaat: 'whaaaat???',
-        },
-        {
-          whatttttt: 'whattttt??',
-        },
-        {
-          envName: 'test',
-          sysName: 'test-sys',
-          sbsName: 'test-subsys',
-          stgSeqNum: 1,
-        },
-      ];
-      const successResponse = {
+      const response = {
         body: {
-          statusCode: 200,
+          statusCode,
+          returnCode,
           data: anyData,
+          messages,
         },
       };
-      // act
-      const parsedResponse = parseToType(
-        SuccessListSubSystemsResponse,
-        successResponse
-      );
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
+      // act && assert
+      expect(parseToType(SubSystemsResponse, response)).toMatchSnapshot();
     });
-    it('should throw an error for a response without subsystems', () => {
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
       // arrange
       const errorResponse = {
         body: {
-          returnCode: 8,
-          statusCode: 400,
+          statusCode,
+          returnCode,
           data: null,
+          messages,
         },
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessListSubSystemsResponse, errorResponse)
+        parseToType(SubSystemsResponse, errorResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });
-  describe('Endevor elements response type parsing', () => {
-    it('should parse a response with any elements', () => {
+
+  describe('Endevor element types response type parsing', () => {
+    const anyData = [
+      {
+        whaaat: 'whaaaat???',
+      },
+      {
+        whatttttt: 'whattttt??',
+      },
+      {
+        envName: 'test',
+        stgId: 'D',
+        sysName: 'test-sys',
+        typeName: 'test-type',
+        nextType: 'next-type',
+      },
+    ];
+    it('should parse a response with any data', () => {
       // arrange
-      const anyData = [
-        {
-          whaaat: 'whaaaat???',
-        },
-        {
-          whatttttt: 'whattttt??',
-        },
-      ];
       const response = {
         body: {
+          statusCode,
+          returnCode,
           data: anyData,
-          statusCode: 200,
+          messages,
         },
       };
-      // act
-      const parsedResponse = parseToType(SuccessListElementsResponse, response);
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
+      // act && assert
+      expect(parseToType(ElementTypesResponse, response)).toMatchSnapshot();
     });
-    it('should throw an error for a response without data', () => {
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
       // arrange
-      const response = {
+      const errorResponse = {
         body: {
-          returnCode: 8,
-          statusCode: 400,
+          statusCode,
+          returnCode,
+          data: null,
+          messages,
         },
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessListElementsResponse, response)
+        parseToType(ElementTypesResponse, errorResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
+  describe('Endevor elements response type parsing', () => {
+    const anyData = [
+      {
+        whaaat: 'whaaaat???',
+      },
+      {
+        whatttttt: 'whattttt??',
+      },
+      {
+        envName: 'test',
+        stgNum: 1,
+        sysName: 'test-sys',
+        sbsName: 'test-subsys',
+        typeName: 'test-type',
+        elmName: 'test-elm',
+        fullElmName: 'test-full-name',
+        nosource: 'N',
+      },
+    ];
+
+    it('should parse a response with any data', () => {
+      // arrange
+      const response = {
+        body: {
+          statusCode,
+          returnCode,
+          data: anyData,
+          messages,
+        },
+      };
+      // act && assert
+      expect(parseToType(ElementsResponse, response)).toMatchSnapshot();
+    });
+
+    // TODO disabled for compatibility with v1 api
+    it.skip('should throw an error for a response without data', () => {
+      // arrange
+      const response = {
+        body: {
+          statusCode,
+          returnCode,
+          data: null,
+          messages,
+        },
+      };
+      // act && assert
+      expect(() =>
+        parseToType(ElementsResponse, response)
+      ).toThrowErrorMatchingSnapshot();
+    });
+  });
+
   describe('Endevor print element and listing response type parsing', () => {
     it('should parse a proper response', () => {
       // arrange
@@ -441,15 +532,18 @@ describe('Endevor responses type parsing', () => {
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor retrieve element response type parsing', () => {
     it('should parse a proper response', () => {
       // arrange
       const returnCode = 0;
       const elementContent = 'very important content';
       const fingerprint = 'fingerprint';
+      const messages = ['Relax, everything will be fine!'];
       const response = {
         body: {
           returnCode,
+          messages,
           statusCode: 200,
           data: [Buffer.from(elementContent)],
         },
@@ -458,17 +552,40 @@ describe('Endevor responses type parsing', () => {
         },
       };
       // act
-      const parsedResponse = parseToType(SuccessRetrieveResponse, response);
+      const parsedResponse = parseToType(RetrieveResponse, response);
       // assert
       expect(parsedResponse).toMatchSnapshot();
     });
+
+    it('should parse a proper response without fingerprint', () => {
+      // arrange
+      const returnCode = 0;
+      const elementContent = 'very important content';
+      const messages = ['Relax, everything will be fine!'];
+      const response = {
+        body: {
+          returnCode,
+          statusCode: 400,
+          messages,
+          data: [Buffer.from(elementContent)],
+        },
+        headers: {},
+      };
+      // act
+      const parsedResponse = parseToType(RetrieveResponse, response);
+      // assert
+      expect(parsedResponse).toMatchSnapshot();
+    });
+
     it('should throw an error for a response without data', () => {
       // arrange
       const returnCode = 0;
       const fingerprint = 'fingerprint';
+      const messages = ['Relax, everything will be fine!'];
       const response = {
         body: {
           returnCode,
+          messages,
           statusCode: 400,
         },
         headers: {
@@ -477,30 +594,15 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessRetrieveResponse, response)
+        parseToType(RetrieveResponse, response)
       ).toThrowErrorMatchingSnapshot();
     });
-    it('should throw an error for a response without fingerprint', () => {
-      // arrange
-      const returnCode = 0;
-      const elementContent = 'very important content';
-      const response = {
-        body: {
-          returnCode,
-          statusCode: 400,
-          data: [Buffer.from(elementContent)],
-        },
-        headers: {},
-      };
-      // act && assert
-      expect(() =>
-        parseToType(SuccessRetrieveResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
+
     it('should throw an error for a response with incorrect data', () => {
       // arrange
       const returnCode = 0;
       const fingerprint = 'fingerprint';
+      const messages = ['Relax, everything will be fine!'];
       const elementContent = {
         firstParagraph: 'blah',
         secondParagraph: 'blahblah',
@@ -509,6 +611,7 @@ describe('Endevor responses type parsing', () => {
         body: {
           returnCode,
           statusCode: 200,
+          messages,
           data: [elementContent],
         },
         headers: {
@@ -517,10 +620,11 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessRetrieveResponse, response)
+        parseToType(RetrieveResponse, response)
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor element dependencies response type parsing', () => {
     it('should parse a response with any dependencies', () => {
       // arrange
@@ -531,10 +635,12 @@ describe('Endevor responses type parsing', () => {
         },
       ];
       const returnCode = 0;
+      const messages = ['Relax, everything will be fine!'];
       const response = {
         body: {
           returnCode,
           statusCode: 200,
+          messages,
           data: [
             {
               components: anyData,
@@ -543,13 +649,11 @@ describe('Endevor responses type parsing', () => {
         },
       };
       // act
-      const parsedResponse = parseToType(
-        SuccessListDependenciesResponse,
-        response
-      );
+      const parsedResponse = parseToType(ComponentsResponse, response);
       // assert
       expect(parsedResponse).toMatchSnapshot();
     });
+
     it('should throw an error for a response without data', () => {
       // arrange
       const returnCode = 8;
@@ -561,10 +665,11 @@ describe('Endevor responses type parsing', () => {
       };
       // act && assert
       expect(() =>
-        parseToType(SuccessListDependenciesResponse, response)
+        parseToType(ComponentsResponse, response)
       ).toThrowErrorMatchingSnapshot();
     });
   });
+
   describe('Endevor update and generate response type parsing', () => {
     it('should parse a proper response', () => {
       // arrange
@@ -671,161 +776,6 @@ describe('Endevor responses type parsing', () => {
       // act && assert
       expect(() =>
         parseToType(UpdateResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-  });
-  describe('Endevor error response type parsing', () => {
-    it('should parse a proper response', () => {
-      // arrange
-      const returnCode = 8;
-      const messages = ['Oops, I did it again!'];
-      const response = {
-        body: {
-          returnCode,
-          messages,
-          statusCode: 400,
-        },
-      };
-      // act
-      const parsedResponse = parseToType(ErrorResponse, response);
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
-    });
-    it('should throw an error for a response without return code', () => {
-      // arrange
-      const messages = ['Oops, I did it again!'];
-      const response = {
-        body: {
-          messages,
-          statusCode: 400,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with incorrect return code', () => {
-      // arrange
-      const messages = ['Oops, I did it again!'];
-      const returnCode = '8';
-      const response = {
-        body: {
-          messages,
-          returnCode,
-          statusCode: 400,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response without messages', () => {
-      // arrange
-      const returnCode = 8;
-      const response = {
-        body: {
-          returnCode,
-          statusCode: 400,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response without status code', () => {
-      // arrange
-      const returnCode = 8;
-      const messages = ['Oops, I did it again!'];
-      const response = {
-        body: {
-          returnCode,
-          messages,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with incorrect status code', () => {
-      // arrange
-      const returnCode = 8;
-      const messages = ['Oops, I did it again!'];
-      const response = {
-        body: {
-          returnCode,
-          messages,
-          statusCode: '400',
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-    it('should throw an error for a response with incorrect messages', () => {
-      // arrange
-      const messages = [
-        {
-          value: 'Oops, I did it again!',
-        },
-      ];
-      const returnCode = 8;
-      const response = {
-        body: {
-          messages,
-          returnCode,
-          statusCode: 400,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(ErrorResponse, response)
-      ).toThrowErrorMatchingSnapshot();
-    });
-  });
-  describe('Endevor environment stages response type parsing', () => {
-    it('should parse a response with any data', () => {
-      // arrange
-      const anyData = [
-        {
-          some_name: 'blah',
-        },
-        {
-          some_different_name: 'blah',
-        },
-        {
-          name: 'real_name',
-        },
-      ];
-      const response = {
-        body: {
-          statusCode: 200,
-          data: anyData,
-        },
-      };
-      // act
-      const parsedResponse = parseToType(
-        SuccessListEnvironmentStagesResponse,
-        response
-      );
-      // assert
-      expect(parsedResponse).toMatchSnapshot();
-    });
-    it('should throw an error for a response without environment stages', () => {
-      // arrange
-      const errorResponse = {
-        body: {
-          statusCode: 200,
-          data: null,
-        },
-      };
-      // act && assert
-      expect(() =>
-        parseToType(SuccessListEnvironmentStagesResponse, errorResponse)
       ).toThrowErrorMatchingSnapshot();
     });
   });

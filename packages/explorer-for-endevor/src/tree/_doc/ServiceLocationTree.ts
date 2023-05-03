@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Command } from 'vscode';
+import { Command, MarkdownString } from 'vscode';
 import { Source } from '../../store/storage/_doc/Storage';
 import { ElementLocationNode } from './ElementTree';
 import { LocationFilterNode } from './FilterTree';
@@ -35,8 +35,8 @@ export type InternalServiceNode = Readonly<{
   name: string;
   source: Source;
   children: LocationNodes;
-  tooltip: string;
   duplicated: boolean;
+  tooltip?: MarkdownString | string;
 }>;
 export type SyncedServiceNode = Omit<InternalServiceNode, 'type'> &
   Readonly<{
@@ -71,8 +71,8 @@ export type InternalLocationNode = Readonly<{
   source: Source;
   serviceName: string;
   serviceSource: Source;
-  tooltip: string;
   duplicated: boolean;
+  tooltip?: MarkdownString | string;
   // showMap: boolean;
   // baseUrl: EndevorUrl;
 }>;
@@ -82,17 +82,25 @@ export type SyncedLocationNode = Omit<InternalLocationNode, 'type'> &
   }>;
 
 export type ValidLocationNode = InternalLocationNode | SyncedLocationNode;
-export type InvalidLocationNode = Omit<SyncedLocationNode, 'type' | 'showMap'> &
+export type NonExistingLocationNode = Omit<
+  SyncedLocationNode,
+  'type' | 'showMap'
+> &
   Readonly<{
-    type:
-      | 'LOCATION_PROFILE/NON_EXISTING'
-      | 'LOCATION_PROFILE/INVALID_CREDENTIALS'
-      | 'LOCATION_PROFILE/INVALID_CONNECTION'
-      | 'LOCATION/NON_EXISTING'
-      | 'LOCATION/INVALID_CREDENTIALS'
-      | 'LOCATION/INVALID_CONNECTION';
+    type: 'LOCATION_PROFILE/NON_EXISTING' | 'LOCATION/NON_EXISTING';
     command?: Command;
   }>;
+export type InvalidLocationNode =
+  | NonExistingLocationNode
+  | (Omit<SyncedLocationNode, 'type' | 'showMap'> &
+      Readonly<{
+        type:
+          | 'LOCATION_PROFILE/INVALID_CREDENTIALS'
+          | 'LOCATION_PROFILE/INVALID_CONNECTION'
+          | 'LOCATION/INVALID_CREDENTIALS'
+          | 'LOCATION/INVALID_CONNECTION';
+        command?: Command;
+      }>);
 
 export type LocationNode = ValidLocationNode | InvalidLocationNode;
 

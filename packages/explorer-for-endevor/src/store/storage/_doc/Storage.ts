@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,11 +11,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  ElementSearchLocation,
-  ServiceLocation,
-} from '@local/endevor/_doc/Endevor';
+import { ServiceLocation } from '@local/endevor/_doc/Endevor';
 import { Credential as EndevorCredential } from '@local/endevor/_doc/Credential';
+import { ElementSearchLocation } from '../../../_doc/Endevor';
 
 export const STORAGE_VALUE_VERSION = '1';
 

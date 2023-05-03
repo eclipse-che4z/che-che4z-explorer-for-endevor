@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -88,6 +88,7 @@ const getTelemetryEventProperties = (
     case V2TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED:
     case V2TelemetryEvents.PROFILES_MIGRATION_COMPLETED:
+    case V2TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED:
     case V2TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED:
     case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED:
@@ -106,6 +107,7 @@ const getTelemetryEventProperties = (
     case V2TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES:
     case V2TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
     case V2TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION:
+    case V2TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN:
     case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED:
     case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED:
     case V2TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED:
@@ -127,14 +129,25 @@ const getTelemetryEventProperties = (
     case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED:
     case V2TelemetryEvents.COMMAND_TOGGLE_MAP:
     case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED:
+    case V2TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED:
+    case V2TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED:
     case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED:
     case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED:
     case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED:
     case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED:
     case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED:
     case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED:
     case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL: {
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL:
+    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL:
+    case V2TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED:
+    case V2TelemetryEvents.REPORT_CONTENT_PROVIDER_COMPLETED:
+    case V2TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALL:
+    case V2TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED:
+    case V2TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL:
+    case V2TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED: {
       return {
         ...Object.entries(event)
           .map(([key, value]) => {
@@ -161,6 +174,7 @@ const getTelemetryEventProperties = (
     case V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
     case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED:
     case V1TelemetryEvents.LISTING_CONTENT_PROVIDER_CALLED:
+    case V1TelemetryEvents.HISTORY_CONTENT_PROVIDER_CALLED:
     case V1TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED:
@@ -168,6 +182,7 @@ const getTelemetryEventProperties = (
     case V1TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALLED:
     case V1TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED:
     case V1TelemetryEvents.REFRESH_COMMAND_CALLED:
+    case V1TelemetryEvents.REFRESH_HISTORY_COMMAND_CALLED:
     case V1TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED:
     case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED:
     case V1TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED:
@@ -181,12 +196,15 @@ const getTelemetryEventProperties = (
     case V1TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED:
     case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED:
     case V1TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED:
+    case V1TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED:
     case V1TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED:
     case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED:
     case V1TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED:
     case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_PRINT_LISTING_CALLED: {
+    case V1TelemetryEvents.COMMAND_PRINT_LISTING_CALLED:
+    case V1TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED:
+    case V1TelemetryEvents.COMMAND_SHOW_CHANGE_LEVEL_CALLED: {
       return {
         ...Object.entries(event)
           .map(([key, value]) => {

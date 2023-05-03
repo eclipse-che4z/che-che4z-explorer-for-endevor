@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,51 +13,67 @@
 
 import { createFileSystemWatcher } from '@local/vscode-wrapper/workspace';
 import { TrackOptions } from '@local/vscode-wrapper/_doc/workspace';
+import * as path from 'path';
 import { Uri } from 'vscode';
+import { SCM_LOCAL_DIR, SCM_METADATA_FILE } from '../../constants';
 import {
   SyncActions,
   SyncElementsUpdated,
   WorkspaceSynced,
 } from './_doc/Actions';
 
-export const watchForFiles =
+export const watchForWorkspaceChanges =
   (folderUri: Uri) =>
-  (scmDispatch: (_action: SyncElementsUpdated) => Promise<void>) => {
-    const withoutHiddenFolders = '/[!.]*/**';
+  (
+    scmDispatch: (
+      _action: SyncElementsUpdated | WorkspaceSynced
+    ) => Promise<void>
+  ) => {
+    const withoutHiddenFolders = '/**';
     const syncedElementsGlob = `${folderUri.fsPath}${withoutHiddenFolders}`;
     const workspaceWatcher = createFileSystemWatcher(syncedElementsGlob)(
       TrackOptions.TRACK_ALL
     );
-    workspaceWatcher.onDidChange(async () => {
-      await scmDispatch({
-        type: SyncActions.SYNC_ELEMENTS_UPDATED,
-      });
+    const dispatch = updateScmTreeAfterWorkspaceChange(scmDispatch)(folderUri);
+    workspaceWatcher.onDidChange(async (fileUri) => {
+      await dispatch(fileUri);
     });
-    workspaceWatcher.onDidCreate(async () => {
-      await scmDispatch({
-        type: SyncActions.SYNC_ELEMENTS_UPDATED,
-      });
+    workspaceWatcher.onDidCreate(async (fileUri) => {
+      await dispatch(fileUri);
     });
-    workspaceWatcher.onDidDelete(async () => {
-      await scmDispatch({
-        type: SyncActions.SYNC_ELEMENTS_UPDATED,
-      });
+    workspaceWatcher.onDidDelete(async (fileUri) => {
+      await dispatch(fileUri);
     });
     return workspaceWatcher;
   };
 
-export const watchForMetadataChanges =
+const updateScmTreeAfterWorkspaceChange =
+  (
+    scmDispatch: (
+      _action: SyncElementsUpdated | WorkspaceSynced
+    ) => Promise<void>
+  ) =>
   (folderUri: Uri) =>
-  (scmDispatch: (_action: WorkspaceSynced) => Promise<void>) => {
-    const metadataFilePath = '/.endevor/**/metadata.json';
-    const metadataFileGlob = `${folderUri.fsPath}${metadataFilePath}`;
-    const watcher = createFileSystemWatcher(metadataFileGlob)(
-      TrackOptions.TRACK_CHANGED
+  async (fileUri: Uri): Promise<void> => {
+    const fileName = path.basename(fileUri.fsPath);
+    const relativeFileDir = path.relative(
+      folderUri.fsPath,
+      path.dirname(fileUri.fsPath)
     );
-    watcher.onDidChange(async () => {
+    if (fileName === SCM_METADATA_FILE && relativeFileDir === SCM_LOCAL_DIR) {
       await scmDispatch({
-        type: SyncActions.WORKSPACE_SYNCED,
+        type: SyncActions.WORKSPACE_META_UPDATED,
       });
-    });
-    return watcher;
+      return;
+    }
+    if (
+      !relativeFileDir.startsWith(SCM_LOCAL_DIR) ||
+      (relativeFileDir.startsWith(SCM_LOCAL_DIR) &&
+        fileName === SCM_METADATA_FILE)
+    ) {
+      await scmDispatch({
+        type: SyncActions.ELEMENTS_UPDATED,
+      });
+      return;
+    }
   };

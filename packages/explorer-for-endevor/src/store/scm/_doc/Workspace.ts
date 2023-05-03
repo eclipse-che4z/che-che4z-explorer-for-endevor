@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,8 +13,9 @@
 
 import { Element } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
+import { Id } from '../../storage/_doc/Storage';
 
-export type EndevorElement = Omit<Element, 'configuration' | 'lastActionCcid'>;
+export type EndevorElement = Omit<Element, 'noSource' | 'lastActionCcid'>;
 
 export const enum WorkspaceElementType {
   ELEMENT_ADDED = 'ELEMENT/ADDED',
@@ -72,7 +73,11 @@ export type SyncedElement = Readonly<{
 export type WorkspaceElement = ChangedElement | SyncedElement;
 export type WorkspaceElements = ReadonlyArray<WorkspaceElement>;
 
-export type State = WorkspaceElements;
+export type State = {
+  workspaceElements: WorkspaceElements;
+  lastUsedServiceId?: Id;
+  lastUsedSearchLocationId?: Id;
+};
 
 export const enum ScmStatus {
   UNKNOWN = 'unknown',

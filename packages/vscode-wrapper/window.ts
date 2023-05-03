@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -35,11 +35,20 @@ export const closeActiveTextEditor = async () => {
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 };
 
-export const showMessageWithOptions = async ({
-  message,
-  options,
-}: MessageWithOptions): Promise<Choice | undefined> => {
-  return await vscode.window.showInformationMessage(message, ...options);
+export const showMessageWithOptions = async (
+  { message, options }: MessageWithOptions,
+  level: MessageLevel = MessageLevel.INFO
+): Promise<Choice | undefined> => {
+  switch (level) {
+    case MessageLevel.WARN:
+      return vscode.window.showWarningMessage(message, ...options);
+    case MessageLevel.ERROR:
+      return vscode.window.showErrorMessage(message, ...options);
+    case MessageLevel.INFO:
+      return vscode.window.showInformationMessage(message, ...options);
+    default:
+      throw new UnreachableCaseError(level);
+  }
 };
 
 export const showModalWithOptions = async (
