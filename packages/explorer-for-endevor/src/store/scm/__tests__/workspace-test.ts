@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -14,7 +14,7 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { initWorkspace, isWorkspace } from '../workspace';
-import { isError } from '@local/endevor/utils';
+import { isError } from '../../../utils';
 import { WorkspaceResponseStatus } from '../_doc/Error';
 
 jest.mock('vscode', () => ({}), { virtual: true });
@@ -131,7 +131,9 @@ describe('endevor workspace initialization', () => {
     // assert
     expect(isError(result)).toBeFalsy();
     expect(
-      !isError(result) && result.status === WorkspaceResponseStatus.SUCCESS
+      !isError(result) &&
+        (result.status === WorkspaceResponseStatus.SUCCESS ||
+          result.status === WorkspaceResponseStatus.WARNING)
     ).toBeTruthy();
     expect(await containsEndevorFolder(initializedFolder)).toBeTruthy();
   });

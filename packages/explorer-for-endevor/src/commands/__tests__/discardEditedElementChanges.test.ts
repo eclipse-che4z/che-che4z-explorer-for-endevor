@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,27 +12,20 @@
  */
 
 import * as vscode from 'vscode';
-import { discardEditedElementChanges } from '../commands/discardEditedElementChanges';
-import { CommandId } from '../commands/id';
+import { discardEditedElementChanges } from '../element/discardEditedElementChanges';
+import { CommandId } from '../id';
 import * as assert from 'assert';
-import {
-  ChangeControlValue,
-  Element,
-  Service,
-  ElementSearchLocation,
-  ServiceApiVersion,
-} from '@local/endevor/_doc/Endevor';
-import { CredentialType } from '@local/endevor/_doc/Credential';
-import { toComparedElementUri } from '../uri/comparedElementUri';
-import { isError } from '../utils';
+import { ChangeControlValue, Element } from '@local/endevor/_doc/Endevor';
+import { toComparedElementUri } from '../../uri/comparedElementUri';
+import { isError } from '../../utils';
 import {
   mockClosingActiveEditorWith,
   mockGettingActiveEditorWith,
-} from '../_mocks/window';
-import { mockDeletingFileWith } from '../_mocks/workspace';
+} from './_mocks/window';
+import { mockDeletingFileWith } from './_mocks/workspace';
 import * as sinon from 'sinon';
 import { join } from 'path';
-import { Source } from '../store/storage/_doc/Storage';
+import { Source } from '../../store/storage/_doc/Storage';
 
 describe('discarding local changes in compared element', () => {
   before(() => {
@@ -60,29 +53,15 @@ describe('discarding local changes in compared element', () => {
       localElementVersionFsPath
     );
     const serviceName = 'serviceName';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-      apiVersion: ServiceApiVersion.V2,
-    };
     const element: Element = {
-      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
       stageNumber: '1',
       type: 'TYP',
       name: 'ELM',
+      id: 'ELM',
+      noSource: false,
       extension: 'ext',
       lastActionCcid: 'LAST-CCID',
     };
@@ -101,12 +80,8 @@ describe('discarding local changes in compared element', () => {
     );
     const remoteElementVersionFingerprint = 'element_fingerprint';
     const searchLocationName = 'searchLocationName';
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
-    };
     const comparedElementUri = toComparedElementUri(localElementVersionFsPath)({
       element,
-      endevorConnectionDetails: service,
       fingerprint: remoteElementVersionFingerprint,
       uploadChangeControlValue,
       uploadTargetLocation: element,
@@ -120,7 +95,6 @@ describe('discarding local changes in compared element', () => {
           name: searchLocationName,
           source: Source.INTERNAL,
         },
-        overallSearchLocation: searchLocation,
         initialSearchLocation: element,
       },
     });

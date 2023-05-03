@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,9 +24,10 @@ describe('renderElementAttributes', () => {
       system: 'SYSTEM',
       subSystem: 'SUBSYS',
       type: 'ASMPGM',
+      id: 'ELEMENT',
       name: 'ELEMENT',
+      noSource: false,
       extension: 'cbl',
-      configuration: 'CFG',
       lastActionCcid: 'CCID',
     };
 

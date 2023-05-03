@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,17 +11,16 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  ElementMapPath,
-  ElementSearchLocation,
-} from '@local/endevor/_doc/Endevor';
+import { ElementMapPath } from '@local/endevor/_doc/Endevor';
 import * as workspace from '@local/vscode-wrapper/workspace';
 import * as sinon from 'sinon';
 import { Uri } from 'vscode';
-import * as changeControlValueDialogs from '../change-control/endevorChangeControlDialogs';
-import * as signoutDialogs from '../change-control/signOutDialogs';
-import * as uploadLocationDialogs from '../locations/endevorUploadLocationDialogs';
-import * as printListingDialogs from '../listings/showListingDialogs';
+import * as changeControlValueDialogs from '../../../dialogs/change-control/endevorChangeControlDialogs';
+import * as signoutDialogs from '../../../dialogs/change-control/signOutDialogs';
+import * as uploadLocationDialogs from '../../../dialogs/locations/endevorUploadLocationDialogs';
+import * as printListingDialogs from '../../../dialogs/listings/showListingDialogs';
+import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
+import { SearchLocation } from '../../../_doc/Endevor';
 
 type PrefilledDialogValue = {
   ccid?: string;
@@ -73,12 +72,12 @@ export const mockAskingForSignout =
   };
 
 type AskForUploadLocationStub = sinon.SinonStub<
-  [defaultValue: ElementSearchLocation],
+  [defaultValue: SearchLocation],
   Promise<ElementMapPath | undefined>
 >;
 
 export const mockAskingForUploadLocation =
-  (_elementPrefilledLocationArg: ElementSearchLocation) =>
+  (_elementPrefilledLocationArg: SearchLocation) =>
   (mockResult: ElementMapPath): AskForUploadLocationStub => {
     return sinon
       .stub(uploadLocationDialogs, 'askForUploadLocation')
@@ -97,16 +96,34 @@ export const mockChooseFileUriFromFs = (
     .resolves(mockResult);
 };
 
-type AskForForPrintListingStub = sinon.SinonStub<
-  [ReadonlyArray<string>],
-  Promise<boolean>
+type AskForListingOrReportStub = sinon.SinonStub<
+  [message: string, level?: MessageLevel],
+  Promise<printListingDialogs.ChosenPrintOption>
 >;
 
-export const mockAskingForPrintListing = (
-  mockResult: boolean
-): AskForForPrintListingStub => {
+export const mockAskingForListing = (
+  mockResult: printListingDialogs.ChosenPrintOption
+): AskForListingOrReportStub => {
   return sinon
-    .stub(printListingDialogs, 'askToShowListing')
+    .stub(printListingDialogs, 'askForListing')
+    .withArgs(sinon.match.any)
+    .resolves(mockResult);
+};
+
+export const mockAskingForListingOrReport = (
+  mockResult: printListingDialogs.ChosenPrintOption
+): AskForListingOrReportStub => {
+  return sinon
+    .stub(printListingDialogs, 'askForListingOrExecutionReport')
+    .withArgs(sinon.match.any)
+    .resolves(mockResult);
+};
+
+export const mockAskingForReport = (
+  mockResult: printListingDialogs.ChosenPrintOption
+): AskForListingOrReportStub => {
+  return sinon
+    .stub(printListingDialogs, 'askForExecutionReport')
     .withArgs(sinon.match.any)
     .resolves(mockResult);
 };

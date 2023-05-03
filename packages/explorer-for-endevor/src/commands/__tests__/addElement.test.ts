@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,43 +12,60 @@
  */
 
 import { commands, Uri } from 'vscode';
-import { CommandId } from '../commands/id';
-import { addElementFromFileSystem } from '../commands/addElementFromFileSystem';
+import { CommandId } from '../id';
+import { addElementFromFileSystem } from '../location/addElementFromFileSystem';
 import * as sinon from 'sinon';
 import {
   ActionChangeControlValue,
   ElementMapPath,
-  ElementSearchLocation,
   Service,
   Element,
-  ServiceApiVersion,
+  ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import * as assert from 'assert';
-import { mockGettingFileContentWith } from '../_mocks/workspace';
+import { mockGettingFileContentWith } from './_mocks/workspace';
 import { TextEncoder } from 'util';
-import { mockAddingElement } from '../_mocks/endevor';
+import { mockAddingElement } from './_mocks/endevor';
 import {
   mockAskingForChangeControlValue,
   mockAskingForUploadLocation,
   mockChooseFileUriFromFs,
-} from '../dialogs/_mocks/dialogs';
-import { LocationNode } from '../tree/_doc/ServiceLocationTree';
-import { Actions } from '../store/_doc/Actions';
+} from './_mocks/dialogs';
+import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
+import { Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnectionStatus,
   EndevorCredential,
   EndevorCredentialStatus,
   EndevorId,
-} from '../store/_doc/v2/Store';
-import { Source } from '../store/storage/_doc/Storage';
-import { toServiceLocationCompositeKey } from '../store/utils';
+} from '../../store/_doc/v2/Store';
+import { Source } from '../../store/storage/_doc/Storage';
+import { toServiceLocationCompositeKey } from '../../store/utils';
+import { ElementSearchLocation } from '../../_doc/Endevor';
 
 describe('adding new element', () => {
   before(() => {
     commands.registerCommand(
       CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
-      addElementFromFileSystem
+      (
+        getConnectionDetails,
+        getEndevorConfiguration,
+        getCredential,
+        getSearchLocation,
+        dispatch,
+        elementNode
+      ) =>
+        addElementFromFileSystem(
+          {
+            getConnectionDetails,
+            getEndevorConfiguration,
+            getCredential,
+            getSearchLocation,
+          },
+          dispatch,
+          elementNode
+        )
     );
   });
 
@@ -58,6 +75,7 @@ describe('adding new element', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-INST';
   const serviceName = 'GenU';
   const serviceId: EndevorId = {
     name: serviceName,
@@ -76,7 +94,6 @@ describe('adding new element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-    apiVersion: ServiceApiVersion.V2,
   };
   const credential: EndevorCredential = {
     value: service.credential,
@@ -94,7 +111,6 @@ describe('adding new element', () => {
     source: searchLocationNodeId.source,
     serviceName,
     serviceSource: serviceId.source,
-    tooltip: 'FAKETOOLTIP',
     duplicated: false,
   };
 
@@ -112,13 +128,12 @@ describe('adding new element', () => {
       Promise.resolve(new TextEncoder().encode(elementContent))
     );
     const addLocation: ElementMapPath = {
-      configuration: 'ANY',
       environment: 'ENV',
       system: 'SYS',
       subSystem: 'SUBSYS',
       stageNumber: '1',
       type: 'TYP',
-      name: 'ELM',
+      id: 'ELM',
     };
     const prefilledLocationDialogValue: ElementSearchLocation = {
       environment: addLocation.environment,
@@ -126,7 +141,7 @@ describe('adding new element', () => {
       system: addLocation.system,
       subsystem: addLocation.subSystem,
       type: addLocation.type,
-      element: addLocation.name,
+      element: addLocation.id,
       configuration: searchLocation.configuration,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(addLocation);
@@ -137,10 +152,19 @@ describe('adding new element', () => {
     mockAskingForChangeControlValue(addChangeControlValue);
     const addElementStub = mockAddingElement(
       service,
+      configuration,
       addLocation,
       addChangeControlValue,
-      elementContent
-    )([undefined]);
+      { content: elementContent, elementFilePath: uploadedElementFilePath }
+    )([
+      {
+        status: ResponseStatus.OK,
+        details: {
+          messages: ['ELEMENT ADDED LIKE A CHARM, RC FOLLOWS:'],
+          returnCode: 0,
+        },
+      },
+    ]);
     const dispatchAddedAction = sinon.spy();
     // act
     try {
@@ -174,13 +198,14 @@ describe('adding new element', () => {
       'Dispatch for add element was not called'
     );
     const addedElement: Element = {
-      configuration: addLocation.configuration,
       environment: addLocation.environment,
       system: addLocation.system,
       subSystem: addLocation.subSystem,
       stageNumber: addLocation.stageNumber,
       type: addLocation.type,
-      name: addLocation.name,
+      name: addLocation.id,
+      id: addLocation.id,
+      noSource: false,
       lastActionCcid: addChangeControlValue.ccid.toUpperCase(),
     };
     const expectedAddedElementAction = {
