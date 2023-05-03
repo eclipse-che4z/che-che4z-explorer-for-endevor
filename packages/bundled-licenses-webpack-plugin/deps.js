@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -92,7 +92,7 @@ async function writeLicenseFile(depsLicenses, licenseTemplateFilePath) {
     })
     .join(separator);
   const content = `${header}${separator}${depsContent}${lineSeparator}`;
-  await writeFile('LICENSE', content);
+  await writeFile('LICENSE.txt', content);
 }
 
 module.exports = bundleLicenses;
