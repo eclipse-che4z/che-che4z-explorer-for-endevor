@@ -32,9 +32,9 @@ The project maintains the following source code repositories:
 
 This project leverages the following third party content.
 
-@broadcom/endevor-for-zowe-cli (7.2.0)
+@broadcom/endevor-for-zowe-cli (7.4.0)
 
-- License: Broadcom Internal
+- License: SEE LICENSE IN LICENSE
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @colors/colors (1.5.0)
@@ -62,7 +62,7 @@ This project leverages the following third party content.
 - License: MIT
 - Project: https://www.npmjs.com/package/@vscode/extension-telemetry
 
-@zowe/imperative (5.3.3)
+@zowe/imperative (5.9.0)
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/imperative
@@ -71,6 +71,11 @@ This project leverages the following third party content.
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/perf-timing
+
+ajv (8.8.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/ajv
 
 ansi-regex (5.0.1)
 
@@ -86,6 +91,11 @@ array-timsort (1.0.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/array-timsort
+
+astral-regex (2.0.0)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/astral-regex
 
 asynckit (0.4.0)
 
@@ -147,7 +157,7 @@ combined-stream (1.0.8)
 - License: MIT
 - Project: https://www.npmjs.com/package/combined-stream
 
-comment-json (4.1.0)
+comment-json (4.1.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/comment-json
@@ -177,7 +187,7 @@ debug (4.3.4)
 - License: MIT
 - Project: https://www.npmjs.com/package/debug
 
-decamelize (1.2.0)
+decamelize (4.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/decamelize
@@ -192,10 +202,20 @@ delayed-stream (1.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/delayed-stream
 
+diff (5.1.0)
+
+- License: BSD-3-Clause
+- Project: https://www.npmjs.com/package/diff
+
 diff-sequences (27.0.6)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/diff-sequences
+
+diff2html (3.4.20-usewontache.1.60e7a2e)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/diff2html
 
 emoji-regex (8.0.0)
 
@@ -207,15 +227,15 @@ entities (2.1.0)
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/entities
 
-escape-string-regexp (1.0.5)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/escape-string-regexp
-
 esprima (4.0.1)
 
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/esprima
+
+fast-deep-equal (3.1.3)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/fast-deep-equal
 
 fast-glob (3.2.7)
 
@@ -272,7 +292,7 @@ get-caller-file (2.0.5)
 - License: ISC
 - Project: https://www.npmjs.com/package/get-caller-file
 
-glob (7.2.0)
+glob (7.2.3)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/glob
@@ -342,7 +362,7 @@ jest-get-type (27.5.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/jest-get-type
 
-js-yaml (3.14.1)
+js-yaml (4.1.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/js-yaml
@@ -376,6 +396,11 @@ lodash-deep (2.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/lodash-deep
+
+lodash.truncate (4.4.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/lodash.truncate
 
 log4js (6.4.6)
 
@@ -417,7 +442,7 @@ mime-types (2.1.35)
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-types
 
-minimatch (3.0.8)
+minimatch (3.1.2)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/minimatch
@@ -552,11 +577,6 @@ rfdc (1.3.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/rfdc
 
-rimraf (2.6.3)
-
-- License: ISC
-- Project: https://www.npmjs.com/package/rimraf
-
 run-parallel (1.2.0)
 
 - License: MIT
@@ -571,6 +591,11 @@ set-blocking (2.0.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/set-blocking
+
+slice-ansi (4.0.0)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/slice-ansi
 
 stack-trace (0.0.10)
 
@@ -597,6 +622,11 @@ supports-color (7.2.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/supports-color
 
+table (6.8.1)
+
+- License: BSD-3-Clause
+- Project: https://www.npmjs.com/package/table
+
 to-regex-range (5.0.1)
 
 - License: MIT
@@ -606,6 +636,11 @@ uc.micro (1.0.6)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/uc.micro
+
+underscore (1.13.6)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/underscore
 
 universalify (0.1.2)
 
@@ -621,6 +656,11 @@ which-module (2.0.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/which-module
+
+wontache (0.1.0)
+
+- License: BSD-3-Clause
+- Project: https://www.npmjs.com/package/wontache
 
 wrap-ansi (7.0.0)
 
