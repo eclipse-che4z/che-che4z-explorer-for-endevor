@@ -124,7 +124,7 @@ export const addElementFromFileSystem = async (
   const [addLocation, actionControlValue] = addValues;
   const addResult = await addNewElement(service)(configuration)({
     ...addLocation,
-  })(actionControlValue)(content, fileUri.path);
+  })(actionControlValue)(content, fileUri.fsPath);
   if (isErrorEndevorResponse(addResult)) {
     const errorResponse = addResult;
     // TODO: format using all possible error details
