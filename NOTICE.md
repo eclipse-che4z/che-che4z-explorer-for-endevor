@@ -492,7 +492,7 @@ p-try (1.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/p-try
 
-path-exists (3.0.0)
+path-exists (4.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/path-exists

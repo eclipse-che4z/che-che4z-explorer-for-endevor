@@ -2,6 +2,10 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.5.1] &ndash; 2023-05-10
+
+- Fixed an isse with Add an Element command which prevented local elements being added to Endevor.
+
 ## [1.5.0] &ndash; 2023-05-02
 
 ### Added

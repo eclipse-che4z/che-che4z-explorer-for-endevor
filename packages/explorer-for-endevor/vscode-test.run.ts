@@ -34,7 +34,7 @@ async function main() {
     const testOptions: TestOptions = {
       // Have to use insiders version if we want to run it from CLI as well (as opposed to Run from Activity Bar only)
       // See: https://code.visualstudio.com/api/working-with-extensions/testing-extension#tips
-      version: 'stable',
+      version: '1.77.0',
       extensionDevelopmentPath,
       extensionTestsPath,
       launchArgs: ['--disable-extensions'],
