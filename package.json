@@ -30,7 +30,8 @@
     "webpack/**/glob-parent": "3.1.0",
     "**/glob-parent": "6.0.2",
     "**/@zowe/imperative/chalk": "4.1.2",
-    "**/@zowe/imperative/**/decamelize": "4.0.0"
+    "**/@zowe/imperative/**/decamelize": "4.0.0",
+    "**/@zowe/perf-timing/**/path-exists": "4.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.2.18",

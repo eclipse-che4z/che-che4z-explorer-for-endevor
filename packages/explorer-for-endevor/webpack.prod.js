@@ -39,7 +39,7 @@ const config = {
   plugins: [
     new BundledLicensesPlugin({
       override: {
-        '@broadcom/endevor-for-zowe-cli@7.3.0': {
+        '@broadcom/endevor-for-zowe-cli@7.4.0': {
           licenseName: 'Broadcom Internal',
         },
         'promise-pool-tool@1.3.3': {
