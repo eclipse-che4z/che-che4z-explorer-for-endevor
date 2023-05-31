@@ -47,6 +47,10 @@ import {
 import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
 import { SearchLocation } from '../../_doc/Endevor';
 import { Id } from '../../store/storage/_doc/Storage';
+import {
+  askForChangeControlValue,
+  dialogCancelled as changeControlDialogCancelled,
+} from '../../dialogs/change-control/endevorChangeControlDialogs';
 
 export const pullFromEndevorCommand = async (
   configurations: {
@@ -179,8 +183,18 @@ export const pullFromEndevorCommand = async (
     logger.error(`${error.message}.`);
     return;
   }
-
-  // TODO: Remove these hardcoded values when ccid and comment are no longer required in this call.
+  const pullChangeControlValue = await askForChangeControlValue({
+    ccid: searchLocation.ccid,
+    comment: searchLocation.comment,
+  });
+  if (changeControlDialogCancelled(pullChangeControlValue)) {
+    logger.error('CCID and Comment must be specified to pull from Endevor.');
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
+      status: PullFromEndevorCommandCompletedStatus.CANCELLED,
+    });
+    return;
+  }
   const syncResult = await withNotificationProgress('Pulling from Endevor')(
     (progressReporter) =>
       syncEndevorWorkspaceOneWay(progressReporter)({
@@ -190,7 +204,7 @@ export const pullFromEndevorCommand = async (
         ...searchLocation,
         subSystem: searchLocation.subsystem,
         id: searchLocation.element,
-      })(folderUri)
+      })(pullChangeControlValue)(folderUri)
   );
   if (isError(syncResult)) {
     const error = syncResult;
