@@ -522,14 +522,27 @@ describe('generating an element with copy back', () => {
       );
     }
     // assert
-    const [, , , , , generalFunctionStub] = generateElementStub;
+    const generalFunctionStub = generateElementStub.pop();
     assert.ok(
-      generalFunctionStub.calledTwice,
+      generalFunctionStub?.calledTwice,
       `Generate element with copy back Endevor API was not called twice`
     );
     assert.ok(
       dispatchGenerateAction.called,
       'Dispatch for the generated element was not called'
+    );
+    assert.deepStrictEqual(
+      generalFunctionStub?.secondCall.args,
+      [{ overrideSignOut: true }],
+      'Second generate was not called with override signout set'
+    );
+    generateElementStub.shift(); // do not test first argument which is progressReporter
+    generateElementStub.forEach((stub) =>
+      assert.deepStrictEqual(
+        stub.secondCall.args,
+        stub.firstCall.args,
+        'Arguments in the first generate call and second generate call with override signout were not equal'
+      )
     );
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {

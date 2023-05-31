@@ -203,6 +203,7 @@ export const syncWorkspaceOneWay =
     type,
     id: element,
   }: Partial<ElementMapPath>) =>
+  ({ ccid, comment }: ActionChangeControlValue) =>
   async (folderUri: Uri): Promise<WorkspaceSyncResponse | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const location: IElementBasicData = {
@@ -219,6 +220,8 @@ export const syncWorkspaceOneWay =
       'workspace-dir': workspaceDir,
       limit: defaultLimit,
       'one-way': true,
+      ccid,
+      comment,
     };
     const progressApi: IHandlerProgressApi = {
       startBar: (params) => {

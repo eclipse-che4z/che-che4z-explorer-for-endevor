@@ -384,7 +384,7 @@ const complexGenerateWithCopyBack =
           )((progressReporter) =>
             generateElementWithCopyBack(progressReporter)(service)(
               configuration
-            )(element)(actionChangeControlValue)(copyBackParams)({
+            )(generateLocationValue)(actionChangeControlValue)(copyBackParams)({
               overrideSignOut: true,
             })
           );
