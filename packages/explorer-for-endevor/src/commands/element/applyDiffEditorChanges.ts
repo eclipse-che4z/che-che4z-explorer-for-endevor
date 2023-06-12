@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { Uri } from 'vscode';
 import { logger, reporter } from '../../globals';
 import { formatWithNewLines, isError, isTheSameLocation } from '../../utils';
@@ -74,7 +71,7 @@ export const applyDiffEditorChanges = async (
     const error = comparedElementUri;
     logger.error(
       'Unable to apply the element changes.',
-      `Unable to apply the element changes because obtaining the element URI failed with error ${error.message}`
+      `Unable to apply the element changes because obtaining the element URI failed with an error:\n${error.message}`
     );
     return;
   }
@@ -83,18 +80,10 @@ export const applyDiffEditorChanges = async (
     const error = uriParams;
     logger.error(
       'Unable to apply the element changes.',
-      `Unable to apply the element changes because parsing of the element's URI failed with error ${error.message}.`
+      `Unable to apply the element changes because parsing of the element's URI failed with an error:\n${error.message}.`
     );
     return;
   }
-  logger.trace(
-    `Apply the element changes command was called for ${stringifyWithHiddenCredential(
-      {
-        query: JSON.parse(decodeURIComponent(comparedElementUri.query)),
-        path: comparedElementUri.fsPath,
-      }
-    )}`
-  );
   const {
     uploadTargetLocation,
     uploadChangeControlValue,
@@ -106,6 +95,10 @@ export const applyDiffEditorChanges = async (
       initialSearchLocation,
     },
   } = uriParams;
+  logger.trace(
+    `Apply diff changes for the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
+    of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+  );
   const connectionParams = await getConnectionConfiguration(configurations)(
     serviceId,
     searchLocationId

@@ -15,6 +15,7 @@ import { COMMAND_PREFIX, SYNC_PREFIX } from '../constants';
 
 export const CommandId = {
   CLEANUP_STORAGE: `${COMMAND_PREFIX}.cleanupStorage`,
+  DUMP_STORAGE: `${COMMAND_PREFIX}.dumpStorageData`,
   MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
   SUBMIT_ISSUE: `${COMMAND_PREFIX}.submitIssue`,
   CHANGE_HISTORY_LEVEL: `${COMMAND_PREFIX}.changeHistoryLevel`,

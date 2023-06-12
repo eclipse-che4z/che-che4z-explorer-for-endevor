@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   Uri,
@@ -53,15 +50,14 @@ export const elementContentProvider = (
         );
         return;
       }
-      logger.trace(
-        `Print element uri: \n  ${stringifyWithHiddenCredential(
-          JSON.parse(decodeURIComponent(elementUri.query))
-        )}.`
-      );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED,
       });
       const { serviceId, searchLocationId, element } = uriParams;
+      logger.trace(
+        `Print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
+        of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+      );
       const connectionParams = await getConnectionConfiguration(configurations)(
         serviceId,
         searchLocationId

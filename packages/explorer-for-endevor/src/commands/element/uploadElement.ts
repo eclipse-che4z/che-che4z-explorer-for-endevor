@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import {
   deleteFile,
   getFileContent,
@@ -90,17 +87,15 @@ export const uploadElementCommand = async (
     );
     return;
   }
-  logger.trace(
-    `Upload the element command was called for ${stringifyWithHiddenCredential({
-      query: JSON.parse(decodeURIComponent(elementUri.query)),
-      path: elementUri.fsPath,
-    })}.`
-  );
   const {
     element,
     fingerprint,
     searchContext: { searchLocationId, serviceId, initialSearchLocation },
   } = editSessionParams;
+  logger.trace(
+    `Upload the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
+    of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+  );
   const connectionParams = await getConnectionConfiguration(configurations)(
     serviceId,
     searchLocationId

@@ -66,13 +66,6 @@ export const createConnectionLocationsStorage = (
       return versionedConnectionLocations.value;
     },
     store: async (value) => {
-      logger.trace(
-        `Update storage called for "${storageId}" with value: ${JSON.stringify(
-          value,
-          null,
-          2
-        )}`
-      );
       return genericStorage.store(storageId, {
         value,
         version: STORAGE_VALUE_VERSION,
@@ -127,13 +120,6 @@ export const createConnectionsStorage =
           : defaultConnections;
       },
       store: (value) => {
-        logger.trace(
-          `Update storage called for "${storageId}" with value: ${JSON.stringify(
-            value,
-            null,
-            2
-          )}.`
-        );
         return genericStorage.store(storageId, {
           value: Object.entries(value).reduce(
             (acc: Connections, [connectionKey, connection]) => {
@@ -195,13 +181,6 @@ export const createInventoryLocationsStorage =
           : defaultInventoryLocations;
       },
       store: (value) => {
-        logger.trace(
-          `Update storage called for "${storageId}" with value: ${JSON.stringify(
-            value,
-            null,
-            2
-          )}`
-        );
         return genericStorage.store(storageId, {
           value: Object.entries(value).reduce(
             (
@@ -311,13 +290,6 @@ export const createSettingsStorage = (state: StateStorage): SettingsStorage => {
       return versionedSettings.value;
     },
     store: (value: Settings) => {
-      logger.trace(
-        `Update storage called for "${storageId}" with value: ${JSON.stringify(
-          value,
-          null,
-          2
-        )}`
-      );
       return genericStorage.store(storageId, {
         value,
         version: STORAGE_VALUE_VERSION,
