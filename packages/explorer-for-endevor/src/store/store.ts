@@ -1141,7 +1141,13 @@ const persistState =
         Object.entries(state.services).reduce(
           (acc: Connections, [serviceKey, service]) => {
             if (!service) return acc;
-            acc[serviceKey] = service;
+            acc[serviceKey] = {
+              id: service.id,
+              value: {
+                rejectUnauthorized: false,
+                location: service.value.location,
+              },
+            };
             return acc;
           },
           {}

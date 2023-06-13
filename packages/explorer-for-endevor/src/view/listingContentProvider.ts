@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import type {
@@ -46,21 +43,20 @@ export const listingContentProvider = (
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.LISTING_CONTENT_PROVIDER_CALLED,
       });
-      logger.trace(
-        `Print listing uri: \n  ${stringifyWithHiddenCredential(
-          JSON.parse(decodeURIComponent(uri.query))
-        )}.`
-      );
       const uriParams = fromElementListingUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;
         logger.error(
           `Unable to print the element listing.`,
-          `Unable to print the element listing because parsing of the element's URI failed with error ${error.message}.`
+          `Unable to print the element listing because parsing of the element's URI failed with an error:\n${error.message}.`
         );
         return;
       }
       const { serviceId, searchLocationId, element } = uriParams;
+      logger.trace(
+        `Print listing for the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
+        of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+      );
       const connectionParams = await getConnectionConfiguration(configurations)(
         serviceId,
         searchLocationId

@@ -185,10 +185,13 @@ export const isDefined = <T>(value: T | undefined): value is T => {
 };
 
 export const stringifyWithHiddenCredential = (value: unknown): string => {
-  return JSON.stringify(value, (key, value) =>
-    key === 'password' || key === 'tokenValue' || key === 'base64EncodedAuth'
-      ? '*****'
-      : value
+  return JSON.stringify(
+    value,
+    (key, value) =>
+      key === 'password' || key === 'tokenValue' || key === 'base64EncodedAuth'
+        ? '*****'
+        : value,
+    2
   );
 };
 

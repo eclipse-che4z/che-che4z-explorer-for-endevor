@@ -52,8 +52,8 @@ export const parseServiceProfileForLocation = ({
   profile: EndevorServiceProfile;
 }>): ServiceLocation | undefined => {
   if (!serviceProfile.host || !serviceProfile.port) {
-    logger.error(
-      `Endevor host value is missing for the service profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
+    logger.trace(
+      `Endevor host or port value is missing for the service profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
         serviceProfile
       )}.`
     );
@@ -61,13 +61,13 @@ export const parseServiceProfileForLocation = ({
   }
   const defaultProtocol = 'https';
   if (!serviceProfile.protocol) {
-    logger.warn(
+    logger.trace(
       `Endevor protocol is missing for the service profile ${serviceName}, default value ${defaultProtocol} will be used instead.`
     );
   }
   const defaultBasePath = ServiceBasePath.V2;
   if (!serviceProfile.basePath) {
-    logger.warn(
+    logger.trace(
       `Endevor base path is missing for the service profile ${serviceName}, default value ${defaultBasePath} will be used instead.`
     );
   }
@@ -85,7 +85,7 @@ const parseServiceProfileForRejectUnauthorized = ({
 }: Readonly<{ name: string; profile: EndevorServiceProfile }>): boolean => {
   const defaultValue = true;
   if (serviceProfile.rejectUnauthorized === undefined) {
-    logger.warn(
+    logger.trace(
       `RejectUnauthorized param is missing for the service profile ${serviceName}, default value ${defaultValue} will be used instead.`
     );
     return defaultValue;
@@ -211,7 +211,7 @@ export const getInventoryLocations = async (
     .map(({ name, profile }) => {
       if (profileIsCorrect(profile)) return { name, profile };
       logger.trace(
-        `Inventory location instance or environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
+        `Inventory location instance, environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
           profile
         )}.`
       );

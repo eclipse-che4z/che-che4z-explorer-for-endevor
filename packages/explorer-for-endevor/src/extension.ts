@@ -227,6 +227,10 @@ import { resultTableContentProvider } from './view/resultTableContentProvider';
 import { endevorReportContentProvider } from './view/endevorReportContentProvider';
 import { getElementParmsFromUri } from './uri/utils';
 import { editServiceCommand } from './commands/service/editService';
+import {
+  stringifyPretty,
+  stringifyWithHiddenCredential,
+} from '@local/endevor/utils';
 
 const cleanTempDirectory = async (
   tempEditFolderUri: vscode.Uri
@@ -981,6 +985,30 @@ export const activate: Extension['activate'] = async (context) => {
             await getInventoryLocationsStorage().delete();
             await getSettingsStorage().delete();
             await reloadWindow();
+          })()
+        );
+      },
+    ],
+    [
+      CommandId.DUMP_STORAGE,
+      () => {
+        return withErrorLogging(CommandId.DUMP_STORAGE)(
+          (async () => {
+            logger.trace(
+              `Connection locations storage content dump:\n${stringifyPretty(
+                await getConnectionLocationsStorage().get()
+              )}`
+            );
+            logger.trace(
+              `Connections storage content dump:\n${stringifyWithHiddenCredential(
+                await getConnectionsStorage().get()
+              )}`
+            );
+            logger.trace(
+              `Inventory locations storage content dump:\n${stringifyPretty(
+                await getInventoryLocationsStorage().get()
+              )}`
+            );
           })()
         );
       },
