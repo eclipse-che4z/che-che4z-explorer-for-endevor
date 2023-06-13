@@ -10,10 +10,14 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 ## [1.5.2] &ndash; 2023-05-26
 
+### Fixed
+
 - Fixed an issue with Generate with Copyback action which performed a Generate in place instead in case Override Signout was needed.
 - Fixed the workspace pull command by incorporating the provided ccid and comment to the request.
 
 ## [1.5.1] &ndash; 2023-05-10
+
+### Fixed
 
 - Fixed an issue with Add an Element command which prevented local elements being added to Endevor.
 
