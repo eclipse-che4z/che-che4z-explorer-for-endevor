@@ -13,7 +13,7 @@
     "@local/extension": "1.0.0",
     "@types/semver": "^7.3.13",
     "@vscode/extension-telemetry": "^0.4.7",
-    "semver": "^7.3.8"
+    "semver": "^7.5.2"
   },
   "devDependencies": {
     "@types/vscode": "1.58.0"
