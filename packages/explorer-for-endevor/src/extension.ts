@@ -112,8 +112,7 @@ import { discardEditedElementChanges } from './commands/element/discardEditedEle
 import { applyDiffEditorChanges } from './commands/element/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/location/addElementFromFileSystem';
 import { generateSubsystemElementsCommand } from './commands/subsystem/generateSubsystemElements';
-import { TelemetryEvents as V2TelemetryEvents } from './_doc/telemetry/v2/Telemetry';
-import { TelemetryEvents as V1TelemetryEvents } from './_doc/Telemetry';
+import { TelemetryEvents } from './_doc/telemetry/Telemetry';
 import {
   deleteDirectoryWithContent,
   getWorkspaceUri,
@@ -477,9 +476,6 @@ export const activate: Extension['activate'] = async (context) => {
     };
 
   const refresh = async () => {
-    reporter.sendTelemetryEvent({
-      type: V1TelemetryEvents.REFRESH_COMMAND_CALLED,
-    });
     dispatch({
       type: Actions.REFRESH,
     });
@@ -487,9 +483,6 @@ export const activate: Extension['activate'] = async (context) => {
   };
 
   const refreshHistory = async () => {
-    reporter.sendTelemetryEvent({
-      type: V1TelemetryEvents.REFRESH_HISTORY_COMMAND_CALLED,
-    });
     const editor = vscode.window.activeTextEditor;
     const editorUri = editor?.document.uri;
     if (!editor || !editorUri) {
@@ -1452,7 +1445,7 @@ export const activate: Extension['activate'] = async (context) => {
   }
 
   reporter.sendTelemetryEvent({
-    type: V2TelemetryEvents.EXTENSION_ACTIVATED,
+    type: TelemetryEvents.EXTENSION_ACTIVATED,
     buildNumber: __E4E_BUILD_NUMBER__,
     autoSignOut: isAutomaticSignOut(),
     maxParallelRequests: getMaxParallelRequests(),

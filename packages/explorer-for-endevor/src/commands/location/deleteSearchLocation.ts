@@ -27,7 +27,7 @@ import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   CommandDeleteSearchLocationCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { hideSearchLocation } from './hideSearchLocation';
 
 export const deleteSearchLocation =
@@ -49,9 +49,6 @@ export const deleteSearchLocation =
     logger.trace(
       `Delete the ${searchLocationId.source} Endevor inventory location ${searchLocationId.name} for the ${serviceSource} Endevor service ${serviceName} called.`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_DELETE_SEARCH_LOCATION_CALLED,
-    });
     const usedByServices = Object.values(
       configurations.getServiceDescriptionsBySearchLocationId(searchLocationId)
     );

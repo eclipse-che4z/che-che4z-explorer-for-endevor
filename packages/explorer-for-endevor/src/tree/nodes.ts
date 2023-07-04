@@ -38,8 +38,6 @@ import {
   ValidEndevorSearchLocationDescription,
   ValidEndevorServiceDescription,
 } from '../store/_doc/v2/Store';
-import { reporter } from '../globals';
-import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
 import { Source } from '../store/storage/_doc/Storage';
 import { toCompositeKey } from '../store/storage/utils';
 import { toServiceLocationCompositeKey } from '../store/utils';
@@ -123,10 +121,6 @@ const toValidServiceNode =
         })
         .sort(byNameOrder),
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE,
-      source: service.id.source,
-    });
     switch (service.id.source) {
       case Source.INTERNAL:
         return {
@@ -157,10 +151,6 @@ const toEmptyServiceNode = (
     }),
     children: [],
   };
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE,
-    source: service.id.source,
-  });
   switch (service.id.source) {
     case Source.INTERNAL:
       return {
@@ -198,10 +188,6 @@ const toInvalidConnectionServiceNode =
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE,
-      source: service.id.source,
-    });
     switch (service.id.source) {
       case Source.INTERNAL:
         return {
@@ -235,10 +221,6 @@ const toNonExistingServiceNode =
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE,
-      source: service.id.source,
-    });
     switch (service.id.source) {
       case Source.INTERNAL:
         return {
@@ -277,10 +259,6 @@ const toWrongCredentialsServiceNode =
         .map(([, location]) => toInvalidSearchLocationNode(service)(location))
         .sort(byNameOrder),
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SERVICE_PROVIDED_INTO_TREE,
-      source: service.id.source,
-    });
     switch (service.id.source) {
       case Source.INTERNAL:
         return {
@@ -312,11 +290,6 @@ const toSearchLocationNode =
         location: location.location,
       }),
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE,
-      source: location.id.source,
-      serviceSource: service.id.source,
-    });
     switch (location.id.source) {
       case Source.INTERNAL:
         return location.searchForFirstFoundElements
@@ -354,11 +327,6 @@ const toInvalidSearchLocationNode =
       serviceName: service.id.name,
       serviceSource: service.id.source,
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE,
-      source: location.id.source,
-      serviceSource: service.id.source,
-    });
     if (location.status === EndevorSearchLocationStatus.INVALID) {
       return {
         ...locationNodeParams,

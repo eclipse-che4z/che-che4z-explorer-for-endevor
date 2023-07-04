@@ -11,16 +11,12 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { logger } from '../../globals';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { renderElementAttributes } from '../../view/elementAttributes';
 import { showWebView } from '@local/vscode-wrapper/window';
 import { filterElementNodes } from '../../utils';
 import { COMMAND_PREFIX } from '../../constants';
-import {
-  TelemetryEvents,
-  TreeElementCommandArguments,
-} from '../../_doc/Telemetry';
 import { Node } from '../../tree/_doc/ServiceLocationTree';
 
 type SelectedElementNode = ElementNode;
@@ -34,23 +30,18 @@ export const viewElementDetails = (
     const elementNodes = filterElementNodes(nodes);
     logger.trace(
       `View element details command was called for ${elementNodes
-        .map((node) => node.name)
-        .join(',')}`
+        .map((node) => {
+          const element = node.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${node.name}`;
+        })
+        .join(',\n ')}`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
-      elementsAmount: elementNodes.length,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-    });
     elementNodes.forEach((elementNode) => showElementAttributes(elementNode));
   } else if (elementNode) {
+    const element = elementNode.element;
     logger.trace(
-      `View element details command was called for ${elementNode.name}`
+      `View element details command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-    });
     showElementAttributes(elementNode);
   }
 };

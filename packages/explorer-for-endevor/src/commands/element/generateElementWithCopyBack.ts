@@ -41,7 +41,7 @@ import {
   TelemetryEvents,
   GenerateWithCopyBackCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { ANY_VALUE } from '@local/endevor/const';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
@@ -64,8 +64,9 @@ export const generateElementWithCopyBackCommand = async (
   elementNode: SelectedElementNode,
   noSource: GenerateWithCopyBackParams['noSource']
 ) => {
+  const element = elementNode.element;
   logger.trace(
-    `Generate with copy back command was called for ${elementNode.name}.`
+    `Generate with copy back command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
   );
   await generateSingleElementWithCopyBack(configurations)(dispatch)(
     elementNode
@@ -77,10 +78,6 @@ const generateSingleElementWithCopyBack =
   (dispatch: (action: Action) => Promise<void>) =>
   ({ name, element, parent, serviceId, searchLocationId }: ElementNode) =>
   async (noSource: GenerateWithCopyBackParams['noSource']) => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
-      noSource: noSource ? noSource : false,
-    });
     const connectionParams = await getConnectionConfiguration(configurations)(
       serviceId,
       searchLocationId
@@ -136,7 +133,11 @@ const generateSingleElementWithCopyBack =
       const errorResponse = generateResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to generate and copy back the element ${name} because of an error:${formatWithNewLines(
+        `Unable to generate and copy back the element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${element.type}/${
+          element.name
+        } because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -162,11 +163,6 @@ const generateSingleElementWithCopyBack =
                   element,
                 }
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL,
-            context:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
-          });
           await printListingCommand(generatedElementNode);
           if (executionReportId) {
             const dialogResult = await askForExecutionReport(
@@ -206,7 +202,7 @@ const generateSingleElementWithCopyBack =
             // TODO: specific completed status?
             status: GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
           });
           return;
@@ -219,7 +215,7 @@ const generateSingleElementWithCopyBack =
             // TODO: specific completed status?
             status: GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
             error,
           });
           return;
@@ -232,16 +228,16 @@ const generateSingleElementWithCopyBack =
             // TODO: specific completed status?
             status: GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
             error,
           });
           return;
         case ErrorResponseType.GENERIC_ERROR: {
-          const message = `Unable to generate the element ${name}`;
+          const message = `Unable to generate the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}`;
           logger.trace(`${message}.`);
           if (executionReportId) {
             const dialogResult = await askForExecutionReport(
-              `${message}. Would you like to see the execution report?`
+              `Unable to generate the element ${name}. Would you like to see the execution report?`
             );
             if (dialogResult.printExecutionReport) {
               reporter.sendTelemetryEvent({
@@ -258,7 +254,7 @@ const generateSingleElementWithCopyBack =
             type: TelemetryEvents.ERROR,
             status: GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
             error,
           });
           return;
@@ -302,7 +298,11 @@ const generateSingleElementWithCopyBack =
       resultWithWarnings ? 'with warnings' : 'successfully'
     }`;
     logger.trace(
-      `${message}${
+      `The element ${element.environment}/${element.stageNumber}/${
+        element.system
+      }/${element.subSystem}/${element.type}/${name} is generated ${
+        resultWithWarnings ? 'with warnings' : 'successfully'
+      }${
         generateResponse.details?.messages.length
           ? `:${generateResponse.details.messages}.`
           : '.'
@@ -318,11 +318,6 @@ const generateSingleElementWithCopyBack =
           resultWithWarnings ? MessageLevel.WARN : MessageLevel.INFO
         );
     if (dialogResult.printListing) {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL,
-        context:
-          TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED,
-      });
       await printListingCommand(generatedElementNode);
     }
     if (executionReportId && dialogResult.printExecutionReport) {
@@ -362,11 +357,6 @@ const complexGenerateWithCopyBack =
           logger.warn(
             `The element ${element.name} requires an override sign out action to generate the element.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED,
-          });
           const overrideSignout = await askToOverrideSignOutForElements([
             element.name,
           ]);
@@ -421,7 +411,7 @@ const askForGenerateWithCopyBackValues = async (
   });
   if (generateLocationCancelled(generateLocation)) {
     return new Error(
-      `Target location must be specified to generate with copying back the element ${element.name}`
+      `Target location must be specified to generate with copying back the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`
     );
   }
   const generateChangeControlValue = await askForChangeControlValue({
@@ -430,7 +420,7 @@ const askForGenerateWithCopyBackValues = async (
   });
   if (changeControlDialogCancelled(generateChangeControlValue)) {
     return new Error(
-      `CCID and Comment must be specified to generate with copying back the element ${generateLocation.id}`
+      `CCID and Comment must be specified to generate with copying back the element ${generateLocation.environment}/${generateLocation.stageNumber}/${generateLocation.system}/${generateLocation.subSystem}/${generateLocation.type}/${generateLocation.id}`
     );
   }
   return [generateLocation, generateChangeControlValue];

@@ -32,7 +32,7 @@ import {
   EditElementCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { retrieveElement, retrieveElementWithSignout } from '../../endevor';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
@@ -80,7 +80,9 @@ export const editElementCommand =
     { getTempEditFolderUri, dispatch }: CommandContext
   ) =>
   async (elementNode: SelectedElementNode) => {
-    logger.trace(`Edit element command was called for ${elementNode.name}`);
+    logger.trace(
+      `Edit element command was called for  ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}`
+    );
     if (isAutomaticSignOut()) {
       await editSingleElementWithSignout(
         configurations,
@@ -105,10 +107,6 @@ const editSingleElement =
     getTempEditFolderUri: () => vscode.Uri
   ) =>
   async (elementNode: ElementNode): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
-      autoSignOut: false,
-    });
     const connectionParams = await getConnectionConfiguration(configurations)(
       elementNode.serviceId,
       elementNode.searchLocationId
@@ -124,10 +122,13 @@ const editSingleElement =
     });
     if (isErrorEndevorResponse(retrieveResponse)) {
       const errorResponse = retrieveResponse;
+      const element = elementNode.element;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element ${
-          elementNode.element.name
+        `Unable to retrieve the element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${element.type}/${
+          element.name
         } because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
@@ -142,7 +143,7 @@ const editSingleElement =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -156,7 +157,7 @@ const editSingleElement =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -168,7 +169,7 @@ const editSingleElement =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -189,7 +190,7 @@ const editSingleElement =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
         status: EditElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -215,7 +216,7 @@ const editSingleElement =
       const error = uploadableElementUri;
       logger.error(
         `Unable to open the element ${elementNode.name} for editing.`,
-        `Unable to open the element ${elementNode.name} because of an error:\n${error.message}.`
+        `Unable to open the element ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name} because of an error:\n${error.message}.`
       );
       return;
     }
@@ -228,7 +229,7 @@ const editSingleElement =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
         status: EditElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -253,10 +254,6 @@ const editSingleElementWithSignout =
     searchLocationId,
     element,
   }: ElementNode): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
-      autoSignOut: true,
-    });
     const connectionParams = await getConnectionConfiguration(configurations)(
       serviceId,
       searchLocationId
@@ -286,7 +283,9 @@ const editSingleElementWithSignout =
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element with sign out ${
+        `Unable to retrieve the element with sign out ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${element.type}/${
           element.name
         } because of an error:${formatWithNewLines(
           errorResponse.details.messages
@@ -309,7 +308,7 @@ const editSingleElementWithSignout =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
               status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
               error,
             });
@@ -330,7 +329,7 @@ const editSingleElementWithSignout =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -344,7 +343,7 @@ const editSingleElementWithSignout =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -356,7 +355,7 @@ const editSingleElementWithSignout =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
             status: EditElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -377,7 +376,7 @@ const editSingleElementWithSignout =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
         status: EditElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -403,7 +402,7 @@ const editSingleElementWithSignout =
       const error = uploadableElementUri;
       logger.error(
         `Unable to open the element ${name} for editing.`,
-        `Unable to open the element ${name} because of an error:\n${error.message}.`
+        `Unable to open the element  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of an error:\n${error.message}.`
       );
       return;
     }
@@ -416,7 +415,7 @@ const editSingleElementWithSignout =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED,
         status: EditElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -452,10 +451,6 @@ const complexRetrieve =
           logger.warn(
             `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
-          });
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(`Override signout option was not chosen.`);
             return errorResponse;
@@ -564,7 +559,7 @@ const saveIntoEditFolder =
       return saveResult;
     } catch (error) {
       return new Error(
-        `Unable to save the element ${element.name} into the file system because of error ${error.message}`
+        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of error ${error.message}`
       );
     }
   };

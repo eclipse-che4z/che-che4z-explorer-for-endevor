@@ -47,7 +47,7 @@ import {
 import {
   SyncWorkspaceCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import {
   isWorkspaceSyncConflictResponse,
   isWorkspaceSyncErrorResponse,
@@ -82,9 +82,6 @@ export const syncWorkspace = async (
   getLastUsedSearchLocationId: () => Id | undefined
 ): Promise<void> => {
   logger.trace('Synchronization of an Endevor workspace called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
-  });
   const folderUri = await getWorkspaceUri();
   if (!folderUri) {
     const error = new Error(
@@ -93,7 +90,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -106,7 +103,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -136,7 +133,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -172,7 +169,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -189,7 +186,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -205,7 +202,7 @@ export const syncWorkspace = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -243,7 +240,7 @@ export const syncWorkspace = async (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -273,7 +270,7 @@ export const syncWorkspace = async (
         logger.trace(errorMessage);
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED,
+          errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
           status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
           error: new Error(errorMessage),
         });

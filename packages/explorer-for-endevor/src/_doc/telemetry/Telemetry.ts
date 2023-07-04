@@ -12,10 +12,8 @@
  */
 
 import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
-import { FileExtensionResolutions } from '../../../settings/_doc/v2/Settings';
-import { Source } from '../../../store/storage/_doc/Storage';
-import { TreeElementCommandArguments } from '../../Telemetry';
-export const TELEMETRY_EVENTS_VERSION = '2';
+import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import { Source } from '../../store/storage/_doc/Storage';
 
 export const enum TelemetryEvents {
   ERROR = 'extension error',
@@ -23,17 +21,15 @@ export const enum TelemetryEvents {
   EXTENSION_ACTIVATED = 'extension activation completed',
 
   PROFILES_MIGRATION_COMPLETED = 'profiles migration completed',
-  PROFILES_MIGRATION_CALLED = 'profiles migration called',
 
   ELEMENTS_IN_PLACE_TREE_BUILT = 'elements in place tree built',
   ELEMENTS_UP_THE_MAP_TREE_BUILT = 'elements up the map tree built',
 
   SERVICE_PROVIDED_INTO_TREE = 'service provided into the tree',
+  SERVICES_LOCATIONS_PROVIDED_INTO_TREE = 'services/locations provided into the tree',
   SEARCH_LOCATION_PROVIDED_INTO_TREE = 'search location provided into the tree',
 
-  COMMAND_ADD_NEW_SERVICE_CALLED = 'add new service command called',
   COMMAND_ADD_NEW_SERVICE_COMPLETED = 'add new service command completed',
-  COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED = 'add new search location command called',
   COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED = 'add new search location command completed',
 
   SERVICE_HIDDEN = 'service hidden from the tree',
@@ -41,43 +37,49 @@ export const enum TelemetryEvents {
 
   COMMAND_EDIT_SERVICE_COMPLETED = 'edit service command completed',
 
-  COMMAND_DELETE_SERVICE_CALLED = 'delete service command called',
   COMMAND_DELETE_SERVICE_COMPLETED = 'delete service command completed',
 
-  COMMAND_DELETE_SEARCH_LOCATION_CALLED = 'delete search location command called',
   COMMAND_DELETE_SEARCH_LOCATION_COMPLETED = 'delete search location command completed',
 
+  //Used in completed events
   COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED = 'generate element in place command called',
   COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED = 'generate element with copy back command called',
+
   COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED = 'generate element in place command completed',
   COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED = 'generate element with copy back command completed',
 
-  COMMAND_PRINT_LISTING_CALL = 'print listing command call performed',
-
-  COMMAND_SIGNOUT_ERROR_RECOVER_CALLED = 'signout error recover command called',
   COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED = 'signout error recover command completed',
 
+  //Used in completed events
   COMMAND_SIGNOUT_ELEMENT_CALLED = 'signout element command called',
   COMMAND_SIGNOUT_ELEMENT_COMPLETED = 'signout element command completed',
 
+  //Used in completed events
   COMMAND_INIT_WORKSPACE_CALLED = 'init workspace command called',
   COMMAND_INIT_WORKSPACE_COMPLETED = 'init workspace command completed',
 
+  //Used in completed events
   COMMAND_SYNC_WORKSPACE_CALLED = 'sync workspace command called',
   COMMAND_SYNC_WORKSPACE_COMPLETED = 'sync workspace command completed',
 
+  //Used in completed events
   COMMAND_PULL_FROM_ENDEVOR_CALLED = 'pull from endevor command called',
   COMMAND_PULL_FROM_ENDEVOR_COMPLETED = 'pull from endevor command completed',
 
+  //Used in completed events
   COMMAND_DISCARD_ELEMENT_CHANGES_CALLED = 'discard element changes command called',
   COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED = 'discard element changes command completed',
 
+  //Used in completed events
   COMMAND_REVERT_SECTION_CHANGE_CALLED = 'revert section change command called',
 
+  //Used in completed events
   COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED = 'confirm conflict resolution command called',
   COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED = 'confirm conflict resolution command completed',
 
+  //TODO: Check with this again
   DIALOG_SERVICE_INFO_COLLECTION_CALLED = 'service information collection dialog called',
+  //TODO: Check with this again
   SERVICE_INFO_RESOLVER_CALLED = 'service information resolver called',
   SERVICE_CONNECTION_TEST = 'service connection test',
   REJECT_UNAUTHORIZED_PROVIDED = 'reject unauthorized provided',
@@ -88,46 +90,75 @@ export const enum TelemetryEvents {
   SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
   SETTING_CHANGED_AUTH_WITH_TOKEN = 'auth with token setting changed',
 
-  COMMAND_EDIT_CONNECTION_DETAILS_CALLED = 'edit connection details command called',
   COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED = 'edit connection details command completed',
 
-  COMMAND_TEST_CONNECTION_DETAILS_CALLED = 'test connection details command called',
   COMMAND_TEST_CONNECTION_DETAILS_COMPLETED = 'test connection details command completed',
 
-  COMMAND_EDIT_CREDENTIALS_CALLED = 'edit credentials command called',
   COMMAND_EDIT_CREDENTIALS_COMPLETED = 'edit credentials command completed',
 
   COMMAND_TOGGLE_MAP = 'map view changed in the tree',
 
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL = 'update elements name filter command call performed',
-  COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED = 'update elements name filter command called',
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED = 'update elements name filter command completed',
 
   COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL = 'update elements type filter command call performed',
-  COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED = 'update elements type filter command called',
   COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED = 'update elements type filter command completed',
 
   COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL = 'update elements CCID filter command call performed',
-  COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED = 'update elements CCID filter command called',
   COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED = 'update elements CCID filter command completed',
 
-  COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED = 'generate subsystem elements in place command called',
   COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED = 'generate subsystem elements in place command completed',
 
-  COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED = 'clear search location filters command called',
-
-  COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED = 'clear search location filter command called',
-
-  COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED = 'clear search location filter value command called',
-
   COMMAND_PRINT_RESULT_TABLE_CALL = 'print result table command call performed',
+  //TODO: Check with this again
   COMMAND_PRINT_RESULT_TABLE_CALLED = 'print result table command called',
 
   COMMAND_PRINT_ENDEVOR_REPORT_CALL = 'print Endevor report command call performed',
+  //TODO: Check with this again
   COMMAND_PRINT_ENDEVOR_REPORT_CALLED = 'print Endevor report command called',
 
-  REPORT_CONTENT_PROVIDER_CALLED = 'Endevor report content provider called',
   REPORT_CONTENT_PROVIDER_COMPLETED = 'Endevor report content provider completed',
+
+  ELEMENTS_WERE_FETCHED = 'elements were fetched',
+
+  ENDEVOR_MAP_STRUCTURE_BUILT = 'endevor map structure built',
+
+  MISSING_CREDENTIALS_PROVIDED = 'missing credentials provided',
+
+  COMMAND_ADD_ELEMENT_COMPLETED = 'add element command completed',
+
+  ELEMENT_CONTENT_PROVIDER_COMPLETED = 'element content provider completed',
+  LISTING_CONTENT_PROVIDER_COMPLETED = 'listing content provider completed',
+  HISTORY_CONTENT_PROVIDER_COMPLETED = 'history content provider completed',
+
+  COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED = 'resolve conflict with remote command completed',
+  COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL = 'resolve conflict with remote call performed',
+
+  //Used in completed events
+  COMMAND_EDIT_ELEMENT_CALLED = 'edit element command called',
+  COMMAND_EDIT_ELEMENT_COMPLETED = 'edit element command completed',
+
+  //Used in completed events
+  COMMAND_UPLOAD_ELEMENT_CALLED = 'upload element command called',
+  COMMAND_UPLOAD_ELEMENT_COMPLETED = 'upload element command completed',
+
+  //Used in completed events
+  COMMAND_RETRIEVE_ELEMENT_CALLED = 'retrieve element command called',
+  COMMAND_RETRIEVE_ELEMENT_COMPLETED = 'retrieve element command completed',
+
+  //Used in completed events
+  COMMAND_SIGNIN_ELEMENT_CALLED = 'signin element command called',
+  COMMAND_SIGNIN_ELEMENT_COMPLETED = 'signin element command completed',
+
+  //Used in completed events
+  COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED = 'retrieve element with deps command called',
+  COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED = 'retrieve element with deps command completed',
+  ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED = 'element dependency was not fetched',
+  COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL = 'discard edited element changes call performed',
+
+  //Used in completed events
+  COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED = 'apply diff editor changes called',
+  COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED = 'apply diff editor changes completed',
 }
 
 export type ExtensionActivatedEvent = {
@@ -140,14 +171,10 @@ export type ExtensionActivatedEvent = {
   workspaceSync: boolean;
 };
 
-export type ProfileMigrationCalledEvent = {
-  type: TelemetryEvents.PROFILES_MIGRATION_CALLED;
-};
-
 export type ProfileMigrationCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.PROFILES_MIGRATION_CALLED;
+      errorContext: TelemetryEvents.PROFILES_MIGRATION_COMPLETED;
       status: ProfileMigrationCompletedStatus.NO_PROFILES_MIGRATED;
       error: Error;
     }
@@ -182,14 +209,19 @@ export type ServiceProvidedIntoTreeEvent = {
   source: Source;
 };
 
+export type ServicesProvidedIntoTreeEvent = {
+  type: TelemetryEvents.SERVICES_LOCATIONS_PROVIDED_INTO_TREE;
+  syncedServices: number;
+  internalServices: number;
+  maxLocationsPerService: number;
+  uniqueSyncedLocations: number;
+  uniqueInternalLocations: number;
+};
+
 export type SearchLocationProvidedIntoTreeEvent = {
   type: TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE;
   source: Source;
   serviceSource: Source;
-};
-
-export type CommandAddNewServiceCalledEvent = {
-  type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED;
 };
 
 export const enum CommandAddNewServiceCompletedStatus {
@@ -202,7 +234,7 @@ export const enum CommandAddNewServiceCompletedStatus {
 export type CommandAddNewServiceCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED;
+      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED;
       status: CommandAddNewServiceCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -221,10 +253,6 @@ export type CommandAddNewServiceCompletedEvent =
       source: Source;
     };
 
-export type CommandAddNewSearchLocationCalledEvent = {
-  type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED;
-};
-
 export const enum CommandAddNewSearchLocationCompletedStatus {
   CANCELLED = 'CANCELLED',
   USED_EXISTING_SEARCH_LOCATION_CHOSEN = 'USED_EXISTING_LOCATION_CHOSEN',
@@ -236,7 +264,7 @@ export const enum CommandAddNewSearchLocationCompletedStatus {
 export type CommandAddNewSearchLocationCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED;
+      errorContext: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED;
       status: CommandAddNewSearchLocationCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -292,10 +320,6 @@ export type CommandEditServiceCompletedEvent =
         | CommandEditServiceCompletedStatus.VALIDATION_UNSUCCESSFUL;
     };
 
-export type CommandDeleteServiceCalledEvent = {
-  type: TelemetryEvents.COMMAND_DELETE_SERVICE_CALLED;
-};
-
 export const enum CommandDeleteServiceCompletedStatus {
   SUCCESS = 'SUCCESS',
   CANCELLED = 'CANCELLED',
@@ -310,10 +334,6 @@ export type CommandDeleteServiceCompletedEvent =
       type: TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED;
       status: CommandDeleteServiceCompletedStatus.SUCCESS;
     };
-
-export type CommandDeleteSearchLocationCalledEvent = {
-  type: TelemetryEvents.COMMAND_DELETE_SEARCH_LOCATION_CALLED;
-};
 
 export const enum CommandDeleteSearchLocationCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -339,19 +359,6 @@ export type CommandDeleteSearchLocationCompletedEvent =
       source: Source;
     };
 
-type CommandGenerateElementInPlaceCalled = {
-  type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED;
-};
-
-type CommandGenerateElementWithCopyBackCalled = {
-  type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED;
-  noSource: boolean;
-};
-
-export type CommandGenerateElementCalledEvent =
-  | CommandGenerateElementInPlaceCalled
-  | CommandGenerateElementWithCopyBackCalled;
-
 export const enum GenerateElementInPlaceCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -369,8 +376,8 @@ export type CommandGenerateElementCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
       errorContext:
-        | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED
-        | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED;
+        | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED
+        | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED;
       status:
         | GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR
         | GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR;
@@ -390,31 +397,18 @@ export type CommandGenerateElementCompletedEvent =
         | GenerateWithCopyBackCommandCompletedStatus.CANCELLED;
     };
 
-export type CommandPrintListingCallEvent = {
-  type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL;
-  context:
-    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED
-    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED;
-};
-
-export type CommandSignoutErrorRecoverCalledEvent = {
-  type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED;
-  context:
-    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED
-    | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED
-    | TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
-};
-
 export const enum SignoutErrorRecoverCommandCompletedStatus {
   OVERRIDE_SUCCESS = 'OVERRIDE_SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
   CANCELLED = 'CANCELLED',
+  SIGNOUT_SUCCESS = 'SIGNOUT_SUCCESS',
+  COPY_SUCCESS = 'COPY_SUCCESS',
 }
 
 export type CommandSignoutErrorRecoverCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED;
+      errorContext: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED;
       status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -423,25 +417,29 @@ export type CommandSignoutErrorRecoverCompletedEvent =
       context:
         | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED
         | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED
+        | TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED
+        | TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED
+        | TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED
+        | TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED
+        | TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED
         | TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
       status:
         | SignoutErrorRecoverCommandCompletedStatus.OVERRIDE_SUCCESS
+        | SignoutErrorRecoverCommandCompletedStatus.SIGNOUT_SUCCESS
+        | SignoutErrorRecoverCommandCompletedStatus.COPY_SUCCESS
         | SignoutErrorRecoverCommandCompletedStatus.CANCELLED;
     };
 
 export const enum SignOutElementCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
+  SIGN_OUT_ERROR = 'SIGN_OUT_ERROR',
   GENERIC_ERROR = 'GENERIC_ERROR',
 }
-
-export type CommandSignOutElementCalledEvent = {
-  type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
-};
 
 export type CommandSignOutElementCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED;
+      errorContext: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED;
       status: SignOutElementCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -544,18 +542,6 @@ export const enum SettingChangedStatus {
   WRONG_SETTING_TYPE_ERROR = 'WRONG_SETTING_TYPE_ERROR',
 }
 
-export type CommandDiscardElementChangesCalledEvent = {
-  type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED;
-} & (
-  | {
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
-    }
-  | {
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
-      elementsAmount: number;
-    }
-);
-
 export const enum DiscardElementChangesCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -565,7 +551,7 @@ export const enum DiscardElementChangesCommandCompletedStatus {
 export type CommandDiscardElementChangesCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED;
+      errorContext: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED;
       status: DiscardElementChangesCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -576,22 +562,6 @@ export type CommandDiscardElementChangesCompletedEvent =
         | DiscardElementChangesCommandCompletedStatus.CANCELLED;
     };
 
-export type CommandRevertSectionChangeEvent = {
-  type: TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED;
-};
-
-export type CommandConfirmConflictResolutionCalledEvent = {
-  type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED;
-} & (
-  | {
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT;
-    }
-  | {
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS;
-      elementsAmount: number;
-    }
-);
-
 export const enum ConfirmConflictResolutionCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -600,7 +570,7 @@ export const enum ConfirmConflictResolutionCommandCompletedStatus {
 export type CommandConfirmConflictResolutionCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED;
+      errorContext: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED;
       status: ConfirmConflictResolutionCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -608,10 +578,6 @@ export type CommandConfirmConflictResolutionCompletedEvent =
       type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED;
       status: ConfirmConflictResolutionCommandCompletedStatus.SUCCESS;
     };
-
-export type CommandInitWorkspaceCalledEvent = {
-  type: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED;
-};
 
 export const enum InitWorkspaceCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -622,7 +588,7 @@ export const enum InitWorkspaceCommandCompletedStatus {
 export type CommandInitWorkspaceCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED;
+      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED;
       status: InitWorkspaceCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -632,10 +598,6 @@ export type CommandInitWorkspaceCompletedEvent =
         | InitWorkspaceCommandCompletedStatus.SUCCESS
         | InitWorkspaceCommandCompletedStatus.CANCELLED;
     };
-
-export type CommandSyncWorkspaceCalledEvent = {
-  type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED;
-};
 
 export const enum SyncWorkspaceCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -647,7 +609,7 @@ export const enum SyncWorkspaceCommandCompletedStatus {
 export type CommandSyncWorkspaceCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED;
+      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED;
       status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -659,10 +621,6 @@ export type CommandSyncWorkspaceCompletedEvent =
         | SyncWorkspaceCommandCompletedStatus.CONFLICT;
     };
 
-export type CommandPullFromEndevorCalledEvent = {
-  type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED;
-};
-
 export const enum PullFromEndevorCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -673,7 +631,7 @@ export const enum PullFromEndevorCommandCompletedStatus {
 export type CommandPullFromEndevorCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED;
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED;
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -685,10 +643,6 @@ export type CommandPullFromEndevorCompletedEvent =
         | PullFromEndevorCommandCompletedStatus.CONFLICT;
     };
 
-export type CommandEditCredentialsCalledEvent = {
-  type: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED;
-};
-
 export const enum EditCredentialsCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -698,7 +652,7 @@ export const enum EditCredentialsCommandCompletedStatus {
 export type CommandEditCredentialsCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED;
+      errorContext: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED;
       status: EditCredentialsCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -709,10 +663,6 @@ export type CommandEditCredentialsCompletedEvent =
         | EditCredentialsCommandCompletedStatus.CANCELLED;
     };
 
-export type CommandEditConnectionDetailsCalledEvent = {
-  type: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED;
-};
-
 export const enum EditConnectionDetailsCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -722,7 +672,7 @@ export const enum EditConnectionDetailsCommandCompletedStatus {
 export type CommandEditConnectionDetailsCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED;
+      errorContext: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED;
       status: EditConnectionDetailsCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -733,10 +683,6 @@ export type CommandEditConnectionDetailsCompletedEvent =
         | EditConnectionDetailsCommandCompletedStatus.CANCELLED;
     };
 
-export type CommandTestConnectionDetailsCalledEvent = {
-  type: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED;
-};
-
 export const enum TestConnectionDetailsCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -745,7 +691,7 @@ export const enum TestConnectionDetailsCommandCompletedStatus {
 export type CommandTestConnectionDetailsCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED;
+      errorContext: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED;
       status: TestConnectionDetailsCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -758,22 +704,6 @@ export type MapViewToggled = {
   type: TelemetryEvents.COMMAND_TOGGLE_MAP;
   source: Source;
   showMap: boolean;
-};
-
-export type CommandClearSearchLocationFiltersCalledEvent = {
-  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED;
-};
-
-export type CommandClearSearchLocationFilterCalledEvent = {
-  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED;
-};
-
-export type CommandClearSearchLocationFilterValueCalledEvent = {
-  type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED;
-};
-
-export type CommandUpdateElementNameFilterCalledEvent = {
-  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED;
 };
 
 export const enum UpdateElementNameFilterCommandCompletedStatus {
@@ -809,7 +739,7 @@ export const enum GenerateSubsystemElementsInPlaceCompletedStatus {
 export type CommandGenerateSubsystemElementsInPlaceCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
-      errorContext: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED;
+      errorContext: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED;
       status: GenerateSubsystemElementsInPlaceCompletedStatus.GENERIC_ERROR;
       error: Error;
     }
@@ -821,18 +751,10 @@ export type CommandGenerateSubsystemElementsInPlaceCompletedEvent =
         | GenerateSubsystemElementsInPlaceCompletedStatus.CANCELLED;
     };
 
-export type CommandGenerateSubsystemElementsInPlaceCalledEvent = {
-  type: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED;
-};
-
 export const enum ElementNameFilterCompletedElementsFetched {
   ELEMENTS_FETCHED = 'ELEMENTS_FETCHED',
   ELEMENTS_NOT_FETCHED = 'ELEMENTS_NOT_FETCHED',
 }
-
-export type CommandUpdateElementTypeFilterCalledEvent = {
-  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED;
-};
 
 export const enum UpdateElementTypeFilterCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -854,10 +776,6 @@ export type CommandUpdateElementTypeFilterCompletedEvent =
       patternsCount: number;
       wildcardUsed: boolean;
     };
-
-export type CommandUpdateElementCcidFilterCalledEvent = {
-  type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED;
-};
 
 export const enum UpdateElementCcidFilterCommandCompletedStatus {
   SUCCESS = 'SUCCESS',
@@ -895,10 +813,6 @@ export type CommandUpdateElementTypeFilterCallEvent = {
   type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL;
 };
 
-export type ReportContentProviderCalledEvent = {
-  type: TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED;
-};
-
 export const enum ReportContentProviderCompletedStatus {
   SUCCESS = 'SUCCESS',
   GENERIC_ERROR = 'GENERIC_ERROR',
@@ -926,10 +840,6 @@ export type CommandPrintResultTableCallEvent = {
   context: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED;
 };
 
-export type CommandPrintResultTableCalledEvent = {
-  type: TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED;
-};
-
 export type CommandPrintEndevorReportCallEvent = {
   type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL;
   context:
@@ -937,74 +847,324 @@ export type CommandPrintEndevorReportCallEvent = {
     | TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED;
 };
 
-export type CommandPrintEndevorReportCalledEvent = {
-  type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED;
+export const enum ElementsFetchingStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type ElementsFetchedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED;
+      status: ElementsFetchingStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.ELEMENTS_WERE_FETCHED;
+      status:
+        | ElementsFetchingStatus.SUCCESS
+        | ElementsFetchingStatus.GENERIC_ERROR;
+      elementsAmount: number;
+    };
+
+export const enum EndevorMapBuildingStatus {
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  SUCCESS = 'SUCCESS',
+}
+
+export type EndevorMapNotBuiltEvent = {
+  type: TelemetryEvents.ERROR;
+  errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT;
+  status: EndevorMapBuildingStatus.GENERIC_ERROR;
+  error: Error;
+};
+
+export type EndevorMapBuildCompleted = {
+  type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT;
+  status:
+    | EndevorMapBuildingStatus.SUCCESS
+    | EndevorMapBuildingStatus.GENERIC_ERROR;
+  error: Error;
+};
+
+export type MissingCredentialsProvidedEvent = {
+  type: TelemetryEvents.MISSING_CREDENTIALS_PROVIDED;
+};
+
+export const enum AddElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  DUPLICATED_ELEMENT_ERROR = 'DUPLICATED_ELEMENT_ERROR',
+}
+
+export type CommandAddElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED;
+      status:
+        | AddElementCommandCompletedStatus.GENERIC_ERROR
+        | AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED;
+      status: AddElementCommandCompletedStatus.SUCCESS;
+    };
+
+export const enum ElementContentProviderCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type ElementContentProviderCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED;
+      status: ElementContentProviderCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED;
+      status: ElementContentProviderCompletedStatus.SUCCESS;
+    };
+
+export const enum ListingContentProviderCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  NO_LISTING = 'NO_LISTING',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+export type ListingContentProviderCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED;
+      status:
+        | ListingContentProviderCompletedStatus.NO_LISTING
+        | ListingContentProviderCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED;
+      status: ListingContentProviderCompletedStatus.SUCCESS;
+    };
+
+export const enum HistoryContentProviderCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+export type HistoryContentProviderCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED;
+      status: HistoryContentProviderCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED;
+      status: HistoryContentProviderCompletedStatus.SUCCESS;
+    };
+
+export const enum TreeElementCommandArguments {
+  SINGLE_ELEMENT = 'SINGLE_ELEMENT',
+  MULTIPLE_ELEMENTS = 'MULTIPLE_ELEMENTS',
+}
+
+export type CommandResolveConflictWithRemoteCallEvent = {
+  type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL;
+  context:
+    | TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED
+    | TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED;
+};
+
+export const enum EditElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  NO_OPENED_WORKSPACE_ERROR = 'NO_OPENED_WORKSPACE_ERROR',
+}
+
+export type CommandEditElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED;
+      status: EditElementCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED;
+      status: EditElementCommandCompletedStatus.SUCCESS;
+    };
+
+export const enum RetrieveElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  NO_OPENED_WORKSPACE_ERROR = 'NO_OPENED_WORKSPACE_ERROR',
+}
+
+export type CommandRetrieveElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED;
+      status:
+        | RetrieveElementCommandCompletedStatus.GENERIC_ERROR
+        | RetrieveElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED;
+      status: RetrieveElementCommandCompletedStatus.SUCCESS;
+    };
+export const enum UploadElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandUploadElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED;
+      status: UploadElementCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED;
+      status: UploadElementCommandCompletedStatus.SUCCESS;
+    };
+
+export const enum SignInElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandSignInElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED;
+      status: SignInElementCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED;
+      status: SignInElementCommandCompletedStatus.SUCCESS;
+    };
+
+export const enum RetrieveElementWithDepsCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  NO_OPENED_WORKSPACE_ERROR = 'NO_OPENED_WORKSPACE_ERROR',
+}
+
+export type CommandRetrieveElementWithDepsCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED;
+      status:
+        | RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR
+        | RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED;
+      status: RetrieveElementWithDepsCommandCompletedStatus.SUCCESS;
+      dependenciesAmount: number;
+    };
+
+export const enum DependencyRetrievalCompletedStatus {
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type ElementDependencyWasNotRetrievedEvent = {
+  type: TelemetryEvents.ERROR;
+  errorContext: TelemetryEvents.ELEMENT_DEPENDENCY_WAS_NOT_RETRIEVED;
+  status: DependencyRetrievalCompletedStatus.GENERIC_ERROR;
+  error: Error;
+};
+
+export const enum ResolveConflictWithRemoteCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type ResolveConflictWithRemoteCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED;
+      status: ResolveConflictWithRemoteCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED;
+      status: ResolveConflictWithRemoteCompletedStatus.SUCCESS;
+    };
+
+export type CommandDiscardEditedElementChangesCallEvent = {
+  type: TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL;
+  context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED;
+};
+export const enum ApplyDiffEditorChangesCompletedStatus {
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandApplyDiffEditorChangesCompletedEvent = {
+  type: TelemetryEvents.ERROR;
+  errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED;
+  status: ApplyDiffEditorChangesCompletedStatus.GENERIC_ERROR;
+  error: Error;
 };
 
 export type TelemetryEvent =
   | ExtensionActivatedEvent
   | ProfileMigrationCompletedEvent
-  | ProfileMigrationCalledEvent
   | ElementsInPlaceTreeBuiltEvent
   | ElementsUpTheMapTreeBuiltEvent
   | ServiceProvidedIntoTreeEvent
+  | ServicesProvidedIntoTreeEvent
   | SearchLocationProvidedIntoTreeEvent
-  | CommandAddNewServiceCalledEvent
   | CommandAddNewServiceCompletedEvent
-  | CommandAddNewSearchLocationCalledEvent
   | CommandAddNewSearchLocationCompletedEvent
   | ServiceHiddenEvent
   | SearchLocationHiddenEvent
   | CommandEditServiceCompletedEvent
-  | CommandDeleteServiceCalledEvent
   | CommandDeleteServiceCompletedEvent
-  | CommandDeleteSearchLocationCalledEvent
   | CommandDeleteSearchLocationCompletedEvent
-  | CommandGenerateElementCalledEvent
   | CommandGenerateElementCompletedEvent
-  | CommandGenerateSubsystemElementsInPlaceCalledEvent
   | CommandGenerateSubsystemElementsInPlaceCompletedEvent
-  | CommandPrintListingCallEvent
-  | CommandSignoutErrorRecoverCalledEvent
   | CommandSignoutErrorRecoverCompletedEvent
-  | CommandSignOutElementCalledEvent
   | CommandSignOutElementCompletedEvent
   | ServiceConnectionTestEvent
   | RejectUnauthorizedProvidedEvent
   | SettingChangedEvent
-  | CommandDiscardElementChangesCalledEvent
   | CommandDiscardElementChangesCompletedEvent
-  | CommandRevertSectionChangeEvent
-  | CommandConfirmConflictResolutionCalledEvent
   | CommandConfirmConflictResolutionCompletedEvent
-  | CommandInitWorkspaceCalledEvent
   | CommandInitWorkspaceCompletedEvent
-  | CommandSyncWorkspaceCalledEvent
   | CommandSyncWorkspaceCompletedEvent
-  | CommandPullFromEndevorCalledEvent
   | CommandPullFromEndevorCompletedEvent
   | CommandEditConnectionDetailsCompletedEvent
   | CommandEditCredentialsCompletedEvent
-  | CommandEditCredentialsCalledEvent
-  | CommandEditConnectionDetailsCalledEvent
   | CommandTestConnectionDetailsCompletedEvent
-  | CommandTestConnectionDetailsCalledEvent
   | MapViewToggled
-  | CommandClearSearchLocationFiltersCalledEvent
-  | CommandClearSearchLocationFilterCalledEvent
-  | CommandClearSearchLocationFilterValueCalledEvent
-  | CommandUpdateElementNameFilterCalledEvent
   | CommandUpdateElementNameFilterCompletedEvent
-  | CommandUpdateElementTypeFilterCalledEvent
   | CommandUpdateElementTypeFilterCompletedEvent
-  | CommandUpdateElementCcidFilterCalledEvent
   | CommandUpdateElementCcidFilterCompletedEvent
   | CommandUpdateElementNameFilterCallEvent
   | CommandUpdateElementTypeFilterCallEvent
   | CommandUpdateElementCcidFilterCallEvent
-  | ReportContentProviderCalledEvent
   | ReportContentProviderCompletedEvent
   | CommandPrintResultTableCallEvent
-  | CommandPrintResultTableCalledEvent
   | CommandPrintEndevorReportCallEvent
-  | CommandPrintEndevorReportCalledEvent;
+  | CommandAddElementCompletedEvent
+  | ElementsFetchedEvent
+  | EndevorMapNotBuiltEvent
+  | EndevorMapBuildCompleted
+  | MissingCredentialsProvidedEvent
+  | CommandResolveConflictWithRemoteCallEvent
+  | ElementContentProviderCompletedEvent
+  | ListingContentProviderCompletedEvent
+  | HistoryContentProviderCompletedEvent
+  | CommandEditElementCompletedEvent
+  | CommandRetrieveElementCompletedEvent
+  | CommandSignInElementCompletedEvent
+  | CommandRetrieveElementWithDepsCompletedEvent
+  | ElementDependencyWasNotRetrievedEvent
+  | CommandUploadElementCompletedEvent
+  | ResolveConflictWithRemoteCompletedEvent
+  | CommandDiscardEditedElementChangesCallEvent
+  | CommandApplyDiffEditorChangesCompletedEvent;

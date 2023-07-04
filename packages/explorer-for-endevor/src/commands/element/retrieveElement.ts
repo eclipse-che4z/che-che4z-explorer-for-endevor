@@ -65,8 +65,7 @@ import {
   RetrieveElementCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-  TreeElementCommandArguments,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { Id } from '../../store/storage/_doc/Storage';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import path = require('path');
@@ -92,8 +91,11 @@ export const retrieveElementCommand = async (
     const elementNodes = filterElementNodes(nodes);
     logger.trace(
       `Retrieve element command was called for ${elementNodes
-        .map((node) => node.name)
-        .join(', ')}.`
+        .map((node) => {
+          const element = node.element;
+          `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${node.name}`;
+        })
+        .join(',\n ')}.`
     );
     if (isAutomaticSignOut()) {
       const groupedElementNodes = groupBySearchLocationId(elementNodes);
@@ -109,7 +111,7 @@ export const retrieveElementCommand = async (
     return;
   } else if (elementNode) {
     logger.trace(
-      `Retrieve element command was called for ${elementNode.name}.`
+      `Retrieve element command was called for ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}.`
     );
     if (isAutomaticSignOut()) {
       await retrieveSingleElementWithSignoutOption(
@@ -136,11 +138,6 @@ const retrieveSingleElementWithSignoutOption =
     searchLocationId,
     element,
   }: Readonly<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-      autoSignOut: true,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -149,7 +146,7 @@ const retrieveSingleElementWithSignoutOption =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
       });
@@ -182,7 +179,9 @@ const retrieveSingleElementWithSignoutOption =
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element with sign out ${
+        `Unable to retrieve the element with sign out ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${element.type}/${
           element.name
         } because of an error:${formatWithNewLines(
           errorResponse.details.messages
@@ -206,7 +205,7 @@ const retrieveSingleElementWithSignoutOption =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
               status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
               error: copyError,
             });
@@ -228,7 +227,7 @@ const retrieveSingleElementWithSignoutOption =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -242,7 +241,7 @@ const retrieveSingleElementWithSignoutOption =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -254,7 +253,7 @@ const retrieveSingleElementWithSignoutOption =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -275,7 +274,7 @@ const retrieveSingleElementWithSignoutOption =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -291,7 +290,7 @@ const retrieveSingleElementWithSignoutOption =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -326,16 +325,14 @@ const complexRetrieve =
           logger.warn(
             `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-          });
           if (!(await askToOverrideSignOutForElements([element.name]))) {
-            logger.trace(`Override signout option was not chosen.`);
+            logger.trace(
+              `Override signout option was not chosen for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}.`
+            );
             return errorResponse;
           }
           logger.trace(
-            `Override signout option was chosen, ${element.name} will be retrieved with override signout.`
+            `Override signout option was chosen, ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be retrieved with override signout.`
           );
           const retrieveWithOverrideSignoutResponse =
             await retrieveSingleElementWithOverrideSignout(service)(
@@ -439,7 +436,7 @@ const saveIntoWorkspace =
     if (isError(saveResult)) {
       const error = saveResult;
       return new Error(
-        `Unable to save the element ${element.name} into the file system because of an error:\n${error.message}`
+        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of an error:\n${error.message}`
       );
     }
     const savedFileUri = saveResult;
@@ -503,11 +500,6 @@ const retrieveSingleElement =
     searchLocationId,
     element,
   }: SelectedElementNode): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-      autoSignOut: false,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -516,7 +508,7 @@ const retrieveSingleElement =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
       });
@@ -535,7 +527,11 @@ const retrieveSingleElement =
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element ${name} because of an error:${formatWithNewLines(
+        `Unable to retrieve the element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -549,7 +545,7 @@ const retrieveSingleElement =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -563,7 +559,7 @@ const retrieveSingleElement =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -575,7 +571,7 @@ const retrieveSingleElement =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -596,7 +592,7 @@ const retrieveSingleElement =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -612,7 +608,7 @@ const retrieveSingleElement =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -627,12 +623,6 @@ const retrieveSingleElement =
 export const retrieveMultipleElements =
   (configurations: ConnectionConfigurations) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: elementNodes.length,
-      autoSignOut: false,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -641,7 +631,7 @@ export const retrieveMultipleElements =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
       });
@@ -658,7 +648,7 @@ export const retrieveMultipleElements =
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element ${name} because of missing connection configuration`
+            `Unable to retrieve the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
           )
         );
         continue;
@@ -700,11 +690,14 @@ export const retrieveMultipleElements =
       const [elementDetails, retrieveResponse] = result;
       if (isErrorEndevorResponse(retrieveResponse)) {
         const errorResponse = retrieveResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const error = new Error(
-          `Unable to retrieve the element ${
-            elementDetails.element.name
-          } because of an error:${formatWithNewLines(
+          `Unable to retrieve the element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
+          }} because of an error:${formatWithNewLines(
             errorResponse.details.messages
           )}`
         );
@@ -714,7 +707,7 @@ export const retrieveMultipleElements =
             // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
               status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
               error,
             });
@@ -724,7 +717,7 @@ export const retrieveMultipleElements =
             // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
               status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
               error,
             });
@@ -732,7 +725,7 @@ export const retrieveMultipleElements =
           case ErrorResponseType.GENERIC_ERROR:
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+              errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
               status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
               error,
             });
@@ -760,7 +753,7 @@ export const retrieveMultipleElements =
           const error = saveResult;
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -781,7 +774,8 @@ export const retrieveMultipleElements =
               const error = showResult;
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+                errorContext:
+                  TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
                 status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
                 error,
               });
@@ -811,9 +805,15 @@ export const retrieveMultipleElements =
       const elementNames = elementNodes
         .map((element) => element.name)
         .join(', ');
+      const elementsPaths = elementNodes
+        .map((elementNode) => {
+          const element = elementNode.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+        })
+        .join(',\n ');
       logger.error(
         `There were some issues during retrieving of the elements ${elementNames}.`,
-        `There were some issues during retrieving of the elements ${elementNames}: ${[
+        `There were some issues during retrieving of the elements ${elementsPaths}: ${[
           '',
           ...overallErrors.map((error) => error.message),
         ].join('\n')}.`
@@ -868,12 +868,6 @@ const retrieveMultipleElementsWithSignoutOption =
     dispatch: (action: Action) => Promise<void>
   ) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: elementNodes.length,
-      autoSignOut: true,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -882,7 +876,7 @@ const retrieveMultipleElementsWithSignoutOption =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
       });
@@ -919,7 +913,7 @@ const retrieveMultipleElementsWithSignoutOption =
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element ${name} because of missing connection configuration`
+            `Unable to retrieve the element  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
           )
         );
         continue;
@@ -956,10 +950,13 @@ const retrieveMultipleElementsWithSignoutOption =
             return successRetrieve;
           }
           const errorResponse = retrieveResponse;
+          const element = elementDetails.element;
           // TODO: format using all possible error details
           const error = new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } because of an error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
@@ -971,10 +968,15 @@ const retrieveMultipleElementsWithSignoutOption =
               )(elementDetails.configuration)(elementDetails.element);
               if (isErrorEndevorResponse(retrieveCopyResponse)) {
                 const retrieveCopyErrorResponse = retrieveCopyResponse;
+                const element = elementDetails.element;
                 // TODO: format using all possible error details
                 const retrieveCopyError = new Error(
                   `Unable to retrieve a copy of the element ${
-                    elementDetails.element.name
+                    element.environment
+                  }/${element.stageNumber}/${element.system}/${
+                    element.subSystem
+                  }/${element.type}/${
+                    element.name
                   } because of an error:${formatWithNewLines(
                     retrieveCopyErrorResponse.details.messages
                   )}`
@@ -982,7 +984,7 @@ const retrieveMultipleElementsWithSignoutOption =
                 reporter.sendTelemetryEvent({
                   type: TelemetryEvents.ERROR,
                   errorContext:
-                    TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+                    TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
                   status:
                     SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
                   error: retrieveCopyError,
@@ -1001,7 +1003,8 @@ const retrieveMultipleElementsWithSignoutOption =
               // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+                errorContext:
+                  TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
                 status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
                 error,
               });
@@ -1011,7 +1014,8 @@ const retrieveMultipleElementsWithSignoutOption =
               // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+                errorContext:
+                  TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
                 status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
                 error,
               });
@@ -1019,7 +1023,8 @@ const retrieveMultipleElementsWithSignoutOption =
             case ErrorResponseType.GENERIC_ERROR:
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+                errorContext:
+                  TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
                 status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
                 error,
               });
@@ -1045,7 +1050,7 @@ const retrieveMultipleElementsWithSignoutOption =
           const error = saveResult;
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
             status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -1066,7 +1071,8 @@ const retrieveMultipleElementsWithSignoutOption =
               const error = showResult;
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+                errorContext:
+                  TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
                 status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
                 error,
               });
@@ -1096,9 +1102,15 @@ const retrieveMultipleElementsWithSignoutOption =
       const elementNames = elementNodes
         .map((element) => element.name)
         .join(', ');
+      const elementsPaths = elementNodes
+        .map((elementNode) => {
+          const element = elementNode.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+        })
+        .join(',\n ');
       logger.error(
         `There were some issues during retrieving of the elements ${elementNames}`,
-        `There were some issues during retrieving of the elements ${elementNames}:\n${[
+        `There were some issues during retrieving of the elements ${elementsPaths}:\n${[
           '',
           ...overallErrors.map((error) => error.message),
         ].join('\n')}`
@@ -1149,7 +1161,7 @@ const complexRetrieveMultipleElements =
     genericErrorsAfterSignoutRetrieve.forEach(([, error]) =>
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
+        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
         status: RetrieveElementCommandCompletedStatus.GENERIC_ERROR,
         error,
       })
@@ -1160,8 +1172,11 @@ const complexRetrieveMultipleElements =
     if (allErrorsAreGeneric) {
       logger.trace(
         `Unable to retrieve the elements ${notRetrievedElementsWithSignout
-          .map(([elementDetails]) => elementDetails.element.name)
-          .join(', ')} with signout.`
+          .map(
+            ([elementDetails]) =>
+              `${elementDetails.element.environment}/${elementDetails.element.stageNumber}/${elementDetails.element.system}/${elementDetails.element.subSystem}/${elementDetails.element.type}/${elementDetails.element.name}`
+          )
+          .join(',\n ')} with signout.`
       );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
@@ -1173,12 +1188,6 @@ const complexRetrieveMultipleElements =
     }
     const signoutErrorsAfterSignoutRetrieve = signoutErrors(
       retrieveWithSignoutResult
-    );
-    signoutErrorsAfterSignoutRetrieve.forEach(() =>
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-        context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED,
-      })
     );
     logger.warn(
       `Elements ${signoutErrorsAfterSignoutRetrieve
@@ -1195,8 +1204,11 @@ const complexRetrieveMultipleElements =
     if (!overrideSignout) {
       logger.trace(
         `Override signout option was not chosen, ${signoutErrorsAfterSignoutRetrieve
-          .map((elementDetails) => elementDetails.element.name)
-          .join(', ')} copies will be retrieved.`
+          .map(
+            (elementDetails) =>
+              `${elementDetails.element.environment}/${elementDetails.element.stageNumber}/${elementDetails.element.system}/${elementDetails.element.subSystem}/${elementDetails.element.type}/${elementDetails.element.name}`
+          )
+          .join(',\n ')} copies will be retrieved.`
       );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
@@ -1208,8 +1220,11 @@ const complexRetrieveMultipleElements =
     }
     logger.trace(
       `Override signout option was chosen, ${signoutErrorsAfterSignoutRetrieve
-        .map((elementDetails) => elementDetails.element.name)
-        .join(', ')} will be retrieved with override signout.`
+        .map(
+          (elementDetails) =>
+            `${elementDetails.element.environment}/${elementDetails.element.stageNumber}/${elementDetails.element.system}/${elementDetails.element.subSystem}/${elementDetails.element.type}/${elementDetails.element.name}`
+        )
+        .join(',\n ')} will be retrieved with override signout.`
     );
     const retrieveWithOverrideSignoutResult =
       await retrieveMultipleElementsWithOverrideSignout(
@@ -1348,14 +1363,17 @@ const genericErrors = (
       const [elementDetails, retrieveResponse] = result;
       if (isErrorEndevorResponse(retrieveResponse)) {
         const errorResponse = retrieveResponse;
+        const element = elementDetails.element;
         if (errorResponse.type === ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR) {
           return undefined;
         }
         const mappedValue: [ElementDetails, Error] = [
           elementDetails,
           new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } with sign out because of an error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
@@ -1379,13 +1397,16 @@ const allErrors = (
   return input
     .map((result) => {
       const [elementDetails, retrieveResponse] = result;
+      const element = elementDetails.element;
       if (isErrorEndevorResponse(retrieveResponse)) {
         const errorResponse = retrieveResponse;
         const mappedValue: [ElementDetails, Error] = [
           elementDetails,
           new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } with sign out because of an error:${formatWithNewLines(
               errorResponse.details.messages
             )}`

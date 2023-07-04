@@ -15,7 +15,7 @@ import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { ElementFilterType } from '../../store/_doc/v2/Store';
 import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents } from '../../_doc/telemetry/Telemetry';
 
 export const toggleMapView =
   (dispatch: (action: Action) => Promise<void>) =>

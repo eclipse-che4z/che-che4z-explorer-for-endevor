@@ -30,7 +30,7 @@ import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
 import {
   TelemetryEvents,
   UpdateElementTypeFilterCommandCompletedStatus,
-} from '../../../_doc/telemetry/v2/Telemetry';
+} from '../../../_doc/telemetry/Telemetry';
 
 export const filterSearchLocationByElementTypeCommand =
   (
@@ -58,9 +58,6 @@ export const filterSearchLocationByElementTypeCommand =
     logger.trace(
       `Set filtering by element type for the ${locationSource} inventory location ${locationName} within the ${serviceSource} Endevor connection ${serviceName}.`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED,
-    });
     const serviceId = {
       name: serviceName,
       source: serviceSource,

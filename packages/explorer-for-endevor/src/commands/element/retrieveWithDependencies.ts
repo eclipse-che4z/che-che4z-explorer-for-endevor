@@ -77,8 +77,7 @@ import {
   RetrieveElementWithDepsCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-  TreeElementCommandArguments,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { Id } from '../../store/storage/_doc/Storage';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import path = require('path');
@@ -111,8 +110,11 @@ export const retrieveWithDependencies = async (
     const elementNodes = filterElementNodes(nodes);
     logger.trace(
       `Retrieve element command was called for ${elementNodes
-        .map((node) => node.name)
-        .join(',')}.`
+        .map((node) => {
+          const element = node.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${node.name}`;
+        })
+        .join(',\n')}.`
     );
     if (isAutomaticSignOut()) {
       const groupedElementNodes = groupBySearchLocationId(elementNodes);
@@ -128,7 +130,7 @@ export const retrieveWithDependencies = async (
     return;
   } else if (elementNode) {
     logger.trace(
-      `Retrieve element command was called for ${elementNode.name}.`
+      `Retrieve element command was called for ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}.`
     );
     if (isAutomaticSignOut()) {
       await retrieveSingleElementWithDepsWithSignout(
@@ -155,11 +157,6 @@ const retrieveSingleElementWithDepsWithSignout =
     searchLocationId,
     element,
   }: Readonly<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-      autoSignOut: true,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -168,7 +165,8 @@ const retrieveSingleElementWithDepsWithSignout =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status:
           RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
@@ -210,8 +208,10 @@ const retrieveSingleElementWithDepsWithSignout =
       // TODO: format using all possible error details
       const mainElementError = new Error(
         `Unable to retrieve the element with sign out with dependencies ${
-          element.name
-        } because of an error:${formatWithNewLines(
+          element.environment
+        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
+          element.type
+        }/${element.name} because of an error:${formatWithNewLines(
           mainElementErrorResponse.details.messages
         )}`
       );
@@ -225,7 +225,9 @@ const retrieveSingleElementWithDepsWithSignout =
           if (isErrorEndevorResponse(retrieveMainElementResponse)) {
             const mainElementCopyErrorResponse = retrieveMainElementResponse;
             const mainElementCopyError = new Error(
-              `Unable to retrieve copy of the element ${
+              `Unable to retrieve copy of the element ${element.environment}/${
+                element.stageNumber
+              }/${element.system}/${element.subSystem}/${element.type}/${
                 element.name
               } because of an error:${formatWithNewLines(
                 mainElementCopyErrorResponse.details.messages
@@ -234,7 +236,7 @@ const retrieveSingleElementWithDepsWithSignout =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+                TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
               status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
               error: mainElementCopyError,
             });
@@ -257,7 +259,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -272,7 +274,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -285,7 +287,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -303,7 +305,11 @@ const retrieveSingleElementWithDepsWithSignout =
       const componentsErrorResponse = componentsResponse;
       // TODO: format using all possible error details
       const componentsError = new Error(
-        `Unable to retrieve components for element ${name} because of an error:${formatWithNewLines(
+        `Unable to retrieve components for element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} because of an error:${formatWithNewLines(
           componentsErrorResponse.details.messages
         )}`
       );
@@ -318,7 +324,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -333,7 +339,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -347,7 +353,7 @@ const retrieveSingleElementWithDepsWithSignout =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -395,7 +401,11 @@ const retrieveSingleElementWithDepsWithSignout =
         // TODO: format using all possible error details
         // TODO add more dependency info (name, type, etc.) to the error message
         const error = new Error(
-          `Unable to retrieve the element ${name} dependency content because of an error:${formatWithNewLines(
+          `Unable to retrieve the element  ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${
+            element.type
+          }/${name} dependency content because of an error:${formatWithNewLines(
             errorResponse.details.messages
           )}`
         );
@@ -405,7 +415,11 @@ const retrieveSingleElementWithDepsWithSignout =
     if (dependencyErrors.length) {
       logger.warn(
         `There were some issues during retrieving of the element ${name} dependencies.`,
-        `There were some issues during retrieving of the element ${name} dependencies:${[
+        `There were some issues during retrieving of the element ${
+          element.environment
+        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} dependencies:${[
           '',
           dependencyErrors.map((error) => error.message),
         ].join('\n')}.`
@@ -445,11 +459,12 @@ const retrieveSingleElementWithDepsWithSignout =
       const error = saveResult;
       logger.error(
         `Unable to save the element ${name} into the file system.`,
-        `Unable to save the element ${name} into the file system because of an error:\n${error.message}.`
+        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} into the file system because of an error:\n${error.message}.`
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -461,11 +476,12 @@ const retrieveSingleElementWithDepsWithSignout =
       const error = showResult;
       logger.error(
         `Unable to open the element ${name} for editing.`,
-        `Unable to open the element ${name} for editing because of an error:\n${error.message}.`
+        `Unable to open the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} for editing because of an error:\n${error.message}.`
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -495,16 +511,12 @@ const complexRetrieve =
           logger.warn(
             `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-          });
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(`Override signout option was not chosen`);
             return errorResponse;
           }
           logger.trace(
-            `Override signout option was chosen, ${element.name} will be retrieved with override signout.`
+            `Override signout option was chosen, ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be retrieved with override signout.`
           );
           const retrieveWithOverrideSignoutResponse =
             await retrieveSingleElementWithOverrideSignout(serviceInstance)(
@@ -616,13 +628,17 @@ const saveIntoWorkspaceWithDependencies =
       })
       .filter(isDefined);
     if (errors.length) {
+      const mainElement = elementWithDeps.mainElement.element;
       logger.warn(
         `There were some issues during saving of the element ${elementWithDeps.mainElement.element.name} dependencies.`,
         `There were some issues during saving of the element ${
-          elementWithDeps.mainElement.element.name
-        } dependencies:${['', errors.map((error) => error.message)].join(
-          '\n'
-        )}.`
+          mainElement.environment
+        }/${mainElement.stageNumber}/${mainElement.system}/${
+          mainElement.subSystem
+        }/${mainElement.type}/${mainElement.name} dependencies:${[
+          '',
+          errors.map((error) => error.message),
+        ].join('\n')}.`
       );
     }
     return saveMainElementResult;
@@ -636,11 +652,6 @@ const retrieveSingleElementWithDeps =
     searchLocationId,
     element,
   }: Readonly<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-      autoSignOut: false,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -649,7 +660,8 @@ const retrieveSingleElementWithDeps =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status:
           RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
@@ -672,7 +684,11 @@ const retrieveSingleElementWithDeps =
       const mainElementErrorResponse = retrieveMainElementResponse;
       // TODO: format using all possible error details
       const mainElementError = new Error(
-        `Unable to retrieve the element ${name} because of an error:${formatWithNewLines(
+        `Unable to retrieve the element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} because of an error:${formatWithNewLines(
           mainElementErrorResponse.details.messages
         )}`
       );
@@ -687,7 +703,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -702,7 +718,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -715,7 +731,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: mainElementError,
           });
@@ -733,7 +749,11 @@ const retrieveSingleElementWithDeps =
       const componentsErrorResponse = componentsResponse;
       // TODO: format using all possible error details
       const componentsError = new Error(
-        `Unable to retrieve components for element ${name} because of an error:${formatWithNewLines(
+        `Unable to retrieve components for element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} because of an error:${formatWithNewLines(
           componentsErrorResponse.details.messages
         )}`
       );
@@ -748,7 +768,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -763,7 +783,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -777,7 +797,7 @@ const retrieveSingleElementWithDeps =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+              TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
             status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
             error: componentsError,
           });
@@ -824,7 +844,11 @@ const retrieveSingleElementWithDeps =
         // TODO: format using all possible error details
         // TODO add more dependency info (name, type, etc.) to the error message
         const error = new Error(
-          `Unable to retrieve the element ${name} dependency content because of an error:${formatWithNewLines(
+          `Unable to retrieve the element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${
+            element.type
+          }/${name} dependency content because of an error:${formatWithNewLines(
             errorResponse.details.messages
           )}`
         );
@@ -834,7 +858,11 @@ const retrieveSingleElementWithDeps =
     if (dependencyErrors.length) {
       logger.warn(
         `There were some issues during retrieving of the element ${name} dependencies.`,
-        `There were some issues during retrieving of the element ${name} dependencies:${[
+        `There were some issues during retrieving of the element ${
+          element.environment
+        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} dependencies:${[
           '',
           dependencyErrors.map((error) => error.message),
         ].join('\n')}.`
@@ -874,11 +902,12 @@ const retrieveSingleElementWithDeps =
       const error = saveResult;
       logger.error(
         `Unable to save the element ${name} into the file system.`,
-        `Unable to save the element ${name} into the file system because of an error:\n${error.message}.`
+        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} into the file system because of an error:\n${error.message}.`
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -890,11 +919,12 @@ const retrieveSingleElementWithDeps =
       const error = showResult;
       logger.error(
         `Unable to open the element ${name} for editing.`,
-        `Unable to open the element ${name} for editing because of an error:\n${error.message}.`
+        `Unable to open the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} for editing because of an error:\n${error.message}.`
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -910,12 +940,6 @@ const retrieveSingleElementWithDeps =
 const retrieveMultipleElementsWithDeps =
   (configurations: ConnectionConfigurations) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: elementNodes.length,
-      autoSignOut: false,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -924,7 +948,8 @@ const retrieveMultipleElementsWithDeps =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status:
           RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
@@ -942,7 +967,7 @@ const retrieveMultipleElementsWithDeps =
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element ${name} because of missing connection configuration`
+            `Unable to retrieve the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
           )
         );
         continue;
@@ -984,10 +1009,13 @@ const retrieveMultipleElementsWithDeps =
           return successRetrieve;
         }
         const mainElementErrorResponse = mainElementRetrieveResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const mainElementError = new Error(
-          `Unable to retrieve the element ${
-            elementDetails.element.name
+          `Unable to retrieve the element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
           } because of an error:${formatWithNewLines(
             mainElementErrorResponse.details.messages
           )}`
@@ -1026,10 +1054,13 @@ const retrieveMultipleElementsWithDeps =
       })(elementDetails.element);
       if (isErrorEndevorResponse(componentsResponse)) {
         const componentsErrorResponse = componentsResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const componentsError = new Error(
-          `Unable to retrieve components for element ${
-            elementDetails.element.name
+          `Unable to retrieve components for element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
           } because of an error:${formatWithNewLines(
             componentsErrorResponse.details.messages
           )}`
@@ -1045,7 +1076,7 @@ const retrieveMultipleElementsWithDeps =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1061,7 +1092,7 @@ const retrieveMultipleElementsWithDeps =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1076,7 +1107,7 @@ const retrieveMultipleElementsWithDeps =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1123,11 +1154,14 @@ const retrieveMultipleElementsWithDeps =
       dependencyWithContentResponses.map(([, retrieveResponse]) => {
         if (isErrorEndevorResponse(retrieveResponse)) {
           const errorResponse = retrieveResponse;
+          const element = elementDetails.element;
           // TODO: format using all possible error details
           // TODO add more dependency info (name, type, etc.) to the error message
           const error = new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } dependency content because of an error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
@@ -1136,11 +1170,14 @@ const retrieveMultipleElementsWithDeps =
         }
       });
       if (dependencyErrors.length) {
+        const dependencyElement = elementDetails.element;
         logger.warn(
           `There were some issues during retrieving of the element ${elementDetails.element.name} dependencies.`,
           `There were some issues during retrieving of the element ${
-            elementDetails.element.name
-          } dependencies:${[
+            dependencyElement.environment
+          }/${dependencyElement.stageNumber}/${dependencyElement.system}/${
+            dependencyElement.subSystem
+          }/${dependencyElement.type}/${dependencyElement.name} dependencies:${[
             '',
             dependencyErrors.map((error) => error.message),
           ].join('\n')}.`
@@ -1191,10 +1228,11 @@ const retrieveMultipleElementsWithDeps =
           });
           if (isError(saveResult)) {
             const error = saveResult;
+            const element = result.mainElement.details.element;
             return [
               result.mainElement.details,
               new Error(
-                `Unable to save the element ${result.mainElement.details.element.name} into the file system because of an error:\n${error.message}`
+                `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of an error:\n${error.message}`
               ),
             ];
           }
@@ -1214,10 +1252,11 @@ const retrieveMultipleElementsWithDeps =
               const showResult = await showElementInEditor(savedElementUri);
               if (isError(showResult)) {
                 const error = showResult;
+                const element = elementDetails.element;
                 return [
                   elementDetails,
                   new Error(
-                    `Unable to show the element ${elementDetails.element.name} in the editor because of an error:\n${error.message}`
+                    `Unable to show the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} in the editor because of an error:\n${error.message}`
                   ),
                 ];
               }
@@ -1240,9 +1279,15 @@ const retrieveMultipleElementsWithDeps =
       const elementNames = errors
         .map(([elementDetails]) => elementDetails.element.name)
         .join(', ');
+      const elementPaths = errors
+        .map(([elementDetails]) => {
+          const element = elementDetails.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+        })
+        .join(',\n ');
       logger.error(
         `There were some issues during retrieving of the elements ${elementNames}.`,
-        `There were some issues during retrieving of the elements ${elementNames}:${[
+        `There were some issues during retrieving of the elements ${elementPaths}:${[
           '',
           errors.map(([, error]) => error.message),
         ].join('\n')}.`
@@ -1251,7 +1296,8 @@ const retrieveMultipleElementsWithDeps =
     errors.forEach(([, error]) => {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -1333,12 +1379,6 @@ const retrieveMultipleElementsWithDepsWithSignout =
     dispatch: (action: Action) => Promise<void>
   ) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: elementNodes.length,
-      autoSignOut: true,
-    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
@@ -1347,7 +1387,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
       logger.error(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status:
           RetrieveElementWithDepsCommandCompletedStatus.NO_OPENED_WORKSPACE_ERROR,
         error,
@@ -1385,7 +1426,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element ${elementNode.name} because of missing connection configuration`
+            `Unable to retrieve the element  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} because of missing connection configuration`
           )
         );
         continue;
@@ -1428,10 +1469,13 @@ const retrieveMultipleElementsWithDepsWithSignout =
             return successfulRetrieveResult;
           }
           const mainElementErrorResponse = mainElementRetrieveResponse;
+          const element = elementDetails.element;
           // TODO: format using all possible error details
           const mainElementError = new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } because of an error:${formatWithNewLines(
               mainElementErrorResponse.details.messages
             )}`
@@ -1446,8 +1490,10 @@ const retrieveMultipleElementsWithDepsWithSignout =
               if (isErrorEndevorResponse(retrieveCopyResponse)) {
                 const copyErrorResponse = retrieveCopyResponse;
                 const copyError = new Error(
-                  `Unable to retrieve copy of ${
-                    elementDetails.element.name
+                  `Unable to retrieve copy of ${element.environment}/${
+                    element.stageNumber
+                  }/${element.system}/${element.subSystem}/${element.type}/${
+                    element.name
                   } because of an error:${formatWithNewLines(
                     copyErrorResponse.details.messages
                   )}`
@@ -1455,7 +1501,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
                 reporter.sendTelemetryEvent({
                   type: TelemetryEvents.ERROR,
                   errorContext:
-                    TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
+                    TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
                   status:
                     SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
                   error: copyError,
@@ -1511,10 +1557,13 @@ const retrieveMultipleElementsWithDepsWithSignout =
       })(elementDetails.element);
       if (isErrorEndevorResponse(componentsResponse)) {
         const componentsErrorResponse = componentsResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const componentsError = new Error(
-          `Unable to retrieve components for element ${
-            elementDetails.element.name
+          `Unable to retrieve components for element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
           } because of an error:${formatWithNewLines(
             componentsErrorResponse.details.messages
           )}`
@@ -1530,7 +1579,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1546,7 +1595,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1561,7 +1610,7 @@ const retrieveMultipleElementsWithDepsWithSignout =
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext:
-                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+                TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
               status:
                 RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
               error: componentsError,
@@ -1605,11 +1654,14 @@ const retrieveMultipleElementsWithDepsWithSignout =
       dependencyWithContentResponses.map(([, retrieveResponse]) => {
         if (isErrorEndevorResponse(retrieveResponse)) {
           const errorResponse = retrieveResponse;
+          const element = elementDetails.element;
           // TODO: format using all possible error details
           // TODO add more dependency info (name, type, etc.) to the error message
           const error = new Error(
-            `Unable to retrieve the element ${
-              elementDetails.element.name
+            `Unable to retrieve the element ${element.environment}/${
+              element.stageNumber
+            }/${element.system}/${element.subSystem}/${element.type}/${
+              element.name
             } dependency content because of an error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
@@ -1618,11 +1670,14 @@ const retrieveMultipleElementsWithDepsWithSignout =
         }
       });
       if (dependencyErrors.length) {
+        const dependencyElement = elementDetails.element;
         logger.warn(
           `There were some issues during retrieving of the element ${elementDetails.element.name} dependencies.`,
           `There were some issues during retrieving of the element ${
-            elementDetails.element.name
-          } dependencies:${[
+            dependencyElement.environment
+          }/${dependencyElement.stageNumber}/${dependencyElement.system}/${
+            dependencyElement.subSystem
+          }/${dependencyElement.type}/${dependencyElement.name} dependencies:${[
             '',
             dependencyErrors.map((error) => error.message),
           ].join('\n')}.`
@@ -1673,10 +1728,11 @@ const retrieveMultipleElementsWithDepsWithSignout =
           });
           if (isError(saveResult)) {
             const error = saveResult;
+            const element = result.mainElement.details.element;
             return [
               result.mainElement.details,
               new Error(
-                `Unable to save the element ${result.mainElement.details.element.name} into the file system because of an error:\n${error.message}`
+                `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of an error:\n${error.message}`
               ),
             ];
           }
@@ -1696,10 +1752,11 @@ const retrieveMultipleElementsWithDepsWithSignout =
               const showResult = await showElementInEditor(savedElementUri);
               if (isError(showResult)) {
                 const error = showResult;
+                const element = elementDetails.element;
                 return [
                   elementDetails,
                   new Error(
-                    `Unable to show the element ${elementDetails.element.name} in the editor because of an error:\n${error.message}`
+                    `Unable to show the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} in the editor because of an error:\n${error.message}`
                   ),
                 ];
               }
@@ -1736,7 +1793,8 @@ const retrieveMultipleElementsWithDepsWithSignout =
     errors.forEach(([, error]) => {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -1822,7 +1880,8 @@ const complexMultipleRetrieve =
     genericErrorsAfterSignoutRetrieve.forEach(([, error]) =>
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
+        errorContext:
+          TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED,
         status: RetrieveElementWithDepsCommandCompletedStatus.GENERIC_ERROR,
         error,
       })
@@ -1833,8 +1892,11 @@ const complexMultipleRetrieve =
     if (allErrorsAreGeneric) {
       logger.trace(
         `Unable to retrieve the elements ${notRetrievedElementsWithSignout
-          .map(([elementDetails]) => elementDetails.element.name)
-          .join(', ')} with signout.`
+          .map(([elementDetails]) => {
+            const element = elementDetails.element;
+            return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+          })
+          .join(',\n ')} with signout.`
       );
       const signedOutElements = toSignedOutElementsPayload([
         ...successRetrievedElementsWithSignout.map(
@@ -1846,12 +1908,6 @@ const complexMultipleRetrieve =
     }
     const signoutErrorsAfterSignoutRetrieve = signoutErrors(
       retrieveWithSignoutResult
-    );
-    signoutErrorsAfterSignoutRetrieve.forEach(() =>
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-        context: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED,
-      })
     );
     logger.warn(
       `Elements ${signoutErrorsAfterSignoutRetrieve
@@ -1868,7 +1924,10 @@ const complexMultipleRetrieve =
     if (!overrideSignout) {
       logger.trace(
         `Override signout option was not chosen, ${signoutErrorsAfterSignoutRetrieve
-          .map((elementDetails) => elementDetails.element.name)
+          .map((elementDetails) => {
+            const element = elementDetails.element;
+            return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+          })
           .join(', ')} copies will be retrieved.`
       );
       const signedOutElements = toSignedOutElementsPayload([
@@ -1881,8 +1940,11 @@ const complexMultipleRetrieve =
     }
     logger.trace(
       `Override signout option was chosen, ${signoutErrorsAfterSignoutRetrieve
-        .map((elementDetails) => elementDetails.element.name)
-        .join(', ')} will be retrieved with override signout.`
+        .map((elementDetails) => {
+          const element = elementDetails.element;
+          return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}`;
+        })
+        .join(',\n ')} will be retrieved with override signout.`
     );
     const retrieveWithOverrideSignoutResult =
       await retrieveMultipleElementsWithOverrideSignout(
@@ -1932,10 +1994,13 @@ const genericErrors = (
       const [elementDetails, retrieveResponse] = result;
       if (isErrorEndevorResponse(retrieveResponse)) {
         const errorResponse = retrieveResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const error = new Error(
-          `Unable to retrieve the element ${
-            elementDetails.element.name
+          `Unable to retrieve the element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
           } with sign out because of an error:${formatWithNewLines(
             errorResponse.details.messages
           )}`
@@ -1964,10 +2029,13 @@ const allErrors = (
       const [elementDetails, retrieveResponse] = result;
       if (isErrorEndevorResponse(retrieveResponse)) {
         const errorResponse = retrieveResponse;
+        const element = elementDetails.element;
         // TODO: format using all possible error details
         const error = new Error(
-          `Unable to retrieve the element ${
-            elementDetails.element.name
+          `Unable to retrieve the element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
           } with sign out because of an error:${formatWithNewLines(
             errorResponse.details.messages
           )}`

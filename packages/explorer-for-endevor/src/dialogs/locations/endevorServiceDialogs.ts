@@ -40,7 +40,7 @@ import {
 import {
   ServiceConnectionTestStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import {
   EndevorConnection,
   EndevorConnectionStatus,

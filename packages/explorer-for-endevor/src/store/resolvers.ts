@@ -17,7 +17,6 @@ import {
   dialogCancelled,
 } from '../dialogs/credentials/endevorCredentialDialogs';
 import { logger, reporter } from '../globals';
-import { TelemetryEvents as V1TelemetryEvents } from '../_doc/Telemetry';
 import {
   getCredential as getCredentialFromStore,
   getSearchLocation as getSearchLocationFromStore,
@@ -51,8 +50,8 @@ import {
 } from '@local/endevor/utils';
 import {
   ServiceConnectionTestStatus,
-  TelemetryEvents as V2TelemetryEvents,
-} from '../_doc/telemetry/v2/Telemetry';
+  TelemetryEvents,
+} from '../_doc/telemetry/Telemetry';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { ENDEVOR_CREDENTIAL_VALIDATION_LIMIT } from '../constants';
 import { SearchLocation } from '../_doc/Endevor';
@@ -208,9 +207,6 @@ export const defineValidCredentialResolutionOrder = (
       };
     },
     async (sessionId) => {
-      reporter.sendTelemetryEvent({
-        type: V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED,
-      });
       const credential = await askForCredentialWithDefaultPasswordPolicy({
         validateCredential: async (credential) => {
           const response = await withNotificationProgress(
@@ -264,7 +260,7 @@ export const defineValidCredentialResolutionOrder = (
       switch (credential.status) {
         case EndevorCredentialStatus.VALID: {
           reporter.sendTelemetryEvent({
-            type: V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
+            type: TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
           });
           const token = credential.token;
           if (!token) {
@@ -363,13 +359,10 @@ export const defineAnyCredentialResolutionOrder = (
       const storedCredential = getCredentialFromStore(getState)(sessionId);
       if (storedCredential) credential = storedCredential;
       else {
-        reporter.sendTelemetryEvent({
-          type: V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED,
-        });
         const missingCredential = await askForCredentialWithoutValidation();
         if (dialogCancelled(missingCredential)) return;
         reporter.sendTelemetryEvent({
-          type: V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
+          type: TelemetryEvents.MISSING_CREDENTIALS_PROVIDED,
         });
         credential = {
           status: EndevorCredentialStatus.UNKNOWN,
@@ -538,8 +531,8 @@ export const defineValidConnectionDetailsResolutionOrder = (
       );
       if (!apiVersionResponse) {
         reporter.sendTelemetryEvent({
-          type: V2TelemetryEvents.SERVICE_CONNECTION_TEST,
-          context: V2TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
+          type: TelemetryEvents.SERVICE_CONNECTION_TEST,
+          context: TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
           status: ServiceConnectionTestStatus.CANCELLED,
         });
         return;
@@ -555,8 +548,8 @@ export const defineValidConnectionDetailsResolutionOrder = (
         switch (errorResponse.type) {
           case ErrorResponseType.CERT_VALIDATION_ERROR:
             reporter.sendTelemetryEvent({
-              type: V2TelemetryEvents.ERROR,
-              errorContext: V2TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
+              type: TelemetryEvents.ERROR,
+              errorContext: TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
               status: ServiceConnectionTestStatus.CERT_ISSUER_VALIDATION_ERROR,
               error,
             });
@@ -575,8 +568,8 @@ export const defineValidConnectionDetailsResolutionOrder = (
           case ErrorResponseType.CONNECTION_ERROR:
           case ErrorResponseType.GENERIC_ERROR:
             reporter.sendTelemetryEvent({
-              type: V2TelemetryEvents.ERROR,
-              errorContext: V2TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
+              type: TelemetryEvents.ERROR,
+              errorContext: TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
               status: ServiceConnectionTestStatus.GENERIC_ERROR,
               error,
             });
@@ -599,8 +592,8 @@ export const defineValidConnectionDetailsResolutionOrder = (
       }
       const apiVersion = apiVersionResponse.result;
       reporter.sendTelemetryEvent({
-        type: V2TelemetryEvents.SERVICE_CONNECTION_TEST,
-        context: V2TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
+        type: TelemetryEvents.SERVICE_CONNECTION_TEST,
+        context: TelemetryEvents.SERVICE_INFO_RESOLVER_CALLED,
         status: ServiceConnectionTestStatus.SUCCESS,
         apiVersion,
       });

@@ -17,21 +17,12 @@ import { createTelemetryReporter } from '@local/vscode-wrapper/telemetry';
 import { TelemetryProperties } from '@local/vscode-wrapper/_doc/telemetry';
 import { ENDEVOR_MESSAGE_CODE_PREFIXES } from './constants';
 import { deepCopyError } from './utils';
-import {
-  TelemetryEvent as V1TelemetryEvent,
-  TelemetryEvents as V1TelemetryEvents,
-  TELEMETRY_EVENTS_VERSION as V1_TELEMETRY_EVENTS_VERSION,
-} from './_doc/Telemetry';
-import {
-  TelemetryEvent as V2TelemetryEvent,
-  TelemetryEvents as V2TelemetryEvents,
-  TELEMETRY_EVENTS_VERSION as V2_TELEMETRY_EVENTS_VERSION,
-} from './_doc/telemetry/v2/Telemetry';
+import { TelemetryEvent, TelemetryEvents } from './_doc/telemetry/Telemetry';
 
 export type TelemetryEventTypeProperties = { readonly [key: string]: string };
 
 type TelemetryReporter = {
-  sendTelemetryEvent: (event: V1TelemetryEvent | V2TelemetryEvent) => void;
+  sendTelemetryEvent: (event: TelemetryEvent) => void;
   dispose: () => Promise<unknown>;
 };
 
@@ -44,13 +35,10 @@ export const createReporter =
       key
     )(logger);
     return {
-      sendTelemetryEvent: (
-        event: V1TelemetryEvent | V2TelemetryEvent
-      ): void => {
+      sendTelemetryEvent: (event: TelemetryEvent): void => {
         const eventProperties = getTelemetryEventProperties(event);
         switch (event.type) {
-          case V2TelemetryEvents.ERROR:
-          case V1TelemetryEvents.ERROR:
+          case TelemetryEvents.ERROR:
             reporter.sendTelemetryException(
               getRedactedError(event.error),
               eventProperties
@@ -65,89 +53,74 @@ export const createReporter =
   };
 
 const getTelemetryEventProperties = (
-  event: V1TelemetryEvent | V2TelemetryEvent
+  event: TelemetryEvent
 ): TelemetryProperties => {
   switch (event.type) {
     // deprecated: we only need v1 error type for the backward compatibility between the v1 and v2 type system
-    case V1TelemetryEvents.ERROR:
-    case V2TelemetryEvents.ERROR:
+    case TelemetryEvents.ERROR:
       return {
         errorContext: event.errorContext,
         status: event.status,
-        propertiesTypeVersion: V2_TELEMETRY_EVENTS_VERSION,
       };
-    case V2TelemetryEvents.EXTENSION_ACTIVATED:
-    case V2TelemetryEvents.SERVICE_HIDDEN:
-    case V2TelemetryEvents.SEARCH_LOCATION_HIDDEN:
-    case V2TelemetryEvents.SERVICE_PROVIDED_INTO_TREE:
-    case V2TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE:
-    case V2TelemetryEvents.COMMAND_DELETE_SERVICE_CALLED:
-    case V2TelemetryEvents.COMMAND_DELETE_SEARCH_LOCATION_CALLED:
-    case V2TelemetryEvents.PROFILES_MIGRATION_CALLED:
-    case V2TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED:
-    case V2TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED:
-    case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED:
-    case V2TelemetryEvents.PROFILES_MIGRATION_COMPLETED:
-    case V2TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED:
-    case V2TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED:
-    case V2TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED:
-    case V2TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED:
-    case V2TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED:
-    case V2TelemetryEvents.COMMAND_PRINT_LISTING_CALL:
-    case V2TelemetryEvents.COMMAND_DELETE_SEARCH_LOCATION_COMPLETED:
-    case V2TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_CALLED:
-    case V2TelemetryEvents.SERVICE_CONNECTION_TEST:
-    case V2TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED:
-    case V2TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_CALLED:
-    case V2TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT:
-    case V2TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES:
-    case V2TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
-    case V2TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION:
-    case V2TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN:
-    case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED:
-    case V2TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED:
-    case V2TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED:
-    case V2TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED:
-    case V2TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED:
-    case V2TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED:
-    case V2TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_SYNC_WORKSPACE_CALLED:
-    case V2TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED:
-    case V2TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED:
-    case V2TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED:
-    case V2TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED:
-    case V2TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED:
-    case V2TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED:
-    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED:
-    case V2TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT:
-    case V2TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT:
-    case V2TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED:
-    case V2TelemetryEvents.COMMAND_TOGGLE_MAP:
-    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED:
-    case V2TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED:
-    case V2TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALLED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALLED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED:
-    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED:
-    case V2TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL:
-    case V2TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL:
-    case V2TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED:
-    case V2TelemetryEvents.REPORT_CONTENT_PROVIDER_COMPLETED:
-    case V2TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALL:
-    case V2TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED:
-    case V2TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL:
-    case V2TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED: {
+    case TelemetryEvents.EXTENSION_ACTIVATED:
+    case TelemetryEvents.SERVICE_HIDDEN:
+    case TelemetryEvents.SEARCH_LOCATION_HIDDEN:
+    case TelemetryEvents.SERVICE_PROVIDED_INTO_TREE:
+    case TelemetryEvents.SERVICES_LOCATIONS_PROVIDED_INTO_TREE:
+    case TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE:
+    case TelemetryEvents.PROFILES_MIGRATION_COMPLETED:
+    case TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED:
+    case TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED:
+    case TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED:
+    case TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED:
+    case TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED:
+    case TelemetryEvents.COMMAND_ADD_NEW_SERVICE_COMPLETED:
+    case TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED:
+    case TelemetryEvents.COMMAND_DELETE_SEARCH_LOCATION_COMPLETED:
+    case TelemetryEvents.SERVICE_CONNECTION_TEST:
+    case TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED:
+    case TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT:
+    case TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES:
+    case TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
+    case TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION:
+    case TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN:
+    case TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED:
+    case TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED:
+    case TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED:
+    case TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED:
+    case TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED:
+    case TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED:
+    case TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED:
+    case TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED:
+    case TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT:
+    case TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT:
+    case TelemetryEvents.COMMAND_TOGGLE_MAP:
+    case TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_COMPLETED:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL:
+    case TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL:
+    case TelemetryEvents.REPORT_CONTENT_PROVIDER_COMPLETED:
+    case TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALL:
+    case TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL:
+    case TelemetryEvents.ELEMENTS_WERE_FETCHED:
+    case TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
+    case TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED:
+    case TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED:
+    case TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL:
+    case TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL:
+    case TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED:
+    case TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED:
+    case TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED:
+    case TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT: {
       return {
         ...Object.entries(event)
           .map(([key, value]) => {
@@ -166,64 +139,6 @@ const getTelemetryEventProperties = (
             },
             {}
           ),
-        propertiesTypeVersion: V2_TELEMETRY_EVENTS_VERSION,
-      };
-    }
-    case V1TelemetryEvents.ELEMENTS_WERE_FETCHED:
-    case V1TelemetryEvents.MISSING_CREDENTIALS_PROMPT_CALLED:
-    case V1TelemetryEvents.MISSING_CREDENTIALS_PROVIDED:
-    case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED:
-    case V1TelemetryEvents.LISTING_CONTENT_PROVIDER_CALLED:
-    case V1TelemetryEvents.HISTORY_CONTENT_PROVIDER_CALLED:
-    case V1TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED:
-    case V1TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALLED:
-    case V1TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED:
-    case V1TelemetryEvents.REFRESH_COMMAND_CALLED:
-    case V1TelemetryEvents.REFRESH_HISTORY_COMMAND_CALLED:
-    case V1TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_EDIT_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED:
-    case V1TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED:
-    case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_COMPLETED:
-    case V1TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED:
-    case V1TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALL:
-    case V1TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALL:
-    case V1TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED:
-    case V1TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED:
-    case V1TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED:
-    case V1TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED:
-    case V1TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_WITH_DEPS_CALLED:
-    case V1TelemetryEvents.COMMAND_VIEW_ELEMENT_DETAILS_CALLED:
-    case V1TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED:
-    case V1TelemetryEvents.COMMAND_PRINT_LISTING_CALLED:
-    case V1TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED:
-    case V1TelemetryEvents.COMMAND_SHOW_CHANGE_LEVEL_CALLED: {
-      return {
-        ...Object.entries(event)
-          .map(([key, value]) => {
-            const result: [string, string] = [key, value.toString()];
-            return result;
-          })
-          .reduce(
-            (
-              accum: {
-                [key: string]: string;
-              },
-              [key, value]
-            ) => {
-              accum[key] = value;
-              return accum;
-            },
-            {}
-          ),
-        propertiesTypeVersion: V1_TELEMETRY_EVENTS_VERSION,
       };
     }
     default:

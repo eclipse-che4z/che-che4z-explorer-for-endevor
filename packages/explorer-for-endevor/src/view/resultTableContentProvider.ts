@@ -20,7 +20,7 @@ import { isDefined, isError } from '../utils';
 import {
   ReportContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/v2/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 import * as markDownTable from 'table';
 import { Action, Actions } from '../store/_doc/Actions';
 import { Element } from '@local/endevor/_doc/Endevor';
@@ -54,9 +54,6 @@ export const resultTableContentProvider = (
       uri: vscode.Uri,
       _token: vscode.CancellationToken
     ): Promise<string | undefined> {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED,
-      });
       const uriParams = fromActionReportUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;

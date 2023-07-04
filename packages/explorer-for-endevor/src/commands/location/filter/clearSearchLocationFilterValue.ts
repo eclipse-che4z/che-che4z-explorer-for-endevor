@@ -13,7 +13,7 @@
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { FILTER_WILDCARD_ZERO_OR_MORE } from '../../../constants';
-import { logger, reporter } from '../../../globals';
+import { logger } from '../../../globals';
 import { Action, Actions } from '../../../store/_doc/Actions';
 import {
   CachedElement,
@@ -25,7 +25,6 @@ import {
   EndevorId,
 } from '../../../store/_doc/v2/Store';
 import { FilterNodeType, FilterValueNode } from '../../../tree/_doc/FilterTree';
-import { TelemetryEvents } from '../../../_doc/telemetry/v2/Telemetry';
 
 export const clearSearchLocationFilterValueCommand =
   (
@@ -66,9 +65,6 @@ export const clearSearchLocationFilterValueCommand =
       name: locationName,
       source: locationSource,
     };
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_VALUE_CALLED,
-    });
     switch (node.filterType) {
       case FilterNodeType.CCIDS_FILTER: {
         const existingCcidFilter =

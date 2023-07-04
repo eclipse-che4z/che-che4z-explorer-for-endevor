@@ -17,11 +17,10 @@ import { logger, reporter } from '../../globals';
 import { confirmConflictResolution as confirmEndevorConflictResolution } from '../../store/scm/workspace';
 import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 import { isError } from '../../utils';
-import { TreeElementCommandArguments } from '../../_doc/Telemetry';
 import {
   ConfirmConflictResolutionCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 
 export const confirmConflictResolutionCommand = async (
   resourceStates: SourceControlResourceState[]
@@ -33,18 +32,6 @@ export const confirmConflictResolutionCommand = async (
       'Unable to confirm conflict resolution(s) because resource state(s) are undefined.'
     );
     return;
-  }
-  if (resourceStates.length > 1) {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
-      commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-      elementsAmount: resourceStates.length,
-    });
-  } else {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-    });
   }
   const conflictConfirmations = await Promise.all(
     resourceStates.map(async (resourceState) => {
@@ -63,7 +50,7 @@ export const confirmConflictResolutionCommand = async (
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext:
-            TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
+            TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED,
           status: ConfirmConflictResolutionCommandCompletedStatus.GENERIC_ERROR,
           error,
         });
@@ -79,7 +66,7 @@ export const confirmConflictResolutionCommand = async (
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_CALLED,
+              TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED,
             status:
               ConfirmConflictResolutionCommandCompletedStatus.GENERIC_ERROR,
             error,

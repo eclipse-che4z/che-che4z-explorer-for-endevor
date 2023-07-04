@@ -34,7 +34,7 @@ import {
   GenerateElementInPlaceCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
@@ -55,7 +55,10 @@ export const generateElementInPlaceCommand =
     dispatch: (action: Action) => Promise<void>
   ) =>
   async (elementNode: SelectedElementNode): Promise<void> => {
-    logger.trace(`Generate command was called for ${elementNode.name}.`);
+    const element = elementNode.element;
+    logger.trace(
+      `Generate command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
+    );
     await generateSingleElement(configurations, dispatch)(elementNode);
   };
 
@@ -73,9 +76,6 @@ const generateSingleElement =
     serviceId,
     searchLocationId,
   }: ElementNode): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
-    });
     const connectionParams = await getConnectionConfiguration(configurations)(
       serviceId,
       searchLocationId
@@ -110,7 +110,11 @@ const generateSingleElement =
       const errorResponse = generateResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to generate the element ${name} because of an error:${formatWithNewLines(
+        `Unable to generate the element ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${element.type}/${
+          element.name
+        } because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -125,11 +129,6 @@ const generateSingleElement =
               ...element,
               lastActionCcid: actionControlValue.ccid.toUpperCase(),
             },
-          });
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL,
-            context:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
           });
           await printListingCommand(updatedElementNode);
           if (executionReportId) {
@@ -168,7 +167,7 @@ const generateSingleElement =
             // TODO: specific completed status?
             status: GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
           });
           return;
@@ -181,7 +180,7 @@ const generateSingleElement =
             // TODO: specific completed status?
             status: GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
           });
           return;
@@ -194,16 +193,17 @@ const generateSingleElement =
             // TODO: specific completed status?
             status: GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
           });
           return;
         case ErrorResponseType.GENERIC_ERROR: {
-          const message = `Unable to generate the element ${name}`;
-          logger.trace(`${message}.`);
+          logger.trace(
+            `Unable to generate the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
+          );
           if (executionReportId) {
             const dialogResult = await askForExecutionReport(
-              `${message}. Would you like to see the execution report?`
+              `Unable to generate the element ${name}. Would you like to see the execution report?`
             );
             if (dialogResult.printExecutionReport) {
               reporter.sendTelemetryEvent({
@@ -220,7 +220,7 @@ const generateSingleElement =
             type: TelemetryEvents.ERROR,
             status: GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+              TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
           });
           return;
@@ -235,7 +235,11 @@ const generateSingleElement =
       resultWithWarnings ? 'with warnings' : 'successfully'
     }`;
     logger.trace(
-      `${message}${
+      `The element ${element.environment}/${element.stageNumber}/${
+        element.system
+      }/${element.subSystem}/${element.type}/${name} is generated ${
+        resultWithWarnings ? 'with warnings' : 'successfully'
+      }${
         generateResponse.details?.messages.length
           ? `:${formatWithNewLines(generateResponse.details.messages)}.`
           : '.'
@@ -260,10 +264,6 @@ const generateSingleElement =
           resultWithWarnings ? MessageLevel.WARN : MessageLevel.INFO
         );
     if (dialogResult.printListing) {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_PRINT_LISTING_CALL,
-        context: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
-      });
       await printListingCommand(updatedElementNode);
     }
     if (executionReportId && dialogResult.printExecutionReport) {
@@ -302,10 +302,6 @@ const complexGenerate =
           logger.warn(
             `The element ${element.name} requires an override sign out action to generate the element.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
-          });
           const overrideSignout = await askToOverrideSignOutForElements([
             element.name,
           ]);

@@ -27,7 +27,7 @@ import { InvalidLocationNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   EditConnectionDetailsCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { CredentialType } from '@local/endevor/_doc/Credential';
@@ -39,9 +39,6 @@ export const editConnectionDetailsCommand =
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
     logger.trace('Modify Endevor connection command called.');
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED,
-    });
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
@@ -71,7 +68,7 @@ export const editConnectionDetailsCommand =
       const error = new Error('Invalid connection details provided.');
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_CONNECTION_DETAILS_COMPLETED,
         status: EditConnectionDetailsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });

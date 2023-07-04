@@ -50,7 +50,7 @@ import {
 import {
   TelemetryEvents,
   SettingChangedStatus,
-} from '../_doc/telemetry/v2/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 import { reloadWindow } from '@local/vscode-wrapper/window';
 import { askToReloadWindowAfterSettingsChanged } from '../dialogs/settings/settingsDialogs';
 

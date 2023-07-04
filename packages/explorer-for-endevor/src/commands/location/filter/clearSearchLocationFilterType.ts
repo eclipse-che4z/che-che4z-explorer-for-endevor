@@ -12,11 +12,10 @@
  */
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { logger, reporter } from '../../../globals';
+import { logger } from '../../../globals';
 import { Action, Actions } from '../../../store/_doc/Actions';
 import { ElementFilterType } from '../../../store/_doc/v2/Store';
 import { FilterNode, FilterNodeType } from '../../../tree/_doc/FilterTree';
-import { TelemetryEvents } from '../../../_doc/telemetry/v2/Telemetry';
 
 export const clearSearchLocationFilterTypeCommand =
   (dispatch: (action: Action) => Promise<void>) =>
@@ -42,9 +41,6 @@ export const clearSearchLocationFilterTypeCommand =
       default:
         throw new UnreachableCaseError(node.filterType);
     }
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTER_CALLED,
-    });
     dispatch({
       type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED,
       serviceId: {

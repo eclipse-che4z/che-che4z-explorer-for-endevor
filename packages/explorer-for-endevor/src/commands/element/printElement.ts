@@ -13,23 +13,20 @@
 
 import { showDocument as showElementContent } from '@local/vscode-wrapper/window';
 import { getElementContent } from '../../view/elementContentProvider';
-import { logger, reporter } from '../../globals';
-import { TelemetryEvents } from '../../_doc/Telemetry';
+import { logger } from '../../globals';
 import { toBasicElementUri } from '../../uri/basicElementUri';
 import { isError } from '../../utils';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 
 export const printElement = async (elementNode: ElementNode) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
-  });
   try {
     const elementUri = toBasicElementUri(elementNode)(elementNode.timestamp);
     if (isError(elementUri)) {
       const error = elementUri;
+      const element = elementNode.element;
       logger.error(
         `Unable to print the element ${elementNode.name}.`,
-        `Unable to print the element ${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
+        `Unable to print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }

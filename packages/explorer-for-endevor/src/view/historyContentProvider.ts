@@ -11,7 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { isErrorEndevorResponse } from '@local/endevor/utils';
+import {
+  isErrorEndevorResponse,
+  stringifyWithHiddenCredential,
+} from '@local/endevor/utils';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import type {
   Uri,
@@ -29,7 +32,7 @@ import { formatWithNewLines, isError } from '../utils';
 import {
   HistoryContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 
 export const historyContentProvider = (
   configurations: ConnectionConfigurations
@@ -39,9 +42,11 @@ export const historyContentProvider = (
       uri: Uri,
       _token: CancellationToken
     ): Promise<string | undefined> {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.HISTORY_CONTENT_PROVIDER_CALLED,
-      });
+      logger.trace(
+        `Print history uri: \n  ${stringifyWithHiddenCredential(
+          JSON.parse(decodeURIComponent(uri.query))
+        )}.`
+      );
       const uriParams = fromElementHistoryUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;
@@ -68,7 +73,10 @@ export const historyContentProvider = (
         return printHistory(progressReporter)(service)(configuration)(element);
       });
       if (isErrorEndevorResponse(historyResponse)) {
-        const errorMessage = `Unable to print history for the element ${
+        const errorMessage = `Unable to print history for the element 
+          ${element.environment}/${element.stageNumber}/${element.system}/${
+          element.subSystem
+        }/${element.type}/${
           element.name
         } because of error:\n${formatWithNewLines(
           historyResponse.details.messages
@@ -79,7 +87,7 @@ export const historyContentProvider = (
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED,
+          errorContext: TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED,
           status: HistoryContentProviderCompletedStatus.GENERIC_ERROR,
           error: new Error(errorMessage),
         });
@@ -88,7 +96,9 @@ export const historyContentProvider = (
       if (historyResponse.details && historyResponse.details.returnCode >= 4) {
         logger.warn(
           `History for ${element.name} was printed with warnings.`,
-          `History for ${
+          `History for ${element.environment}/${element.stageNumber}/${
+            element.system
+          }/${element.subSystem}/${element.type}/${
             element.name
           } was printed with warnings:\n${formatWithNewLines(
             historyResponse.details.messages
@@ -98,7 +108,6 @@ export const historyContentProvider = (
 
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.HISTORY_CONTENT_PROVIDER_COMPLETED,
-        context: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED,
         status: HistoryContentProviderCompletedStatus.SUCCESS,
       });
       return historyResponse.result;

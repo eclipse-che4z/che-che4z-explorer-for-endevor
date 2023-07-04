@@ -25,7 +25,7 @@ import { logger, reporter } from '../../globals';
 import {
   CommandAddNewServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnectionStatus,
@@ -43,9 +43,6 @@ export const addNewServiceCommand = async (
   dispatch: (action: Action) => Promise<void>
 ): Promise<EndevorId | undefined> => {
   logger.trace('Add an Endevor connection called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_ADD_NEW_SERVICE_CALLED,
-  });
   const dialogResult = await askForServiceOrCreateNew({
     servicesToChoose: configurations.getValidServiceDescriptions(),
     allExistingServices: configurations.getAllServiceNames(),

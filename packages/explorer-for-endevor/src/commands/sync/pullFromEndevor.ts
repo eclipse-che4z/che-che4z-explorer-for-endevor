@@ -39,7 +39,7 @@ import { SyncActions, UpdateLastUsed } from '../../store/scm/_doc/Actions';
 import {
   PullFromEndevorCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import {
   isWorkspaceSyncConflictResponse,
   isWorkspaceSyncErrorResponse,
@@ -78,9 +78,6 @@ export const pullFromEndevorCommand = async (
   getLastUsedSearchLocationId: () => Id | undefined
 ): Promise<void> => {
   logger.trace('Pull from Endevor into workspace called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
-  });
   const folderUri = await getWorkspaceUri();
   if (!folderUri) {
     const error = new Error(
@@ -89,7 +86,7 @@ export const pullFromEndevorCommand = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -102,7 +99,7 @@ export const pullFromEndevorCommand = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -211,7 +208,7 @@ export const pullFromEndevorCommand = async (
     logger.error('Unable to pull from Endevor.', `${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -241,7 +238,7 @@ export const pullFromEndevorCommand = async (
         logger.trace(errorMessage);
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+          errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
           status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
           error: new Error(errorMessage),
         });

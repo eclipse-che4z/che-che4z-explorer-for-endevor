@@ -11,12 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../../globals';
+import { logger } from '../../../globals';
 import { Action, Actions } from '../../../store/_doc/Actions';
 import { ElementFilterType } from '../../../store/_doc/v2/Store';
 import { FilteredNode } from '../../../tree/_doc/FilterTree';
 import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../../_doc/telemetry/v2/Telemetry';
 
 export const clearSearchLocationFiltersCommand =
   (dispatch: (action: Action) => Promise<void>) =>
@@ -30,11 +29,6 @@ export const clearSearchLocationFiltersCommand =
     logger.trace(
       `Clear filters for the ${locationSource} inventory location ${locationName} within the ${serviceSource} Endevor connection ${serviceName}.`
     );
-
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_CLEAR_SEARCH_LOCATION_FILTERS_CALLED,
-    });
-
     dispatch({
       type: Actions.ENDEVOR_SEARCH_LOCATION_FILTERS_CLEARED,
       serviceId: {

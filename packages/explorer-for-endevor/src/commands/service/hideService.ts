@@ -14,7 +14,7 @@
 import { logger, reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { ServiceNode } from '../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents } from '../../_doc/telemetry/Telemetry';
 
 export const hideServiceCommand =
   (dispatch: (action: Action) => Promise<void>) =>

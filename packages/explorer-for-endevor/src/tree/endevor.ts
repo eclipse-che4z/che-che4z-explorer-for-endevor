@@ -25,7 +25,7 @@ import {
   ElementsPerRoute,
   EndevorId,
 } from '../store/_doc/v2/Store';
-import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents } from '../_doc/telemetry/Telemetry';
 import { fromSubsystemMapPathId } from '../store/utils';
 import {
   ChangeLevelNode,
@@ -124,7 +124,7 @@ export const buildTree =
             if (isError(elementNode)) {
               const error = elementNode;
               logger.trace(
-                `Unable to show the element ${elementName} in the tree because of error ${error.message}.`
+                `Unable to show the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementName} in the tree because of error ${error.message}.`
               );
               return;
             }
@@ -140,7 +140,7 @@ export const buildTree =
             if (isError(elementNode)) {
               const error = elementNode;
               logger.trace(
-                `Unable to show the element ${element.name} in the tree because of error ${error.message}.`
+                `Unable to show the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} in the tree because of error ${error.message}.`
               );
               return;
             }

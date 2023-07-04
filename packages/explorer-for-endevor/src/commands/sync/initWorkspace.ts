@@ -27,14 +27,11 @@ import { Uri } from 'vscode';
 import {
   InitWorkspaceCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 
 export const initWorkspace = async (): Promise<void> => {
   logger.trace('Initialization of an Endevor workspace called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED,
-  });
   const folder = await resolveFolder();
   if (!folder) {
     logger.trace(
@@ -65,7 +62,7 @@ export const initWorkspace = async (): Promise<void> => {
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED,
       status: InitWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });

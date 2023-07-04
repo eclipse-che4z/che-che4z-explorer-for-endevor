@@ -26,7 +26,7 @@ import { formatWithNewLines } from '../../utils';
 import {
   TelemetryEvents,
   TestConnectionDetailsCommandCompletedStatus,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 
 export const testConnectionDetailsCommand =
   (
@@ -35,9 +35,6 @@ export const testConnectionDetailsCommand =
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
     logger.trace('Test Endevor connection command called.');
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED,
-    });
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
@@ -66,7 +63,7 @@ export const testConnectionDetailsCommand =
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_CALLED,
+        errorContext: TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED,
         status: TestConnectionDetailsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
