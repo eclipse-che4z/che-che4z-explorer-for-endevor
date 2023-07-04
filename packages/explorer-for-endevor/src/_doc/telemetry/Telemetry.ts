@@ -26,7 +26,7 @@ export const enum TelemetryEvents {
   ELEMENTS_UP_THE_MAP_TREE_BUILT = 'elements up the map tree built',
 
   SERVICE_PROVIDED_INTO_TREE = 'service provided into the tree',
-  SERVICES_PROVIDED_INTO_TREE = 'service provided into the tree',
+  SERVICES_LOCATIONS_PROVIDED_INTO_TREE = 'services/locations provided into the tree',
   SEARCH_LOCATION_PROVIDED_INTO_TREE = 'search location provided into the tree',
 
   COMMAND_ADD_NEW_SERVICE_COMPLETED = 'add new service command completed',
@@ -210,7 +210,7 @@ export type ServiceProvidedIntoTreeEvent = {
 };
 
 export type ServicesProvidedIntoTreeEvent = {
-  type: TelemetryEvents.SERVICES_PROVIDED_INTO_TREE;
+  type: TelemetryEvents.SERVICES_LOCATIONS_PROVIDED_INTO_TREE;
   syncedServices: number;
   internalServices: number;
   maxLocationsPerService: number;

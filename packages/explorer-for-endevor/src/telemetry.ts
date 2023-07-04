@@ -66,7 +66,7 @@ const getTelemetryEventProperties = (
     case TelemetryEvents.SERVICE_HIDDEN:
     case TelemetryEvents.SEARCH_LOCATION_HIDDEN:
     case TelemetryEvents.SERVICE_PROVIDED_INTO_TREE:
-    case TelemetryEvents.SERVICES_PROVIDED_INTO_TREE:
+    case TelemetryEvents.SERVICES_LOCATIONS_PROVIDED_INTO_TREE:
     case TelemetryEvents.SEARCH_LOCATION_PROVIDED_INTO_TREE:
     case TelemetryEvents.PROFILES_MIGRATION_COMPLETED:
     case TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED:

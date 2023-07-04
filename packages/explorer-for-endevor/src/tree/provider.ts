@@ -982,7 +982,7 @@ const endevorCacheEffect =
   };
 
 // TODO: We can move this in the future.
-// Keeping it here seemes fine, since moving it to telemetry.ts or utils.ts causes circular dependencies.
+// Keeping it here seems fine, since moving it to telemetry.ts or utils.ts causes circular dependencies.
 // Creating its own file seemed a bit excessive.
 export const sendTreeRefreshTelemetry = (serviceNodes: ServiceNodes): void => {
   let maxLocationsPerService = 0;
@@ -1010,7 +1010,7 @@ export const sendTreeRefreshTelemetry = (serviceNodes: ServiceNodes): void => {
     .map((location) => location.name)
     .filter(isUnique).length;
   reporter.sendTelemetryEvent({
-    type: TelemetryEvents.SERVICES_PROVIDED_INTO_TREE,
+    type: TelemetryEvents.SERVICES_LOCATIONS_PROVIDED_INTO_TREE,
     syncedServices,
     internalServices,
     maxLocationsPerService,
