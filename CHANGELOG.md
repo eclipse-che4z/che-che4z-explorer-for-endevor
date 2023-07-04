@@ -2,6 +2,12 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.5.4] &ndash; 2023-07-04
+
+### Fixed
+
+- Introduced enhancements to the logging and telemetry reporting capabilities.
+
 ## [1.5.3] &ndash; 2023-06-13
 
 ### Fixed
