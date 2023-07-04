@@ -46,7 +46,7 @@ import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import {
   AddElementCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
 import { getFileExtensionResolution } from '../../settings/settings';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
@@ -58,9 +58,6 @@ export const addElementFromFileSystem = async (
   dispatch: (action: Action) => Promise<void>,
   searchLocationNode: LocationNode
 ): Promise<void> => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
-  });
   const fileUri = await chooseFileUriFromFs();
   if (!fileUri) {
     return;
@@ -75,7 +72,7 @@ export const addElementFromFileSystem = async (
     const error = content;
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
       status: AddElementCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -129,7 +126,9 @@ export const addElementFromFileSystem = async (
     const errorResponse = addResult;
     // TODO: format using all possible error details
     const error = new Error(
-      `Unable to add the element ${
+      `Unable to add the element  ${addLocation.environment}/${
+        addLocation.stageNumber
+      }/${addLocation.system}/${addLocation.subSystem}/${addLocation.type}/${
         addLocation.id
       } to Endevor because of an error:${formatWithNewLines(
         errorResponse.details.messages
@@ -143,7 +142,7 @@ export const addElementFromFileSystem = async (
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
           status: AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR,
           error,
         });
@@ -157,7 +156,7 @@ export const addElementFromFileSystem = async (
         // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
           status: AddElementCommandCompletedStatus.GENERIC_ERROR,
           error,
         });
@@ -171,7 +170,7 @@ export const addElementFromFileSystem = async (
         // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
           status: AddElementCommandCompletedStatus.GENERIC_ERROR,
           error,
         });
@@ -183,7 +182,7 @@ export const addElementFromFileSystem = async (
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_CALLED,
+          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
           status: AddElementCommandCompletedStatus.GENERIC_ERROR,
           error,
         });

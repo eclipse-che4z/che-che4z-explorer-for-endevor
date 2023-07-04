@@ -11,11 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { logger } from '../../globals';
 import { Uri } from 'vscode';
 import { isError } from '../../utils';
 import { toElementChangeUri } from '../../uri/elementHistoryUri';
-import { TelemetryEvents } from '../../_doc/Telemetry';
 import { CURRENT_CHANGE_LEVEL } from '../../constants';
 import { HistoryViewModes } from '../../tree/providerChanges';
 import { BasicElementUriQuery } from '../../_doc/Uri';
@@ -25,10 +24,9 @@ export const printHistoryCommand = async (
   uri: BasicElementUriQuery,
   mode: HistoryViewModes
 ) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_PRINT_HISTORY_CALLED,
-  });
-  logger.trace(`Print History command was called for ${uri.element.name}.`);
+  logger.trace(
+    `Print History command was called for ${uri.element.environment}/${uri.element.stageNumber}/${uri.element.system}/${uri.element.subSystem}/${uri.element.type}/${uri.element.name}.`
+  );
 
   const { serviceId, searchLocationId, element } = uri;
   const changeLvlUri = toElementChangeUri({
@@ -41,7 +39,7 @@ export const printHistoryCommand = async (
     const error = changeLvlUri;
     logger.error(
       `Unable to print the element ${element.name} history.`,
-      `Unable to print the element ${element.name} history because parsing of the element's URI failed with error ${error.message}.`
+      `Unable to print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} history because parsing of the element's URI failed with error ${error.message}.`
     );
     return error;
   }

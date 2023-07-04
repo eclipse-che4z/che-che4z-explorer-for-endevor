@@ -20,7 +20,7 @@ import { Action, Actions } from '../../store/_doc/Actions';
 import {
   SignInElementCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
@@ -39,10 +39,9 @@ export const signInElementCommand =
     searchLocationId,
     element,
   }: SelectedElementNode): Promise<void> => {
-    logger.trace(`Signin command was called for ${name}.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
-    });
+    logger.trace(
+      `Signin command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
+    );
     const connectionParams = await getConnectionConfiguration(configurations)(
       serviceId,
       searchLocationId
@@ -58,7 +57,11 @@ export const signInElementCommand =
       const errorResponse = signInResponse;
       // TODO: format using all possible details
       const error = new Error(
-        `Unable to sign in the element ${name} because of an error:${formatWithNewLines(
+        `Unable to sign in the element  ${element.environment}/${
+          element.stageNumber
+        }/${element.system}/${element.subSystem}/${
+          element.type
+        }/${name} because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -72,7 +75,7 @@ export const signInElementCommand =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
             status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -86,7 +89,7 @@ export const signInElementCommand =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
             status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -98,7 +101,7 @@ export const signInElementCommand =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
             status: SignInElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });

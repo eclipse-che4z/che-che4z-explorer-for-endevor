@@ -23,7 +23,7 @@ import { Service, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 import {
   GenerateSubsystemElementsInPlaceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { EndevorConfiguration, EndevorId } from '../../store/_doc/v2/Store';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
@@ -60,9 +60,6 @@ const generateSubsystemElements =
   (service: Service) =>
   (searchLocation: SearchLocation) =>
   async (subSystemNode: SelectedSubSystemNode): Promise<void> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_CALLED,
-    });
     const actionControlValue = await askForChangeControlValue({
       ccid: searchLocation?.ccid,
       comment: searchLocation?.comment,

@@ -29,7 +29,7 @@ import { ENDEVOR_CREDENTIAL_VALIDATION_LIMIT } from '../../constants';
 import {
   EditCredentialsCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Source } from '../../store/storage/_doc/Storage';
 import { CredentialType } from '@local/endevor/_doc/Credential';
@@ -48,9 +48,6 @@ export const editCredentialsCommand =
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
     logger.trace('Modify Endevor credentials command called');
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED,
-    });
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
@@ -113,7 +110,7 @@ export const editCredentialsCommand =
       const error = new Error('Invalid credentials provided.');
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_CALLED,
+        errorContext: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED,
         status: EditCredentialsCommandCompletedStatus.GENERIC_ERROR,
         error,
       });

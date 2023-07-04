@@ -20,7 +20,7 @@ import { isError } from '../utils';
 import {
   ReportContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/v2/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 
 export const endevorReportContentProvider: vscode.TextDocumentContentProvider =
   {
@@ -28,9 +28,6 @@ export const endevorReportContentProvider: vscode.TextDocumentContentProvider =
       uri: vscode.Uri,
       _token: vscode.CancellationToken
     ): Promise<string | undefined> {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.REPORT_CONTENT_PROVIDER_CALLED,
-      });
       const uriParams = fromGenericReportUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;

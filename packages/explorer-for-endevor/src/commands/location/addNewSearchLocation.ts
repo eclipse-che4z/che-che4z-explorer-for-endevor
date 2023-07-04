@@ -31,7 +31,7 @@ import {
 import {
   CommandAddNewSearchLocationCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import {
   askForService,
   dialogCancelled as serviceDialogCancelled,
@@ -74,9 +74,6 @@ export const addNewSearchLocation =
     logger.trace(
       `Add an Endevor inventory location for the ${serviceId.source} Endevor connection ${serviceId.name} was called.`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED,
-    });
     const dialogResult = await askForSearchLocationOrCreateNew({
       locationsToChoose:
         configurations.getValidSearchLocationDescriptionsForService(serviceId),
@@ -120,7 +117,7 @@ export const addNewSearchLocation =
               reporter.sendTelemetryEvent({
                 type: TelemetryEvents.ERROR,
                 errorContext:
-                  TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED,
+                  TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED,
                 status:
                   CommandAddNewSearchLocationCompletedStatus.GENERIC_ERROR,
                 error,
@@ -145,7 +142,7 @@ export const addNewSearchLocation =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_CALLED,
+              TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED,
             status: CommandAddNewSearchLocationCompletedStatus.GENERIC_ERROR,
             error,
           });

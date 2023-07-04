@@ -24,7 +24,7 @@ import {
 } from '../../../store/_doc/v2/Store';
 import { FilterNodeType, FilterValueNode } from '../../../tree/_doc/FilterTree';
 import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../../_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents } from '../../../_doc/telemetry/Telemetry';
 import { filterSearchLocationByElementCcidCommand } from './filterSearchLocationByElementCcid';
 import { filterSearchLocationByElementNameCommand } from './filterSearchLocationByElementName';
 import { filterSearchLocationByElementTypeCommand } from './filterSearchLocationByElementType';

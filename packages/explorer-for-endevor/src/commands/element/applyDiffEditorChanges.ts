@@ -52,7 +52,7 @@ import {
   ApplyDiffEditorChangesCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   UploadElementCommandCompletedStatus,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
 import { ElementSearchLocation } from '../../_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
@@ -63,9 +63,6 @@ export const applyDiffEditorChanges = async (
   dispatch: (action: Action) => Promise<void>,
   incomingUri?: Uri
 ): Promise<void> => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
-  });
   const comparedElementUri = await toElementUriEvenInTheia(incomingUri);
   if (isError(comparedElementUri)) {
     const error = comparedElementUri;
@@ -110,11 +107,11 @@ export const applyDiffEditorChanges = async (
     const error = elementData;
     logger.error(
       `Unable to apply changes for the element ${uploadTargetLocation.id}.`,
-      `Unable to apply changes for the element ${uploadTargetLocation.id} because of error ${error.message}.`
+      `Unable to apply changes for the element  ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} because of error ${error.message}.`
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
+      errorContext: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
       status: ApplyDiffEditorChangesCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -159,7 +156,11 @@ export const applyDiffEditorChanges = async (
   ) {
     logger.warn(
       `Element ${element.name} was updated with warnings`,
-      `Element ${element.name} was updated with warnings: ${formatWithNewLines(
+      `Element  ${element.environment}/${element.stageNumber}/${
+        element.system
+      }/${element.subSystem}/${element.type}/${
+        element.name
+      } was updated with warnings: ${formatWithNewLines(
         uploadResult.details.messages
       )}.`
     );
@@ -301,7 +302,11 @@ const uploadElement =
       const errorResponse = uploadResult;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to upload the element ${
+        `Unable to upload the element ${uploadTargetLocation.environment}/${
+          uploadTargetLocation.stageNumber
+        }/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${
+          uploadTargetLocation.type
+        }/${
           uploadTargetLocation.id
         } to Endevor because of an error:${formatWithNewLines(
           errorResponse.details.messages
@@ -373,7 +378,7 @@ const uploadElement =
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
             status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -388,7 +393,7 @@ const uploadElement =
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
             status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -401,7 +406,7 @@ const uploadElement =
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
-            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_CALLED,
+            errorContext: TelemetryEvents.COMMAND_UPLOAD_ELEMENT_COMPLETED,
             status: UploadElementCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
@@ -427,10 +432,6 @@ const complexSignoutElement =
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<SignoutElementResponse> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-      context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
-    });
     let signOutResponse = await withNotificationProgress(
       `Signing out the element ${element.name} ...`
     )((progressReporter) =>
@@ -445,16 +446,12 @@ const complexSignoutElement =
           logger.warn(
             `Element ${element.name} cannot be signout because the element is signed out to somebody else.`
           );
-          reporter.sendTelemetryEvent({
-            type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_CALLED,
-            context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_CALLED,
-          });
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(`Override signout option was not chosen.`);
             return errorResponse;
           }
           logger.trace(
-            `Override signout option was chosen, ${element.name} will be signed out with override.`
+            `Override signout option was chosen,  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be signed out with override.`
           );
           signOutResponse = await withNotificationProgress(
             `Signing out the element with override ${element.name} ...`

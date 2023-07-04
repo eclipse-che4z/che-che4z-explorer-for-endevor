@@ -44,7 +44,7 @@ export const openElementCommand = async (
     } catch (error) {
       logger.warn(
         `Unable to open the element ${fileName}.`,
-        `Unable to open the element ${fileName} because of error:\n${error.message}`
+        `Unable to open the element ${fileUri.fsPath} because of error:\n${error.message}`
       );
     }
   }

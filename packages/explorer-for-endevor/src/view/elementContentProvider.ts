@@ -11,7 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { isErrorEndevorResponse } from '@local/endevor/utils';
+import {
+  isErrorEndevorResponse,
+  stringifyWithHiddenCredential,
+} from '@local/endevor/utils';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   Uri,
@@ -31,7 +34,7 @@ import { formatWithNewLines, isError } from '../utils';
 import {
   ElementContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 
 export const elementContentProvider = (
   configurations: ConnectionConfigurations
@@ -50,9 +53,11 @@ export const elementContentProvider = (
         );
         return;
       }
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_CALLED,
-      });
+      logger.trace(
+        `Print element uri: \n  ${stringifyWithHiddenCredential(
+          JSON.parse(decodeURIComponent(elementUri.query))
+        )}.`
+      );
       const { serviceId, searchLocationId, element } = uriParams;
       logger.trace(
         `Print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
@@ -69,8 +74,10 @@ export const elementContentProvider = (
       )((progress) => printElement(progress)(service)(configuration)(element));
       if (isErrorEndevorResponse(elementResponse)) {
         const errorMessage = `Unable to print content of the element ${
-          element.name
-        } because of error:\n${formatWithNewLines(
+          element.environment
+        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
+          element.type
+        }/${element.name} because of error:\n${formatWithNewLines(
           elementResponse.details.messages
         )}`;
         logger.error(
@@ -79,7 +86,7 @@ export const elementContentProvider = (
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
+          errorContext: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED,
           status: ElementContentProviderCompletedStatus.GENERIC_ERROR,
           error: new Error(errorMessage),
         });
@@ -87,7 +94,6 @@ export const elementContentProvider = (
       }
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED,
-        context: TelemetryEvents.COMMAND_PRINT_ELEMENT_CALLED,
         status: ElementContentProviderCompletedStatus.SUCCESS,
       });
       return elementResponse.result;

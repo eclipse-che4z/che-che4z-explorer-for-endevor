@@ -21,6 +21,7 @@ const operationCancelled = <T>(value: T | undefined): value is undefined => {
 export const askForFileDeletion = async (
   fileName: string
 ): Promise<boolean> => {
+  // TODO: Try to add more information for the file path here:
   logger.trace(`Prompt for the file '${fileName}' deletion.`);
   const dialogResult = await showModalWithOptions({
     message: `Do you want to delete '${fileName}?'`,
@@ -29,6 +30,7 @@ export const askForFileDeletion = async (
     options: ['Delete'],
   });
   if (operationCancelled(dialogResult)) {
+    // TODO: Try to add more information for the file path here:
     logger.trace(`Deletion of the '${fileName}' was cancelled.`);
     return false;
   }
@@ -38,12 +40,14 @@ export const askForFileDeletion = async (
 export const askForDiscardChanges = async (
   fileName: string
 ): Promise<boolean> => {
+  // TODO: Try to add more information for the file path here:
   logger.trace(`Prompt for the file '${fileName}' discard changes.`);
   const dialogResult = await showModalWithOptions({
     message: `Do you want to discard all changes in the file '${fileName}?'`,
     options: ['Discard Changes'],
   });
   if (operationCancelled(dialogResult)) {
+    // TODO: Try to add more information for the file path here:
     logger.trace(`Discard changes for the file '${fileName}' was cancelled.`);
     return false;
   }
@@ -68,12 +72,14 @@ export const askForDiscardMultipleChanges = async (
 export const askForFileRestoration = async (
   fileName: string
 ): Promise<boolean> => {
+  // TODO: Try to add more information for the file path here:
   logger.trace(`Prompt for the file '${fileName}' restore.`);
   const dialogResult = await showModalWithOptions({
     message: `Do you want to restore the file '${fileName}?'`,
     options: ['Restore File'],
   });
   if (operationCancelled(dialogResult)) {
+    // TODO: Try to add more information for the file path here:
     logger.trace(`Restore for the file '${fileName}' was cancelled.`);
     return false;
   }

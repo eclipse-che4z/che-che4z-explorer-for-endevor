@@ -13,8 +13,6 @@
 
 export type TelemetryProperties = {
   readonly [key: string]: string;
-} & {
-  propertiesTypeVersion: string;
 };
 
 export interface TelemetryMeasurements {

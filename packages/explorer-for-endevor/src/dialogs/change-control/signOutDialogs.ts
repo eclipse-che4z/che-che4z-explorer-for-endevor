@@ -24,6 +24,7 @@ type ChosenSignOutOption = Readonly<{
 export const askToSignOutElements = async (
   elementNames: ReadonlyArray<string>
 ): Promise<ChosenSignOutOption> => {
+  // TODO: Try adding more details for these elements.
   logger.trace(
     `Prompt user to signout the following elements: ${JSON.stringify(
       elementNames
@@ -41,6 +42,7 @@ export const askToSignOutElements = async (
     })
   );
   if (isTimeoutError(dialogResult)) {
+    // TODO: Try adding more details for these elements.
     logger.trace(
       `Nothing was selected from the notification options for signout of elements: ${JSON.stringify(
         elementNames
@@ -72,6 +74,7 @@ export const askToSignOutElements = async (
 export const askToOverrideSignOutForElements = async (
   elementNames: ReadonlyArray<string>
 ): Promise<boolean> => {
+  // TODO: Try adding more details for these elements.
   logger.trace(
     `Prompt user to override the signout for the following elements: ${JSON.stringify(
       elementNames
@@ -88,6 +91,7 @@ export const askToOverrideSignOutForElements = async (
     })
   );
   if (isTimeoutError(dialogResult)) {
+    // TODO: Try adding more details for these elements.
     logger.trace(
       `Nothing was selected from the notification options for signout override of elements: ${JSON.stringify(
         elementNames

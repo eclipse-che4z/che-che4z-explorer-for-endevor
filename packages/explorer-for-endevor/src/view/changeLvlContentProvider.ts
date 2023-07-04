@@ -177,7 +177,7 @@ export const updateHistoryData = async (
     const error = historyData;
     logger.error(
       `Unable to parse history for element ${element.name}.`,
-      `Unable to parse history for element ${element.name} because parsing of the history failed with error ${error.message}.`
+      `Unable to parse history for element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} because parsing of the history failed with error ${error.message}.`
     );
     return;
   }

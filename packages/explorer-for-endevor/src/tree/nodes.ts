@@ -39,7 +39,7 @@ import {
   ValidEndevorServiceDescription,
 } from '../store/_doc/v2/Store';
 import { reporter } from '../globals';
-import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
+import { TelemetryEvents } from '../_doc/telemetry/Telemetry';
 import { Source } from '../store/storage/_doc/Storage';
 import { toCompositeKey } from '../store/storage/utils';
 import { toServiceLocationCompositeKey } from '../store/utils';

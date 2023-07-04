@@ -18,7 +18,7 @@ import { logger, reporter } from '../../globals';
 import {
   CommandEditServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnection,

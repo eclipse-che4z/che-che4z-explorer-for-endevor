@@ -34,7 +34,7 @@ import { Schemas } from '../../_doc/Uri';
 import {
   TelemetryEvents,
   ResolveConflictWithRemoteCompletedStatus,
-} from '../../_doc/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 
@@ -50,9 +50,6 @@ export const compareElementWithRemoteVersion =
     initialSearchLocation: SubSystemMapPath
   ) =>
   async (localVersionElementTempFilePath: string): Promise<void | Error> => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED,
-    });
     const tempFolder = path.dirname(localVersionElementTempFilePath);
     if (!tempFolder) {
       return new Error(
@@ -73,7 +70,7 @@ export const compareElementWithRemoteVersion =
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext:
-          TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED,
+          TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED,
         status: ResolveConflictWithRemoteCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -95,7 +92,7 @@ export const compareElementWithRemoteVersion =
     if (isError(localElementVersionUploadableUri)) {
       const error = localElementVersionUploadableUri;
       return new Error(
-        `Unable to open a local version of the element ${uploadTargetLocation.id} to compare because of error ${error.message}`
+        `Unable to open a local version of the element ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} to compare because of error ${error.message}`
       );
     }
     const remoteElementVersionReadonlyUri = savedRemoteVersionUri.with({
@@ -112,7 +109,7 @@ export const compareElementWithRemoteVersion =
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext:
-          TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_CALLED,
+          TelemetryEvents.COMMAND_RESOLVE_CONFLICT_WITH_REMOTE_COMPLETED,
         status: ResolveConflictWithRemoteCompletedStatus.GENERIC_ERROR,
         error,
       });
@@ -146,8 +143,10 @@ const retrieveRemoteVersionIntoFolder =
       // TODO: format using all possible details
       const error = new Error(
         `Unable to save a remote version of the element ${
-          element.name
-        } because of an error:${formatWithNewLines(
+          element.environment
+        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
+          element.type
+        }/${element.name} because of an error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -167,7 +166,7 @@ const retrieveRemoteVersionIntoFolder =
       };
     } catch (error) {
       return new Error(
-        `Unable to save a remote version of the element ${element.name} into file system because of error ${error.message}`
+        `Unable to save a remote version of the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into file system because of error ${error.message}`
       );
     }
   };

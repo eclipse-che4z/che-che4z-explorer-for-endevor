@@ -11,7 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { isErrorEndevorResponse } from '@local/endevor/utils';
+import {
+  isErrorEndevorResponse,
+  stringifyWithHiddenCredential,
+} from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import type {
@@ -26,7 +29,7 @@ import { formatWithNewLines, isError } from '../utils';
 import {
   ListingContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/Telemetry';
+} from '../_doc/telemetry/Telemetry';
 import {
   ConnectionConfigurations,
   getConnectionConfiguration,
@@ -40,9 +43,11 @@ export const listingContentProvider = (
       uri: Uri,
       _token: CancellationToken
     ): Promise<string | undefined> {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.LISTING_CONTENT_PROVIDER_CALLED,
-      });
+      logger.trace(
+        `Print listing uri: \n  ${stringifyWithHiddenCredential(
+          JSON.parse(decodeURIComponent(uri.query))
+        )}.`
+      );
       const uriParams = fromElementListingUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;
@@ -69,11 +74,13 @@ export const listingContentProvider = (
         },
       })(service)(configuration)(element);
       if (isErrorEndevorResponse(listingResponse)) {
-        const message = `Unable to print listing for the element ${
-          element.name
-        } because of error:\n${formatWithNewLines(
-          listingResponse.details.messages
-        )}.`;
+        const message = `Unable to print listing for the element 
+          ${element.environment}/${element.stageNumber}/${element.system}/${
+          element.subSystem
+        }/${element.type}/${element.name} 
+          because of error:\n${formatWithNewLines(
+            listingResponse.details.messages
+          )}.`;
         switch (listingResponse.type) {
           case ErrorResponseType.NO_COMPONENT_INFO_ENDEVOR_ERROR:
             logger.info(
@@ -81,9 +88,10 @@ export const listingContentProvider = (
               message
             );
             reporter.sendTelemetryEvent({
-              type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
-              context: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
+              type: TelemetryEvents.ERROR,
+              errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.NO_LISTING,
+              error: new Error(message),
             });
             return;
           case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
@@ -92,9 +100,8 @@ export const listingContentProvider = (
             // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              // TODO: specific completed status?
+              errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-              errorContext: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
               error: new Error(message),
             });
             return;
@@ -104,9 +111,8 @@ export const listingContentProvider = (
             // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              // TODO: specific completed status?
+              errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-              errorContext: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
               error: new Error(message),
             });
             return;
@@ -117,7 +123,7 @@ export const listingContentProvider = (
             );
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
-              errorContext: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
+              errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
               error: new Error(message),
             });
@@ -129,7 +135,9 @@ export const listingContentProvider = (
       if (listingResponse.details && listingResponse.details.returnCode >= 4) {
         logger.warn(
           `Listing for ${element.name} was printed with warnings.`,
-          `Listing for ${
+          `Listing for ${element.environment}/${element.stageNumber}/${
+            element.system
+          }/${element.subSystem}/${element.type}/${
             element.name
           } was printed with warnings:\n${formatWithNewLines(
             listingResponse.details.messages
@@ -138,7 +146,6 @@ export const listingContentProvider = (
       }
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
-        context: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
         status: ListingContentProviderCompletedStatus.SUCCESS,
       });
       return listingResponse.result;

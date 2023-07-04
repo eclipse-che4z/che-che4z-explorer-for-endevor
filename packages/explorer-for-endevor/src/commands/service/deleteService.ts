@@ -18,15 +18,12 @@ import { ServiceNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   CommandDeleteServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../_doc/telemetry/Telemetry';
 
 export const deleteServiceCommand =
   (dispatch: (action: Action) => Promise<void>) =>
   async ({ name, source }: ServiceNode): Promise<void> => {
     logger.trace(`Delete ${source} Endevor connection ${name} called.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_DELETE_SERVICE_CALLED,
-    });
     if (await askForServiceDeletion(name)) {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED,

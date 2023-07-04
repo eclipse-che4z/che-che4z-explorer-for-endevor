@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { Node } from './_doc/ServiceLocationTree';
+import { LocationNodes, Node, ServiceNodes } from './_doc/ServiceLocationTree';
 import {
   addNewSearchLocationButton,
   toServiceNodes,
@@ -49,6 +49,7 @@ import {
   isDefined,
   isElementUpTheMap,
   isError,
+  isUnique,
 } from '../utils';
 import { Action, Actions } from '../store/_doc/Actions';
 import {
@@ -73,14 +74,15 @@ import {
 import {
   ElementsFetchingStatus,
   EndevorMapBuildingStatus,
-  TelemetryEvents as V1TelemetryEvents,
-} from '../_doc/Telemetry';
+  TelemetryEvents,
+} from '../_doc/telemetry/Telemetry';
 import { EndevorMap, SearchLocation } from '../_doc/Endevor';
 import { toEndevorMap, toEndevorMapWithWildcards } from './endevorMap';
 import {
   DEFAULT_TREE_IN_PLACE_SEARCH_MODE,
   TREE_VIEW_INITIALIZED_CONTEXT_NAME,
 } from '../constants';
+import { Source } from '../store/storage/_doc/Storage';
 
 type DataGetters = Readonly<{
   getServiceLocations: () => EndevorServiceLocations;
@@ -138,9 +140,11 @@ export const make =
       async getChildren(node?: Node) {
         if (!node) {
           setContextVariable(TREE_VIEW_INITIALIZED_CONTEXT_NAME, true);
-          return toServiceNodes(dataGetters.getServiceLocations()).sort(
-            byNameOrder
-          );
+          const serviceNodes = toServiceNodes(
+            dataGetters.getServiceLocations()
+          ).sort(byNameOrder);
+          sendTreeRefreshTelemetry(serviceNodes);
+          return serviceNodes;
         }
         switch (node.type) {
           case 'BUTTON_ADD_SEARCH_LOCATION':
@@ -399,8 +403,13 @@ const endevorCacheEffect =
                   throw new UnreachableCaseError(errorResponse.type);
               }
               reporter.sendTelemetryEvent({
-                type: V1TelemetryEvents.ERROR,
-                errorContext: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                status: ElementsFetchingStatus.GENERIC_ERROR,
+                elementsAmount: 0,
+              });
+              reporter.sendTelemetryEvent({
+                type: TelemetryEvents.ERROR,
+                errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
                 // TODO specific statuses for each error type?
                 status: ElementsFetchingStatus.GENERIC_ERROR,
                 error,
@@ -442,7 +451,8 @@ const endevorCacheEffect =
               ),
             });
             reporter.sendTelemetryEvent({
-              type: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+              type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+              status: ElementsFetchingStatus.SUCCESS,
               elementsAmount: elements.length,
             });
             resolve(undefined);
@@ -540,8 +550,13 @@ const endevorCacheEffect =
                 searchLocationId,
               });
               reporter.sendTelemetryEvent({
-                type: V1TelemetryEvents.ERROR,
-                errorContext: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                status: ElementsFetchingStatus.GENERIC_ERROR,
+                elementsAmount: 0,
+              });
+              reporter.sendTelemetryEvent({
+                type: TelemetryEvents.ERROR,
+                errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
                 status: ElementsFetchingStatus.GENERIC_ERROR,
                 error,
               });
@@ -704,8 +719,13 @@ const endevorCacheEffect =
                       throw new UnreachableCaseError(errorResponse.type);
                   }
                   reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                    error,
+                  });
+                  reporter.sendTelemetryEvent({
+                    type: TelemetryEvents.ERROR,
+                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
                     // TODO specific statuses for each error type?
                     status: EndevorMapBuildingStatus.GENERIC_ERROR,
                     error,
@@ -752,8 +772,13 @@ const endevorCacheEffect =
                     `${error.message}.`
                   );
                   reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                    error,
+                  });
+                  reporter.sendTelemetryEvent({
+                    type: TelemetryEvents.ERROR,
+                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
                     status: EndevorMapBuildingStatus.GENERIC_ERROR,
                     error,
                   });
@@ -798,8 +823,13 @@ const endevorCacheEffect =
                     `${error.message}.`
                   );
                   reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
+                    error,
+                  });
+                  reporter.sendTelemetryEvent({
+                    type: TelemetryEvents.ERROR,
+                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
                     status: EndevorMapBuildingStatus.GENERIC_ERROR,
                     error,
                   });
@@ -843,8 +873,13 @@ const endevorCacheEffect =
                     )}`
                   );
                   reporter.sendTelemetryEvent({
-                    type: V1TelemetryEvents.ERROR,
-                    errorContext: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                    type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                    status: ElementsFetchingStatus.GENERIC_ERROR,
+                    elementsAmount: 0,
+                  });
+                  reporter.sendTelemetryEvent({
+                    type: TelemetryEvents.ERROR,
+                    errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
                     status: ElementsFetchingStatus.GENERIC_ERROR,
                     error,
                   });
@@ -868,7 +903,8 @@ const endevorCacheEffect =
                 }
                 const elements = elementsResponse.result;
                 reporter.sendTelemetryEvent({
-                  type: V1TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                  type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                  status: ElementsFetchingStatus.SUCCESS,
                   elementsAmount: elements.length,
                 });
                 return elements;
@@ -944,3 +980,41 @@ const endevorCacheEffect =
       }),
     };
   };
+
+// TODO: We can move this in the future.
+// Keeping it here seemes fine, since moving it to telemetry.ts or utils.ts causes circular dependencies.
+// Creating its own file seemed a bit excessive.
+export const sendTreeRefreshTelemetry = (serviceNodes: ServiceNodes): void => {
+  let maxLocationsPerService = 0;
+  let internalServices = 0;
+  let syncedServices = 0;
+  const syncedLocationNodes: LocationNodes = [];
+  const internalLocationNodes: LocationNodes = [];
+  serviceNodes.forEach((serviceNode) => {
+    maxLocationsPerService =
+      serviceNode.children.length > maxLocationsPerService
+        ? serviceNode.children.length
+        : maxLocationsPerService;
+    if (serviceNode.source == Source.SYNCHRONIZED) ++syncedServices;
+    else ++internalServices;
+    serviceNode.children.map((location) => {
+      if (location.source == Source.SYNCHRONIZED)
+        syncedLocationNodes.push(location);
+      else internalLocationNodes.push(location);
+    });
+  });
+  const uniqueSyncedLocations = syncedLocationNodes
+    .map((location) => location.name)
+    .filter(isUnique).length;
+  const uniqueInternalLocations = internalLocationNodes
+    .map((location) => location.name)
+    .filter(isUnique).length;
+  reporter.sendTelemetryEvent({
+    type: TelemetryEvents.SERVICES_PROVIDED_INTO_TREE,
+    syncedServices,
+    internalServices,
+    maxLocationsPerService,
+    uniqueSyncedLocations,
+    uniqueInternalLocations,
+  });
+};

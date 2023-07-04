@@ -11,9 +11,8 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../globals';
+import { logger } from '../globals';
 import { showDocument } from '@local/vscode-wrapper/window';
-import { TelemetryEvents } from '../_doc/telemetry/v2/Telemetry';
 import { EndevorConfiguration } from '../store/_doc/v2/Store';
 import { Service } from '@local/endevor/_doc/Endevor';
 import { isError } from '../utils';
@@ -25,9 +24,6 @@ export const printEndevorReportCommand =
   (configuration: EndevorConfiguration) =>
   (service: Service) =>
   async (reportId: string) => {
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALLED,
-    });
     logger.trace(`Print Endevor report command ${objectName} is called.`);
     const reportUri =
       toGenericReportUri(objectName)(configuration)(service)(reportId);

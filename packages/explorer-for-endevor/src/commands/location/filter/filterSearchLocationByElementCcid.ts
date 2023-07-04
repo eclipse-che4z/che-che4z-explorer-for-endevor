@@ -31,7 +31,7 @@ import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
 import {
   TelemetryEvents,
   UpdateElementCcidFilterCommandCompletedStatus,
-} from '../../../_doc/telemetry/v2/Telemetry';
+} from '../../../_doc/telemetry/Telemetry';
 
 export const filterSearchLocationByElementCcidCommand =
   (
@@ -59,9 +59,6 @@ export const filterSearchLocationByElementCcidCommand =
     logger.trace(
       `Set filtering by element ccid for the ${locationSource} inventory location ${locationName} within the ${serviceSource} Endevor connection ${serviceName}.`
     );
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALLED,
-    });
     const serviceId = {
       name: serviceName,
       source: serviceSource,

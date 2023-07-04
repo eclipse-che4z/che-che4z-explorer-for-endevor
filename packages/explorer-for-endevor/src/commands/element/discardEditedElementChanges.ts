@@ -17,15 +17,11 @@ import {
   getActiveTextEditor,
 } from '@local/vscode-wrapper/window';
 import { deleteFile } from '@local/vscode-wrapper/workspace';
-import { logger, reporter } from '../../globals';
+import { logger } from '../../globals';
 import { fromComparedElementUri } from '../../uri/comparedElementUri';
 import { isError } from '../../utils';
-import { TelemetryEvents } from '../../_doc/Telemetry';
 
 export const discardEditedElementChanges = async (incomingUri?: Uri) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_DISCARD_EDITED_ELEMENT_CHANGES_CALLED,
-  });
   let comparedElementUri: Uri;
   // theia workaround because of unmerged https://github.com/eclipse-theia/theia/pull/9492
   if (!incomingUri) {

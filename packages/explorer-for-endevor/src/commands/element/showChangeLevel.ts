@@ -12,7 +12,7 @@
  */
 
 import { Uri } from 'vscode';
-import { logger, reporter } from '../../globals';
+import { logger } from '../../globals';
 import { HistoryViewModes } from '../../tree/providerChanges';
 import { ChangeLevelNode } from '../../tree/_doc/ChangesTree';
 import {
@@ -20,15 +20,11 @@ import {
   toElementChangeUri,
 } from '../../uri/elementHistoryUri';
 import { isError } from '../../utils';
-import { TelemetryEvents } from '../../_doc/Telemetry';
 
 export const showChangeLevelCommand = async (
   refreshElementHistoryTree: (uri: Uri, mode: HistoryViewModes) => void,
   changeNode: ChangeLevelNode
 ) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_SHOW_CHANGE_LEVEL_CALLED,
-  });
   const uriParams = fromElementChangeUri(changeNode.uri);
   if (isError(uriParams)) {
     const error = uriParams;
@@ -38,10 +34,10 @@ export const showChangeLevelCommand = async (
     );
     return;
   }
-  logger.trace(
-    `Show Change Level command was called for ${uriParams.element.name}, version ${changeNode.vvll}.`
-  );
   const { serviceId, searchLocationId, element, fragment } = uriParams;
+  logger.trace(
+    `Show Change Level command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}, version ${changeNode.vvll}.`
+  );
   const changeLvlUri = toElementChangeUri({
     serviceId,
     searchLocationId,

@@ -11,21 +11,20 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { logger } from '../../globals';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { window } from 'vscode';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
 import { toElementListingUri } from '../../uri/elementListingUri';
-import { TelemetryEvents } from '../../_doc/Telemetry';
 
 type SelectedElementNode = ElementNode;
 
 export const printListingCommand = async (elementNode: SelectedElementNode) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_PRINT_LISTING_CALLED,
-  });
-  logger.trace(`Print Listing command was called for ${elementNode.name}.`);
+  const element = elementNode.element;
+  logger.trace(
+    `Print Listing command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
+  );
   return withNotificationProgress(
     `Printing element: ${elementNode.name} listing content`
   )(async (progressReporter) => {
@@ -34,7 +33,7 @@ export const printListingCommand = async (elementNode: SelectedElementNode) => {
       const error = listingUri;
       logger.error(
         `Unable to print the element ${elementNode.name} listing.`,
-        `Unable to print the element ${elementNode.name} listing because parsing of the element's URI failed with error ${error.message}.`
+        `Unable to print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} listing because parsing of the element's URI failed with error ${error.message}.`
       );
       return error;
     }
