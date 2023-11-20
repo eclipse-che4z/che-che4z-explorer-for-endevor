@@ -32,15 +32,80 @@ The project maintains the following source code repositories:
 
 This project leverages the following third party content.
 
-@broadcom/endevor-for-zowe-cli (7.4.0)
+@azure/abort-controller (1.1.0)
 
-- License: Broadcom Internal
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/abort-controller
+
+@azure/core-rest-pipeline (1.10.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/core-rest-pipeline
+
+@azure/core-tracing (1.0.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/core-tracing
+
+@azure/core-util (1.3.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/core-util
+
+@azure/logger (1.0.4)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/logger
+
+@azure/opentelemetry-instrumentation-azure-sdk (1.0.0-beta.5)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@azure/opentelemetry-instrumentation-azure-sdk
+
+@broadcom/endevor-for-zowe-cli (7.6.0)
+
+- License: SEE LICENSE IN LICENSE
 - Project: https://www.npmjs.com/package/@broadcom/endevor-for-zowe-cli
 
 @colors/colors (1.5.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/@colors/colors
+
+@fastify/busboy (2.0.0)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@fastify/busboy
+
+@microsoft/1ds-core-js (3.2.13)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/1ds-core-js
+
+@microsoft/1ds-post-js (3.2.13)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/1ds-post-js
+
+@microsoft/applicationinsights-core-js (2.8.15)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/applicationinsights-core-js
+
+@microsoft/applicationinsights-shims (2.0.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/applicationinsights-shims
+
+@microsoft/applicationinsights-web-snippet (1.0.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/applicationinsights-web-snippet
+
+@microsoft/dynamicproto-js (1.1.9)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@microsoft/dynamicproto-js
 
 @nodelib/fs.scandir (2.1.5)
 
@@ -57,22 +122,57 @@ This project leverages the following third party content.
 - License: MIT
 - Project: https://www.npmjs.com/package/@nodelib/fs.walk
 
-@vscode/extension-telemetry (0.4.7)
+@opentelemetry/api (1.4.1)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/api
+
+@opentelemetry/core (1.15.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/core
+
+@opentelemetry/instrumentation (0.41.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/instrumentation
+
+@opentelemetry/resources (1.15.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/resources
+
+@opentelemetry/sdk-trace-base (1.15.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/sdk-trace-base
+
+@opentelemetry/semantic-conventions (1.15.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/@opentelemetry/semantic-conventions
+
+@tootallnate/once (2.0.0)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/@tootallnate/once
+
+@vscode/extension-telemetry (0.8.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/@vscode/extension-telemetry
 
-@zowe/imperative (5.9.0)
+@zowe/imperative (5.19.0)
 
 - License: EPL-2.0
 - Project: https://www.npmjs.com/package/@zowe/imperative
 
-@zowe/perf-timing (1.0.7)
+agent-base (6.0.2)
 
-- License: EPL-2.0
-- Project: https://www.npmjs.com/package/@zowe/perf-timing
+- License: MIT
+- Project: https://www.npmjs.com/package/agent-base
 
-ajv (8.8.2)
+ajv (8.12.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/ajv
@@ -82,10 +182,15 @@ ansi-regex (5.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/ansi-regex
 
-ansi-styles (4.3.0)
+ansi-styles (5.2.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/ansi-styles
+
+applicationinsights (2.7.3)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/applicationinsights
 
 array-timsort (1.0.3)
 
@@ -97,30 +202,25 @@ astral-regex (2.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/astral-regex
 
+async-hook-jl (1.7.6)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/async-hook-jl
+
+async-listener (0.6.10)
+
+- License: BSD-2-Clause
+- Project: https://www.npmjs.com/package/async-listener
+
 asynckit (0.4.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/asynckit
 
-balanced-match (1.0.2)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/balanced-match
-
-brace-expansion (1.1.11)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/brace-expansion
-
 braces (3.0.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/braces
-
-camelcase (5.3.1)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/camelcase
 
 chalk (4.1.2)
 
@@ -132,10 +232,15 @@ cli-table3 (0.6.2)
 - License: MIT
 - Project: https://www.npmjs.com/package/cli-table3
 
-cliui (6.0.0)
+cliui (7.0.4)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/cliui
+
+cls-hooked (4.2.2)
+
+- License: BSD-2-Clause
+- Project: https://www.npmjs.com/package/cls-hooked
 
 color-convert (2.0.1)
 
@@ -162,22 +267,27 @@ comment-json (4.1.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/comment-json
 
-concat-map (0.0.1)
+continuation-local-storage (3.2.1)
 
-- License: MIT
-- Project: https://www.npmjs.com/package/concat-map
+- License: BSD-2-Clause
+- Project: https://www.npmjs.com/package/continuation-local-storage
 
 core-util-is (1.0.3)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/core-util-is
 
+cross-spawn (7.0.3)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/cross-spawn
+
 dataobject-parser (1.2.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/dataobject-parser
 
-date-format (4.0.13)
+date-format (4.0.14)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/date-format
@@ -186,11 +296,6 @@ debug (4.3.4)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/debug
-
-decamelize (4.0.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/decamelize
 
 deepmerge (4.2.2)
 
@@ -202,12 +307,22 @@ delayed-stream (1.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/delayed-stream
 
+diagnostic-channel (1.1.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/diagnostic-channel
+
+diagnostic-channel-publishers (1.0.7)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/diagnostic-channel-publishers
+
 diff (5.1.0)
 
 - License: BSD-3-Clause
 - Project: https://www.npmjs.com/package/diff
 
-diff-sequences (27.0.6)
+diff-sequences (27.5.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/diff-sequences
@@ -216,6 +331,11 @@ diff2html (3.4.20-usewontache.1.60e7a2e)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/diff2html
+
+emitter-listener (1.1.2)
+
+- License: BSD-2-Clause
+- Project: https://www.npmjs.com/package/emitter-listener
 
 emoji-regex (8.0.0)
 
@@ -226,6 +346,11 @@ entities (2.1.0)
 
 - License: BSD-2-Clause
 - Project: https://www.npmjs.com/package/entities
+
+escalade (3.1.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/escalade
 
 esprima (4.0.1)
 
@@ -247,7 +372,7 @@ fastest-levenshtein (1.0.12)
 - License: MIT
 - Project: https://www.npmjs.com/package/fastest-levenshtein
 
-fastq (1.13.0)
+fastq (1.15.0)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/fastq
@@ -257,22 +382,22 @@ fill-range (7.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/fill-range
 
-find-up (2.1.0)
+find-up (4.1.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/find-up
 
-flatted (3.2.6)
+flatted (3.2.7)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/flatted
 
-form-data (2.5.1)
+form-data (4.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/form-data
 
-fp-ts (2.11.5)
+fp-ts (2.16.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/fp-ts
@@ -282,30 +407,30 @@ fs-extra (8.1.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/fs-extra
 
-fs.realpath (1.0.0)
+function-bind (1.1.1)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/fs.realpath
+- License: MIT
+- Project: https://www.npmjs.com/package/function-bind
 
 get-caller-file (2.0.5)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/get-caller-file
 
-glob (7.2.3)
-
-- License: ISC
-- Project: https://www.npmjs.com/package/glob
-
-glob-parent (6.0.2)
+glob-parent (5.1.2)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/glob-parent
 
-graceful-fs (4.2.8)
+graceful-fs (4.2.11)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/graceful-fs
+
+has (1.0.3)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/has
 
 has-flag (4.0.0)
 
@@ -317,20 +442,30 @@ has-own-prop (2.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/has-own-prop
 
-inflight (1.0.6)
+http-proxy-agent (5.0.0)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/inflight
+- License: MIT
+- Project: https://www.npmjs.com/package/http-proxy-agent
 
-inherits (2.0.4)
+https-proxy-agent (5.0.1)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/inherits
+- License: MIT
+- Project: https://www.npmjs.com/package/https-proxy-agent
 
-io-ts (2.2.16)
+import-in-the-middle (1.4.2)
+
+- License: Apache-2.0
+- Project: https://www.npmjs.com/package/import-in-the-middle
+
+io-ts (2.2.20)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/io-ts
+
+is-core-module (2.12.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/is-core-module
 
 is-extglob (2.1.1)
 
@@ -352,6 +487,11 @@ is-number (7.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/is-number
 
+isexe (2.0.0)
+
+- License: ISC
+- Project: https://www.npmjs.com/package/isexe
+
 jest-diff (27.0.6)
 
 - License: MIT
@@ -372,7 +512,7 @@ jsonfile (4.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/jsonfile
 
-jsonschema (1.1.1)
+jsonschema (1.4.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/jsonschema
@@ -382,7 +522,7 @@ linkify-it (3.0.3)
 - License: MIT
 - Project: https://www.npmjs.com/package/linkify-it
 
-locate-path (2.0.0)
+locate-path (5.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/locate-path
@@ -427,7 +567,7 @@ merge2 (1.4.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/merge2
 
-micromatch (4.0.4)
+micromatch (4.0.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/micromatch
@@ -442,17 +582,17 @@ mime-types (2.1.35)
 - License: MIT
 - Project: https://www.npmjs.com/package/mime-types
 
-minimatch (3.1.2)
+module-details-from-path (1.0.3)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/minimatch
+- License: MIT
+- Project: https://www.npmjs.com/package/module-details-from-path
 
 ms (2.1.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/ms
 
-mustache (2.3.0)
+mustache (2.3.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/mustache
@@ -467,27 +607,22 @@ node-diff3 (2.1.2)
 - License: MIT
 - Project: https://www.npmjs.com/package/node-diff3
 
-once (1.4.0)
-
-- License: ISC
-- Project: https://www.npmjs.com/package/once
-
 opener (1.5.2)
 
 - License: (WTFPL OR MIT)
 - Project: https://www.npmjs.com/package/opener
 
-p-limit (1.3.0)
+p-limit (2.3.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/p-limit
 
-p-locate (2.0.0)
+p-locate (4.1.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/p-locate
 
-p-try (1.0.0)
+p-try (2.2.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/p-try
@@ -497,20 +632,20 @@ path-exists (4.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/path-exists
 
-path-is-absolute (1.0.1)
+path-key (3.1.1)
 
 - License: MIT
-- Project: https://www.npmjs.com/package/path-is-absolute
+- Project: https://www.npmjs.com/package/path-key
 
-picomatch (2.3.0)
+path-parse (1.0.7)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/path-parse
+
+picomatch (2.3.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/picomatch
-
-pkg-up (2.0.0)
-
-- License: MIT
-- Project: https://www.npmjs.com/package/pkg-up
 
 pretty-format (27.5.1)
 
@@ -562,10 +697,15 @@ require-directory (2.1.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/require-directory
 
-require-main-filename (2.0.0)
+require-in-the-middle (7.2.0)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/require-main-filename
+- License: MIT
+- Project: https://www.npmjs.com/package/require-in-the-middle
+
+resolve (1.22.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/resolve
 
 reusify (1.0.4)
 
@@ -582,27 +722,42 @@ run-parallel (1.2.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/run-parallel
 
-semver (7.3.8)
+semver (5.7.2)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/semver
 
-set-blocking (2.0.0)
+shebang-command (2.0.0)
 
-- License: ISC
-- Project: https://www.npmjs.com/package/set-blocking
+- License: MIT
+- Project: https://www.npmjs.com/package/shebang-command
+
+shebang-regex (3.0.0)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/shebang-regex
+
+shimmer (1.2.1)
+
+- License: BSD-2-Clause
+- Project: https://www.npmjs.com/package/shimmer
 
 slice-ansi (4.0.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/slice-ansi
 
+stack-chain (1.3.7)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/stack-chain
+
 stack-trace (0.0.10)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/stack-trace
 
-streamroller (3.1.2)
+streamroller (3.1.5)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/streamroller
@@ -617,7 +772,7 @@ strip-ansi (6.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/strip-ansi
 
-supports-color (7.2.0)
+supports-color (8.1.1)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/supports-color
@@ -632,6 +787,11 @@ to-regex-range (5.0.1)
 - License: MIT
 - Project: https://www.npmjs.com/package/to-regex-range
 
+ts-loader (9.5.1)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/ts-loader
+
 uc.micro (1.0.6)
 
 - License: MIT
@@ -642,20 +802,25 @@ underscore (1.13.6)
 - License: MIT
 - Project: https://www.npmjs.com/package/underscore
 
+undici (5.27.2)
+
+- License: MIT
+- Project: https://www.npmjs.com/package/undici
+
 universalify (0.1.2)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/universalify
 
-webpack (4.46.0)
+uuid (8.3.2)
 
 - License: MIT
-- Project: https://www.npmjs.com/package/webpack
+- Project: https://www.npmjs.com/package/uuid
 
-which-module (2.0.0)
+which (2.0.2)
 
 - License: ISC
-- Project: https://www.npmjs.com/package/which-module
+- Project: https://www.npmjs.com/package/which
 
 wontache (0.1.0)
 
@@ -667,12 +832,7 @@ wrap-ansi (7.0.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/wrap-ansi
 
-wrappy (1.0.2)
-
-- License: ISC
-- Project: https://www.npmjs.com/package/wrappy
-
-y18n (4.0.3)
+y18n (5.0.8)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/y18n
@@ -687,12 +847,12 @@ yamljs (0.3.0)
 - License: MIT
 - Project: https://www.npmjs.com/package/yamljs
 
-yargs (15.3.1)
+yargs (16.2.0)
 
 - License: MIT
 - Project: https://www.npmjs.com/package/yargs
 
-yargs-parser (18.1.3)
+yargs-parser (20.2.9)
 
 - License: ISC
 - Project: https://www.npmjs.com/package/yargs-parser
