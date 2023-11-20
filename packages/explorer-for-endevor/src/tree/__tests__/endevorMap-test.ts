@@ -19,10 +19,25 @@ import {
   EnvironmentStageMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { toEndevorMap, toEndevorMapWithWildcards } from '../endevorMap';
-import { EndevorMap } from '../../_doc/Endevor';
+import { EndevorMap } from '../../api/_doc/Endevor';
 import { toSubsystemMapPathId } from '../../store/utils';
 
 jest.mock('vscode', () => ({}), { virtual: true });
+jest.mock(
+  '../../globals',
+  () => ({
+    logger: {
+      trace: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    },
+    reporter: {
+      sendTelemetryEvent: jest.fn(),
+    },
+  }),
+  { virtual: true }
+);
 
 describe('building the endevor map', () => {
   // arrange

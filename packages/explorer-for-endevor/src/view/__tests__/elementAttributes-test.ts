@@ -29,6 +29,10 @@ describe('renderElementAttributes', () => {
       noSource: false,
       extension: 'cbl',
       lastActionCcid: 'CCID',
+      processorGroup: '*NOPROC*',
+      vvll: '0100',
+      signoutId: 'CHUCK',
+      componentVvll: '0100',
     };
 
     // act

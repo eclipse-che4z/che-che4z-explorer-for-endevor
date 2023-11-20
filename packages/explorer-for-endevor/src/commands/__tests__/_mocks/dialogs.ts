@@ -11,7 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ElementMapPath } from '@local/endevor/_doc/Endevor';
+import {
+  ElementMapPath,
+  ElementTypeMapPath,
+  ProcessorGroupsResponse,
+} from '@local/endevor/_doc/Endevor';
 import * as workspace from '@local/vscode-wrapper/workspace';
 import * as sinon from 'sinon';
 import { Uri } from 'vscode';
@@ -19,8 +23,13 @@ import * as changeControlValueDialogs from '../../../dialogs/change-control/ende
 import * as signoutDialogs from '../../../dialogs/change-control/signOutDialogs';
 import * as uploadLocationDialogs from '../../../dialogs/locations/endevorUploadLocationDialogs';
 import * as printListingDialogs from '../../../dialogs/listings/showListingDialogs';
+import * as endevorSubsystemDialogs from '../../../dialogs/locations/endevorSubsystemDialogs';
+import * as processorGroupDialogs from '../../../dialogs/processor-groups/processorGroupsDialogs';
+import * as moveOptionsMultiStep from '../../../dialogs/multi-step/moveOptions';
 import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
-import { SearchLocation } from '../../../_doc/Endevor';
+import { SearchLocation } from '../../../api/_doc/Endevor';
+import { EndevorLogger } from '../../../logger';
+import { ProgressReporter } from '@local/endevor/_doc/Progress';
 
 type PrefilledDialogValue = {
   ccid?: string;
@@ -126,4 +135,53 @@ export const mockAskingForReport = (
     .stub(printListingDialogs, 'askForExecutionReport')
     .withArgs(sinon.match.any)
     .resolves(mockResult);
+};
+
+type AskForGenerateAllElementsStub = sinon.SinonStub<
+  [subsystemName: string],
+  Promise<boolean>
+>;
+
+export const mockAskingForGenerateAllElements = (
+  mockResult: boolean
+): AskForGenerateAllElementsStub => {
+  return sinon
+    .stub(endevorSubsystemDialogs, 'askForGenerateAllElements')
+    .withArgs(sinon.match.any)
+    .resolves(mockResult);
+};
+
+type AskForProcGroup = sinon.SinonStub<
+  [
+    logger: EndevorLogger,
+    searchLocation: Partial<ElementTypeMapPath>,
+    getProcessorGroups: (
+      progress: ProgressReporter
+    ) => (
+      typeMapPath: Partial<ElementTypeMapPath>
+    ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>,
+    defaultProcGroup?: string
+  ],
+  Promise<string | undefined>
+>;
+
+export const mockAskingForProcGroup = (mockResult: string): AskForProcGroup => {
+  return sinon
+    .stub(processorGroupDialogs, 'askForProcessorGroup')
+    .withArgs(sinon.match.any)
+    .resolves(mockResult);
+};
+
+type AskForMoveOptionsStub = sinon.SinonStub<
+  [defaultCcid?: string, defaultComment?: string],
+  Promise<moveOptionsMultiStep.MoveOptions | undefined>
+>;
+
+export const mockAskingForMoveOptions = (
+  resolveWith: moveOptionsMultiStep.MoveOptions | undefined
+): AskForMoveOptionsStub => {
+  return sinon
+    .stub(moveOptionsMultiStep, 'multiStepMoveOptions')
+    .withArgs(sinon.match.any)
+    .resolves(resolveWith);
 };

@@ -21,7 +21,6 @@ import {
   Element,
   ErrorResponseType,
   ResponseStatus,
-  Service,
   SignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
@@ -53,13 +52,11 @@ import {
 import { Actions } from '../../store/_doc/Actions';
 import { Source } from '../../store/storage/_doc/Storage';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
-import { ElementSearchLocation } from '../../_doc/Endevor';
 import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { ElementNode, TypeNode } from '../../tree/_doc/ElementTree';
 
 describe('retrieve element', () => {
@@ -70,22 +67,12 @@ describe('retrieve element', () => {
     vscode.commands.registerCommand(
       CommandId.RETRIEVE_ELEMENT,
       (
-        getConnectionDetails,
-        getEndevorConfiguration,
-        getCredential,
-        getSearchLocation,
         dispatch,
+        getConnectionConfiguration,
         elementNode,
         SelectedMultipleNodes
       ) =>
-        retrieveElementCommand(
-          {
-            getConnectionDetails,
-            getEndevorConfiguration,
-            getCredential,
-            getSearchLocation,
-          },
-          dispatch,
+        retrieveElementCommand(dispatch, getConnectionConfiguration)(
           elementNode,
           SelectedMultipleNodes
         )
@@ -127,13 +114,13 @@ describe('retrieve element', () => {
     sinon.restore();
   });
 
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -146,6 +133,7 @@ describe('retrieve element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    configuration,
   };
   const element: Element = {
     environment: 'ENV',
@@ -158,14 +146,16 @@ describe('retrieve element', () => {
     noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
   };
   const elementUri = toBasicElementUri({
     serviceId: {
@@ -221,10 +211,6 @@ describe('retrieve element', () => {
     parent,
     timestamp: UNIQUE_ELEMENT_FRAGMENT,
   };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
-  };
   it('should retrieve element without signout', async () => {
     // arrange
     const automaticSignoutSetting = false;
@@ -239,7 +225,6 @@ describe('retrieve element', () => {
     const fingerprint = 'finger';
     const retrieveElementStub = mockRetrieveElement(
       service,
-      configuration,
       element
     )({
       status: ResponseStatus.OK,
@@ -280,18 +265,8 @@ describe('retrieve element', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchSignoutAction,
+        async () => ({ service, searchLocation }),
         elementNode
       );
     } catch (e) {
@@ -302,8 +277,8 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
-      _,
       retrieveContentStub,
     ] = retrieveElementStub;
     assert.ok(
@@ -385,7 +360,6 @@ describe('retrieve element', () => {
     };
     const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
-      configuration,
       element
     )([
       {
@@ -432,18 +406,8 @@ describe('retrieve element', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchSignoutAction,
+        async () => ({ service, searchLocation }),
         elementNode
       );
     } catch (e) {
@@ -454,8 +418,8 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
-      _,
       retrieveContentStub,
       signOutParamsStub,
     ] = retrieveElementStub;
@@ -571,7 +535,6 @@ describe('retrieve element', () => {
     const fingerprint = 'finger';
     const retrieveElementWithOverrideStub = mockRetrieveElementWithSignout(
       service,
-      configuration,
       element
     )([
       {
@@ -629,18 +592,8 @@ describe('retrieve element', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchSignoutActions,
+        async () => ({ service, searchLocation }),
         elementNode
       );
     } catch (e) {
@@ -651,8 +604,8 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
-      _,
       retrieveContentStub,
       signOutParamsStub,
     ] = retrieveElementWithOverrideStub;

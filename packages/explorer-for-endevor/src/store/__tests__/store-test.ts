@@ -12,7 +12,14 @@
  */
 
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
-import { Element, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
+import {
+  Element,
+  ElementType,
+  EnvironmentStage,
+  SubSystem,
+  SubSystemMapPath,
+  System,
+} from '@local/endevor/_doc/Endevor';
 import { toCompositeKey } from '../storage/utils';
 import {
   ConnectionLocationsStorage,
@@ -24,22 +31,29 @@ import {
 } from '../storage/_doc/Storage';
 import {
   getElementsInPlace,
+  getFilteredEndevorTypes,
   getFirstFoundElements,
   make as makeStore,
 } from '../store';
 import {
+  createEndevorInventory,
   toElementCompositeKey,
+  toEnvironmentStageMapPathId,
   toServiceLocationCompositeKey,
   toSubsystemMapPathId,
+  toTypeMapPathId,
 } from '../utils';
 import { Actions } from '../_doc/Actions';
 import {
   CachedElement,
   CachedElements,
+  CachedEndevorInventory,
+  ElementFilterType,
   EndevorCacheVersion,
   EndevorId,
   State,
 } from '../_doc/v2/Store';
+import { EndevorMap } from '../../api/_doc/Endevor';
 
 jest.mock('vscode', () => ({}), { virtual: true });
 jest.mock(
@@ -57,6 +71,95 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+const inPlaceLocation: SubSystemMapPath = {
+  environment: 'ENV',
+  stageNumber: '1',
+  system: 'SYS',
+  subSystem: 'SUBSYS',
+};
+const upTheMapLocation: SubSystemMapPath = {
+  ...inPlaceLocation,
+  stageNumber: '2',
+};
+const typeInPlace: ElementType = {
+  ...inPlaceLocation,
+  type: 'TESTTYPE',
+  nextType: 'NEXTTYPE',
+};
+const typeUpTheMap: ElementType = {
+  ...typeInPlace,
+  stageNumber: '2',
+};
+const inPlaceSubsystem: SubSystem = {
+  ...inPlaceLocation,
+  nextSubSystem: 'NEXTSUB',
+};
+const upTheMapSubsystem: SubSystem = {
+  ...inPlaceSubsystem,
+  stageNumber: '2',
+};
+const inPlaceSystem: System = {
+  ...inPlaceLocation,
+  nextSystem: 'NEXTSYS',
+};
+const upTheMapSystem: System = {
+  ...inPlaceSystem,
+  stageNumber: '2',
+};
+const inPlaceEnvStage: EnvironmentStage = {
+  environment: 'ENV',
+  stageNumber: '1',
+};
+const upTheMapEnvStage: EnvironmentStage = {
+  environment: 'ENV',
+  stageNumber: '2',
+};
+
+const makeEndevorInventory = (
+  useDefaultInPlace: boolean,
+  useDefaultUpTheMap: boolean,
+  cacheVersion?: EndevorCacheVersion,
+  additionalInventory?: {
+    environmentStages?: EnvironmentStage[];
+    systems?: System[];
+    subsystems?: SubSystem[];
+    types?: ElementType[];
+  }
+): CachedEndevorInventory => {
+  const invEnvStages = additionalInventory?.environmentStages || [];
+  const invSystems = additionalInventory?.systems || [];
+  const invSubsystems = additionalInventory?.subsystems || [];
+  const invTypes = additionalInventory?.types || [];
+  const route = [];
+  if (useDefaultInPlace) {
+    invSubsystems.unshift(inPlaceSubsystem);
+    invSystems.unshift(inPlaceSystem);
+    invEnvStages.unshift(inPlaceEnvStage);
+    invTypes.unshift(typeInPlace);
+    route.push(toSubsystemMapPathId(inPlaceSubsystem));
+  }
+  if (useDefaultUpTheMap) {
+    invSubsystems.unshift(upTheMapSubsystem);
+    invSystems.unshift(upTheMapSystem);
+    invEnvStages.unshift(upTheMapEnvStage);
+    invTypes.unshift(typeUpTheMap);
+    route.push(toSubsystemMapPathId(upTheMapSubsystem));
+  }
+  const endevorMap: EndevorMap = {
+    [toSubsystemMapPathId(inPlaceSubsystem)]: route,
+  };
+  return {
+    endevorMap,
+    environmentStages: createEndevorInventory(
+      invEnvStages,
+      invSystems,
+      invSubsystems,
+      invTypes
+    ),
+    cacheVersion: cacheVersion || EndevorCacheVersion.UP_TO_DATE,
+  };
+};
 
 describe('store actions callbacks', () => {
   describe('elements in place fetched callback', () => {
@@ -122,37 +225,33 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const elementsInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(elementsInPlaceLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, false),
           mapItemsContent: {},
         },
       };
       // act
       const elementInPlace: CachedElement = {
         element: {
-          ...elementsInPlaceLocation,
+          ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
           id: 'ELM',
@@ -162,13 +261,14 @@ describe('store actions callbacks', () => {
         elementIsUpTheMap: false,
         lastRefreshTimestamp: Date.now(),
       };
+
       const fetchedElements: CachedElements = {
         [toElementCompositeKey(serviceId)(inventoryLocationId)(
           elementInPlace.element
         )]: elementInPlace,
       };
       await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -180,9 +280,7 @@ describe('store actions callbacks', () => {
         ];
 
       const actualElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementsInPlaceLocation)
-        ];
+        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)];
       Object.keys(fetchedElements).forEach((elementId) => {
         expect(actualElements?.elements[elementId]).toBeDefined();
       });
@@ -196,26 +294,33 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       // act
-      const elementsInPlaceLocation: SubSystemMapPath = {
+      const anotherInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
         stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
+        system: 'OTHERSYS',
+        subSystem: 'OTHERSUB',
       };
       const elementInPlace: CachedElement = {
         element: {
-          ...elementsInPlaceLocation,
+          ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
           id: 'ELM',
@@ -230,18 +335,17 @@ describe('store actions callbacks', () => {
           elementInPlace.element
         )]: elementInPlace,
       };
-      const anotherInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS2',
-        subSystem: 'SUBSYS',
-      };
+      const endevorInventory = makeEndevorInventory(true, true);
       await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
-        subSystemsInPlace: [elementsInPlaceLocation, anotherInPlaceLocation],
         elements: fetchedElements,
+        endevorMap: {
+          ...endevorInventory.endevorMap,
+          [toSubsystemMapPathId(anotherInPlaceLocation)]: [],
+        },
+        environmentStages: endevorInventory.environmentStages,
       });
       // assert
       const actualCache =
@@ -250,9 +354,7 @@ describe('store actions callbacks', () => {
         ];
 
       const actualElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementsInPlaceLocation)
-        ];
+        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)];
       expect(actualElements?.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
@@ -260,26 +362,26 @@ describe('store actions callbacks', () => {
         expect(actualElements?.elements[elementId]).toBeDefined();
       });
 
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]
       ).toBeDefined();
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]?.length
-      ).toEqual(0);
+      ).toEqual(2);
       expect(
-        actualCache?.endevorMap.value[
+        actualCache?.endevorInventory.endevorMap[
           toSubsystemMapPathId(anotherInPlaceLocation)
         ]
       ).toBeDefined();
       expect(
-        actualCache?.endevorMap.value[
+        actualCache?.endevorInventory.endevorMap[
           toSubsystemMapPathId(anotherInPlaceLocation)
         ]?.length
       ).toEqual(0);
@@ -293,14 +395,21 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       const outdatedLocation: SubSystemMapPath = {
@@ -311,25 +420,20 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(outdatedLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {},
         },
       };
       // act
-      const elementsInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const elementInPlace: CachedElement = {
         element: {
-          ...elementsInPlaceLocation,
+          ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
           id: 'ELM',
@@ -344,34 +448,38 @@ describe('store actions callbacks', () => {
           elementInPlace.element
         )]: elementInPlace,
       };
+      const endevorInventory = makeEndevorInventory(true, true);
       await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
-        subSystemsInPlace: [elementsInPlaceLocation],
         elements: fetchedElements,
+        endevorMap: endevorInventory.endevorMap,
+        environmentStages: endevorInventory.environmentStages,
       });
       // assert
       const actualCache =
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]
       ).toBeDefined();
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]?.length
-      ).toEqual(0);
+      ).toEqual(2);
 
       expect(
-        actualCache?.endevorMap.value[toSubsystemMapPathId(outdatedLocation)]
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(outdatedLocation)
+        ]
       ).toBeUndefined();
     });
     it('should put elements creating map structure on the fly', async () => {
@@ -383,26 +491,27 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       // act
-      const elementsInPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const elementInPlace: CachedElement = {
         element: {
-          ...elementsInPlaceLocation,
+          ...inPlaceLocation,
           type: 'TEST-TYPE',
           name: 'ELM',
           id: 'ELM',
@@ -417,11 +526,14 @@ describe('store actions callbacks', () => {
           elementInPlace.element
         )]: elementInPlace,
       };
+      const endevorInventory = makeEndevorInventory(true, true);
       await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
+        endevorMap: endevorInventory.endevorMap,
+        environmentStages: endevorInventory.environmentStages,
       });
       // assert
       const actualCache =
@@ -430,9 +542,7 @@ describe('store actions callbacks', () => {
         ];
 
       const actualElements =
-        actualCache?.mapItemsContent[
-          toSubsystemMapPathId(elementsInPlaceLocation)
-        ];
+        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)];
       expect(actualElements?.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
@@ -440,19 +550,19 @@ describe('store actions callbacks', () => {
         expect(actualElements?.elements[elementId]).toBeDefined();
       });
 
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]
       ).toBeDefined();
       expect(
-        actualCache?.endevorMap.value[
-          toSubsystemMapPathId(elementsInPlaceLocation)
+        actualCache?.endevorInventory.endevorMap[
+          toSubsystemMapPathId(inPlaceLocation)
         ]?.length
-      ).toEqual(0);
+      ).toEqual(2);
     });
     it('should overwrite all elements within the whole search location cache', async () => {
       // arrange
@@ -469,14 +579,21 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       const existingElement: CachedElement = {
@@ -493,12 +610,7 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(searchLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, false),
           mapItemsContent: {
             [toSubsystemMapPathId(searchLocation)]: {
               elements: {
@@ -531,7 +643,7 @@ describe('store actions callbacks', () => {
         )]: elementInPlace,
       };
       await dispatch({
-        type: Actions.ELEMENTS_IN_PLACE_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -620,36 +732,26 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
-        stageNumber: '2',
-      };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(inPlaceLocation)]: [
-                toSubsystemMapPathId(upTheMapLocation),
-              ],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, true),
           mapItemsContent: {},
         },
       };
@@ -687,7 +789,7 @@ describe('store actions callbacks', () => {
         )]: elementUpTheMap,
       };
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -730,37 +832,31 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
-        stageNumber: '2',
-      };
       const endevorMapCacheVersion = EndevorCacheVersion.OUTDATED;
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(inPlaceLocation)]: [
-                toSubsystemMapPathId(upTheMapLocation),
-              ],
-            },
-            cacheVersion: endevorMapCacheVersion,
-          },
+          endevorInventory: makeEndevorInventory(
+            true,
+            true,
+            endevorMapCacheVersion
+          ),
           mapItemsContent: {},
         },
       };
@@ -798,7 +894,7 @@ describe('store actions callbacks', () => {
         )]: elementUpTheMap,
       };
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -830,102 +926,6 @@ describe('store actions callbacks', () => {
         ]
       ).toBeDefined();
     });
-    it('should put elements only for locations from the known map structure', async () => {
-      // arrange
-      let storeState: State = {
-        filters: {},
-        sessions: {},
-        searchLocations: {},
-        serviceLocations: {},
-        services: {},
-        caches: {},
-      };
-      const dispatch = await makeStore(mockedGetters)(
-        () => storeState,
-        () => {
-          // do nothing
-        },
-        (updatedValue) => {
-          storeState = updatedValue;
-        }
-      );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      storeState.caches = {
-        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(inPlaceLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
-          mapItemsContent: {},
-        },
-      };
-      // act
-      const elementInPlace: CachedElement = {
-        element: {
-          ...inPlaceLocation,
-          type: 'TEST-TYPE',
-          name: 'ELM',
-          id: 'ELM',
-          noSource: false,
-          lastActionCcid: 'LAST-CCID',
-        },
-        elementIsUpTheMap: false,
-        lastRefreshTimestamp: Date.now(),
-      };
-      const elementFromDifferentRoute: CachedElement = {
-        element: {
-          ...inPlaceLocation,
-          system: 'SYSSSS',
-          type: 'TEST-TYPE',
-          name: 'I"m from different system',
-          id: 'BLAHBLAH',
-          noSource: false,
-          lastActionCcid: 'LAST-CCID',
-        },
-        elementIsUpTheMap: true,
-        lastRefreshTimestamp: Date.now(),
-      };
-      const fetchedElements: CachedElements = {
-        [toElementCompositeKey(serviceId)(inventoryLocationId)(
-          elementInPlace.element
-        )]: elementInPlace,
-        [toElementCompositeKey(serviceId)(inventoryLocationId)(
-          elementFromDifferentRoute.element
-        )]: elementFromDifferentRoute,
-      };
-      await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
-        serviceId,
-        searchLocationId: inventoryLocationId,
-        elements: fetchedElements,
-      });
-      // assert
-      const actualCache =
-        storeState.caches[
-          toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ];
-      expect(actualCache).toBeDefined();
-      expect(
-        Object.keys(actualCache ? actualCache.mapItemsContent : {}).length
-      ).toEqual(1);
-
-      const inPlaceElements =
-        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)];
-      expect(
-        inPlaceElements?.elements[
-          toElementCompositeKey(serviceId)(inventoryLocationId)(
-            elementInPlace.element
-          )
-        ]
-      ).toBeDefined();
-    });
     it('should not put elements without map structure', async () => {
       // arrange
       let storeState: State = {
@@ -935,26 +935,23 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
-        stageNumber: '2',
-      };
       // act
       const elementInPlace: CachedElement = {
         element: {
@@ -989,7 +986,7 @@ describe('store actions callbacks', () => {
         )]: elementUpTheMap,
       };
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -1010,34 +1007,32 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {},
+          endevorInventory: {
+            endevorMap: {},
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {},
         },
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
-        stageNumber: '2',
       };
       // act
       const elementInPlace: CachedElement = {
@@ -1073,7 +1068,7 @@ describe('store actions callbacks', () => {
         )]: elementUpTheMap,
       };
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -1084,8 +1079,9 @@ describe('store actions callbacks', () => {
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
       expect(actualCache).toEqual({
-        endevorMap: {
-          value: {},
+        endevorInventory: {
+          endevorMap: {},
+          environmentStages: {},
           cacheVersion: EndevorCacheVersion.UP_TO_DATE,
         },
         mapItemsContent: {},
@@ -1100,26 +1096,23 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
-        stageNumber: '2',
-      };
       // act
       const elementInPlace: CachedElement = {
         element: {
@@ -1153,16 +1146,14 @@ describe('store actions callbacks', () => {
           elementUpTheMap.element
         )]: elementUpTheMap,
       };
+      const endevorInventory = makeEndevorInventory(true, true);
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
-        endevorMap: {
-          [toSubsystemMapPathId(inPlaceLocation)]: [
-            toSubsystemMapPathId(upTheMapLocation),
-          ],
-        },
+        endevorMap: endevorInventory.endevorMap,
+        environmentStages: endevorInventory.environmentStages,
       });
       // assert
       const actualCache =
@@ -1205,36 +1196,42 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
-      const upTheMapLocation: SubSystemMapPath = {
-        ...inPlaceLocation,
+      const originalEnvStage: EnvironmentStage = {
+        environment: 'SOME_ENV',
         stageNumber: '2',
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId({
-                environment: 'SOME_ENV',
-                stageNumber: '2',
+                ...originalEnvStage,
                 system: 'SYSYSSSS',
                 subSystem: 'TEST',
               })]: [],
+            },
+            environmentStages: {
+              [toEnvironmentStageMapPathId(originalEnvStage)]: {
+                environmentStage: originalEnvStage,
+                systems: {},
+              },
             },
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
@@ -1274,24 +1271,26 @@ describe('store actions callbacks', () => {
           elementUpTheMap.element
         )]: elementUpTheMap,
       };
-      const fetchedMap = {
-        [toSubsystemMapPathId(inPlaceLocation)]: [
-          toSubsystemMapPathId(upTheMapLocation),
-        ],
-      };
+      const endevorInventory = makeEndevorInventory(true, true);
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
-        endevorMap: fetchedMap,
+        endevorMap: endevorInventory.endevorMap,
+        environmentStages: endevorInventory.environmentStages,
       });
       // assert
       const actualCache =
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.value).toEqual(fetchedMap);
+      expect(actualCache?.endevorInventory.endevorMap).toEqual(
+        endevorInventory.endevorMap
+      );
+      expect(actualCache?.endevorInventory.environmentStages).toEqual(
+        endevorInventory.environmentStages
+      );
     });
     it('should overwrite all elements within the whole search location cache', async () => {
       // arrange
@@ -1302,22 +1301,23 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const nonRelatedLocation: SubSystemMapPath = {
         environment: 'ENV',
         stageNumber: '1',
@@ -1350,11 +1350,12 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(inPlaceLocation)]: [],
               [toSubsystemMapPathId(nonRelatedLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -1396,7 +1397,7 @@ describe('store actions callbacks', () => {
         )]: elementInPlace,
       };
       await dispatch({
-        type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
+        type: Actions.ELEMENTS_FETCHED,
         serviceId,
         searchLocationId: inventoryLocationId,
         elements: fetchedElements,
@@ -1492,24 +1493,25 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const location: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const element: Element = {
-        ...location,
+        ...inPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
         id: 'ELM',
@@ -1523,14 +1525,9 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(location)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, false),
           mapItemsContent: {
-            [toSubsystemMapPathId(location)]: {
+            [toSubsystemMapPathId(inPlaceLocation)]: {
               cacheVersion: EndevorCacheVersion.UP_TO_DATE,
               elements: {
                 [toElementCompositeKey(serviceId)(inventoryLocationId)(
@@ -1549,12 +1546,12 @@ describe('store actions callbacks', () => {
       expect(
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ]?.endevorMap.cacheVersion
+        ]?.endevorInventory.cacheVersion
       ).toEqual(EndevorCacheVersion.UP_TO_DATE);
       expect(
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ]?.mapItemsContent[toSubsystemMapPathId(location)]?.cacheVersion
+        ]?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)]?.cacheVersion
       ).toEqual(EndevorCacheVersion.OUTDATED);
     });
     it('should make the empty location node outdated for the service location', async () => {
@@ -1566,30 +1563,27 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const emptyLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
+      const emptyLocation = inPlaceLocation;
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(emptyLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, true),
           mapItemsContent: {
             [toSubsystemMapPathId(emptyLocation)]: {
               cacheVersion: EndevorCacheVersion.UP_TO_DATE,
@@ -1618,20 +1612,28 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {},
+          endevorInventory: {
+            endevorMap: {},
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {},
@@ -1645,7 +1647,7 @@ describe('store actions callbacks', () => {
       expect(
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
-        ]?.endevorMap.cacheVersion
+        ]?.endevorInventory.cacheVersion
       ).toEqual(EndevorCacheVersion.OUTDATED);
     });
   });
@@ -1712,24 +1714,25 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const location: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const element: Element = {
-        ...location,
+        ...inPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
         id: 'ELM',
@@ -1743,14 +1746,13 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(location)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.OUTDATED,
-          },
+          endevorInventory: makeEndevorInventory(
+            true,
+            false,
+            EndevorCacheVersion.OUTDATED
+          ),
           mapItemsContent: {
-            [toSubsystemMapPathId(location)]: {
+            [toSubsystemMapPathId(inPlaceLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
               elements: {
                 [toElementCompositeKey(serviceId)(inventoryLocationId)(
@@ -1772,11 +1774,11 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(
-        actualCache?.mapItemsContent[toSubsystemMapPathId(location)]
+        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)]
           ?.cacheVersion
       ).toEqual(EndevorCacheVersion.UP_TO_DATE);
     });
@@ -1789,30 +1791,31 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const emptyLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
+      const emptyLocation = inPlaceLocation;
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(emptyLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.OUTDATED,
-          },
+          endevorInventory: makeEndevorInventory(
+            true,
+            false,
+            EndevorCacheVersion.OUTDATED
+          ),
           mapItemsContent: {
             [toSubsystemMapPathId(emptyLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
@@ -1846,21 +1849,29 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
+          endevorInventory: {
             cacheVersion: EndevorCacheVersion.OUTDATED,
-            value: {},
+            endevorMap: {},
+            environmentStages: {},
           },
           mapItemsContent: {},
         },
@@ -1876,7 +1887,7 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
     });
@@ -1889,14 +1900,21 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       // act
@@ -1910,10 +1928,12 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(actualCache?.mapItemsContent).toEqual({});
+      expect(actualCache?.endevorInventory.endevorMap).toEqual({});
+      expect(actualCache?.endevorInventory.environmentStages).toEqual({});
     });
   });
   describe('elements fetch cancelled callback', () => {
@@ -1979,24 +1999,25 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const location: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
       const element: Element = {
-        ...location,
+        ...inPlaceLocation,
         type: 'TYPE',
         name: 'ELM',
         id: 'ELM',
@@ -2010,14 +2031,13 @@ describe('store actions callbacks', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(location)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.OUTDATED,
-          },
+          endevorInventory: makeEndevorInventory(
+            true,
+            false,
+            EndevorCacheVersion.OUTDATED
+          ),
           mapItemsContent: {
-            [toSubsystemMapPathId(location)]: {
+            [toSubsystemMapPathId(inPlaceLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
               elements: {
                 [toElementCompositeKey(serviceId)(inventoryLocationId)(
@@ -2039,11 +2059,11 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(
-        actualCache?.mapItemsContent[toSubsystemMapPathId(location)]
+        actualCache?.mapItemsContent[toSubsystemMapPathId(inPlaceLocation)]
           ?.cacheVersion
       ).toEqual(EndevorCacheVersion.UP_TO_DATE);
     });
@@ -2056,30 +2076,31 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
-      const emptyLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
-      };
+      const emptyLocation = inPlaceLocation;
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(emptyLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.OUTDATED,
-          },
+          endevorInventory: makeEndevorInventory(
+            true,
+            false,
+            EndevorCacheVersion.OUTDATED
+          ),
           mapItemsContent: {
             [toSubsystemMapPathId(emptyLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
@@ -2113,21 +2134,29 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
+          endevorInventory: {
             cacheVersion: EndevorCacheVersion.OUTDATED,
-            value: {},
+            endevorMap: {},
+            environmentStages: {},
           },
           mapItemsContent: {},
         },
@@ -2143,7 +2172,7 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
     });
@@ -2156,14 +2185,21 @@ describe('store actions callbacks', () => {
         serviceLocations: {},
         services: {},
         caches: {},
+        activityEntries: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
         () => {
           // do nothing
         },
+        () => {
+          // do nothing
+        },
         (updatedValue) => {
           storeState = updatedValue;
+        },
+        () => {
+          // do nothing
         }
       );
       // act
@@ -2177,10 +2213,12 @@ describe('store actions callbacks', () => {
         storeState.caches[
           toServiceLocationCompositeKey(serviceId)(inventoryLocationId)
         ];
-      expect(actualCache?.endevorMap.cacheVersion).toEqual(
+      expect(actualCache?.endevorInventory.cacheVersion).toEqual(
         EndevorCacheVersion.UP_TO_DATE
       );
       expect(actualCache?.mapItemsContent).toEqual({});
+      expect(actualCache?.endevorInventory.endevorMap).toEqual({});
+      expect(actualCache?.endevorInventory.environmentStages).toEqual({});
     });
   });
 });
@@ -2204,12 +2242,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
-      };
-      const inPlaceLocation: SubSystemMapPath = {
-        environment: 'ENV',
-        stageNumber: '1',
-        system: 'SYS',
-        subSystem: 'SUBSYS',
+        activityEntries: [],
       };
       const elementInPlace: Element = {
         ...inPlaceLocation,
@@ -2226,12 +2259,7 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
-              [toSubsystemMapPathId(inPlaceLocation)]: [],
-            },
-            cacheVersion: EndevorCacheVersion.UP_TO_DATE,
-          },
+          endevorInventory: makeEndevorInventory(true, false),
           mapItemsContent: {
             [toSubsystemMapPathId(inPlaceLocation)]: {
               cacheVersion: EndevorCacheVersion.OUTDATED,
@@ -2262,6 +2290,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2303,11 +2332,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -2355,6 +2385,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2370,11 +2401,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -2407,6 +2439,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2422,11 +2455,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -2459,6 +2493,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2487,11 +2522,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(emptyInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -2531,6 +2567,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2540,10 +2577,11 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(emptyInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -2574,11 +2612,13 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {},
+          endevorInventory: {
+            endevorMap: {},
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {},
@@ -2613,6 +2653,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const inPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2678,12 +2719,13 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(inPlaceLocation)]: [
                 toSubsystemMapPathId(upTheMapFirstLocation),
               ],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -2734,6 +2776,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2773,11 +2816,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -2825,6 +2869,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2868,8 +2913,8 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [
                 toSubsystemMapPathId(commonUpTheMapLocation),
               ],
@@ -2877,6 +2922,7 @@ describe('store getters', () => {
                 toSubsystemMapPathId(commonUpTheMapLocation),
               ],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -2924,6 +2970,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2937,11 +2984,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -2974,6 +3022,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2987,11 +3036,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -3024,6 +3074,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3050,11 +3101,12 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(firstInPlaceLocation)]: [],
               [toSubsystemMapPathId(secondEmptyInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {
@@ -3094,6 +3146,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3103,10 +3156,11 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(emptyInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {
@@ -3137,6 +3191,7 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3146,10 +3201,11 @@ describe('store getters', () => {
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {
+          endevorInventory: {
+            endevorMap: {
               [toSubsystemMapPathId(emptyInPlaceLocation)]: [],
             },
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.OUTDATED,
           },
           mapItemsContent: {},
@@ -3175,11 +3231,13 @@ describe('store getters', () => {
         services: {},
         caches: {},
         filters: {},
+        activityEntries: [],
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
-          endevorMap: {
-            value: {},
+          endevorInventory: {
+            endevorMap: {},
+            environmentStages: {},
             cacheVersion: EndevorCacheVersion.UP_TO_DATE,
           },
           mapItemsContent: {},
@@ -3193,6 +3251,100 @@ describe('store getters', () => {
       expect(actualElements).toEqual({
         cacheVersion: EndevorCacheVersion.UP_TO_DATE,
         elementsPerRoute: {},
+      });
+    });
+  });
+  describe('getting types', () => {
+    const serviceId: EndevorId = {
+      name: 'test-service',
+      source: Source.INTERNAL,
+    };
+    const inventoryLocationId: EndevorId = {
+      name: 'test-inventory',
+      source: Source.INTERNAL,
+    };
+    it('should return types from a particular location', () => {
+      // arrange
+      const storeState: State = {
+        sessions: {},
+        searchLocations: {},
+        serviceLocations: {},
+        services: {},
+        caches: {},
+        filters: {},
+        activityEntries: [],
+      };
+      const anotherInPlaceLocation: SubSystemMapPath = {
+        environment: 'ENV',
+        stageNumber: '1',
+        system: 'OTHERSYS',
+        subSystem: 'OTHERSUB',
+      };
+      const anotherSystemInPlace: System = {
+        ...anotherInPlaceLocation,
+        system: 'OTHERSYS',
+        nextSystem: 'NEXTSYS',
+      };
+      const anotherTypeInPlace: ElementType = {
+        ...anotherInPlaceLocation,
+        type: 'OTHERTYPE',
+        nextType: 'NEXTTYPE',
+      };
+      storeState.caches = {
+        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
+          endevorInventory: makeEndevorInventory(
+            true,
+            false,
+            EndevorCacheVersion.UP_TO_DATE,
+            {
+              systems: [anotherSystemInPlace],
+              types: [anotherTypeInPlace],
+            }
+          ),
+          mapItemsContent: {},
+        },
+      };
+      // act
+      const actualTypes = getFilteredEndevorTypes(() => storeState)(serviceId)(
+        inventoryLocationId
+      );
+      // assert
+      expect(actualTypes).toEqual({
+        [toTypeMapPathId(typeInPlace)]: typeInPlace,
+        [toTypeMapPathId(anotherTypeInPlace)]: anotherTypeInPlace,
+      });
+    });
+    it('should return types matching filter', () => {
+      // arrange
+      const storeState: State = {
+        sessions: {},
+        searchLocations: {},
+        serviceLocations: {},
+        services: {},
+        caches: {},
+        filters: {
+          [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
+            ELEMENT_TYPES_FILTER: {
+              type: ElementFilterType.ELEMENT_TYPES_FILTER,
+              value: ['TEST*'],
+            },
+          },
+        },
+        activityEntries: [],
+      };
+      storeState.caches = {
+        [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
+          endevorInventory: makeEndevorInventory(true, false),
+          mapItemsContent: {},
+        },
+      };
+      // act
+      const actualTypes = getFilteredEndevorTypes(() => storeState)(serviceId)(
+        inventoryLocationId
+      );
+      // assert
+      expect(actualTypes).toEqual({
+        [toTypeMapPathId(typeInPlace)]: typeInPlace,
       });
     });
   });

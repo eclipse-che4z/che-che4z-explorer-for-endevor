@@ -64,6 +64,7 @@ describe('discarding local changes in compared element', () => {
       noSource: false,
       extension: 'ext',
       lastActionCcid: 'LAST-CCID',
+      processorGroup: '*NOPROC*',
     };
     const uploadChangeControlValue: ChangeControlValue = {
       ccid: 'some_ccid',

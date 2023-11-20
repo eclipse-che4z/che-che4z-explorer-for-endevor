@@ -1,24 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Endevor responses type parsing Endevor configurations response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "some_name": "blah",
       },
-      Object {
+      {
         "some_different_name": "blah",
       },
-      Object {
+      {
         "description": "real description",
         "name": "real_name",
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -27,37 +28,38 @@ Object {
 
 exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
-exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect messages 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>"`;
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect messages 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>"`;
 
 exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect messages 2`] = `
-"Invalid value 1234 supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>/0: string
-Invalid value {\\"invalid\\":\\"invalid\\"} supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>/1: string"
+"Invalid value 1234 supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>/0: string
+Invalid value {"invalid":"invalid"} supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>/1: string"
 `;
 
-exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect return code 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode"`;
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect return code 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/returnCode: ReturnCode"`;
 
-exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect return code 2`] = `"Invalid value \\"8\\" supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode"`;
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect return code 2`] = `"Invalid value "8" supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/returnCode: ReturnCode"`;
 
-exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect status code 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/statusCode: number"`;
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect status code 1`] = `"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/statusCode: number"`;
 
-exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect status code 2`] = `"Invalid value \\"200\\" supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/statusCode: number"`;
+exports[`Endevor responses type parsing Endevor configurations response type parsing should throw an error for a response without or incorrect status code 2`] = `"Invalid value "200" supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<unknown> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/statusCode: number"`;
 
 exports[`Endevor responses type parsing Endevor element dependencies response type parsing should parse a response with any dependencies 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
-        "components": Array [
+{
+  "body": {
+    "data": [
+      {
+        "components": [
           undefined,
-          Object {
+          {
             "is_it_dependency": "noooooo",
           },
         ],
       },
     ],
-    "messages": Array [
+    "messages": [
       "Relax, everything will be fine!",
     ],
+    "reports": undefined,
     "returnCode": 0,
     "statusCode": 200,
   },
@@ -65,21 +67,21 @@ Object {
 `;
 
 exports[`Endevor responses type parsing Endevor element dependencies response type parsing should throw an error for a response without data 1`] = `
-"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<{ components: (Array<unknown> | undefined) }> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<{ components: (Array<unknown> | undefined) }> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>
-Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<{ components: (Array<unknown> | undefined) }> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<{ components: (Array<unknown> | undefined) }> })/1: { data: Array<{ components: (Array<unknown> | undefined) }> }/data: Array<{ components: (Array<unknown> | undefined) }>"
+"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<{ components: (Array<unknown> | undefined) }> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<{ components: (Array<unknown> | undefined) }> })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>
+Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<{ components: (Array<unknown> | undefined) }> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<{ components: (Array<unknown> | undefined) }> })/1: { data: Array<{ components: (Array<unknown> | undefined) }> }/data: Array<{ components: (Array<unknown> | undefined) }>"
 `;
 
 exports[`Endevor responses type parsing Endevor element types response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "whaaat": "whaaaat???",
       },
-      Object {
+      {
         "whatttttt": "whattttt??",
       },
-      Object {
+      {
         "envName": "test",
         "nextType": "next-type",
         "stgId": "D",
@@ -87,10 +89,11 @@ Object {
         "typeName": "test-type",
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -100,16 +103,16 @@ Object {
 exports[`Endevor responses type parsing Endevor element types response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
 exports[`Endevor responses type parsing Endevor elements response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "whaaat": "whaaaat???",
       },
-      Object {
+      {
         "whatttttt": "whattttt??",
       },
-      Object {
+      {
         "elmName": "test-elm",
         "envName": "test",
         "fullElmName": "test-full-name",
@@ -120,10 +123,11 @@ Object {
         "typeName": "test-type",
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -133,16 +137,16 @@ Object {
 exports[`Endevor responses type parsing Endevor elements response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
 exports[`Endevor responses type parsing Endevor environment stages response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "whaaat": "whaaaat???",
       },
-      Object {
+      {
         "whatttttt": "whattttt??",
       },
-      Object {
+      {
         "envName": "test",
         "nextEnv": "next-test",
         "nextStgNum": 2,
@@ -150,10 +154,11 @@ Object {
         "stgNum": 1,
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -163,12 +168,13 @@ Object {
 exports[`Endevor responses type parsing Endevor environment stages response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
 exports[`Endevor responses type parsing Endevor print element and listing response type parsing should parse a proper response 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
+{
+  "body": {
+    "data": [
       "very important content",
     ],
-    "messages": Array [],
+    "messages": [],
+    "reports": undefined,
     "returnCode": 0,
     "statusCode": 200,
   },
@@ -176,23 +182,23 @@ Object {
 `;
 
 exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response with incorrect data 1`] = `
-"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>
-Invalid value {\\"firstParagraph\\":\\"blah\\",\\"secondParagraph\\":\\"blahblah\\"} supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/0: Array<string>/0: string
-Invalid value [{\\"firstParagraph\\":\\"blah\\",\\"secondParagraph\\":\\"blahblah\\"}] supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/1: null"
+"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>
+Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/0: Array<string>/0: string
+Invalid value [{"firstParagraph":"blah","secondParagraph":"blahblah"}] supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/1: null"
 `;
 
 exports[`Endevor responses type parsing Endevor print element and listing response type parsing should throw an error for a response without data 1`] = `
-"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>
-Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/0: Array<string>
-Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/1: null"
+"Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/0: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>
+Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/0: Array<string>
+Invalid value undefined supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: (Array<string> | null) })/1: { data: (Array<string> | null) }/data: (Array<string> | null)/1: null"
 `;
 
 exports[`Endevor responses type parsing Endevor retrieve element response type parsing should parse a proper response 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
-        "data": Array [
+{
+  "body": {
+    "data": [
+      {
+        "data": [
           118,
           101,
           114,
@@ -219,24 +225,25 @@ Object {
         "type": "Buffer",
       },
     ],
-    "messages": Array [
+    "messages": [
       "Relax, everything will be fine!",
     ],
+    "reports": undefined,
     "returnCode": 0,
     "statusCode": 200,
   },
-  "headers": Object {
+  "headers": {
     "fingerprint": "fingerprint",
   },
 }
 `;
 
 exports[`Endevor responses type parsing Endevor retrieve element response type parsing should parse a proper response without fingerprint 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
-        "data": Array [
+{
+  "body": {
+    "data": [
+      {
+        "data": [
           118,
           101,
           114,
@@ -263,31 +270,32 @@ Object {
         "type": "Buffer",
       },
     ],
-    "messages": Array [
+    "messages": [
       "Relax, everything will be fine!",
     ],
+    "reports": undefined,
     "returnCode": 0,
     "statusCode": 400,
   },
-  "headers": Object {},
+  "headers": {},
 }
 `;
 
-exports[`Endevor responses type parsing Endevor retrieve element response type parsing should throw an error for a response with incorrect data 1`] = `"Invalid value {\\"firstParagraph\\":\\"blah\\",\\"secondParagraph\\":\\"blahblah\\"} supplied to : { headers: Partial<{ fingerprint: string }>, body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<Buffer> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<Buffer> })/1: { data: Array<Buffer> }/data: Array<Buffer>/0: Buffer"`;
+exports[`Endevor responses type parsing Endevor retrieve element response type parsing should throw an error for a response with incorrect data 1`] = `"Invalid value {"firstParagraph":"blah","secondParagraph":"blahblah"} supplied to : { headers: Partial<{ fingerprint: string }>, body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<Buffer> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<Buffer> })/1: { data: Array<Buffer> }/data: Array<Buffer>/0: Buffer"`;
 
-exports[`Endevor responses type parsing Endevor retrieve element response type parsing should throw an error for a response without data 1`] = `"Invalid value undefined supplied to : { headers: Partial<{ fingerprint: string }>, body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<Buffer> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<Buffer> })/1: { data: Array<Buffer> }/data: Array<Buffer>"`;
+exports[`Endevor responses type parsing Endevor retrieve element response type parsing should throw an error for a response without data 1`] = `"Invalid value undefined supplied to : { headers: Partial<{ fingerprint: string }>, body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<Buffer> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } & { data: Array<Buffer> })/1: { data: Array<Buffer> }/data: Array<Buffer>"`;
 
 exports[`Endevor responses type parsing Endevor subsystems response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "whaaat": "whaaaat???",
       },
-      Object {
+      {
         "whatttttt": "whattttt??",
       },
-      Object {
+      {
         "envName": "test",
         "nextSbs": "next-subsys",
         "sbsName": "test-subsys",
@@ -295,10 +303,11 @@ Object {
         "sysName": "test-sys",
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -308,26 +317,27 @@ Object {
 exports[`Endevor responses type parsing Endevor subsystems response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
 exports[`Endevor responses type parsing Endevor systems response type parsing should parse a response with any data 1`] = `
-Object {
-  "body": Object {
-    "data": Array [
-      Object {
+{
+  "body": {
+    "data": [
+      {
         "whaaat": "whaaaat???",
       },
-      Object {
+      {
         "whatttttt": "whattttt??",
       },
-      Object {
+      {
         "envName": "test",
         "nextSys": "next-sys",
         "stgId": "D",
         "sysName": "test-sys",
       },
     ],
-    "messages": Array [
+    "messages": [
       "message 1",
       "message 2",
     ],
+    "reports": undefined,
     "returnCode": 8,
     "statusCode": 200,
   },
@@ -337,32 +347,33 @@ Object {
 exports[`Endevor responses type parsing Endevor systems response type parsing should throw an error for a response without data 1`] = `"Invalid value null supplied to : { body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> }) }/body: ({ statusCode: number, returnCode: ReturnCode, messages: Array<string> } & { data: Array<unknown> })/1: { data: Array<unknown> }/data: Array<unknown>"`;
 
 exports[`Endevor responses type parsing Endevor update and generate response type parsing should parse a proper response 1`] = `
-Object {
-  "body": Object {
-    "messages": Array [
+{
+  "body": {
+    "messages": [
       "Relax, everything will be fine!",
     ],
+    "reports": undefined,
     "returnCode": 0,
     "statusCode": 200,
   },
 }
 `;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect messages 1`] = `"Invalid value {\\"messageValue\\":\\"Relax, everything will be fine!\\"} supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect messages 1`] = `"Invalid value {"messageValue":"Relax, everything will be fine!"} supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>"`;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect return code 1`] = `"Invalid value \\"8\\" supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect return code 1`] = `"Invalid value "8" supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/returnCode: ReturnCode"`;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect status code 1`] = `"Invalid value \\"400\\" supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/statusCode: number"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response with incorrect status code 1`] = `"Invalid value "400" supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/statusCode: number"`;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without messages 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/messages: Array<string>"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without messages 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/messages: Array<string>"`;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without return code 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/returnCode: ReturnCode"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without return code 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/returnCode: ReturnCode"`;
 
-exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without status code 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string> }/statusCode: number"`;
+exports[`Endevor responses type parsing Endevor update and generate response type parsing should throw an error for a response without status code 1`] = `"Invalid value undefined supplied to : { body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) } }/body: { statusCode: number, returnCode: ReturnCode, messages: Array<string>, reports: ({ APIMSGS: (APIMSGS | undefined), C1MSGS1: (C1MSGS1 | undefined) } | null | undefined) }/statusCode: number"`;
 
 exports[`Endevor responses type parsing Endevor v1 api response type parsing should parse a response with version header 1`] = `
-Object {
-  "headers": Object {
+{
+  "headers": {
     "api-version": "1.1",
   },
 }
@@ -373,8 +384,8 @@ exports[`Endevor responses type parsing Endevor v1 api response type parsing sho
 exports[`Endevor responses type parsing Endevor v1 api response type parsing should throw an error for a response without version header 1`] = `"Invalid value undefined supplied to : { headers: { api-version: string } }/headers: { api-version: string }/api-version: string"`;
 
 exports[`Endevor responses type parsing Endevor v2 api response type parsing should parse a response with version header 1`] = `
-Object {
-  "headers": Object {
+{
+  "headers": {
     "version": "2.5",
   },
 }

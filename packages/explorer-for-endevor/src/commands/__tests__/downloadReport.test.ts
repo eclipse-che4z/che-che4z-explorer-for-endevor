@@ -14,38 +14,29 @@
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
 import * as assert from 'assert';
-import { Service } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { mockDownloadReportById } from './_mocks/endevor';
 import * as sinon from 'sinon';
 import { printResultTableCommand } from '../../commands/printResultTable';
 import { COMMAND_PREFIX } from '../../constants';
-import { Schemas } from '../../_doc/Uri';
+import { Schemas } from '../../uri/_doc/Uri';
 import { resultTableContentProvider } from '../../view/resultTableContentProvider';
 import { mockShowingDocumentWith } from './_mocks/window';
 import { Source } from '../../store/storage/_doc/Storage';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('fetch report content', () => {
   const retrieveReportCommandId = `${COMMAND_PREFIX}.retrieveReportCommandId`;
   before(() => {
     vscode.commands.registerCommand(
       retrieveReportCommandId,
-      async (
-        objectName,
-        configurations,
-        service,
-        serviceId,
-        searchLocationId,
-        ccid,
-        reportId
-      ) =>
-        printResultTableCommand(objectName)(configurations)(service)(serviceId)(
-          searchLocationId
-        )(ccid)(reportId)
-    );
-    vscode.workspace.registerTextDocumentContentProvider(
-      Schemas.READ_ONLY_REPORT,
-      resultTableContentProvider(sinon.spy())
+      async (serviceId, searchLocationId, objectName, ccid, reportId) =>
+        printResultTableCommand(serviceId, searchLocationId)(objectName)(ccid)(
+          reportId
+        )
     );
   });
 
@@ -55,39 +46,51 @@ describe('fetch report content', () => {
     sinon.restore();
   });
 
+  const subSystemName = 'subSystemName';
+  const configuration = 'TEST-CONFIG';
+  const service: EndevorAuthorizedService = {
+    location: {
+      port: 1234,
+      protocol: 'http',
+      hostname: 'anything',
+      basePath: 'anythingx2',
+    },
+    credential: {
+      type: CredentialType.BASE,
+      user: 'test',
+      password: 'something',
+    },
+    rejectUnauthorized: false,
+    configuration,
+  };
+  const reportId = 'TEST-REPORT-ID';
+  const serviceId = {
+    name: 'TEST-SERVICE',
+    source: Source.INTERNAL,
+  };
+  const searchLocationId = {
+    name: 'TEST-LOCATION',
+    source: Source.INTERNAL,
+  };
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
+  };
+  const ccid = 'TEST-CCID';
+
+  vscode.workspace.registerTextDocumentContentProvider(
+    Schemas.READ_ONLY_REPORT,
+    resultTableContentProvider(sinon.spy(), async () => ({
+      service,
+      searchLocation,
+    }))
+  );
+
   it('should fetch report content', async () => {
     // arrange
-    const subSystemName = 'subSystemName';
-    const configuration = 'TEST-INST';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-    };
-    const reportId = 'TEST-REPORT-ID';
-    const serviceId = {
-      name: 'TEST-SERVICE',
-      source: Source.INTERNAL,
-    };
-    const searchLocationId = {
-      name: 'TEST-LOCATION',
-      source: Source.INTERNAL,
-    };
-    const ccid = 'TEST-CCID';
-
     const expectedReportContent = 'Best Endevor generated report right here!';
     const downloadReportStub = mockDownloadReportById(
       service,
-      configuration,
       reportId
     )(expectedReportContent);
     const success = Promise.resolve();
@@ -96,11 +99,9 @@ describe('fetch report content', () => {
     try {
       await vscode.commands.executeCommand(
         retrieveReportCommandId,
-        subSystemName,
-        configuration,
-        service,
         serviceId,
         searchLocationId,
+        subSystemName,
         ccid,
         reportId
       );
@@ -110,12 +111,8 @@ describe('fetch report content', () => {
       );
     }
     // assert
-    const [
-      generalFunctionStub,
-      withServiceStub,
-      withConfigurationStub,
-      withReportIdStub,
-    ] = downloadReportStub;
+    const [generalFunctionStub, withServiceStub, withReportIdStub] =
+      downloadReportStub;
     assert.ok(
       generalFunctionStub.called,
       'Fetch report content was not called'
@@ -125,12 +122,6 @@ describe('fetch report content', () => {
       actualService,
       service,
       `Fetch report by id was not called with expected ${service}, it was called with ${actualService}`
-    );
-    const actualConfiguration = withConfigurationStub.args[0]?.[0];
-    assert.deepStrictEqual(
-      actualConfiguration,
-      configuration,
-      `Fetch report by id was not called with expected ${configuration}, it was called with ${actualConfiguration}`
     );
     assert.ok(
       showReportContentStub.called,

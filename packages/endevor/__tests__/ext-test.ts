@@ -273,6 +273,11 @@ describe('external Endevor data type parsing', () => {
         sysName: 'SYS',
         // stgId: '1',
         nextSys: 'SYS',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() => parseToType(System, system)).toThrowErrorMatchingSnapshot();
@@ -325,6 +330,11 @@ describe('external Endevor data type parsing', () => {
         stgId: '1',
         stgSeqNum: 1,
         nextSbs: 'SUBSYS',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -399,9 +409,15 @@ describe('external Endevor data type parsing', () => {
       const elementType = {
         envName: 'ENV',
         sysName: 'SYS',
+        stgNum: '1',
         stgId: '1',
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'TYPE-DESC',
+        dfltProcGrp: 'DEF-PROC',
+        dataFm: 'DATA-FM',
+        fileExt: '.TXT',
+        lang: 'EN',
       };
       // act
       const parsedElementType = parseToType(ElementType, elementType);
@@ -409,9 +425,15 @@ describe('external Endevor data type parsing', () => {
       const expectedElementType: ElementType = {
         envName: 'ENV',
         sysName: 'SYS',
+        stgNum: '1',
         stgId: '1',
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'TYPE-DESC',
+        dfltProcGrp: 'DEF-PROC',
+        dataFm: 'DATA-FM',
+        fileExt: '.TXT',
+        lang: 'EN',
       };
       expect(parsedElementType).toStrictEqual(expectedElementType);
     });
@@ -423,6 +445,11 @@ describe('external Endevor data type parsing', () => {
         stgId: '1',
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -437,6 +464,11 @@ describe('external Endevor data type parsing', () => {
         stgId: '1',
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -451,6 +483,11 @@ describe('external Endevor data type parsing', () => {
         // stgId: '1',
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -465,6 +502,11 @@ describe('external Endevor data type parsing', () => {
         stgId: 3, // <- should be literal
         typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -479,13 +521,18 @@ describe('external Endevor data type parsing', () => {
         stgId: '1',
         // typeName: 'TYPE',
         nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
         parseToType(ElementType, elementType)
       ).toThrowErrorMatchingSnapshot();
     });
-    it('should throw an error for a subsystem without a next type name', () => {
+    it('should throw an error for a type without a next type name', () => {
       // arrange
       const elementType = {
         envName: 'ENV',
@@ -493,6 +540,11 @@ describe('external Endevor data type parsing', () => {
         stgId: '1',
         typeName: 'TYPE',
         // nextType: 'NEXT_TYPE',
+        description: 'DESCRIPTION,',
+        dfltProcGrp: 'DEF_PROC_GROUP',
+        dataFm: 'DATA_FM',
+        fileExt: 'CBL',
+        lang: 'COBOL',
       };
       // act && assert
       expect(() =>
@@ -515,6 +567,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -530,6 +584,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -546,6 +602,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -561,6 +619,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -577,6 +637,8 @@ describe('external Endevor data type parsing', () => {
         // fileExt: 'cbl',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -591,6 +653,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -607,6 +671,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -622,6 +688,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: 'CCID',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -638,6 +706,8 @@ describe('external Endevor data type parsing', () => {
         fileExt: 'cbl',
         nosource: 'N',
         // lastActCcid: 'CCID',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -652,6 +722,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         fileExt: 'cbl',
         nosource: 'N',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
@@ -668,6 +740,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: null,
         nosource: 'Y',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       // act
       const parsedElement = parseToType(Element, element);
@@ -683,6 +757,8 @@ describe('external Endevor data type parsing', () => {
         fullElmName: 'ELM1',
         lastActCcid: null,
         nosource: 'Y',
+        procGrpName: '*NOPROC*',
+        elmVVLL: '0100',
       };
       expect(parsedElement).toStrictEqual(expectedElement);
     });
