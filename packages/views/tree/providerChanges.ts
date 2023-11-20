@@ -12,6 +12,7 @@
  */
 
 import { setContextVariable } from '@local/vscode-wrapper/window';
+import { Logger } from '@local/extension/_doc/Logger';
 import {
   DecorationInstanceRenderOptions,
   DecorationOptions,
@@ -27,21 +28,23 @@ import {
   Uri,
   window,
 } from 'vscode';
-import { CommandId } from '../commands/id';
-import { CURRENT_CHANGE_LEVEL, ELM_HISTORY_VIEW_ID } from '../constants';
-import { logger } from '../globals';
-import { getElement } from '../store/store';
-import { Action } from '../store/_doc/Actions';
-import { ElementHistoryData, State } from '../store/_doc/v2/Store';
-import { fromElementChangeUri } from '../uri/elementHistoryUri';
-import { getElementParmsFromUri } from '../uri/utils';
-import { isError } from '../utils';
+import { CURRENT_CHANGE_LEVEL } from '../constants';
+import { updateHistoryData } from '../view/changeLvlContentProvider';
 import {
-  getHistoryContent,
-  updateHistoryData,
-} from '../view/changeLvlContentProvider';
-import { BasicElementUriQuery } from '../_doc/Uri';
-import { ChangeLevelNode } from './_doc/ChangesTree';
+  ChangeLevelNode,
+  HistoryViewModes,
+  ElementHistoryData,
+} from './_doc/ChangesTree';
+import {
+  Element,
+  EndevorResponse,
+  ErrorResponseType,
+  Service,
+} from '@local/endevor/_doc/Endevor';
+import { getHistoryContent } from '../endevor';
+import { fromElementChangeUri } from '../uri/elementHistoryUri';
+import { isError } from '../utils';
+import { UriFunctions } from '../_doc/Uri';
 
 export const Decorations = {
   typeAdded: window.createTextEditorDecorationType({
@@ -68,13 +71,6 @@ export const Decorations = {
   }),
 };
 
-export const enum HistoryViewModes {
-  SHOW_IN_EDITOR = 'SHOW_IN_EDITOR',
-  ONLY_SHOW_CHANGES = 'ONLY_SHOW_CHANGES',
-  CLEAR_AND_SHOW = 'CLEAR_NODES/SHOW_IN_EDITOR',
-  DEFAULT = 'DEFAULT',
-}
-
 export type HistoryViewDataProvider = TreeDataProvider<ChangeLevelNode> &
   Partial<{
     elementUri: Uri;
@@ -83,15 +79,24 @@ export type HistoryViewDataProvider = TreeDataProvider<ChangeLevelNode> &
   }>;
 
 export const make =
-  (getState: () => State) =>
-  (dispatch: (action: Action) => Promise<void>) =>
+  (treeChangeEmitter: EventEmitter<ChangeLevelNode | null>) =>
+  (logger: Logger) =>
   (
-    treeChangeEmitter: EventEmitter<ChangeLevelNode | null>
+    { getConfigurations, getHistoryData, logActivity }: UriFunctions,
+    refreshHistory: (
+      elementHistory: ElementHistoryData,
+      elementUri: Uri
+    ) => Promise<void>
+  ) =>
+  (
+    commandId: string,
+    uriScheme: string,
+    treeViewId: string
   ): HistoryViewDataProvider => {
     return {
       onDidChangeTreeData: treeChangeEmitter.event,
       getTreeItem(node: ChangeLevelNode) {
-        return new ChangeLevelItem(node);
+        return new ChangeLevelItem(node, commandId);
       },
       async getChildren(node?: ChangeLevelNode) {
         if (node || !this.treeView) {
@@ -105,54 +110,82 @@ export const make =
         if (!this.elementUri) {
           return noHistory(
             this.treeView,
-            'There are no element tabs/editors activated to provide element history information.'
+            'There are no element tabs/editors activated to provide element history information.',
+            treeViewId
           );
         }
-        const uriParams = getElementParmsFromUri(this.elementUri);
-        if (isError(uriParams)) {
-          // do not show anything since this basically just means
-          // the active editor does not contain any element text
+        const configurations = await getConfigurations(this.elementUri);
+        if (!configurations) {
           return noHistory(
             this.treeView,
-            'History information cannot be provided for the active editor.'
+            'History information cannot be provided for the active editor.',
+            treeViewId
           );
         }
-        const { serviceId, searchLocationId, element } = uriParams;
+        const { element, service, configuration: instance } = configurations;
         this.treeView.description = `${element.name} • ${element.type} type`;
         if (this.mode === HistoryViewModes.SHOW_IN_EDITOR) {
+          const changedElementQuery = fromElementChangeUri(this.elementUri)(
+            uriScheme
+          );
+          if (isError(changedElementQuery)) {
+            return noHistory(
+              this.treeView,
+              'There are no element tabs/editors activated to provide element history information.',
+              treeViewId
+            );
+          }
           try {
             this.treeView.message = undefined;
             const historyEditor = await window.showTextDocument(
               this.elementUri,
               { preview: true }
             );
-            decorate(getState, historyEditor, this.elementUri);
+            decorate(
+              getHistoryData,
+              historyEditor,
+              this.elementUri,
+              changedElementQuery.vvll
+            );
           } catch (error) {
-            return error;
+            logger.trace('Unable to show element history document');
           }
         }
+        const logActivityFromUri = logActivity
+          ? logActivity(this.elementUri)
+          : undefined;
         let historyData;
         if (this.mode === HistoryViewModes.ONLY_SHOW_CHANGES) {
           historyData = await refreshHistoryData(
-            dispatch,
+            refreshHistory,
             this.treeView,
-            uriParams,
-            this.elementUri
+            service,
+            element,
+            instance,
+            logger,
+            this.elementUri,
+            logActivityFromUri
           );
         } else {
-          historyData =
-            getElement(getState)(serviceId)(searchLocationId)(
-              element
-            )?.historyData;
+          historyData = getHistoryData(this.elementUri);
           if (!historyData || !historyData.changeLevels) {
             if (!this.mode || this.mode === HistoryViewModes.DEFAULT) {
-              return noHistory(this.treeView, 'Press ↻ to retrieve.', true);
+              return noHistory(
+                this.treeView,
+                'Press ↻ to retrieve.',
+                treeViewId,
+                true
+              );
             }
             historyData = await refreshHistoryData(
-              dispatch,
+              refreshHistory,
               this.treeView,
-              uriParams,
-              this.elementUri
+              service,
+              element,
+              instance,
+              logger,
+              this.elementUri,
+              logActivityFromUri
             );
           }
         }
@@ -160,10 +193,11 @@ export const make =
           return noHistory(
             this.treeView,
             'Error occurred during the attempt to retrieve History information, press ↻ to try again.',
+            treeViewId,
             true
           );
         }
-        setContextVariable(`${ELM_HISTORY_VIEW_ID}.showRefresh`, true);
+        setContextVariable(`${treeViewId}.showRefresh`, true);
         this.treeView.message = undefined;
         return [...historyData.changeLevels].reverse();
       },
@@ -171,21 +205,37 @@ export const make =
   };
 
 const refreshHistoryData = async (
-  dispatch: (action: Action) => Promise<void>,
+  refreshHistoryData: (
+    elementHistory: ElementHistoryData,
+    elementUri: Uri
+  ) => Promise<void>,
   treeView: TreeView<ChangeLevelNode>,
-  uriParams: BasicElementUriQuery,
-  uri: Uri
+  service: Service,
+  element: Element,
+  configuration: string,
+  logger: Logger,
+  uri: Uri,
+  logActivity?: (
+    actionName: string
+  ) => <E extends ErrorResponseType | undefined, R>(
+    response: EndevorResponse<E, R>
+  ) => void
 ): Promise<ElementHistoryData | undefined> => {
-  const historyContent = await getHistoryContent(uri);
-  if (isError(historyContent)) {
+  const historyContent = await getHistoryContent(
+    logger,
+    service,
+    configuration,
+    element,
+    logActivity
+  );
+  if (!historyContent) {
     return;
   }
   treeView.message = 'Retrieving History data ...';
   return await updateHistoryData(
-    dispatch,
-    uriParams.serviceId,
-    uriParams.element,
-    uriParams.searchLocationId,
+    refreshHistoryData,
+    element,
+    logger,
     uri,
     historyContent
   );
@@ -194,9 +244,10 @@ const refreshHistoryData = async (
 const noHistory = (
   treeView: TreeView<ChangeLevelNode>,
   message: string,
+  treeViewId: string,
   canRefresh?: boolean
 ): ProviderResult<[]> => {
-  setContextVariable(`${ELM_HISTORY_VIEW_ID}.showRefresh`, !!canRefresh);
+  setContextVariable(`${treeViewId}.showRefresh`, !!canRefresh);
   if (!canRefresh) {
     treeView.description = undefined;
   }
@@ -205,25 +256,15 @@ const noHistory = (
 };
 
 export const decorate = (
-  getState: () => State,
+  getHistoryData: (elementUri: Uri) => ElementHistoryData | undefined,
   editor: TextEditor,
-  uri: Uri
+  elementUri: Uri,
+  vvll: string
 ) => {
   const decorationsArrayAdded: DecorationOptions[] = [];
   const decorationsArrayRemoved: DecorationOptions[] = [];
   const otherDecorations: DecorationOptions[] = [];
-  const uriParams = fromElementChangeUri(uri);
-  if (isError(uriParams)) {
-    const error = uriParams;
-    logger.error(
-      `Unable to decorate.`,
-      `Unable to decorate because parsing of the element's URI failed with error ${error.message}.`
-    );
-    return;
-  }
-  const { serviceId, searchLocationId, element, vvll } = uriParams;
-  const historyData =
-    getElement(getState)(serviceId)(searchLocationId)(element)?.historyData;
+  const historyData = getHistoryData(elementUri);
   if (!historyData || !historyData.changeLevels || !historyData.historyLines) {
     return;
   }
@@ -317,7 +358,7 @@ const createBlameDecoration = (
 };
 
 class ChangeLevelItem extends TreeItem {
-  constructor(node: ChangeLevelNode) {
+  constructor(node: ChangeLevelNode, commandId: string) {
     super(node.vvll, TreeItemCollapsibleState.None);
     this.description =
       node.user?.trim() +
@@ -330,7 +371,7 @@ class ChangeLevelItem extends TreeItem {
         : '');
     this.command = {
       title: 'Show Changes',
-      command: CommandId.CHANGE_HISTORY_LEVEL,
+      command: commandId,
       tooltip: 'Show Changes',
       arguments: [node],
     };

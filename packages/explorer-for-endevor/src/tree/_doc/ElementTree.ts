@@ -56,6 +56,7 @@ type BaseElementNode = Readonly<{
   parent: TypeNode;
   tooltip?: MarkdownString | string;
   noSource?: boolean;
+  outOfDate?: boolean;
 }>;
 
 type ElementInPlaceNode = BaseElementNode &

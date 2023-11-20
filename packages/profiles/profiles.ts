@@ -214,6 +214,8 @@ export const getEndevorProfileByName =
         port: parsedProfileValue.port,
         rejectUnauthorized: parsedProfileValue.rejectUnauthorized,
         basePath: parsedProfileValue.basePath,
+        tokenType: parsedProfileValue.tokenType,
+        tokenValue: parsedProfileValue.tokenValue,
       };
     } catch (error) {
       return new ProfileValidationError(

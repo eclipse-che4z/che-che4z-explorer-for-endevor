@@ -19,16 +19,17 @@ import {
   TelemetryProperties,
 } from './_doc/telemetry';
 
+const enum EventType {
+  ERROR = 'ERROR',
+  FLOW = 'FLOW',
+}
+
 export const createTelemetryReporter =
-  (extensionId: string, extensionVersion: string, key: string) =>
+  (key: string) =>
   (logger: Logger): GenericTelemetryReporter => {
     if (key) {
       try {
-        const reporter = new TelemetryReporter(
-          extensionId,
-          extensionVersion,
-          key
-        );
+        const reporter = new TelemetryReporter(key);
         return makeTelemetryReporter(reporter)(logger);
       } catch (error) {
         logger.trace(
@@ -48,7 +49,14 @@ const makeTelemetryReporter =
       measurements?: TelemetryMeasurements
     ) => {
       try {
-        return reporter.sendTelemetryEvent(eventName, properties, measurements);
+        return reporter.sendTelemetryEvent(
+          eventName,
+          {
+            eventType: EventType.FLOW,
+            ...properties,
+          },
+          measurements
+        );
       } catch (error) {
         logger.trace(
           `Unable to send telemetry event because of: ${error.message}`
@@ -56,13 +64,25 @@ const makeTelemetryReporter =
       }
       logEvent(logger)(eventName, properties, measurements);
     },
-    sendTelemetryException: (
+    sendTelemetryErrorEvent: (
       error: Error,
       properties?: TelemetryProperties,
       measurements?: TelemetryMeasurements
     ) => {
       try {
-        return reporter.sendTelemetryException(error, properties, measurements);
+        // the latest telemetry API provides errors as usual events
+        // we have to put all of the error content into properties
+        return reporter.sendTelemetryErrorEvent(
+          `${EventType.ERROR}${
+            properties?.errorContext ? `: ${properties.errorContext}` : ''
+          }`,
+          {
+            eventType: EventType.ERROR,
+            errorMessage: error.message,
+            ...properties,
+          },
+          measurements
+        );
       } catch (error) {
         logger.trace(
           `Unable to send telemetry error because of: ${error.message}`
@@ -79,7 +99,7 @@ const makeTelemetryLogger = (logger: Logger): GenericTelemetryReporter => ({
     properties?: TelemetryProperties,
     measurements?: TelemetryMeasurements
   ) => logEvent(logger)(eventName, properties, measurements),
-  sendTelemetryException: (
+  sendTelemetryErrorEvent: (
     error: Error,
     properties?: TelemetryProperties,
     measurements?: TelemetryMeasurements

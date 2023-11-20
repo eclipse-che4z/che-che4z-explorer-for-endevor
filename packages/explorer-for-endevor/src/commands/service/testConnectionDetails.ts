@@ -13,8 +13,8 @@
 
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { withCancellableNotificationProgress } from '@local/vscode-wrapper/window';
-import { getApiVersion } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { getApiVersionAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnection,
@@ -26,27 +26,37 @@ import { formatWithNewLines } from '../../utils';
 import {
   TelemetryEvents,
   TestConnectionDetailsCommandCompletedStatus,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const testConnectionDetailsCommand =
   (
-    getConnectionDetails: (id: EndevorId) => EndevorConnection | undefined,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionDetails: (id: EndevorId) => EndevorConnection | undefined
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
-    logger.trace('Test Endevor connection command called.');
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
     };
+    const logger = createEndevorLogger({ serviceId });
+    logger.traceWithDetails('Test Endevor connection command was called.');
     const connectionDetails = getConnectionDetails(serviceId);
     if (!connectionDetails) return;
     const testResponse = await withCancellableNotificationProgress(
       'Testing Endevor connection ...'
     )((progressReporter) =>
-      getApiVersion(progressReporter)(connectionDetails.value.location)(
-        connectionDetails.value.rejectUnauthorized
-      )
+      getApiVersionAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+        })
+      )(progressReporter)({
+        location: connectionDetails.value.location,
+        rejectUnauthorized: connectionDetails.value.rejectUnauthorized,
+      })
     );
     if (!testResponse) return;
     if (isErrorEndevorResponse(testResponse)) {
@@ -57,7 +67,7 @@ export const testConnectionDetailsCommand =
           errorResponse.details.messages
         )}`
       );
-      logger.error(
+      logger.errorWithDetails(
         'Unable to connect to Endevor Web Services.',
         `${error.message}.`
       );

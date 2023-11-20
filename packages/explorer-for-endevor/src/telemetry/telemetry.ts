@@ -13,11 +13,11 @@
 
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Logger } from '@local/extension/_doc/Logger';
-import { createTelemetryReporter } from '@local/vscode-wrapper/telemetry';
-import { TelemetryProperties } from '@local/vscode-wrapper/_doc/telemetry';
-import { ENDEVOR_MESSAGE_CODE_PREFIXES } from './constants';
-import { deepCopyError } from './utils';
-import { TelemetryEvent, TelemetryEvents } from './_doc/telemetry/Telemetry';
+import { createTelemetryReporter } from '@local/telemetry/telemetry';
+import { TelemetryProperties } from '@local/telemetry/_doc/telemetry';
+import { ENDEVOR_MESSAGE_CODE_PREFIXES } from '../constants';
+import { deepCopyError } from '../utils';
+import { TelemetryEvent, TelemetryEvents } from './_doc/Telemetry';
 
 export type TelemetryEventTypeProperties = { readonly [key: string]: string };
 
@@ -27,19 +27,15 @@ type TelemetryReporter = {
 };
 
 export const createReporter =
-  (extensionId: string, extensionVersion: string, key: string) =>
+  (key: string) =>
   (logger: Logger): TelemetryReporter => {
-    const reporter = createTelemetryReporter(
-      extensionId,
-      extensionVersion,
-      key
-    )(logger);
+    const reporter = createTelemetryReporter(key)(logger);
     return {
       sendTelemetryEvent: (event: TelemetryEvent): void => {
         const eventProperties = getTelemetryEventProperties(event);
         switch (event.type) {
           case TelemetryEvents.ERROR:
-            reporter.sendTelemetryException(
+            reporter.sendTelemetryErrorEvent(
               getRedactedError(event.error),
               eventProperties
             );
@@ -71,6 +67,8 @@ const getTelemetryEventProperties = (
     case TelemetryEvents.PROFILES_MIGRATION_COMPLETED:
     case TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED:
     case TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED:
+    case TelemetryEvents.COMMAND_FETCH_ELEMENT_COMPLETED:
+    case TelemetryEvents.COMMAND_MOVE_ELEMENT_COMPLETED:
     case TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED:
     case TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED:
     case TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED:
@@ -95,7 +93,7 @@ const getTelemetryEventProperties = (
     case TelemetryEvents.COMMAND_TEST_CONNECTION_DETAILS_COMPLETED:
     case TelemetryEvents.ELEMENTS_IN_PLACE_TREE_BUILT:
     case TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT:
-    case TelemetryEvents.COMMAND_TOGGLE_MAP:
+    case TelemetryEvents.COMMAND_TOGGLE_FILTER:
     case TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED:
     case TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED:
     case TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_COMPLETED:

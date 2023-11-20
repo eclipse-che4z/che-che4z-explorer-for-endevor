@@ -37,3 +37,16 @@ export type ChangeLevelNode = Readonly<{
   ccid: string | undefined;
   comment: string | undefined;
 }> & { lineNums?: HistoryLine[] };
+
+export const enum HistoryViewModes {
+  SHOW_IN_EDITOR = 'SHOW_IN_EDITOR',
+  ONLY_SHOW_CHANGES = 'ONLY_SHOW_CHANGES',
+  CLEAR_AND_SHOW = 'CLEAR_NODES/SHOW_IN_EDITOR',
+  DEFAULT = 'DEFAULT',
+}
+
+export type ElementHistoryData = Partial<{
+  historyLines: HistoryLines;
+  changeLevels: ChangeLevels;
+  historyContent: string;
+}>;

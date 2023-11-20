@@ -13,45 +13,54 @@
 
 import { withCancellableNotificationProgress } from '@local/vscode-wrapper/window';
 import { askForServiceValue } from '../../dialogs/locations/endevorServiceDialogs';
-import { getApiVersion } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { getApiVersionAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import {
   CommandEditServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnection,
   EndevorConnectionStatus,
-  EndevorCredential,
+  EndevorCredentialDescription,
   EndevorCredentialStatus,
   EndevorId,
 } from '../../store/_doc/v2/Store';
 import { ServiceNode } from '../../tree/_doc/ServiceLocationTree';
 import { toServiceUrl } from '../../utils';
 import { CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const editServiceCommand =
   (
-    configurations: {
-      getServiceDetails: (id: EndevorId) => EndevorConnection | undefined;
-      getServiceCredentials: (id: EndevorId) => EndevorCredential | undefined;
-    },
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getServiceDetails: (id: EndevorId) => EndevorConnection | undefined,
+    getServiceCredentials: (
+      id: EndevorId
+    ) => Promise<EndevorCredentialDescription | undefined>
   ) =>
   async ({ name, source }: ServiceNode): Promise<void> => {
-    logger.trace(`Edit an Endevor connection called for ${name}.`);
     const serviceId: EndevorId = {
       name,
       source,
     };
-    const connectionDetails = configurations.getServiceDetails(serviceId);
-    const credentials = configurations.getServiceCredentials(serviceId);
+    const logger = createEndevorLogger({ serviceId });
+    logger.traceWithDetails(`Edit an Endevor connection was called.`);
+    const connectionDetails = getServiceDetails(serviceId);
+    const credentials = await getServiceCredentials(serviceId);
     const editedConnection = await askForServiceValue(
       (location, rejectUnauthorized) =>
         withCancellableNotificationProgress('Testing Endevor connection ...')(
           (progressReporter) =>
-            getApiVersion(progressReporter)(location)(rejectUnauthorized)
+            getApiVersionAndLogActivity(
+              setLogActivityContext(dispatch, {
+                serviceId,
+              })
+            )(progressReporter)({ location, rejectUnauthorized })
         ),
       connectionDetails
         ? toServiceUrl(connectionDetails.value.location)
@@ -67,7 +76,7 @@ export const editServiceCommand =
     );
     if (!editedConnection) {
       logger.trace(
-        'Editing an Endevor connection is cancelled, no new values provided.'
+        'Editing Endevor connection is cancelled, no new values provided.'
       );
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_EDIT_SERVICE_COMPLETED,
@@ -114,5 +123,5 @@ export const editServiceCommand =
         status: CommandEditServiceCompletedStatus.SUCCESS,
       });
     }
-    logger.info(`Endevor connection ${name} is updated.`);
+    logger.infoWithDetails(`Endevor connection ${name} is updated.`);
   };

@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { formatWithNewLines } from '../../utils';
 import {
   askForChangeControlValue,
@@ -21,7 +21,7 @@ import {
   SignOutElementCommandCompletedStatus,
   TelemetryEvents,
   SignoutErrorRecoverCommandCompletedStatus,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import {
@@ -34,14 +34,32 @@ import {
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import * as endevor from '../../endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { signOutElementAndLogActivity } from '../../api/endevor';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 export const signOutElementCommand =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async ({
     name,
@@ -49,33 +67,41 @@ export const signOutElementCommand =
     searchLocationId,
     element,
   }: ElementNode): Promise<void> => {
-    logger.trace(
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
+    logger.traceWithDetails(
       `Signout command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
     );
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
+    const { service, searchLocation } = connectionParams;
     const signoutChangeControlValue = await askForChangeControlValue({
       ccid: searchLocation.ccid,
       comment: searchLocation.comment,
     });
     if (dialogCancelled(signoutChangeControlValue)) {
       logger.error(
-        'CCID and Comment must be specified to sign out an element.',
+        'CCID and Comment must be specified to sign out element.',
         'Signout command cancelled.'
       );
       return;
     }
-    const signoutResponse = await signOutElement(
+    const signoutResponse = await signOutElement(logger)(
       (element) => (signoutParams) => {
-        return withNotificationProgress(`Signing out the element ${name} ...`)(
+        return withNotificationProgress(`Signing out element ${name} ...`)(
           (progressReporter) =>
-            endevor.signOutElement(progressReporter)(service)(configuration)(
-              element
-            )(signoutParams)
+            signOutElementAndLogActivity(
+              setLogActivityContext(dispatch, {
+                serviceId,
+                searchLocationId,
+                element,
+              })
+            )(progressReporter)(service)(element)(signoutParams)
         );
       }
     )(signoutChangeControlValue, element);
@@ -83,18 +109,18 @@ export const signOutElementCommand =
       const errorResponse = signoutResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to sign out the element  ${element.environment}/${
+        `Unable to sign out element ${element.environment}/${
           element.stageNumber
         }/${element.system}/${element.subSystem}/${
           element.type
-        }/${name} because of an error:${formatWithNewLines(
+        }/${name} because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR:
-          logger.error(
-            `Unable to sign out the element ${name} because it is signed out to somebody else or not at all.`,
+          logger.errorWithDetails(
+            `Unable to sign out element ${name} because it is signed out to somebody else or not at all.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -106,7 +132,7 @@ export const signOutElementCommand =
           return;
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Endevor credentials are incorrect or expired.`,
             `${error.message}.`
           );
@@ -120,7 +146,7 @@ export const signOutElementCommand =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Unable to connect to Endevor Web Services.`,
             `${error.message}.`
           );
@@ -133,8 +159,8 @@ export const signOutElementCommand =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
-            `Unable to sign out the element ${name}.`,
+          logger.errorWithDetails(
+            `Unable to sign out element ${name}.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -153,17 +179,23 @@ export const signOutElementCommand =
       searchLocationId,
       serviceId,
       elements: [
-        { ...element, lastActionCcid: signoutChangeControlValue.ccid },
+        {
+          ...element,
+          lastActionCcid: signoutChangeControlValue.ccid,
+        },
       ],
     });
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_SIGNOUT_ELEMENT_COMPLETED,
       status: SignOutElementCommandCompletedStatus.SUCCESS,
     });
-    logger.info(`Element ${element.name} was signed out successfully!`);
+    logger.infoWithDetails(
+      `Element ${element.name} was signed out successfully!`
+    );
   };
 
 export const signOutElement =
+  (logger: EndevorLogger) =>
   (
     signOutElement: (
       element: Element
@@ -183,8 +215,8 @@ export const signOutElement =
       const errorResponse = signOutResponse;
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
-          logger.warn(
-            `Element ${element.name} cannot be signed out because the element is signed out to somebody else.`
+          logger.warnWithDetails(
+            `Element ${element.name} cannot be signed out because it is signed out to somebody else.`
           );
           const overrideSignout = await askToOverrideSignOutForElements([
             element.name,

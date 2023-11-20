@@ -25,8 +25,8 @@ export const printElement = async (elementNode: ElementNode) => {
       const error = elementUri;
       const element = elementNode.element;
       logger.error(
-        `Unable to print the element ${elementNode.name}.`,
-        `Unable to print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
+        `Unable to print element ${elementNode.name}.`,
+        `Unable to print element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} because parsing of the element's URI failed with error ${error.message}.`
       );
       return;
     }

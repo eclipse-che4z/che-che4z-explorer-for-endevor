@@ -40,6 +40,7 @@ import {
 import {
   Credential as EndevorCredential,
   CredentialType,
+  CredentialTokenType,
 } from '@local/endevor/_doc/Credential';
 import { ANY_VALUE } from '@local/endevor/const';
 import { toCompositeKey } from './utils';
@@ -93,6 +94,33 @@ const parseServiceProfileForRejectUnauthorized = ({
   return serviceProfile.rejectUnauthorized;
 };
 
+const toCredentialTokenType =
+  ({
+    serviceName,
+    serviceProfile,
+  }: Readonly<{
+    serviceName: string;
+    serviceProfile: EndevorServiceProfile;
+  }>) =>
+  (tokenType: string | undefined): CredentialTokenType | undefined => {
+    if (!tokenType) return;
+    switch (tokenType) {
+      case CredentialTokenType.APIML:
+        return CredentialTokenType.APIML;
+      case CredentialTokenType.JWT:
+        return CredentialTokenType.JWT;
+      case CredentialTokenType.LTPA:
+        return CredentialTokenType.LTPA;
+      default:
+        logger.trace(
+          `Incompatible token type for the profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
+            serviceProfile
+          )}.`
+        );
+        return;
+    }
+  };
+
 const parseServiceProfileForCredentials = ({
   name: serviceName,
   profile: serviceProfile,
@@ -100,6 +128,7 @@ const parseServiceProfileForCredentials = ({
   name: string;
   profile: EndevorServiceProfile;
 }>): EndevorCredential | undefined => {
+  // try to get base credentials first
   const user = serviceProfile.user;
   const password = serviceProfile.password;
   if (user && password) {
@@ -107,6 +136,18 @@ const parseServiceProfileForCredentials = ({
       type: CredentialType.BASE,
       user,
       password,
+    };
+  }
+  const tokenType = toCredentialTokenType({
+    serviceName,
+    serviceProfile,
+  })(serviceProfile.tokenType);
+  const tokenValue = serviceProfile.tokenValue;
+  if (tokenType && tokenValue) {
+    return {
+      type: CredentialType.TOKEN_BEARER,
+      tokenType,
+      tokenValue,
     };
   }
   logger.trace(

@@ -13,20 +13,20 @@
 
 import { logger } from '../globals';
 import { showDocument } from '@local/vscode-wrapper/window';
-import { EndevorConfiguration } from '../store/_doc/v2/Store';
-import { Service } from '@local/endevor/_doc/Endevor';
 import { isError } from '../utils';
 import { getEndevorReportContent } from '../view/endevorReportContentProvider';
 import { toGenericReportUri } from '../uri/genericReportUri';
+import { EndevorId } from '../store/_doc/v2/Store';
 
 export const printEndevorReportCommand =
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   (objectName: string) =>
-  (configuration: EndevorConfiguration) =>
-  (service: Service) =>
   async (reportId: string) => {
     logger.trace(`Print Endevor report command ${objectName} is called.`);
-    const reportUri =
-      toGenericReportUri(objectName)(configuration)(service)(reportId);
+    const reportUri = toGenericReportUri(
+      serviceId,
+      searchLocationId
+    )(objectName)(reportId);
     if (isError(reportUri)) {
       const error = reportUri;
       logger.error(

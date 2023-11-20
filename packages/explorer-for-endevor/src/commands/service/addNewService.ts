@@ -20,12 +20,12 @@ import {
   dialogCancelled,
   serviceChosen,
 } from '../../dialogs/locations/endevorServiceDialogs';
-import { getApiVersion } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { getApiVersionAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import {
   CommandAddNewServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnectionStatus,
@@ -34,22 +34,29 @@ import {
   ExistingEndevorServiceDescriptions,
 } from '../../store/_doc/v2/Store';
 import { TREE_VIEW_ID } from '../../constants';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const addNewServiceCommand = async (
+  dispatch: (action: Action) => Promise<void>,
   configurations: {
     getAllServiceNames: () => ReadonlyArray<EndevorServiceName>;
-    getValidServiceDescriptions: () => ExistingEndevorServiceDescriptions;
-  },
-  dispatch: (action: Action) => Promise<void>
+    getValidServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>;
+  }
 ): Promise<EndevorId | undefined> => {
-  logger.trace('Add an Endevor connection called.');
+  const logger = createEndevorLogger();
+  logger.trace('Add Endevor connection was called.');
   const dialogResult = await askForServiceOrCreateNew({
-    servicesToChoose: configurations.getValidServiceDescriptions(),
+    servicesToChoose: await configurations.getValidServiceDescriptions(),
     allExistingServices: configurations.getAllServiceNames(),
   })((location, rejectUnauthorized) =>
     withCancellableNotificationProgress('Testing Endevor connection ...')(
       (progressReporter) =>
-        getApiVersion(progressReporter)(location)(rejectUnauthorized)
+        getApiVersionAndLogActivity(setLogActivityContext(dispatch))(
+          progressReporter
+        )({ location, rejectUnauthorized })
     )
   );
   if (dialogCancelled(dialogResult)) {

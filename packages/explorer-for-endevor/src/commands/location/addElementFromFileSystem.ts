@@ -18,7 +18,7 @@ import {
 } from '@local/vscode-wrapper/workspace';
 import { formatWithNewLines, isError, parseFilePath } from '../../utils';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   askForChangeControlValue,
@@ -33,11 +33,15 @@ import {
   AddResponse,
   ChangeControlValue,
   ElementMapPath,
+  ElementTypeMapPath,
   ErrorResponseType,
-  Service,
+  ProcessorGroupsResponse,
   Value,
 } from '@local/endevor/_doc/Endevor';
-import { addElement } from '../../endevor';
+import {
+  addElementAndLogActivity,
+  getProcessorGroupsByTypeAndLogActivity,
+} from '../../api/endevor';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { TextDecoder } from 'util';
 import { Uri } from 'vscode';
@@ -46,184 +50,228 @@ import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import {
   AddElementCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
 import { getFileExtensionResolution } from '../../settings/settings';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ElementSearchLocation } from '../../_doc/Endevor';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { TypeNode } from '../../tree/_doc/ElementTree';
+import { ProgressReporter } from '@local/endevor/_doc/Progress';
+import {
+  askForProcessorGroup,
+  pickedChoiceLabel,
+} from '../../dialogs/processor-groups/processorGroupsDialogs';
 
-export const addElementFromFileSystem = async (
-  configurations: ConnectionConfigurations,
-  dispatch: (action: Action) => Promise<void>,
-  searchLocationNode: LocationNode
-): Promise<void> => {
-  const fileUri = await chooseFileUriFromFs();
-  if (!fileUri) {
-    return;
-  }
-  const { fileName, fullFileName } = parseFilePath(fileUri.path);
-  if (!fileName) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const content = await readElementContent(fileUri.path);
-  if (isError(content)) {
-    const error = content;
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-      status: AddElementCommandCompletedStatus.GENERIC_ERROR,
-      error,
-    });
-    logger.error(
-      `Unable to read the element content.`,
-      `Unable to read the element content because of error ${error.message}.`
-    );
-    return;
-  }
-  const serviceId = resolveServiceId(searchLocationNode);
-  if (!serviceId) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const searchLocationId = resolveSearchLocationId(searchLocationNode);
-  if (!searchLocationId) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const connectionParams = await getConnectionConfiguration(configurations)(
-    serviceId,
-    searchLocationId
-  );
-  if (!connectionParams) return;
-  const { service, configuration, searchLocation } = connectionParams;
-  const connectionDetails = await configurations.getConnectionDetails(
-    serviceId
-  );
-  if (!connectionDetails) {
-    logger.error(`Unable to add the element ${fileName}.`);
-    return;
-  }
-  const fileNameToShow = selectFileNameToShow(fileName, fullFileName);
-  const addValues = await askForAddValues(
-    {
-      configuration,
-      ...searchLocation,
-    },
-    fileNameToShow
-  );
-  if (isError(addValues)) {
-    const error = addValues;
-    logger.error(error.message);
-    return;
-  }
-  const [addLocation, actionControlValue] = addValues;
-  const addResult = await addNewElement(service)(configuration)({
-    ...addLocation,
-  })(actionControlValue)(content, fileUri.fsPath);
-  if (isErrorEndevorResponse(addResult)) {
-    const errorResponse = addResult;
-    // TODO: format using all possible error details
-    const error = new Error(
-      `Unable to add the element  ${addLocation.environment}/${
-        addLocation.stageNumber
-      }/${addLocation.system}/${addLocation.subSystem}/${addLocation.type}/${
-        addLocation.id
-      } to Endevor because of an error:${formatWithNewLines(
-        errorResponse.details.messages
-      )}`
-    );
-    switch (errorResponse.type) {
-      case ErrorResponseType.DUPLICATE_ELEMENT_ENDEVOR_ERROR:
-        logger.error(
-          `Unable to add the element ${fileName} because an element with this name already exists.`,
-          `${error.message}.`
-        );
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-          status: AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR,
-          error,
-        });
-        return;
-      case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
-      case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-        logger.error(
-          `Endevor credentials are incorrect or expired.`,
-          `${error.message}.`
-        );
-        // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-          status: AddElementCommandCompletedStatus.GENERIC_ERROR,
-          error,
-        });
-        return;
-      case ErrorResponseType.CERT_VALIDATION_ERROR:
-      case ErrorResponseType.CONNECTION_ERROR:
-        logger.error(
-          `Unable to connect to Endevor Web Services.`,
-          `${error.message}.`
-        );
-        // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-          status: AddElementCommandCompletedStatus.GENERIC_ERROR,
-          error,
-        });
-        return;
-      case ErrorResponseType.GENERIC_ERROR:
-        logger.error(
-          `Unable to add the element ${fileName} to Endevor.`,
-          `${error.message}.`
-        );
-        reporter.sendTelemetryEvent({
-          type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-          status: AddElementCommandCompletedStatus.GENERIC_ERROR,
-          error,
-        });
-        return;
-      default:
-        throw new UnreachableCaseError(errorResponse.type);
+export const addElementFromFileSystem =
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
+  ) =>
+  async (node: LocationNode | TypeNode): Promise<void> => {
+    const logger = createEndevorLogger();
+    const fileUri = await chooseFileUriFromFs();
+    if (!fileUri) {
+      return;
     }
-  }
-  await dispatch({
-    type: Actions.ELEMENT_ADDED,
-    serviceId,
-    searchLocationId,
-    element: {
-      environment: addLocation.environment,
-      stageNumber: addLocation.stageNumber,
-      system: addLocation.system,
-      subSystem: addLocation.subSystem,
-      type: addLocation.type,
-      id: addLocation.id,
-      name: addLocation.id,
-      noSource: false,
-      lastActionCcid: actionControlValue.ccid.toUpperCase(),
-    },
-  });
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
-    status: AddElementCommandCompletedStatus.SUCCESS,
-  });
-  logger.info('Add successful!');
-};
+    const { fileName, fullFileName } = parseFilePath(fileUri.path);
+    if (!fileName) {
+      logger.error(`Unable to add element ${fileName}.`);
+      return;
+    }
+    const content = await readElementContent(fileUri.path);
+    if (isError(content)) {
+      const error = content;
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+        status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+        error,
+      });
+      logger.error(
+        `Unable to read element content.`,
+        `Unable to read element content because of error ${error.message}.`
+      );
+      return;
+    }
+    const serviceId = resolveServiceId(node);
+    if (!serviceId) {
+      logger.error(`Unable to add element ${fileName}.`);
+      return;
+    }
+    logger.updateContext({ serviceId });
+    const searchLocationId = resolveSearchLocationId(node);
+    if (!searchLocationId) {
+      logger.errorWithDetails(`Unable to add element ${fileName}.`);
+      return;
+    }
+    logger.updateContext({ serviceId, searchLocationId });
+    const connectionParams = await getConnectionConfiguration(
+      serviceId,
+      searchLocationId
+    );
+    if (!connectionParams) return;
+    const { service, searchLocation } = connectionParams;
+    const fileNameToShow = selectFileNameToShow(fileName, fullFileName);
+    const updatedSearchLocation =
+      node.type === 'TYPE'
+        ? {
+            ...searchLocation,
+            system: node.parent.subSystemMapPath.system,
+            subsystem: node.parent.subSystemMapPath.subSystem,
+            type: node.name,
+          }
+        : searchLocation;
+    const addValues = await askForAddValues(logger)(
+      updatedSearchLocation,
+      fileNameToShow,
+      getProcessorGroupsByTypeAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+        })
+      )(service)
+    );
+    if (isError(addValues)) {
+      const error = addValues;
+      logger.errorWithDetails(error.message);
+      return;
+    }
+    const [addLocation, actionControlValue, actionProcGroup] = addValues;
+    const addResult = await addNewElement(dispatch)({
+      id: serviceId,
+      value: service,
+    })({
+      id: searchLocationId,
+      configuration: service.configuration,
+    })({
+      ...addLocation,
+    })(actionProcGroup)(actionControlValue)(content, fileUri.fsPath);
+    if (isErrorEndevorResponse(addResult)) {
+      const errorResponse = addResult;
+      // TODO: format using all possible error details
+      const error = new Error(
+        `Unable to add element  ${addLocation.environment}/${
+          addLocation.stageNumber
+        }/${addLocation.system}/${addLocation.subSystem}/${addLocation.type}/${
+          addLocation.id
+        } to Endevor because of error:${formatWithNewLines(
+          errorResponse.details.messages
+        )}`
+      );
+      switch (errorResponse.type) {
+        case ErrorResponseType.DUPLICATE_ELEMENT_ENDEVOR_ERROR:
+          logger.errorWithDetails(
+            `Unable to add element ${fileName} because element with this name already exists.`,
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+            status: AddElementCommandCompletedStatus.DUPLICATED_ELEMENT_ERROR,
+            error,
+          });
+          return;
+        case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
+        case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
+          logger.errorWithDetails(
+            `Endevor credentials are incorrect or expired.`,
+            `${error.message}.`
+          );
+          // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+            status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return;
+        case ErrorResponseType.CERT_VALIDATION_ERROR:
+        case ErrorResponseType.CONNECTION_ERROR:
+          logger.errorWithDetails(
+            `Unable to connect to Endevor Web Services.`,
+            `${error.message}.`
+          );
+          // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+            status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return;
+        case ErrorResponseType.GENERIC_ERROR:
+          logger.errorWithDetails(
+            `Unable to add element ${fileName} to Endevor.`,
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+            status: AddElementCommandCompletedStatus.GENERIC_ERROR,
+            error,
+          });
+          return;
+        default:
+          throw new UnreachableCaseError(errorResponse.type);
+      }
+    }
+    await dispatch({
+      type: Actions.ELEMENT_ADDED,
+      serviceId,
+      searchLocationId,
+      element: {
+        environment: addLocation.environment,
+        stageNumber: addLocation.stageNumber,
+        system: addLocation.system,
+        subSystem: addLocation.subSystem,
+        type: addLocation.type,
+        id: addLocation.id,
+        name: addLocation.id,
+        noSource: false,
+        lastActionCcid: actionControlValue.ccid.toUpperCase(),
+      },
+    });
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_ADD_ELEMENT_COMPLETED,
+      status: AddElementCommandCompletedStatus.SUCCESS,
+    });
+    logger.infoWithDetails(`Element ${addLocation.id} was added successfully!`);
+  };
 
 const addNewElement =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (service: { id: EndevorId; value: EndevorAuthorizedService }) =>
+  (searchLocation: { id: EndevorId; configuration: Value }) =>
   (element: ElementMapPath) =>
+  (processorGroup: Value | undefined) =>
   (uploadChangeControlValue: ChangeControlValue) =>
   async (content: string, elementFilePath: string): Promise<AddResponse> => {
     const addResult = await withNotificationProgress(
-      `Adding element: ${element.id}.`
+      `Adding element ${element.id} ...`
     )((progressReporter) => {
-      return addElement(progressReporter)(service)(configuration)(element)(
+      return addElementAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId: service.id,
+          searchLocationId: searchLocation.id,
+        })
+      )(progressReporter)(service.value)(element)(processorGroup)(
         uploadChangeControlValue
       )({
         content,
@@ -233,33 +281,55 @@ const addNewElement =
     return addResult;
   };
 
-const askForAddValues = async (
-  searchLocation: ElementSearchLocation,
-  name: string
-): Promise<Error | [ElementMapPath, ActionChangeControlValue]> => {
-  const addLocation = await askForAddLocation({
-    environment: searchLocation.environment,
-    stageNumber: searchLocation.stageNumber,
-    system: searchLocation.system,
-    subsystem: searchLocation.subsystem,
-    type: searchLocation.type,
-    element: name,
-  });
-  if (addLocationDialogCancelled(addLocation)) {
-    return new Error(`Add location must be specified to add element ${name}.`);
-  }
+const askForAddValues =
+  (logger: EndevorLogger) =>
+  async (
+    searchLocation: SearchLocation,
+    name: string,
+    getProcessorGroups: (
+      progress: ProgressReporter
+    ) => (
+      typeMapPath: Partial<ElementTypeMapPath>
+    ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>
+  ): Promise<
+    Error | [ElementMapPath, ActionChangeControlValue, Value | undefined]
+  > => {
+    const addLocation = await askForAddLocation({
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
+      type: searchLocation.type,
+      element: name,
+    });
+    if (addLocationDialogCancelled(addLocation)) {
+      return new Error(
+        `Add location must be specified to add element ${name}.`
+      );
+    }
 
-  const addChangeControlValue = await askForChangeControlValue({
-    ccid: searchLocation.ccid,
-    comment: searchLocation.comment,
-  });
-  if (changeControlDialogCancelled(addChangeControlValue)) {
-    return new Error(
-      `CCID and Comment must be specified to add element ${addLocation.id}.`
+    let actionProcGroup = await askForProcessorGroup(
+      logger,
+      addLocation,
+      getProcessorGroups
     );
-  }
-  return [addLocation, addChangeControlValue];
-};
+    if (!actionProcGroup) {
+      return new Error('Adding of an element was cancelled.');
+    }
+    actionProcGroup =
+      actionProcGroup !== pickedChoiceLabel ? actionProcGroup : undefined;
+
+    const addChangeControlValue = await askForChangeControlValue({
+      ccid: searchLocation.ccid,
+      comment: searchLocation.comment,
+    });
+    if (changeControlDialogCancelled(addChangeControlValue)) {
+      return new Error(
+        `CCID and Comment must be specified to add element ${addLocation.id}.`
+      );
+    }
+    return [addLocation, addChangeControlValue, actionProcGroup];
+  };
 
 const readElementContent = async (
   elementTempFilePath: string
@@ -274,20 +344,26 @@ const readElementContent = async (
 };
 
 const resolveServiceId = (
-  serviceLocationArg: LocationNode
+  nodeArg: LocationNode | TypeNode
 ): EndevorId | undefined => {
+  if (nodeArg.type === 'TYPE') {
+    return nodeArg.parent.serviceId;
+  }
   return {
-    name: serviceLocationArg.serviceName,
-    source: serviceLocationArg.serviceSource,
+    name: nodeArg.serviceName,
+    source: nodeArg.serviceSource,
   };
 };
 
 const resolveSearchLocationId = (
-  serviceLocationArg: LocationNode
+  nodeArg: LocationNode | TypeNode
 ): EndevorId | undefined => {
+  if (nodeArg.type === 'TYPE') {
+    return nodeArg.parent.searchLocationId;
+  }
   return {
-    name: serviceLocationArg.name,
-    source: serviceLocationArg.source,
+    name: nodeArg.name,
+    source: nodeArg.source,
   };
 };
 

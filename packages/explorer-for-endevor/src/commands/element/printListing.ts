@@ -11,29 +11,33 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger } from '../../globals';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { window } from 'vscode';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
 import { toElementListingUri } from '../../uri/elementListingUri';
+import { createEndevorLogger } from '../../logger';
 
 type SelectedElementNode = ElementNode;
 
 export const printListingCommand = async (elementNode: SelectedElementNode) => {
+  const logger = createEndevorLogger({
+    serviceId: elementNode.serviceId,
+    searchLocationId: elementNode.searchLocationId,
+  });
   const element = elementNode.element;
-  logger.trace(
-    `Print Listing command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
+  logger.traceWithDetails(
+    `Print listing command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
   );
   return withNotificationProgress(
-    `Printing element: ${elementNode.name} listing content`
+    `Printing a listing for element ${elementNode.name} ...`
   )(async (progressReporter) => {
     const listingUri = toElementListingUri(elementNode)(elementNode.timestamp);
     if (isError(listingUri)) {
       const error = listingUri;
       logger.error(
-        `Unable to print the element ${elementNode.name} listing.`,
-        `Unable to print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} listing because parsing of the element's URI failed with error ${error.message}.`
+        `Unable to print element ${elementNode.name} listing.`,
+        `Unable to print element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name} listing because parsing of the element's URI failed with error ${error.message}.`
       );
       return error;
     }

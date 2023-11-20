@@ -18,7 +18,6 @@ import {
   EDIT_DIR,
   TREE_VIEW_ID,
   ELM_HISTORY_VIEW_ID,
-  EXT_VERSION,
   UNKNOWN_VERSION,
   ZE_API_MIN_VERSION,
   SCM_ID,
@@ -28,16 +27,15 @@ import {
   SCM_STATUS_CONTEXT_NAME,
   SCM_MERGE_CHANGES_GROUP_LABEL,
   SCM_MERGE_CHANGES_GROUP_ID,
-  EXTENSION_ISSUES_PAGE,
+  ACTIVITY_VIEW_ID,
 } from './constants';
 import { elementContentProvider } from './view/elementContentProvider';
 import { make as makeElmTreeProvider } from './tree/provider';
 import {
-  decorate,
-  Decorations,
-  HistoryViewModes,
-  make as makeElementHistoryTreeProvider,
-} from './tree/providerChanges';
+  make as makeActivityTreeProvider,
+  ActivityNode,
+  ReportNode,
+} from './tree/activityProvider';
 import {
   getAllServiceLocations,
   make as makeStore,
@@ -54,13 +52,15 @@ import {
   getAllElements,
   getElementCcidsFilterValue,
   getElementTypesFilterValue,
-  getElement,
   getElementsUpTheMapFilterValue,
   getAllElementFilterValues,
   getElementsInPlace,
   getFirstFoundElements,
-  getEndevorMap,
+  getEndevorInventory,
   getCredential,
+  getElementHistoryData,
+  getActivityRecords,
+  getEmptyTypesFilterValue,
 } from './store/store';
 import {
   watchForAutoSignoutChanges,
@@ -83,7 +83,7 @@ import { CommandId } from './commands/id';
 import { printElement } from './commands/element/printElement';
 import { printListingCommand } from './commands/element/printListing';
 import { addNewServiceCommand } from './commands/service/addNewService';
-import { ElementNode, SubSystemNode } from './tree/_doc/ElementTree';
+import { ElementNode, SubSystemNode, TypeNode } from './tree/_doc/ElementTree';
 import { addNewSearchLocation } from './commands/location/addNewSearchLocation';
 import { hideSearchLocation } from './commands/location/hideSearchLocation';
 import { hideServiceCommand } from './commands/service/hideService';
@@ -100,19 +100,20 @@ import { generateElementWithCopyBackCommand } from './commands/element/generateE
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './store/_doc/Actions';
 import {
+  ElementFilterType,
   EndevorConfiguration,
   EndevorConnection,
+  EndevorId,
   State,
-  ValidEndevorConnection,
 } from './store/_doc/v2/Store';
-import { Schemas } from './_doc/Uri';
+import { BasicElementUriQuery, Schemas } from './uri/_doc/Uri';
 import { readOnlyFileContentProvider } from './view/readOnlyFileContentProvider';
 import { isEditedElementUri } from './uri/editedElementUri';
 import { discardEditedElementChanges } from './commands/element/discardEditedElementChanges';
 import { applyDiffEditorChanges } from './commands/element/applyDiffEditorChanges';
 import { addElementFromFileSystem } from './commands/location/addElementFromFileSystem';
 import { generateSubsystemElementsCommand } from './commands/subsystem/generateSubsystemElements';
-import { TelemetryEvents } from './_doc/telemetry/Telemetry';
+import { TelemetryEvents } from './telemetry/_doc/Telemetry';
 import {
   deleteDirectoryWithContent,
   getWorkspaceUri,
@@ -138,9 +139,9 @@ import {
   resolveSearchLocation,
   resolveValidConnectionDetails,
   resolveAnyConnectionDetails,
-  resolveAnyCredentials,
-  defineAnyCredentialResolutionOrder,
   defineAnyConnectionDetailsResolutionOrder,
+  resolveValidOrUnknownCredentials,
+  defineValidOrUnknownCredentialsResolutionOrder,
 } from './store/resolvers';
 import {
   LocationNode,
@@ -200,7 +201,7 @@ import { showDeletedElementCommand } from './commands/sync/showDeletedElement';
 import { showAddedElementCommand } from './commands/sync/showAddedElement';
 import { confirmConflictResolutionCommand } from './commands/sync/confirmConflictResolution';
 import { showConflictedElementCommand } from './commands/sync/showConflictedElement';
-import { toggleMapView } from './commands/location/toggleMapView';
+import { toggleFilterValue } from './commands/location/toggleFilterValue';
 import { clearSearchLocationFiltersCommand } from './commands/location/filter/clearSearchLocationFilters';
 import { filterSearchLocationByElementNameCommand } from './commands/location/filter/filterSearchLocationByElementName';
 import { filterSearchLocationByElementCcidCommand } from './commands/location/filter/filterSearchLocationByElementCcid';
@@ -217,11 +218,9 @@ import {
   isNonExistingLocationNode,
   isNonExistingServiceNode,
 } from './tree/utils';
-import { historyContentProvider } from './view/historyContentProvider';
-import { printHistoryCommand } from './commands/element/printHistory';
-import { ChangeLevelNode } from './tree/_doc/ChangesTree';
-import { showChangeLevelCommand } from './commands/element/showChangeLevel';
-import { changeLvlContentProvider } from './view/changeLvlContentProvider';
+import { printHistoryCommand } from '@local/views/commands/printHistory';
+import { showChangeLevelCommand } from '@local/views/commands/showChangeLevel';
+import { changeLvlContentProvider } from '@local/views/view/changeLvlContentProvider';
 import { resultTableContentProvider } from './view/resultTableContentProvider';
 import { endevorReportContentProvider } from './view/endevorReportContentProvider';
 import { getElementParmsFromUri } from './uri/utils';
@@ -230,6 +229,29 @@ import {
   stringifyPretty,
   stringifyWithHiddenCredential,
 } from '@local/endevor/utils';
+import { printEndevorReportCommand } from './commands/printEndevorReport';
+import {
+  make as makeElementHistoryTreeProvider,
+  decorate,
+  Decorations,
+} from '@local/views/tree/providerChanges';
+import {
+  ChangeLevelNode,
+  ElementHistoryData,
+  HistoryViewModes,
+} from '@local/views/tree/_doc/ChangesTree';
+import path = require('path');
+import { getConnectionConfiguration } from './store/utils';
+import { fromElementChangeUri } from '@local/views/uri/elementHistoryUri';
+import { viewTypeDetails } from './commands/type/viewTypeDetails';
+import { logActivity } from './logger';
+import { moveElementCommand } from './commands/element/moveElement';
+import { EndevorAuthorizedService, SearchLocation } from './api/_doc/Endevor';
+import { ElementInfo, ExternalEndevorApi } from './api/_doc/Api';
+import {
+  emitElementsUpdatedEvent,
+  make as makeExternalEndevorApi,
+} from './api/external';
 
 const cleanTempDirectory = async (
   tempEditFolderUri: vscode.Uri
@@ -243,30 +265,32 @@ const cleanTempDirectory = async (
   }
 };
 
-const getExtensionVersionFromSettings = async (
-  getSettingsStorage: () => SettingsStorage
-) => {
-  const settings = await getSettingsStorage().get();
-  if (isError(settings)) {
-    const error = settings;
-    logger.error(
-      `Unable to retrieve the extension version.`,
-      `Unable to get the extension version from the settings storage because of: ${error.message}.`
-    );
-    return error;
-  }
-  if (settings.version !== EXT_VERSION) {
-    const storeResult = getSettingsStorage().store({ version: EXT_VERSION });
-    if (isError(storeResult)) {
-      const error = storeResult;
-      logger.warn(
-        'Unable to store the latest extension version to the settings.',
-        `Unable to store the latest extension version to the settings storage because of: ${error.message}.`
+const getExtensionVersionFromSettings =
+  (getSettingsStorage: () => SettingsStorage) =>
+  async (currentExtensionVersion: string) => {
+    const settings = await getSettingsStorage().get();
+    if (isError(settings)) {
+      const error = settings;
+      logger.error(
+        `Unable to retrieve the extension version.`,
+        `Unable to get the extension version from the settings storage because of: ${error.message}.`
       );
+      return error;
     }
-  }
-  return settings.version;
-};
+    if (settings.version !== currentExtensionVersion) {
+      const storeResult = getSettingsStorage().store({
+        version: currentExtensionVersion,
+      });
+      if (isError(storeResult)) {
+        const error = storeResult;
+        logger.warn(
+          'Unable to store the latest extension version to the settings.',
+          `Unable to store the latest extension version to the settings storage because of: ${error.message}.`
+        );
+      }
+    }
+    return settings.version;
+  };
 
 export const migrateConnectionLocations =
   (getConnectionLocationsStorage: () => ConnectionLocationsStorage) =>
@@ -305,10 +329,12 @@ export const initializeProfilesStore = async (): Promise<
   return profilesStore;
 };
 
-export const submitExtensionIssue = () =>
-  vscode.env.openExternal(vscode.Uri.parse(EXTENSION_ISSUES_PAGE));
+export const submitExtensionIssue = (extensionBugsPageUrl: string) => () =>
+  vscode.env.openExternal(vscode.Uri.parse(extensionBugsPageUrl));
 
-export const activate: Extension['activate'] = async (context) => {
+export const activate: Extension<ExternalEndevorApi>['activate'] = async (
+  context
+) => {
   logger.trace(
     `${context.extension.id} extension with the build number: ${__E4E_BUILD_NUMBER__} will be activated.`
   );
@@ -320,6 +346,9 @@ export const activate: Extension['activate'] = async (context) => {
   const treeChangeEmitter = new vscode.EventEmitter<Node | null>();
   const elementHistoryTreeChangeEmitter =
     new vscode.EventEmitter<ChangeLevelNode | null>();
+  const activityChangeEmitter = new vscode.EventEmitter<ActivityNode | null>();
+  const invalidatedElementsEmitter: vscode.EventEmitter<ElementInfo[]> =
+    new vscode.EventEmitter();
   let stateForTree: State = {
     caches: {},
     services: {},
@@ -327,13 +356,22 @@ export const activate: Extension['activate'] = async (context) => {
     sessions: {},
     searchLocations: {},
     serviceLocations: {},
+    activityEntries: [],
   };
   const refreshTree = (_node?: Node) => {
     treeChangeEmitter.fire(null);
     elementHistoryTreeChangeEmitter.fire(null);
+    activityChangeEmitter.fire(null);
+  };
+  const refreshActivity = (_node?: Node) => {
+    activityChangeEmitter.fire(null);
   };
 
   const getState = () => stateForTree;
+
+  const activityTreeProvider = makeActivityTreeProvider(() =>
+    getActivityRecords(getState)
+  )(activityChangeEmitter);
 
   // use global storages to store the settings for now
   const stateStorage = context.globalState;
@@ -365,7 +403,7 @@ export const activate: Extension['activate'] = async (context) => {
 
   const extensionVersion = await getExtensionVersionFromSettings(
     getSettingsStorage
-  );
+  )(context.extension.packageJSON.version);
   if (!isError(extensionVersion)) {
     await migrateConnectionLocations(() => connectionLocationsStorage)(
       extensionVersion
@@ -380,15 +418,164 @@ export const activate: Extension['activate'] = async (context) => {
   })(
     () => stateForTree,
     refreshTree,
+    refreshActivity,
     (state) => {
       stateForTree = state;
       return;
+    },
+    emitElementsUpdatedEvent(invalidatedElementsEmitter, getTempEditFolderUri)
+  );
+
+  const refreshElementHistory = async (
+    historyData: ElementHistoryData,
+    elementUri: vscode.Uri
+  ): Promise<void> => {
+    const elementQuery = getElementParmsFromUri(elementUri);
+    if (isError(elementQuery)) {
+      return;
+    }
+    const { serviceId, searchLocationId, element } = elementQuery;
+    await dispatch({
+      type: Actions.ELEMENT_HISTORY_PRINTED,
+      serviceId,
+      element,
+      searchLocationId,
+      historyData,
+    });
+  };
+
+  const getConnectionDetailsFromUri =
+    (
+      getConnectionConfiguration: (
+        serviceId: EndevorId,
+        searchLocationId: EndevorId
+      ) => Promise<
+        | {
+            service: EndevorAuthorizedService;
+            searchLocation: SearchLocation;
+          }
+        | undefined
+      >
+    ) =>
+    async (uri: vscode.Uri) => {
+      const elementQuery = getElementParmsFromUri(uri);
+      if (isError(elementQuery)) {
+        return;
+      }
+      const connectionParams = await getConnectionConfiguration(
+        elementQuery.serviceId,
+        elementQuery.searchLocationId
+      );
+      if (!connectionParams) return;
+      return {
+        element: elementQuery.element,
+        service: connectionParams.service,
+        configuration: connectionParams.service.configuration,
+      };
+    };
+
+  const getElementHistoryFromUri = (uri: vscode.Uri) => {
+    const elementQuery = getElementParmsFromUri(uri);
+    if (isError(elementQuery)) {
+      return;
+    }
+    const { serviceId, searchLocationId, element } = elementQuery;
+    return getElementHistoryData(getState)(serviceId)(searchLocationId)(
+      element
+    );
+  };
+
+  const logActivityFromUri = (uri: vscode.Uri) => {
+    const elementQuery = getElementParmsFromUri(uri);
+    if (isError(elementQuery)) {
+      return;
+    }
+    const { serviceId, searchLocationId, element } = elementQuery;
+    return logActivity(dispatch, { serviceId, searchLocationId, element });
+  };
+
+  const anyConnectionDetailsResolver = resolveAnyConnectionDetails(
+    defineAnyConnectionDetailsResolutionOrder(getState)
+  );
+  const validConnectionDetailsResolver = resolveValidConnectionDetails(
+    defineValidConnectionDetailsResolutionOrder(getState, dispatch)
+  );
+
+  const endevorConfigurationResolver = resolveEndevorConfiguration(
+    defineEndevorConfigurationResolutionOrder(getState)
+  );
+
+  const validOrUnknownBaseCredentialResolver = resolveValidOrUnknownCredentials(
+    defineValidOrUnknownCredentialsResolutionOrder(
+      getState,
+      getCredentialsStorage
+    )
+  );
+  const validCredentialsResolver = (
+    connection: EndevorConnection,
+    configuration: EndevorConfiguration
+  ) =>
+    resolveValidCredentials(
+      defineValidCredentialResolutionOrder(
+        getState,
+        dispatch,
+        getCredentialsStorage,
+        validOrUnknownBaseCredentialResolver,
+        connection,
+        configuration
+      )()
+    );
+  const validCredentialsResolverWithNoReturnValue = (
+    connection: EndevorConnection,
+    configuration: EndevorConfiguration
+  ) =>
+    resolveValidCredentials(
+      defineValidCredentialResolutionOrder(
+        getState,
+        dispatch,
+        getCredentialsStorage,
+        validOrUnknownBaseCredentialResolver,
+        connection,
+        configuration
+      )({ undefinedIfRevalidated: true })
+    );
+
+  const searchLocationResolver = resolveSearchLocation(
+    defineSearchLocationResolutionOrder(getState)
+  );
+
+  const connectionConfigurationResolver = getConnectionConfiguration({
+    getConnectionDetails: validConnectionDetailsResolver,
+    getCredential: validCredentialsResolver,
+    getSearchLocation: searchLocationResolver,
+    getEndevorConfiguration: endevorConfigurationResolver,
+  });
+
+  const connectionConfigurationResolverForProvider = getConnectionConfiguration(
+    {
+      getConnectionDetails: anyConnectionDetailsResolver,
+      getCredential: validCredentialsResolverWithNoReturnValue,
+      getSearchLocation: searchLocationResolver,
+      getEndevorConfiguration: endevorConfigurationResolver,
     }
   );
 
-  const elementHistoryTreeProvider = makeElementHistoryTreeProvider(getState)(
-    dispatch
-  )(elementHistoryTreeChangeEmitter);
+  const elementHistoryTreeProvider = makeElementHistoryTreeProvider(
+    elementHistoryTreeChangeEmitter
+  )(logger)(
+    {
+      getHistoryData: getElementHistoryFromUri,
+      logActivity: logActivityFromUri,
+      getConfigurations: getConnectionDetailsFromUri(
+        connectionConfigurationResolver
+      ),
+    },
+    refreshElementHistory
+  )(
+    CommandId.CHANGE_HISTORY_LEVEL,
+    Schemas.ELEMENT_CHANGE_LVL,
+    ELM_HISTORY_VIEW_ID
+  );
   const elementHistoryTreeView = vscode.window.createTreeView(
     ELM_HISTORY_VIEW_ID,
     {
@@ -408,57 +595,19 @@ export const activate: Extension['activate'] = async (context) => {
     }
   };
 
-  const validConnectionDetailsResolver = resolveValidConnectionDetails(
-    defineValidConnectionDetailsResolutionOrder(getState, dispatch)
-  );
-  const validCredentialsResolver = (
-    connection: ValidEndevorConnection,
-    configuration: EndevorConfiguration
-  ) =>
-    resolveValidCredentials(
-      defineValidCredentialResolutionOrder(
-        getState,
-        dispatch,
-        connection,
-        configuration
-      )
-    );
-  const anyConnectionDetailsResolver = resolveAnyConnectionDetails(
-    defineAnyConnectionDetailsResolutionOrder(getState)
-  );
-  const anyCredentialsResolver = (
-    connection: EndevorConnection,
-    configuration: EndevorConfiguration
-  ) =>
-    resolveAnyCredentials(
-      defineAnyCredentialResolutionOrder(
-        getState,
-        dispatch,
-        connection,
-        configuration
-      )
-    );
-  const endevorConfigurationResolver = resolveEndevorConfiguration(
-    defineEndevorConfigurationResolutionOrder(getState)
-  );
-  const searchLocationResolver = resolveSearchLocation(
-    defineSearchLocationResolutionOrder(getState)
-  );
-
   const treeProvider = makeElmTreeProvider(
+    dispatch,
+    connectionConfigurationResolverForProvider,
     {
-      getServiceLocations: () => getAllServiceLocations(getState),
-      getConnectionDetails: anyConnectionDetailsResolver,
-      getCredential: anyCredentialsResolver,
-      getEndevorConfiguration: endevorConfigurationResolver,
-      getSearchLocation: searchLocationResolver,
+      getServiceLocations: () =>
+        getAllServiceLocations(getState)(getCredentialsStorage),
       getElementsUpTheMapFilterValue: getElementsUpTheMapFilterValue(getState),
+      getEmptyTypesFilterValue: getEmptyTypesFilterValue(getState),
       getAllElementFilterValues: getAllElementFilterValues(getState),
       getElementsInPlace: getElementsInPlace(getState),
       getFirstFoundElements: getFirstFoundElements(getState),
-      getEndevorMap: getEndevorMap(getState),
-    },
-    dispatch
+      getEndevorInventory: getEndevorInventory(getState),
+    }
   )(treeChangeEmitter);
 
   const withErrorLogging =
@@ -489,19 +638,18 @@ export const activate: Extension['activate'] = async (context) => {
       refreshElementHistoryTree();
       return;
     }
-    const uriParams = getElementParmsFromUri(editorUri);
-    if (isError(uriParams)) {
-      const error = uriParams;
-      logger.trace(
-        `Unable to print the element history because parsing of the element's URI failed with error ${error.message}.`
-      );
+    const elementQuery = getElementParmsFromUri(editorUri);
+    if (isError(elementQuery)) {
+      refreshElementHistoryTree();
       return;
     }
     withErrorLogging(CommandId.PRINT_HISTORY)(
-      printHistoryCommand(
+      printHistoryCommand<Omit<BasicElementUriQuery, 'element'>>(
+        logger,
         refreshElementHistoryTree,
-        uriParams,
-        HistoryViewModes.ONLY_SHOW_CHANGES
+        elementQuery,
+        HistoryViewModes.ONLY_SHOW_CHANGES,
+        Schemas.ELEMENT_CHANGE_LVL
       )
     );
   };
@@ -512,10 +660,10 @@ export const activate: Extension['activate'] = async (context) => {
       (invalidLocationNode: InvalidLocationNode) => {
         return withErrorLogging(CommandId.EDIT_CREDENTIALS)(
           editCredentialsCommand(
+            dispatch,
             endevorConfigurationResolver,
             validConnectionDetailsResolver,
-            getCredential(getState),
-            dispatch
+            getCredential(getState)(getCredentialsStorage)
           )(invalidLocationNode)
         );
       },
@@ -543,13 +691,15 @@ export const activate: Extension['activate'] = async (context) => {
         focusOnView(ELM_HISTORY_VIEW_ID);
         return withErrorLogging(CommandId.PRINT_HISTORY)(
           printHistoryCommand(
+            logger,
             refreshElementHistoryTree,
             {
               serviceId: elementNode.serviceId,
               searchLocationId: elementNode.searchLocationId,
               element: elementNode.element,
             },
-            HistoryViewModes.CLEAR_AND_SHOW
+            HistoryViewModes.CLEAR_AND_SHOW,
+            Schemas.ELEMENT_CHANGE_LVL
           )
         );
       },
@@ -558,42 +708,48 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.CHANGE_HISTORY_LEVEL,
       (changeNode: ChangeLevelNode) => {
         return withErrorLogging(CommandId.CHANGE_HISTORY_LEVEL)(
-          showChangeLevelCommand(refreshElementHistoryTree, changeNode)
+          showChangeLevelCommand(
+            logger,
+            refreshElementHistoryTree,
+            changeNode,
+            Schemas.ELEMENT_CHANGE_LVL
+          )
         );
       },
     ],
     [CommandId.REFRESH_TREE_VIEW, refresh],
-    [CommandId.SUBMIT_ISSUE, submitExtensionIssue],
+    [
+      CommandId.SUBMIT_ISSUE,
+      submitExtensionIssue(context.extension.packageJSON.bugs.url),
+    ],
     [
       CommandId.ADD_SERVICE_AND_LOCATION,
       () => {
         return withErrorLogging(CommandId.ADD_SERVICE_AND_LOCATION)(
           (async () => {
-            const serviceId = await addNewServiceCommand(
-              {
-                getValidServiceDescriptions: () =>
-                  getExistingUnusedServiceDescriptions(getState),
-                getAllServiceNames: () => getAllServiceNames(getState),
-              },
-              dispatch
-            );
+            const serviceId = await addNewServiceCommand(dispatch, {
+              getValidServiceDescriptions: () =>
+                getExistingUnusedServiceDescriptions(getState)(
+                  getCredentialsStorage
+                ),
+              getAllServiceNames: () => getAllServiceNames(getState),
+            });
             if (serviceId) {
-              await addNewSearchLocation(
-                {
-                  getSearchLocationNames: () =>
-                    getAllSearchLocationNames(getState),
-                  getValidSearchLocationDescriptionsForService:
-                    getValidUnusedSearchLocationDescriptionsForService(
-                      getState
-                    ),
-                  getServiceDescriptionsBySearchLocationId:
-                    getAllServiceDescriptionsBySearchLocationId(getState),
-                  getConnectionDetails: validConnectionDetailsResolver,
-                  getValidUsedServiceDescriptions: () =>
-                    getExistingUsedServiceDescriptions(getState),
-                },
-                dispatch
-              )(serviceId);
+              await addNewSearchLocation(dispatch, {
+                getSearchLocationNames: () =>
+                  getAllSearchLocationNames(getState),
+                getValidSearchLocationDescriptionsForService:
+                  getValidUnusedSearchLocationDescriptionsForService(getState),
+                getServiceDescriptionsBySearchLocationId:
+                  getAllServiceDescriptionsBySearchLocationId(getState)(
+                    getCredentialsStorage
+                  ),
+                getConnectionDetails: validConnectionDetailsResolver,
+                getValidUsedServiceDescriptions: () =>
+                  getExistingUsedServiceDescriptions(getState)(
+                    getCredentialsStorage
+                  ),
+              })(serviceId);
             }
           })()
         );
@@ -603,14 +759,13 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.ADD_NEW_SERVICE,
       () => {
         return withErrorLogging(CommandId.ADD_NEW_SERVICE)(
-          addNewServiceCommand(
-            {
-              getValidServiceDescriptions: () =>
-                getExistingUnusedServiceDescriptions(getState),
-              getAllServiceNames: () => getAllServiceNames(getState),
-            },
-            dispatch
-          )
+          addNewServiceCommand(dispatch, {
+            getValidServiceDescriptions: () =>
+              getExistingUnusedServiceDescriptions(getState)(
+                getCredentialsStorage
+              ),
+            getAllServiceNames: () => getAllServiceNames(getState),
+          })
         );
       },
     ],
@@ -618,19 +773,20 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.ADD_NEW_SEARCH_LOCATION,
       (serviceNode?: ValidServiceNode) => {
         return withErrorLogging(CommandId.ADD_NEW_SEARCH_LOCATION)(
-          addNewSearchLocation(
-            {
-              getSearchLocationNames: () => getAllSearchLocationNames(getState),
-              getValidSearchLocationDescriptionsForService:
-                getValidUnusedSearchLocationDescriptionsForService(getState),
-              getServiceDescriptionsBySearchLocationId:
-                getAllServiceDescriptionsBySearchLocationId(getState),
-              getConnectionDetails: validConnectionDetailsResolver,
-              getValidUsedServiceDescriptions: () =>
-                getExistingUsedServiceDescriptions(getState),
-            },
-            dispatch
-          )(serviceNode)
+          addNewSearchLocation(dispatch, {
+            getSearchLocationNames: () => getAllSearchLocationNames(getState),
+            getValidSearchLocationDescriptionsForService:
+              getValidUnusedSearchLocationDescriptionsForService(getState),
+            getServiceDescriptionsBySearchLocationId:
+              getAllServiceDescriptionsBySearchLocationId(getState)(
+                getCredentialsStorage
+              ),
+            getConnectionDetails: validConnectionDetailsResolver,
+            getValidUsedServiceDescriptions: () =>
+              getExistingUsedServiceDescriptions(getState)(
+                getCredentialsStorage
+              ),
+          })(serviceNode)
         );
       },
     ],
@@ -657,11 +813,10 @@ export const activate: Extension['activate'] = async (context) => {
           isNonExistingLocationNode(locationNode)
             ? hideSearchLocation(dispatch)(locationNode)
             : deleteSearchLocation(
-                {
-                  getServiceDescriptionsBySearchLocationId:
-                    getAllServiceDescriptionsBySearchLocationId(getState),
-                },
-                dispatch
+                dispatch,
+                getAllServiceDescriptionsBySearchLocationId(getState)(
+                  getCredentialsStorage
+                )
               )(locationNode)
         );
       },
@@ -678,18 +833,12 @@ export const activate: Extension['activate'] = async (context) => {
     ],
     [
       CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
-      (parentNode: LocationNode) => {
+      (parentNode: LocationNode | TypeNode) => {
         return withErrorLogging(CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM)(
           addElementFromFileSystem(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
             dispatch,
-            parentNode
-          )
+            connectionConfigurationResolver
+          )(parentNode)
         );
       },
     ],
@@ -713,15 +862,12 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.CLEAR_SEARCH_LOCATION_FILTER_VALUE,
       (parentNode: FilterValueNode) => {
         return withErrorLogging(CommandId.CLEAR_SEARCH_LOCATION_FILTER_VALUE)(
-          clearSearchLocationFilterValueCommand(
-            {
-              getElementNamesFilterValue: getElementNamesFilterValue(getState),
-              getElementTypesFilterValue: getElementTypesFilterValue(getState),
-              getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
-              getAllElements: getAllElements(getState),
-            },
-            dispatch
-          )(parentNode)
+          clearSearchLocationFilterValueCommand(dispatch, {
+            getElementNamesFilterValue: getElementNamesFilterValue(getState),
+            getElementTypesFilterValue: getElementTypesFilterValue(getState),
+            getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
+            getAllElements: getAllElements(getState),
+          })(parentNode)
         );
       },
     ],
@@ -729,15 +875,12 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.EDIT_SEARCH_LOCATION_FILTER,
       (parentNode: FilterValueNode) => {
         return withErrorLogging(CommandId.EDIT_SEARCH_LOCATION_FILTER)(
-          editSearchLocationFilterTypeCommand(
-            {
-              getElementNamesFilterValue: getElementNamesFilterValue(getState),
-              getElementTypesFilterValue: getElementTypesFilterValue(getState),
-              getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
-              getAllElements: getAllElements(getState),
-            },
-            dispatch
-          )(parentNode)
+          editSearchLocationFilterTypeCommand(dispatch, {
+            getElementNamesFilterValue: getElementNamesFilterValue(getState),
+            getElementTypesFilterValue: getElementTypesFilterValue(getState),
+            getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
+            getAllElements: getAllElements(getState),
+          })(parentNode)
         );
       },
     ],
@@ -747,13 +890,10 @@ export const activate: Extension['activate'] = async (context) => {
         return withErrorLogging(
           CommandId.FILTER_SEARCH_LOCATION_BY_ELEMENT_NAME
         )(
-          filterSearchLocationByElementNameCommand(
-            {
-              getElementNamesFilterValue: getElementNamesFilterValue(getState),
-              getAllElements: getAllElements(getState),
-            },
-            dispatch
-          )(parentNode)
+          filterSearchLocationByElementNameCommand(dispatch, {
+            getElementNamesFilterValue: getElementNamesFilterValue(getState),
+            getAllElements: getAllElements(getState),
+          })(parentNode)
         );
       },
     ],
@@ -763,13 +903,10 @@ export const activate: Extension['activate'] = async (context) => {
         return withErrorLogging(
           CommandId.FILTER_SEARCH_LOCATION_BY_ELEMENT_TYPE
         )(
-          filterSearchLocationByElementTypeCommand(
-            {
-              getElementTypesFilterValue: getElementTypesFilterValue(getState),
-              getAllElements: getAllElements(getState),
-            },
-            dispatch
-          )(parentNode)
+          filterSearchLocationByElementTypeCommand(dispatch, {
+            getElementTypesFilterValue: getElementTypesFilterValue(getState),
+            getAllElements: getAllElements(getState),
+          })(parentNode)
         );
       },
     ],
@@ -779,13 +916,23 @@ export const activate: Extension['activate'] = async (context) => {
         return withErrorLogging(
           CommandId.FILTER_SEARCH_LOCATION_BY_ELEMENT_CCID
         )(
-          filterSearchLocationByElementCcidCommand(
-            {
-              getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
-              getAllElements: getAllElements(getState),
-            },
-            dispatch
-          )(parentNode)
+          filterSearchLocationByElementCcidCommand(dispatch, {
+            getElementCcidsFilterValue: getElementCcidsFilterValue(getState),
+            getAllElements: getAllElements(getState),
+          })(parentNode)
+        );
+      },
+    ],
+    [
+      CommandId.MOVE_ELEMENT,
+      (elementNode: ElementNode) => {
+        return withErrorLogging(CommandId.MOVE_ELEMENT)(
+          moveElementCommand(
+            dispatch,
+            connectionConfigurationResolver,
+            getEndevorInventory(getState),
+            getElementsUpTheMapFilterValue(getState)
+          )(elementNode)
         );
       },
     ],
@@ -794,13 +941,8 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.GENERATE_ELEMENT)(
           generateElementInPlaceCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            dispatch
+            dispatch,
+            connectionConfigurationResolver
           )(elementNode)
         );
       },
@@ -810,16 +952,9 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.GENERATE_ELEMENT_WITH_COPY_BACK)(
           generateElementWithCopyBackCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
             dispatch,
-            elementNode,
-            false
-          )
+            connectionConfigurationResolver
+          )(elementNode, { noSource: false })
         );
       },
     ],
@@ -828,16 +963,28 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.GENERATE_ELEMENT_WITH_NO_SOURCE)(
           generateElementWithCopyBackCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
             dispatch,
-            elementNode,
-            true
-          )
+            connectionConfigurationResolver
+          )(elementNode, { noSource: true })
+        );
+      },
+    ],
+    [
+      CommandId.SHOW_REPORT,
+      (reportNode: ReportNode) => {
+        return withErrorLogging(CommandId.SHOW_REPORT)(
+          (async () => {
+            if (
+              !reportNode.parent.serviceId ||
+              !reportNode.parent.searchLocationId
+            ) {
+              return;
+            }
+            printEndevorReportCommand(
+              reportNode.parent.serviceId,
+              reportNode.parent.searchLocationId
+            )(reportNode.objectName)(reportNode.id);
+          })()
         );
       },
     ],
@@ -853,14 +1000,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.RETRIEVE_ELEMENT,
       (elementNode?: ElementNode, nodes?: ElementNode[]) => {
         return withErrorLogging(CommandId.RETRIEVE_ELEMENT)(
-          retrieveElementCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            dispatch,
+          retrieveElementCommand(dispatch, connectionConfigurationResolver)(
             elementNode,
             nodes
           )
@@ -871,14 +1011,7 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.RETRIEVE_WITH_DEPENDENCIES,
       (elementNode?: ElementNode, nodes?: ElementNode[]) => {
         return withErrorLogging(CommandId.RETRIEVE_WITH_DEPENDENCIES)(
-          retrieveWithDependencies(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            dispatch,
+          retrieveWithDependencies(dispatch, connectionConfigurationResolver)(
             elementNode,
             nodes
           )
@@ -890,16 +1023,9 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.QUICK_EDIT_ELEMENT)(
           editElementCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            {
-              dispatch,
-              getTempEditFolderUri,
-            }
+            dispatch,
+            connectionConfigurationResolver,
+            getTempEditFolderUri
           )(elementNode)
         );
       },
@@ -917,13 +1043,8 @@ export const activate: Extension['activate'] = async (context) => {
       (comparedElementUri?: vscode.Uri) => {
         return withErrorLogging(CommandId.UPLOAD_COMPARED_ELEMENT)(
           applyDiffEditorChanges(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
             dispatch,
+            connectionConfigurationResolver,
             comparedElementUri
           )
         );
@@ -934,13 +1055,8 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.SIGN_OUT_ELEMENT)(
           signOutElementCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            dispatch
+            dispatch,
+            connectionConfigurationResolver
           )(elementNode)
         );
       },
@@ -950,13 +1066,8 @@ export const activate: Extension['activate'] = async (context) => {
       (elementNode: ElementNode) => {
         return withErrorLogging(CommandId.SIGN_IN_ELEMENT)(
           signInElementCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
-            dispatch
+            dispatch,
+            connectionConfigurationResolver
           )(elementNode)
         );
       },
@@ -1026,11 +1137,9 @@ export const activate: Extension['activate'] = async (context) => {
       (serviceNode: ServiceNode) => {
         return withErrorLogging(CommandId.EDIT_SERVICE)(
           editServiceCommand(
-            {
-              getServiceDetails: getEndevorConnectionDetails(getState),
-              getServiceCredentials: getCredential(getState),
-            },
-            dispatch
+            dispatch,
+            getEndevorConnectionDetails(getState),
+            getCredential(getState)(getCredentialsStorage)
           )(serviceNode)
         );
       },
@@ -1040,8 +1149,8 @@ export const activate: Extension['activate'] = async (context) => {
       (invalidLocationNode: InvalidLocationNode) => {
         return withErrorLogging(CommandId.EDIT_CONNECTION_DETAILS)(
           editConnectionDetailsCommand(
-            getEndevorConnectionDetails(getState),
-            dispatch
+            dispatch,
+            getEndevorConnectionDetails(getState)
           )(invalidLocationNode)
         );
       },
@@ -1050,7 +1159,10 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.SHOW_FIRST_FOUND,
       (locationNode: LocationNode) => {
         return withErrorLogging(CommandId.SHOW_FIRST_FOUND)(
-          toggleMapView(dispatch)(true)(locationNode)
+          toggleFilterValue(dispatch)({
+            type: ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER,
+            value: true,
+          })(locationNode)
         );
       },
     ],
@@ -1058,7 +1170,32 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.SHOW_IN_PLACE,
       (locationNode: LocationNode) => {
         return withErrorLogging(CommandId.SHOW_IN_PLACE)(
-          toggleMapView(dispatch)(false)(locationNode)
+          toggleFilterValue(dispatch)({
+            type: ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER,
+            value: false,
+          })(locationNode)
+        );
+      },
+    ],
+    [
+      CommandId.SHOW_EMPTY_TYPES,
+      (locationNode: LocationNode) => {
+        return withErrorLogging(CommandId.SHOW_EMPTY_TYPES)(
+          toggleFilterValue(dispatch)({
+            type: ElementFilterType.EMPTY_TYPES_FILTER,
+            value: true,
+          })(locationNode)
+        );
+      },
+    ],
+    [
+      CommandId.HIDE_EMPTY_TYPES,
+      (locationNode: LocationNode) => {
+        return withErrorLogging(CommandId.HIDE_EMPTY_TYPES)(
+          toggleFilterValue(dispatch)({
+            type: ElementFilterType.EMPTY_TYPES_FILTER,
+            value: false,
+          })(locationNode)
         );
       },
     ],
@@ -1067,8 +1204,8 @@ export const activate: Extension['activate'] = async (context) => {
       (invalidLocationNode: InvalidLocationNode) => {
         return withErrorLogging(CommandId.TEST_CONNECTION_DETAILS)(
           testConnectionDetailsCommand(
-            getEndevorConnectionDetails(getState),
-            dispatch
+            dispatch,
+            getEndevorConnectionDetails(getState)
           )(invalidLocationNode)
         );
       },
@@ -1077,12 +1214,20 @@ export const activate: Extension['activate'] = async (context) => {
       CommandId.GENERATE_SUBSYSTEM_ELEMENTS,
       (subSystemNode: SubSystemNode) => {
         return withErrorLogging(CommandId.GENERATE_SUBSYSTEM_ELEMENTS)(
-          generateSubsystemElementsCommand(dispatch, {
-            getConnectionDetails: validConnectionDetailsResolver,
-            getCredential: validCredentialsResolver,
-            getSearchLocation: searchLocationResolver,
-            getEndevorConfiguration: endevorConfigurationResolver,
-          })(subSystemNode)
+          generateSubsystemElementsCommand(
+            dispatch,
+            connectionConfigurationResolver
+          )(subSystemNode)
+        );
+      },
+    ],
+    [
+      CommandId.VIEW_TYPE_DETAILS,
+      (typeNode: TypeNode) => {
+        return withErrorLogging(CommandId.VIEW_TYPE_DETAILS)(
+          Promise.resolve(
+            viewTypeDetails(dispatch, connectionConfigurationResolver)(typeNode)
+          )
         );
       },
     ],
@@ -1093,24 +1238,17 @@ export const activate: Extension['activate'] = async (context) => {
       apply: (document) => {
         return withErrorLogging(CommandId.UPLOAD_ELEMENT)(
           uploadElementCommand(
-            {
-              getConnectionDetails: validConnectionDetailsResolver,
-              getEndevorConfiguration: endevorConfigurationResolver,
-              getCredential: validCredentialsResolver,
-              getSearchLocation: searchLocationResolver,
-            },
             dispatch,
-            document.uri
-          )
+            connectionConfigurationResolver
+          )(document.uri)
         );
       },
       isApplicable: (document) => {
         const uriValidationResult = isEditedElementUri(document.uri);
-        if (uriValidationResult.valid) return true;
-        logger.trace(
-          `Element uri is not valid for uploading elements, because of: ${uriValidationResult.message}`
-        );
-        return false;
+        return uriValidationResult.valid;
+        // logger.trace(
+        //   `Element uri is not valid for uploading elements, because of: ${uriValidationResult.message}`
+        // );
       },
     },
   ];
@@ -1133,7 +1271,22 @@ export const activate: Extension['activate'] = async (context) => {
       editorUri &&
       editorUri.scheme === Schemas.ELEMENT_CHANGE_LVL
     ) {
-      decorate(getState, activeEditor, editorUri);
+      const elementQuery = fromElementChangeUri(editorUri)(editorUri.scheme);
+      if (isError(elementQuery)) {
+        const error = elementQuery;
+        const elementName = path.basename(editorUri.fsPath);
+        logger.error(
+          `Unable to show history for element ${elementName}`,
+          `Unable to show history for element ${elementName} because of ${error.message}.`
+        );
+        return;
+      }
+      decorate(
+        getElementHistoryFromUri,
+        activeEditor,
+        editorUri,
+        elementQuery.vvll
+      );
     }
   };
 
@@ -1144,36 +1297,31 @@ export const activate: Extension['activate'] = async (context) => {
       canSelectMany: true,
     }),
     elementHistoryTreeView,
+    vscode.window.createTreeView(ACTIVITY_VIEW_ID, {
+      treeDataProvider: activityTreeProvider,
+    }),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.TREE_ELEMENT,
-      elementContentProvider({
-        getConnectionDetails: validConnectionDetailsResolver,
-        getEndevorConfiguration: endevorConfigurationResolver,
-        getCredential: validCredentialsResolver,
-        getSearchLocation: searchLocationResolver,
-      })
+      elementContentProvider(dispatch, connectionConfigurationResolver)
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.ELEMENT_LISTING,
-      listingContentProvider({
-        getConnectionDetails: validConnectionDetailsResolver,
-        getEndevorConfiguration: endevorConfigurationResolver,
-        getCredential: validCredentialsResolver,
-        getSearchLocation: searchLocationResolver,
-      })
-    ),
-    vscode.workspace.registerTextDocumentContentProvider(
-      Schemas.ELEMENT_HISTORY,
-      historyContentProvider({
-        getConnectionDetails: validConnectionDetailsResolver,
-        getCredential: validCredentialsResolver,
-        getSearchLocation: searchLocationResolver,
-        getEndevorConfiguration: endevorConfigurationResolver,
-      })
+      listingContentProvider(dispatch, connectionConfigurationResolver)
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.ELEMENT_CHANGE_LVL,
-      changeLvlContentProvider(dispatch, getElement(getState))
+      changeLvlContentProvider(
+        {
+          getHistoryData: getElementHistoryFromUri,
+          logActivity: logActivityFromUri,
+          getConfigurations: getConnectionDetailsFromUri(
+            connectionConfigurationResolver
+          ),
+        },
+        refreshElementHistory,
+        logger,
+        Schemas.ELEMENT_CHANGE_LVL
+      )
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.READ_ONLY_FILE,
@@ -1181,11 +1329,11 @@ export const activate: Extension['activate'] = async (context) => {
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.READ_ONLY_REPORT,
-      resultTableContentProvider(dispatch)
+      resultTableContentProvider(dispatch, connectionConfigurationResolver)
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       Schemas.READ_ONLY_GENERIC_REPORT,
-      endevorReportContentProvider
+      endevorReportContentProvider(connectionConfigurationResolver)
     ),
     ...commands.map(([id, command]) =>
       vscode.commands.registerCommand(id, command)
@@ -1303,17 +1451,13 @@ export const activate: Extension['activate'] = async (context) => {
           () => {
             return withErrorLogging(CommandId.SYNC_WORKSPACE)(
               syncWorkspace(
-                {
-                  getValidServiceDescriptions: () =>
-                    getAllExistingServiceDescriptions(getState),
-                  getValidSearchLocationDescriptions: () =>
-                    getAllValidSearchLocationDescriptions(getState),
-                  getConnectionDetails: validConnectionDetailsResolver,
-                  getEndevorConfiguration: endevorConfigurationResolver,
-                  getCredential: validCredentialsResolver,
-                  getSearchLocation: searchLocationResolver,
-                },
                 scmDispatch,
+                connectionConfigurationResolver,
+                () =>
+                  getAllExistingServiceDescriptions(getState)(
+                    getCredentialsStorage
+                  ),
+                () => getAllValidSearchLocationDescriptions(getState),
                 () => getLastUsedServiceId(getScmState),
                 () => getLastUsedSearchLocationId(getScmState)
               )
@@ -1325,17 +1469,13 @@ export const activate: Extension['activate'] = async (context) => {
           () => {
             return withErrorLogging(CommandId.PULL_FROM_ENDEVOR)(
               pullFromEndevorCommand(
-                {
-                  getValidServiceDescriptions: () =>
-                    getAllExistingServiceDescriptions(getState),
-                  getValidSearchLocationDescriptions: () =>
-                    getAllValidSearchLocationDescriptions(getState),
-                  getConnectionDetails: validConnectionDetailsResolver,
-                  getEndevorConfiguration: endevorConfigurationResolver,
-                  getCredential: validCredentialsResolver,
-                  getElementLocation: searchLocationResolver,
-                },
                 scmDispatch,
+                connectionConfigurationResolver,
+                () =>
+                  getAllExistingServiceDescriptions(getState)(
+                    getCredentialsStorage
+                  ),
+                () => getAllValidSearchLocationDescriptions(getState),
                 () => getLastUsedServiceId(getScmState),
                 () => getLastUsedSearchLocationId(getScmState)
               )
@@ -1453,6 +1593,12 @@ export const activate: Extension['activate'] = async (context) => {
     fileExtensionResolution: getFileExtensionResolution(),
     workspaceSync: isWorkspaceSync(),
   });
+
+  return makeExternalEndevorApi(
+    dispatch,
+    connectionConfigurationResolver,
+    getTempEditFolderUri
+  )(invalidatedElementsEmitter);
 };
 
 export const deactivate: Extension['deactivate'] = () => {

@@ -32,6 +32,12 @@ export const getWorkspaceUri = async (): Promise<vscode.Uri | undefined> => {
   return openedWorkspace?.uri;
 };
 
+export const getOpenedWorkspaceFolders = async (): Promise<
+  ReadonlyArray<vscode.WorkspaceFolder> | undefined
+> => {
+  return vscode.workspace.workspaceFolders;
+};
+
 export const chooseFileUriFromFs = async (): Promise<
   vscode.Uri | undefined
 > => {

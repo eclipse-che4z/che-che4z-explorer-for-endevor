@@ -16,9 +16,13 @@ import {
   askForChangeControlValue,
   dialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
-import { generateElementInPlace } from '../../endevor';
-import { logger, reporter } from '../../globals';
-import { formatWithNewLines } from '../../utils';
+import {
+  fetchElement,
+  generateElementInPlaceAndLogActivity,
+  getProcessorGroupsByTypeAndLogActivity,
+} from '../../api/endevor';
+import { reporter } from '../../globals';
+import { formatWithNewLines, isError } from '../../utils';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { printListingCommand } from './printListing';
 import { Action, Actions } from '../../store/_doc/Actions';
@@ -27,45 +31,83 @@ import {
   Element,
   GenerateResponse,
   ErrorResponseType,
-  Service,
   Value,
 } from '@local/endevor/_doc/Endevor';
 import {
+  FetchElementCommandCompletedStatus,
   GenerateElementInPlaceCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
 import { printEndevorReportCommand } from '../printEndevorReport';
 import {
   askForListing,
   askForListingOrExecutionReport,
   askForExecutionReport,
 } from '../../dialogs/listings/showListingDialogs';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import {
+  askForProcessorGroup,
+  pickedChoiceLabel,
+} from '../../dialogs/processor-groups/processorGroupsDialogs';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 type SelectedElementNode = ElementNode;
 
 export const generateElementInPlaceCommand =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async (elementNode: SelectedElementNode): Promise<void> => {
+    const logger = createEndevorLogger({
+      serviceId: elementNode.serviceId,
+      searchLocationId: elementNode.searchLocationId,
+    });
     const element = elementNode.element;
-    logger.trace(
+    logger.traceWithDetails(
       `Generate command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${elementNode.name}.`
     );
-    await generateSingleElement(configurations, dispatch)(elementNode);
+    await generateSingleElement(
+      dispatch,
+      getConnectionConfiguration
+    )(elementNode);
   };
 
 const generateSingleElement =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async ({
     name,
@@ -76,12 +118,37 @@ const generateSingleElement =
     serviceId,
     searchLocationId,
   }: ElementNode): Promise<void> => {
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
+    const { service, searchLocation } = connectionParams;
+    let actionProcGroup = await askForProcessorGroup(
+      logger,
+      {
+        ...searchLocation,
+        type: element.type,
+      },
+      getProcessorGroupsByTypeAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+        })
+      )(service),
+      element.processorGroup
+    );
+    if (!actionProcGroup) {
+      logger.error(`Generation for the element ${element.name} was cancelled.`);
+      return;
+    }
+    actionProcGroup =
+      actionProcGroup !== pickedChoiceLabel ? actionProcGroup : undefined;
+
     const actionControlValue = await askForChangeControlValue({
       ccid: searchLocation.ccid,
       comment: searchLocation.comment,
@@ -101,20 +168,20 @@ const generateSingleElement =
       element,
       timestamp,
     };
-    const generateResponse = await complexGenerate(service)(configuration)(
-      element
-    )(actionControlValue);
-    const executionReportId =
-      generateResponse.details?.reportIds?.executionReportId;
+    const generateResponse = await complexGenerate(logger)(dispatch)(
+      serviceId,
+      searchLocationId
+    )(service)(element)(actionProcGroup)(actionControlValue);
+    const executionReportId = generateResponse.details?.reportIds?.C1MSGS1;
     if (isErrorEndevorResponse(generateResponse)) {
       const errorResponse = generateResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to generate the element ${element.environment}/${
+        `Unable to generate element ${element.environment}/${
           element.stageNumber
         }/${element.system}/${element.subSystem}/${element.type}/${
           element.name
-        } because of an error:${formatWithNewLines(
+        } because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -133,7 +200,7 @@ const generateSingleElement =
           await printListingCommand(updatedElementNode);
           if (executionReportId) {
             const dialogResult = await askForExecutionReport(
-              `The element ${name} is generated unsuccessfully. Please review the listing or execution report.`,
+              `Element ${name} is generated unsuccessfully. Please review the listing or execution report.`,
               MessageLevel.ERROR
             );
             if (dialogResult.printExecutionReport) {
@@ -142,13 +209,14 @@ const generateSingleElement =
                 context:
                   TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
               });
-              await printEndevorReportCommand(element.name)(configuration)(
-                service
-              )(executionReportId);
+              await printEndevorReportCommand(
+                serviceId,
+                searchLocationId
+              )(element.name)(executionReportId);
             }
           } else {
-            logger.error(
-              `The element ${name} is generated unsuccessfully. Please review the listing.`
+            logger.errorWithDetails(
+              `Element ${name} is generated unsuccessfully. Please review the listing.`
             );
           }
           // consider errors in the element processing as a success too (a part of the expected developer workflow)
@@ -159,8 +227,8 @@ const generateSingleElement =
           return;
         }
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR:
-          logger.error(
-            `Unable to generate the element ${name} because it is signed out to somebody else or not at all.`
+          logger.errorWithDetails(
+            `Unable to generate element ${name} because it is signed out to somebody else or not at all.`
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
@@ -173,7 +241,9 @@ const generateSingleElement =
           return;
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(`Endevor credentials are incorrect or expired.`);
+          logger.errorWithDetails(
+            `Endevor credentials are incorrect or expired.`
+          );
           // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
@@ -186,7 +256,7 @@ const generateSingleElement =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(`Unable to connect to Endevor Web Services.`);
+          logger.errorWithDetails(`Unable to connect to Endevor Web Services.`);
           // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
@@ -198,12 +268,9 @@ const generateSingleElement =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR: {
-          logger.trace(
-            `Unable to generate the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
-          );
           if (executionReportId) {
             const dialogResult = await askForExecutionReport(
-              `Unable to generate the element ${name}. Would you like to see the execution report?`
+              `Unable to generate element ${name}. Would you like to see the execution report?`
             );
             if (dialogResult.printExecutionReport) {
               reporter.sendTelemetryEvent({
@@ -211,9 +278,10 @@ const generateSingleElement =
                 context:
                   TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
               });
-              await printEndevorReportCommand(element.name)(configuration)(
-                service
-              )(executionReportId);
+              await printEndevorReportCommand(
+                serviceId,
+                searchLocationId
+              )(element.name)(executionReportId);
             }
           }
           reporter.sendTelemetryEvent({
@@ -231,11 +299,11 @@ const generateSingleElement =
     }
     const resultWithWarnings =
       generateResponse.details && generateResponse.details.returnCode >= 4;
-    const message = `The element ${name} is generated ${
+    const message = `Element ${name} is generated ${
       resultWithWarnings ? 'with warnings' : 'successfully'
     }`;
-    logger.trace(
-      `The element ${element.environment}/${element.stageNumber}/${
+    logger.traceWithDetails(
+      `Element ${element.environment}/${element.stageNumber}/${
         element.system
       }/${element.subSystem}/${element.type}/${name} is generated ${
         resultWithWarnings ? 'with warnings' : 'successfully'
@@ -254,6 +322,9 @@ const generateSingleElement =
         lastActionCcid: actionControlValue.ccid.toUpperCase(),
       },
     });
+    fetchGeneratedElement(dispatch)(serviceId, searchLocationId)(service)(
+      element
+    );
     const dialogResult = executionReportId
       ? await askForListingOrExecutionReport(
           `${message}. Would you like to see the listing or execution report?`,
@@ -271,9 +342,10 @@ const generateSingleElement =
         type: TelemetryEvents.COMMAND_PRINT_ENDEVOR_REPORT_CALL,
         context: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
       });
-      await printEndevorReportCommand(element.name)(configuration)(service)(
-        executionReportId
-      );
+      await printEndevorReportCommand(
+        serviceId,
+        searchLocationId
+      )(element.name)(executionReportId);
     }
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
@@ -282,16 +354,25 @@ const generateSingleElement =
   };
 
 const complexGenerate =
-  (service: Service) =>
-  (configuration: Value) =>
+  (logger: EndevorLogger) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
+  (processorGroup: Value | undefined) =>
   async (
     actionChangeControlValue: ActionChangeControlValue
   ): Promise<GenerateResponse> => {
     const generateResponse = await withNotificationProgress(
-      `Generating the element: ${element.name}`
+      `Generating element ${element.name} ...`
     )((progressReporter) =>
-      generateElementInPlace(progressReporter)(service)(configuration)(element)(
+      generateElementInPlaceAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)(processorGroup)(
         actionChangeControlValue
       )()
     );
@@ -299,8 +380,8 @@ const complexGenerate =
       const errorResponse = generateResponse;
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
-          logger.warn(
-            `The element ${element.name} requires an override sign out action to generate the element.`
+          logger.warnWithDetails(
+            `Element ${element.name} requires an override sign out action to generate the element.`
           );
           const overrideSignout = await askToOverrideSignOutForElements([
             element.name,
@@ -314,11 +395,19 @@ const complexGenerate =
             return errorResponse;
           }
           const generateWithOverrideSignOut = await withNotificationProgress(
-            `Generating with override signout of the element: ${element.name}`
+            `Generating with override signout of element ${element.name} ...`
           )((progressReporter) =>
-            generateElementInPlace(progressReporter)(service)(configuration)(
-              element
-            )(actionChangeControlValue)({ overrideSignOut: true })
+            generateElementInPlaceAndLogActivity(
+              setLogActivityContext(dispatch, {
+                serviceId,
+                searchLocationId,
+                element,
+              })
+            )(progressReporter)(service)(element)(processorGroup)(
+              actionChangeControlValue
+            )({
+              overrideSignOut: true,
+            })
           );
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
@@ -332,4 +421,50 @@ const complexGenerate =
       }
     }
     return generateResponse;
+  };
+
+const fetchGeneratedElement =
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  async (element: Element): Promise<void> => {
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
+    const elementFetchResponse = await withNotificationProgress(
+      `Fetching generated element(s) ...`
+    )((progressReporter) => {
+      return fetchElement(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element);
+    });
+
+    if (isError(elementFetchResponse)) {
+      const error = elementFetchResponse;
+      logger.errorWithDetails(error.name, error.message);
+      reporter.sendTelemetryEvent({
+        type: TelemetryEvents.ERROR,
+        // TODO: specific completed status?
+        status: FetchElementCommandCompletedStatus.GENERIC_ERROR,
+        errorContext: TelemetryEvents.COMMAND_FETCH_ELEMENT_COMPLETED,
+        error,
+      });
+      return;
+    }
+    dispatch({
+      type: Actions.SELECTED_ELEMENTS_FETCHED,
+      serviceId,
+      searchLocationId,
+      elements: elementFetchResponse,
+    });
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_FETCH_ELEMENT_COMPLETED,
+      context: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED,
+      status: FetchElementCommandCompletedStatus.SUCCESS,
+    });
   };

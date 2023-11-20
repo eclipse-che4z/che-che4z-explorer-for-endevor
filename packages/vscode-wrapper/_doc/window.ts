@@ -46,7 +46,7 @@ export type PromptInputOptions = Readonly<
 export type QuickPickOptions = Readonly<
   Partial<{
     title: string;
-    placeholder: string;
+    placeHolder: string;
     ignoreFocusOut: boolean;
     canPickMany: boolean;
   }>
@@ -57,6 +57,7 @@ export type Progress = Readonly<
 >;
 export type ProgressReporter = {
   report(value: Progress): void;
+  message?: string;
 };
 export type ProgressingFunction<R> = (
   progress: ProgressReporter,

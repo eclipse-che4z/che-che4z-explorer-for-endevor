@@ -28,6 +28,7 @@ import { FilterNodeType, FilterValueNode } from '../../../tree/_doc/FilterTree';
 
 export const clearSearchLocationFilterValueCommand =
   (
+    dispatch: (action: Action) => Promise<void>,
     configurations: {
       getElementNamesFilterValue: (
         serviceId: EndevorId
@@ -46,8 +47,7 @@ export const clearSearchLocationFilterValueCommand =
             elements: ReadonlyArray<CachedElement>;
           }>
         | undefined;
-    },
-    dispatch: (action: Action) => Promise<void>
+    }
   ) =>
   async (node: FilterValueNode): Promise<void> => {
     const serviceName = node.serviceName;

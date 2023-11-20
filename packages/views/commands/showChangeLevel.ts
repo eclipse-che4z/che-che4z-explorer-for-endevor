@@ -12,20 +12,21 @@
  */
 
 import { Uri } from 'vscode';
-import { logger } from '../../globals';
-import { HistoryViewModes } from '../../tree/providerChanges';
-import { ChangeLevelNode } from '../../tree/_doc/ChangesTree';
+import { Logger } from '@local/extension/_doc/Logger';
+import { ChangeLevelNode, HistoryViewModes } from '../tree/_doc/ChangesTree';
+import { isError } from '../utils';
 import {
   fromElementChangeUri,
   toElementChangeUri,
-} from '../../uri/elementHistoryUri';
-import { isError } from '../../utils';
+} from '../uri/elementHistoryUri';
 
 export const showChangeLevelCommand = async (
+  logger: Logger,
   refreshElementHistoryTree: (uri: Uri, mode: HistoryViewModes) => void,
-  changeNode: ChangeLevelNode
+  changeNode: ChangeLevelNode,
+  uriScheme: string
 ) => {
-  const uriParams = fromElementChangeUri(changeNode.uri);
+  const uriParams = fromElementChangeUri(changeNode.uri)(uriScheme);
   if (isError(uriParams)) {
     const error = uriParams;
     logger.error(
@@ -34,16 +35,14 @@ export const showChangeLevelCommand = async (
     );
     return;
   }
-  const { serviceId, searchLocationId, element, fragment } = uriParams;
+  const element = uriParams.element;
   logger.trace(
     `Show Change Level command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}, version ${changeNode.vvll}.`
   );
   const changeLvlUri = toElementChangeUri({
-    serviceId,
-    searchLocationId,
-    element,
+    ...uriParams,
     vvll: changeNode.vvll,
-  })(fragment);
+  })(uriScheme)(Date.now().toString());
   if (isError(changeLvlUri)) {
     const error = changeLvlUri;
     logger.error(

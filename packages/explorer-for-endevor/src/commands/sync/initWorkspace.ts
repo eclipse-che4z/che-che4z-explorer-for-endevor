@@ -27,7 +27,7 @@ import { Uri } from 'vscode';
 import {
   InitWorkspaceCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 
 export const initWorkspace = async (): Promise<void> => {

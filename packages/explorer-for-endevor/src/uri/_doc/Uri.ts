@@ -16,16 +16,14 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
-  Service,
   SubSystemMapPath,
   Value,
 } from '@local/endevor/_doc/Endevor';
-import { EndevorId } from '../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 
 export const enum Schemas {
   TREE_ELEMENT = 'e4eElement',
   ELEMENT_LISTING = 'e4eListing',
-  ELEMENT_HISTORY = 'e4eHistory',
   ELEMENT_CHANGE_LVL = 'e4eChangeLvl',
   FILE = 'file',
   READ_ONLY_FILE = 'e4eReadonlyFile',
@@ -94,11 +92,9 @@ export type FragmentType = {
 };
 
 export type ActionReportUriQuery = Readonly<{
-  service: Service;
-  configuration: Value;
-  reportId: Value;
-  objectName: Value;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
+  reportId: Value;
+  objectName: Value;
   ccid: Value;
 }>;

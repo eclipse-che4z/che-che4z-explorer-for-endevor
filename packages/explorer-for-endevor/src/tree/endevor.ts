@@ -22,98 +22,118 @@ import { isError } from '../utils';
 import { logger, reporter } from '../globals';
 import {
   CachedElement,
+  CachedEndevorInventory,
+  ElementFilter,
+  ElementFilterType,
   ElementsPerRoute,
   EndevorId,
 } from '../store/_doc/v2/Store';
-import { TelemetryEvents } from '../_doc/telemetry/Telemetry';
-import { fromSubsystemMapPathId } from '../store/utils';
-import {
-  ChangeLevelNode,
-  ChangeLevels,
-  HistoryLine,
-  HistoryLines,
-} from './_doc/ChangesTree';
-import { Uri } from 'vscode';
+import { TelemetryEvents } from '../telemetry/_doc/Telemetry';
+import { fromSubsystemMapPathId, typeMatchesFilter } from '../store/utils';
 import { toElementTooltip } from './utils';
+import { SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 
 type ElementsTreeOptions = Readonly<{
   withElementsUpTheMap: boolean;
   showEmptyRoutes: boolean;
+  showEmptyTypes: boolean;
 }>;
-
-export const HISTORY_LINE_PATTERN =
-  '^\\s*(%{0,1})\\+([0-9]{4})(?:-| )([0-9]{4}|\\s{4}) (.*)$';
-const SOURCE_CHANGE_LINE_PATTERN =
-  '^\\s*([0-9]{4})\\s+([A-Z]{0,1})\\s+(.{1,8})\\s+(\\S{7})' +
-  '\\s+(\\S{5})\\s+([0-9]+) (.{1,12}) (.*)';
-const SOURCE_CHANGE_LINE_HEADER =
-  'VVLL SYNC USER     DATE    TIME     STMTS CCID         COMMENT';
 
 /**
  * Converts list element result into a tree for tree view
  */
 export const buildTree =
   (serviceId: EndevorId, searchLocationId: EndevorId) =>
-  (elementsPerRoute: ElementsPerRoute) =>
-  ({ withElementsUpTheMap, showEmptyRoutes }: ElementsTreeOptions): Systems => {
+  (
+    elementsPerRoute: ElementsPerRoute,
+    endevorInventory: CachedEndevorInventory,
+    elementFilters: ReadonlyArray<ElementFilter>
+  ) =>
+  ({
+    withElementsUpTheMap,
+    showEmptyRoutes,
+    showEmptyTypes,
+  }: ElementsTreeOptions): Systems => {
     let overallElementsInPlaceCount = 0;
     let overallElementsUpTheMapCount = 0;
+    const addTypeNode = (
+      name: string,
+      subsystemNode: SubSystemNode
+    ): TypeNode => {
+      const existingNode = subsystemNode.children.find(
+        (node) => node.name === name
+      );
+      if (existingNode) return existingNode;
+      const node: TypeNode = {
+        type: 'TYPE',
+        name,
+        parent: subsystemNode,
+        elements: [],
+        map: withElementsUpTheMap
+          ? {
+              type: 'MAP',
+              name: '[MAP]',
+              elements: [],
+            }
+          : undefined,
+      };
+      subsystemNode.children.push(node);
+      return node;
+    };
+    const addSystemNode = (name: string, systems: Systems): SystemNode => {
+      const existingSystem = systems.find((system) => system.name === name);
+      const systemNode: SystemNode = existingSystem ?? {
+        type: 'SYS',
+        name,
+        children: [],
+      };
+      if (!existingSystem) systems.push(systemNode);
+      return systemNode;
+    };
+    const addSubSystemNode = (
+      name: string,
+      systemNode: SystemNode,
+      subSystemMapPath: SubSystemMapPath
+    ): SubSystemNode => {
+      const existingSubsystem = systemNode.children.find(
+        (treeSubsystem) => treeSubsystem.name === name
+      );
+      const subsystemNode: SubSystemNode = existingSubsystem ?? {
+        type: 'SUB',
+        name,
+        parent: systemNode,
+        children: [],
+        subSystemMapPath,
+        serviceId,
+        searchLocationId,
+      };
+      if (!existingSubsystem) {
+        systemNode.children.push(subsystemNode);
+      }
+      return subsystemNode;
+    };
     const elementsTree = Object.entries(elementsPerRoute)
       .filter(([, elements]) => {
         if (elements.length === 0) {
-          if (showEmptyRoutes) return true;
-          return false;
+          return showEmptyRoutes;
         }
         return true;
       })
       .reduce((acc: Systems, [searchSubsystem, elements]) => {
         const parsedSearchSubsystem = fromSubsystemMapPathId(searchSubsystem);
         if (!parsedSearchSubsystem) return acc;
-        const existingSystem = acc.find(
-          (system) => system.name === parsedSearchSubsystem.system
+        const systemNode = addSystemNode(parsedSearchSubsystem.system, acc);
+
+        const subsystemNode = addSubSystemNode(
+          parsedSearchSubsystem.subSystem,
+          systemNode,
+          parsedSearchSubsystem
         );
-        const systemNode: SystemNode = existingSystem ?? {
-          type: 'SYS',
-          name: parsedSearchSubsystem.system,
-          children: [],
-        };
-        if (!existingSystem) acc.push(systemNode);
-        const subsystemNode: SubSystemNode = {
-          type: 'SUB',
-          name: parsedSearchSubsystem.subSystem,
-          parent: systemNode,
-          children: [],
-          subSystemMapPath: parsedSearchSubsystem,
-          serviceId,
-          searchLocationId,
-        };
-        systemNode.children.push(subsystemNode);
-        const addTypeNode = (name: string): TypeNode => {
-          const existingNode = subsystemNode.children.find(
-            (node) => node.name === name
-          );
-          if (existingNode) return existingNode;
-          const node: TypeNode = {
-            type: 'TYPE',
-            name,
-            parent: subsystemNode,
-            elements: [],
-            map: withElementsUpTheMap
-              ? {
-                  type: 'MAP',
-                  name: '[MAP]',
-                  elements: [],
-                }
-              : undefined,
-          };
-          subsystemNode.children.push(node);
-          return node;
-        };
         const addElement = (cachedElement: CachedElement): void => {
           const element = cachedElement.element;
           if (cachedElement.elementIsUpTheMap && withElementsUpTheMap) {
             overallElementsUpTheMapCount++;
-            const typeNode = addTypeNode(element.type);
+            const typeNode = addTypeNode(element.type, subsystemNode);
             const elementName = element.name;
             const elementNode = toUpTheMapElementNode(
               serviceId,
@@ -132,7 +152,7 @@ export const buildTree =
             return;
           } else {
             overallElementsInPlaceCount++;
-            const typeNode = addTypeNode(element.type);
+            const typeNode = addTypeNode(element.type, subsystemNode);
             const elementNode = toInPlaceElementNode(
               serviceId,
               searchLocationId
@@ -150,6 +170,46 @@ export const buildTree =
         elements.forEach(addElement);
         return acc;
       }, []);
+
+    if (showEmptyTypes && endevorInventory.startEnvironmentStage) {
+      const startEnvironmentStage =
+        endevorInventory.environmentStages[
+          endevorInventory.startEnvironmentStage
+        ];
+      if (startEnvironmentStage?.systems) {
+        Object.entries(startEnvironmentStage.systems).forEach(
+          ([, cachedSystem]) => {
+            const systemNode = addSystemNode(
+              cachedSystem.system.system,
+              elementsTree
+            );
+            Object.entries(cachedSystem.subsystems).forEach(
+              ([subsystemPath, subsystem]) => {
+                const subSystemMapPath = fromSubsystemMapPathId(subsystemPath);
+                if (!subSystemMapPath) {
+                  return;
+                }
+                const subsystemNode = addSubSystemNode(
+                  subsystem.subSystem,
+                  systemNode,
+                  subSystemMapPath
+                );
+                const typeFilter = elementFilters.find(
+                  (elementFilter) =>
+                    elementFilter.type ===
+                    ElementFilterType.ELEMENT_TYPES_FILTER
+                );
+                Object.values(cachedSystem.types).forEach((type) => {
+                  if (!typeFilter || typeMatchesFilter(type)(typeFilter))
+                    addTypeNode(type.type, subsystemNode);
+                });
+              }
+            );
+          }
+        );
+      }
+    }
+
     if (withElementsUpTheMap) {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ELEMENTS_UP_THE_MAP_TREE_BUILT,
@@ -170,7 +230,7 @@ export const buildTree =
 
 const toInPlaceElementNode =
   (serviceId: EndevorId, searchLocationId: EndevorId) =>
-  ({ element, lastRefreshTimestamp }: CachedElement) =>
+  ({ element, lastRefreshTimestamp, outOfDate }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
     return {
@@ -181,14 +241,20 @@ const toInPlaceElementNode =
       element,
       timestamp: lastRefreshTimestamp.toString(),
       parent,
-      tooltip: toElementTooltip(element),
+      tooltip: toElementTooltip(
+        element,
+        outOfDate
+          ? 'Element details may be out of date. Refresh the tree to get the latest information.'
+          : undefined
+      ),
       noSource: element.noSource,
+      outOfDate,
     };
   };
 
 const toUpTheMapElementNode =
   (serviceId: EndevorId, searchLocationId: EndevorId) =>
-  ({ element, lastRefreshTimestamp }: CachedElement) =>
+  ({ element, lastRefreshTimestamp, outOfDate }: CachedElement) =>
   (parent: TypeNode) =>
   (nodeName?: string): ElementNode | Error => {
     return {
@@ -199,67 +265,11 @@ const toUpTheMapElementNode =
       element,
       timestamp: lastRefreshTimestamp.toString(),
       parent,
-      tooltip: toElementTooltip(element),
+      tooltip: toElementTooltip(
+        element,
+        outOfDate ? 'This element info is out of date!' : undefined
+      ),
       noSource: element.noSource,
+      outOfDate,
     };
   };
-
-export const parseHistory = (
-  content: string,
-  uri: Uri
-): { changeLevels: ChangeLevels; historyLines: HistoryLines } | Error => {
-  const contentLines = content.split(/\r?\n/);
-  const changeLevels = Array<ChangeLevelNode>();
-  const historyLines = Array<HistoryLine>();
-
-  let lineIndex = 0;
-  let isHeader = contentLines[lineIndex]?.indexOf(SOURCE_CHANGE_LINE_HEADER);
-  while (lineIndex < contentLines.length && isHeader && isHeader < 0) {
-    lineIndex++;
-    isHeader = contentLines[lineIndex]?.indexOf(SOURCE_CHANGE_LINE_HEADER);
-  }
-  if (!isHeader || isHeader < 0) {
-    return new Error('History Change Level metadata header does not match.');
-  }
-  while (
-    lineIndex < contentLines.length &&
-    !contentLines[lineIndex]?.match(HISTORY_LINE_PATTERN)
-  ) {
-    const matcher = contentLines[lineIndex]?.match(SOURCE_CHANGE_LINE_PATTERN);
-    if (matcher && matcher[1]) {
-      const node = {
-        uri,
-        vvll: matcher[1].trim(),
-        user: matcher[3]?.trim(),
-        date: matcher[4]?.trim(),
-        time: matcher[5]?.trim(),
-        ccid: matcher[7]?.trim(),
-        comment: matcher[8]?.trim(),
-        lineNums: [],
-      };
-      changeLevels.push(node);
-    }
-    lineIndex++;
-  }
-  while (lineIndex < contentLines.length) {
-    const matcher = contentLines[lineIndex]?.match(HISTORY_LINE_PATTERN);
-    if (matcher) {
-      const historyLine = {
-        changed: matcher[1] === '%',
-        addedVersion: matcher[2]?.trim() || '',
-        removedVersion: matcher[3]?.trim() || '',
-        line: lineIndex,
-        lineLength: contentLines[lineIndex]?.length,
-      };
-      historyLines.push(historyLine);
-    }
-    lineIndex++;
-  }
-  if (!changeLevels || !historyLines) {
-    return new Error('Could not find any history data');
-  }
-  return {
-    changeLevels,
-    historyLines,
-  };
-};

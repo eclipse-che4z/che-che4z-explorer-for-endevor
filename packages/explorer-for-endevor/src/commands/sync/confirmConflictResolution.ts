@@ -20,7 +20,7 @@ import { isError } from '../../utils';
 import {
   ConfirmConflictResolutionCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 
 export const confirmConflictResolutionCommand = async (
   resourceStates: SourceControlResourceState[]

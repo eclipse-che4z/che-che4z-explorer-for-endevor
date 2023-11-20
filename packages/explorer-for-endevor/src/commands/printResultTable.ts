@@ -11,30 +11,29 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger } from '../globals';
 import { showDocument } from '@local/vscode-wrapper/window';
-import { EndevorConfiguration, EndevorId } from '../store/_doc/v2/Store';
-import { Service } from '@local/endevor/_doc/Endevor';
+import { EndevorId } from '../store/_doc/v2/Store';
 import { isError } from '../utils';
 import { toActionReportUri } from '../uri/actionReportUri';
 import { getResultTableContent } from '../view/resultTableContentProvider';
+import { createEndevorLogger } from '../logger';
 
 export const printResultTableCommand =
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   (objectName: string) =>
-  (configuration: EndevorConfiguration) =>
-  (service: Service) =>
-  (serviceId: EndevorId) =>
-  (searchLocationId: EndevorId) =>
   (ccid: string) =>
   async (reportId: string) => {
-    logger.trace(`Print result table command for ${objectName} is called.`);
-    const reportUri =
-      toActionReportUri(objectName)(configuration)(service)(serviceId)(
-        searchLocationId
-      )(ccid)(reportId);
+    const logger = createEndevorLogger({ serviceId, searchLocationId });
+    logger.traceWithDetails(
+      `Print result table command for ${objectName} is called.`
+    );
+    const reportUri = toActionReportUri(
+      serviceId,
+      searchLocationId
+    )(objectName)(ccid)(reportId);
     if (isError(reportUri)) {
       const error = reportUri;
-      logger.error(
+      logger.errorWithDetails(
         `Unable to print the result table for ${objectName}.`,
         `Unable to print the result table for ${objectName} because parsing of the reports URI failed with error:\n${error.message}.`
       );

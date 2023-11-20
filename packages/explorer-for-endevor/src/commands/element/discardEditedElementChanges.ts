@@ -28,7 +28,7 @@ export const discardEditedElementChanges = async (incomingUri?: Uri) => {
     const activeDiffEditor = getActiveTextEditor();
     if (!activeDiffEditor) {
       logger.error(
-        `Unable to discard the element changes because the active diff editor was closed.`
+        `Unable to discard element changes because the active diff editor was closed.`
       );
       return;
     }
@@ -41,7 +41,7 @@ export const discardEditedElementChanges = async (incomingUri?: Uri) => {
     const error = comparedUriParams;
     logger.error(
       `Unable to discard the element changes.`,
-      `Unable to discard the element changes because the element's URI parsing finished with error ${error.message}.`
+      `Unable to discard element changes because the element's URI parsing finished with error ${error.message}.`
     );
     return;
   }
@@ -71,8 +71,8 @@ const safeDeleteTempFile = async (tempFilePath: string) => {
     return deleteFile(Uri.file(tempFilePath));
   } catch (error) {
     logger.error(
-      `Unable to remove the temporary file ${tempFilePath}.`,
-      `Unable to remove the temporary file ${tempFilePath} because of error ${error.message}.`
+      `Unable to remove temporary file ${tempFilePath}.`,
+      `Unable to remove temporary file ${tempFilePath} because of error ${error.message}.`
     );
   }
 };

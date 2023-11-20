@@ -16,7 +16,7 @@ import {
   dialogCancelled as locationDialogCancelled,
   locationChosen,
 } from '../../dialogs/locations/endevorSearchLocationDialogs';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { formatWithNewLines, isDefined } from '../../utils';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
@@ -31,7 +31,7 @@ import {
 import {
   CommandAddNewSearchLocationCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import {
   askForService,
   dialogCancelled as serviceDialogCancelled,
@@ -41,39 +41,44 @@ import {
   focusOnView,
   withCancellableNotificationProgress,
 } from '@local/vscode-wrapper/window';
-import { getConfigurations } from '../../endevor';
+import { getConfigurationsAndLogActivity } from '../../api/endevor';
 import { TREE_VIEW_ID } from '../../constants';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const addNewSearchLocation =
   (
+    dispatch: (action: Action) => Promise<void>,
     configurations: {
       getConnectionDetails: (
         id: EndevorId
       ) => Promise<ValidEndevorConnection | undefined>;
       getServiceDescriptionsBySearchLocationId: (
         searchLocationId: EndevorId
-      ) => EndevorServiceDescriptions;
+      ) => Promise<EndevorServiceDescriptions>;
       getSearchLocationNames: () => ReadonlyArray<EndevorLocationName>;
       getValidSearchLocationDescriptionsForService: (
         serviceId: EndevorId
       ) => ValidEndevorSearchLocationDescriptions;
-      getValidUsedServiceDescriptions: () => ExistingEndevorServiceDescriptions;
-    },
-    dispatch: (action: Action) => Promise<void>
+      getValidUsedServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>;
+    }
   ) =>
   async (
     serviceArg?: EndevorId | ValidServiceNode
   ): Promise<EndevorId | undefined> => {
-    const serviceId = await resolveServiceId(
-      configurations.getValidUsedServiceDescriptions()
+    const logger = createEndevorLogger();
+    const serviceId = await resolveServiceId(logger)(
+      await configurations.getValidUsedServiceDescriptions()
     )(serviceArg);
     if (!serviceId) return;
-    logger.trace(
-      `Add an Endevor inventory location for the ${serviceId.source} Endevor connection ${serviceId.name} was called.`
-    );
+    logger.updateContext({ serviceId });
+    logger.traceWithDetails(`Add an Endevor inventory location was called.`);
     const dialogResult = await askForSearchLocationOrCreateNew({
       locationsToChoose:
         configurations.getValidSearchLocationDescriptionsForService(serviceId),
@@ -83,20 +88,20 @@ export const addNewSearchLocation =
         serviceId
       );
       if (!connectionDetails) {
-        logger.error(
-          `Unable to fetch ${serviceId.source} Endevor connection ${serviceId.name} to fetch configurations.`
-        );
+        logger.errorWithDetails('Unable to fetch Endevor connection.');
         return;
       }
       return withCancellableNotificationProgress(
         'Fetching Endevor configurations ...'
       )(async (progressReporter) => {
-        const configurationsResponse = await getConfigurations(
-          progressReporter
-        )(connectionDetails.value.location)(
-          connectionDetails.value.rejectUnauthorized
-        );
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        const configurationsResponse = await getConfigurationsAndLogActivity(
+          setLogActivityContext(dispatch, {
+            serviceId,
+          })
+        )(progressReporter)({
+          location: connectionDetails.value.location,
+          rejectUnauthorized: connectionDetails.value.rejectUnauthorized,
+        });
         if (isErrorEndevorResponse(configurationsResponse)) {
           const errorResponse = configurationsResponse;
           // TODO: format using all possible error details
@@ -110,7 +115,7 @@ export const addNewSearchLocation =
           switch (errorResponse.type) {
             case ErrorResponseType.CONNECTION_ERROR:
             case ErrorResponseType.CERT_VALIDATION_ERROR:
-              logger.error(
+              logger.errorWithDetails(
                 `Unable to connect to Endevor Web Service to fetch configurations for ${serviceId.name}.`,
                 `${error.message}.`
               );
@@ -131,7 +136,7 @@ export const addNewSearchLocation =
               });
               break;
             case ErrorResponseType.GENERIC_ERROR:
-              logger.error(
+              logger.errorWithDetails(
                 `Unable to fetch configurations for ${serviceId.name} from Endevor.`,
                 `${error.message}.`
               );
@@ -184,7 +189,9 @@ export const addNewSearchLocation =
     }
     const searchLocationId = dialogResult.id;
     const inUseByServicesAmount = Object.keys(
-      configurations.getServiceDescriptionsBySearchLocationId(searchLocationId)
+      await configurations.getServiceDescriptionsBySearchLocationId(
+        searchLocationId
+      )
     ).length;
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_ADD_NEW_SEARCH_LOCATION_COMPLETED,
@@ -213,6 +220,7 @@ export const addNewSearchLocation =
   };
 
 const resolveServiceId =
+  (logger: EndevorLogger) =>
   (servicesToChoose: ExistingEndevorServiceDescriptions) =>
   async (
     serviceArg?: EndevorId | ValidServiceNode

@@ -11,11 +11,27 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Credential } from '@local/endevor/_doc/Credential';
 import {
   ChangeControlValue,
+  ServiceLocation,
   StageNumber,
   Value,
 } from '@local/endevor/_doc/Endevor';
+
+// TODO move to the endevor package to be reused on the API level too
+// TODO rejectUnauthorized may be put in dependency on the protocol which is used
+export type EndevorUnauthorizedService = Readonly<{
+  location: ServiceLocation;
+  rejectUnauthorized: boolean;
+}>;
+
+// TODO move to the endevor package to be reused on the API level too
+export type EndevorAuthorizedService = EndevorUnauthorizedService &
+  Readonly<{
+    configuration: string;
+    credential: Credential;
+  }>;
 
 export type EnvironmentStageSearchLocation = Readonly<{
   environment: Value;
@@ -29,7 +45,7 @@ export type ElementSearchLocation = Partial<
     configuration: Value;
   }>
 > &
-  Partial<EnvironmentStageSearchLocation> &
+  Readonly<EnvironmentStageSearchLocation> &
   Partial<
     Readonly<{
       system: Value;
@@ -42,8 +58,15 @@ export type ElementSearchLocation = Partial<
 
 export type SearchLocation = Omit<ElementSearchLocation, 'configuration'>;
 
+// any environment & stage number
+export type EnvironmentStageMapPathId = string;
+// any system in the search environment & stage number
+export type SystemMapPathId = string;
 // any subsystem in any system in the search environment & stage number
 export type SubsystemMapPathId = string;
+// any type in any system in the search environment & stage number
+export type TypeMapPathId = string;
+
 // code routes up the Endevor map
 type Routes = ReadonlyArray<SubsystemMapPathId>;
 

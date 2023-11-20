@@ -110,6 +110,13 @@ export type SubSystem = SubSystemMapPath &
     nextSubSystem: Value;
   }>;
 
+export type ProcessorGroup = ElementTypeMapPath &
+  Readonly<{
+    procGroupName: Value;
+    nextProcGoup: Value;
+    description: Value;
+  }>;
+
 export type ElementTypeMapPath = SystemMapPath & {
   type: Value;
 };
@@ -121,10 +128,27 @@ export type ElementType = ElementTypeMapPath &
 
 export type ElementTypeResponseObject = Readonly<{
   environment: Value;
+  stageNumber: StageNumber;
   stageId: Value;
   system: Value;
   type: Value;
   nextType: Value;
+  description: Value;
+  defaultPrcGrp: Value;
+  dataFm?: Value;
+  fileExt?: Value;
+  lang: Value;
+}>;
+
+export type ProcessorGroupResponseObject = Readonly<{
+  environment: Value;
+  stageNumber: StageNumber;
+  stageId: Value;
+  system: Value;
+  type: Value;
+  procGroupName: Value;
+  nextProcGoup: Value;
+  description: Value;
 }>;
 
 export type SubSystemResponseObject = Readonly<{
@@ -146,12 +170,17 @@ export type Component = ElementMapPath;
 export type Element = ElementMapPath &
   Readonly<{
     name: Value;
-    noSource: boolean;
   }> &
   Partial<
     Readonly<{
       lastActionCcid: Value;
       extension: Value;
+      noSource: boolean;
+      vvll: Value;
+      signoutId: Value;
+      componentVvll: Value;
+      processorGroup: Value;
+      fingerprint: Value;
     }>
   >;
 export type ElementContent = string;
@@ -175,10 +204,28 @@ export type AuthorizationToken = Readonly<{
   tokenValidFor: Value;
 }>;
 
+export type Dataset = Readonly<{
+  name: Value;
+}>;
+
+export type Member = Readonly<{
+  name: Value;
+  dataset: Dataset;
+}>;
+
+export type MoveParams = {
+  withHistory: boolean;
+  bypassElementDelete: boolean;
+  synchronize: boolean;
+  retainSignout: boolean;
+  ackElementJump: boolean;
+};
+
 export type GenerateParams = Readonly<{
   copyBack: boolean;
   noSource: boolean;
   overrideSignOut: boolean;
+  processorGroup?: string;
 }>;
 export type GenerateWithCopyBackParams = Readonly<{ noSource?: boolean }>;
 export type GenerateSignOutParams = Readonly<{
@@ -234,8 +281,11 @@ export const enum ErrorResponseType {
   CHANGE_REGRESSION_ENDEVOR_ERROR = 'CHANGE_REGRESSION_ENDEVOR_ERROR',
 }
 
+export type EndevorReportName = string;
+export type EndevorReportId = string;
+
 export type EndevorReportIds = Readonly<{
-  executionReportId: string;
+  [key: EndevorReportName]: EndevorReportId | undefined;
 }>;
 
 // comes from successfully parsed Endevor errors
@@ -273,16 +323,17 @@ export type SuccessEndevorResponse<R = undefined> = {
       EndevorResponseDetails;
   }>;
 
+export type ErrorEndevorType =
+  // may appear on all the Endevor request types
+  | ErrorResponseType.CERT_VALIDATION_ERROR
+  | ErrorResponseType.CONNECTION_ERROR
+  | ErrorResponseType.GENERIC_ERROR;
+
 export type ErrorEndevorResponse<
   E extends ErrorResponseType | undefined = undefined
 > = Readonly<{
   status: ResponseStatus.ERROR;
-  type:
-    | (E extends undefined ? never : E)
-    // may appear on all the Endevor request types
-    | ErrorResponseType.CERT_VALIDATION_ERROR
-    | ErrorResponseType.CONNECTION_ERROR
-    | ErrorResponseType.GENERIC_ERROR;
+  type: (E extends undefined ? never : E) | ErrorEndevorType;
   details: Readonly<{
     messages: ReadonlyArray<string>;
   }> &
@@ -292,18 +343,18 @@ export type ErrorEndevorResponse<
     Partial<ErrorDetails>;
 }>;
 
+export type ErrorEndevorAuthorizedType =
+  // may appear on all the Endevor authorized request types
+  | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR
+  | ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR
+  | ErrorResponseType.CERT_VALIDATION_ERROR
+  | ErrorResponseType.CONNECTION_ERROR
+  | ErrorResponseType.GENERIC_ERROR;
 export type ErrorEndevorAuthorizedResponse<
   E extends ErrorResponseType | undefined = undefined
 > = Readonly<{
   status: ResponseStatus.ERROR;
-  type:
-    | (E extends undefined ? never : E)
-    // may appear on all the Endevor authorized request types
-    | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR
-    | ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR
-    | ErrorResponseType.CERT_VALIDATION_ERROR
-    | ErrorResponseType.CONNECTION_ERROR
-    | ErrorResponseType.GENERIC_ERROR;
+  type: (E extends undefined ? never : E) | ErrorEndevorAuthorizedType;
   details: Readonly<{
     messages: ReadonlyArray<string>;
   }> &
@@ -330,6 +381,11 @@ export type ConfigurationsResponse = EndevorResponse<
   ReadonlyArray<Configuration>
 >;
 
+export type MembersResponse = AuthorizedEndevorResponse<
+  undefined,
+  ReadonlyArray<Member>
+>;
+
 export type AuthenticationTokenResponse = AuthorizedEndevorResponse<
   undefined,
   BearerTokenCredential | null
@@ -337,11 +393,15 @@ export type AuthenticationTokenResponse = AuthorizedEndevorResponse<
 
 export type SignInElementResponse = AuthorizedEndevorResponse;
 
+export type SignoutElementResponseErrorType =
+  ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR;
 export type SignoutElementResponse =
-  AuthorizedEndevorResponse<ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR>;
+  AuthorizedEndevorResponse<SignoutElementResponseErrorType>;
 
+export type RetrieveElementWithSignoutResponseErrorType =
+  SignoutElementResponseErrorType;
 export type RetrieveElementWithSignoutResponse = AuthorizedEndevorResponse<
-  ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+  RetrieveElementWithSignoutResponseErrorType,
   ElementDataWithFingerprint
 >;
 
@@ -370,6 +430,11 @@ export type ElementTypesResponse = AuthorizedEndevorResponse<
   ReadonlyArray<ElementTypeResponseObject>
 >;
 
+export type ProcessorGroupsResponse = AuthorizedEndevorResponse<
+  undefined,
+  ReadonlyArray<ProcessorGroupResponseObject>
+>;
+
 export type ElementsResponse = AuthorizedEndevorResponse<
   undefined,
   ReadonlyArray<Element>
@@ -380,20 +445,68 @@ export type ComponentsResponse = AuthorizedEndevorResponse<
   ReadonlyArray<Component>
 >;
 
-export type GenerateResponse = AuthorizedEndevorResponse<
+export type MoveResponse = AuthorizedEndevorResponse;
+
+export type GenerateResponseErrorType =
   | ErrorResponseType.PROCESSOR_STEP_MAX_RC_EXCEEDED_ENDEVOR_ERROR
-  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR
->;
+  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR;
+export type GenerateResponse =
+  AuthorizedEndevorResponse<GenerateResponseErrorType>;
 
-export type AddResponse =
-  AuthorizedEndevorResponse<ErrorResponseType.DUPLICATE_ELEMENT_ENDEVOR_ERROR>;
+export type AddResponseErrorType =
+  ErrorResponseType.DUPLICATE_ELEMENT_ENDEVOR_ERROR;
+export type AddResponse = AuthorizedEndevorResponse<AddResponseErrorType>;
 
-export type UpdateResponse = AuthorizedEndevorResponse<
+export type UpdateResponseErrorType =
   | ErrorResponseType.FINGERPRINT_MISMATCH_ENDEVOR_ERROR
-  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR
->;
+  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR;
+export type UpdateResponse = AuthorizedEndevorResponse<UpdateResponseErrorType>;
 
+export type PrintResponseErrorType =
+  ErrorResponseType.NO_COMPONENT_INFO_ENDEVOR_ERROR;
 export type PrintResponse = AuthorizedEndevorResponse<
-  ErrorResponseType.NO_COMPONENT_INFO_ENDEVOR_ERROR,
+  PrintResponseErrorType,
   string
 >;
+
+export class EndevorApiError extends Error {
+  details: {
+    messages: ReadonlyArray<string>;
+  } & Partial<ErrorDetails>;
+  constructor(
+    messages: ReadonlyArray<string>,
+    connectionCode?: string,
+    httpStatusCode?: number
+  ) {
+    super();
+    this.details = {
+      messages,
+      connectionCode,
+      httpStatusCode,
+    };
+    Object.setPrototypeOf(this, EndevorApiError.prototype);
+  }
+}
+
+export class EndevorResponseError extends Error {
+  details: {
+    messages: ReadonlyArray<string>;
+  } & Partial<{
+    // TODO: make non-partial when values become available
+    returnCode: number;
+    reportIds: EndevorReportIds;
+  }>;
+  constructor(
+    messages: ReadonlyArray<string>,
+    returnCode?: number,
+    reportIds?: EndevorReportIds
+  ) {
+    super();
+    this.details = {
+      messages,
+      returnCode,
+      reportIds,
+    };
+    Object.setPrototypeOf(this, EndevorResponseError.prototype);
+  }
+}

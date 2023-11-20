@@ -20,6 +20,8 @@ import { StageNumber } from '../_doc/Endevor';
 
 export type Configuration = t.TypeOf<typeof Configuration>;
 
+export type Member = t.TypeOf<typeof Member>;
+
 export type EnvironmentStage = t.TypeOf<typeof EnvironmentStage>;
 
 export type System = t.TypeOf<typeof System>;
@@ -27,6 +29,8 @@ export type System = t.TypeOf<typeof System>;
 export type SubSystem = t.TypeOf<typeof SubSystem>;
 
 export type ElementType = t.TypeOf<typeof ElementType>;
+
+export type ProcessorGroup = t.TypeOf<typeof ProcessorGroup>;
 
 export type Element = t.TypeOf<typeof Element>;
 
@@ -42,18 +46,27 @@ export type PrintResponse = t.TypeOf<typeof PrintResponse>;
 export type RetrieveResponse = t.TypeOf<typeof RetrieveResponse>;
 
 export type ConfigurationsResponse = t.TypeOf<typeof ConfigurationsResponse>;
+export type MembersResponse = t.TypeOf<typeof MembersResponse>;
 export type EnvironmentStagesResponse = t.TypeOf<
   typeof EnvironmentStagesResponse
 >;
+export type BaseResponseWithUnknownDataOrNull = t.TypeOf<
+  typeof BaseResponseWithUnknownDataOrNull
+>;
+export type BaseResponseWithNoData = t.TypeOf<typeof BaseResponseWithNoData>;
+
 export type SystemsResponse = t.TypeOf<typeof SystemsResponse>;
 export type SubSystemsResponse = t.TypeOf<typeof SubSystemsResponse>;
 export type ElementTypesResponse = t.TypeOf<typeof ElementTypesResponse>;
+export type ProcessorGroupsRepsonse = t.TypeOf<typeof ProcessorGroupsRepsonse>;
 export type ElementsResponse = t.TypeOf<typeof ElementsResponse>;
 
 export type ComponentsResponse = t.TypeOf<typeof ComponentsResponse>;
 export type UpdateResponse = t.TypeOf<typeof UpdateResponse>;
 
 export type AddResponse = t.TypeOf<typeof AddResponse>;
+
+export type MoveResponse = t.TypeOf<typeof MoveResponse>;
 
 export type GenerateResponse = t.TypeOf<typeof GenerateResponse>;
 
@@ -66,6 +79,9 @@ export type AuthenticationTokenResponse = t.TypeOf<
 export const Configuration = t.type({
   name: t.string,
   description: t.string,
+});
+export const Member = t.type({
+  mbrName: t.string,
 });
 
 class StageNumberType extends t.Type<StageNumber> {
@@ -143,9 +159,26 @@ export const SubSystem = t.type({
 export const ElementType = t.type({
   envName: t.string,
   stgId: t.string,
+  stgNum: new StageNumberType(),
   sysName: t.string,
   typeName: t.string,
   nextType: t.string,
+  description: t.string,
+  dfltProcGrp: t.string,
+  dataFm: t.union([t.string, t.null]),
+  fileExt: t.union([t.string, t.null]),
+  lang: t.string,
+});
+
+export const ProcessorGroup = t.type({
+  envName: t.string,
+  stgId: t.string,
+  stgNum: new StageNumberType(),
+  sysName: t.string,
+  typeName: t.string,
+  procGrpName: t.string,
+  nextProcGrp: t.string,
+  description: t.string,
 });
 
 const ElementPath = t.type({
@@ -161,11 +194,16 @@ export const Element = t.intersection([
   ElementPath,
   t.type({
     fullElmName: t.string,
+    elmVVLL: t.string,
     nosource: t.string,
+    procGrpName: t.string,
   }),
   t.partial({
     lastActCcid: t.union([t.string, t.null]),
     fileExt: t.union([t.string, t.null]),
+    signoutId: t.union([t.string, t.null]),
+    cmpntVVLL: t.union([t.string, t.null]),
+    fingerprint: t.union([t.string, t.null]),
   }),
 ]);
 
@@ -183,6 +221,14 @@ const BaseResponseValues = t.type({
   //  TODO add report types
   // }),
   messages: t.array(t.string),
+  reports: t.union([
+    t.type({
+      APIMSGS: t.union([new ReportIdType('APIMSGS'), t.undefined]),
+      C1MSGS1: t.union([new ReportIdType('C1MSGS1'), t.undefined]),
+    }),
+    t.null,
+    t.undefined,
+  ]),
 });
 
 const BaseResponseWithNoData = t.type({
@@ -230,6 +276,7 @@ export const V2ApiVersionResponse = t.type({
 });
 
 export const ConfigurationsResponse = BaseResponseWithUnknownData;
+export const MembersResponse = BaseResponseWithUnknownData;
 
 class StringWithNumberType extends t.Type<string, number> {
   constructor() {
@@ -267,6 +314,7 @@ export const SystemsResponse = BaseResponseWithUnknownDataOrNull;
 export const SubSystemsResponse = BaseResponseWithUnknownDataOrNull;
 export const ElementTypesResponse = BaseResponseWithUnknownDataOrNull;
 export const ElementsResponse = BaseResponseWithUnknownDataOrNull;
+export const ProcessorGroupsRepsonse = BaseResponseWithUnknownDataOrNull;
 
 export const PrintResponse = BaseResponseWithContentOrNull;
 
@@ -307,17 +355,8 @@ export const ComponentsResponse = t.type({
   ]),
 });
 
-export const GenerateResponse = t.type({
-  body: t.intersection([
-    BaseResponseValues,
-    t.type({
-      reports: t.type({
-        C1MSGS1: new ReportIdType('C1MSGS1'),
-      }),
-    }),
-  ]),
-});
-
+export const MoveResponse = BaseResponseWithNoData;
+export const GenerateResponse = BaseResponseWithNoData;
 export const UpdateResponse = BaseResponseWithNoData;
 export const AddResponse = BaseResponseWithNoData;
 export const SignInElementResponse = BaseResponseWithNoData;

@@ -106,6 +106,8 @@ export const EndevorServiceProfile = t.partial({
   port: t.number,
   basePath: t.string,
   rejectUnauthorized: t.boolean,
+  tokenType: t.string,
+  tokenValue: t.string,
 });
 export const EndevorServiceProfiles = t.array(EndevorServiceProfile);
 class EndevorStageNumberType extends t.Type<StageNumber> {

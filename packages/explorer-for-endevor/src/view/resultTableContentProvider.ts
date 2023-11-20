@@ -13,19 +13,23 @@
 
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import * as vscode from 'vscode';
-import { downloadReportById } from '../endevor';
-import { logger, reporter } from '../globals';
+import { downloadReportById } from '../api/endevor';
+import { reporter } from '../globals';
 import { fromActionReportUri } from '../uri/actionReportUri';
 import { isDefined, isError } from '../utils';
 import {
   ReportContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/Telemetry';
+} from '../telemetry/_doc/Telemetry';
 import * as markDownTable from 'table';
 import { Action, Actions } from '../store/_doc/Actions';
 import { Element } from '@local/endevor/_doc/Endevor';
 import { EndevorId } from '../store/_doc/v2/Store';
 import { toEndevorStageNumber } from '@local/endevor/utils';
+import { createEndevorLogger } from '../logger';
+import { EndevorAuthorizedService, SearchLocation } from '../api/_doc/Endevor';
+
+const logger = createEndevorLogger();
 
 const failedStatus = '*FAILED*';
 
@@ -47,7 +51,17 @@ const tableHeaders = [
 ];
 
 export const resultTableContentProvider = (
-  dispatch: (action: Action) => Promise<void>
+  dispatch: (action: Action) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >
 ): vscode.TextDocumentContentProvider => {
   return {
     async provideTextDocumentContent(
@@ -58,30 +72,30 @@ export const resultTableContentProvider = (
       if (isError(uriParams)) {
         const error = uriParams;
         logger.error(
-          `Unable to print the generate result table.`,
-          `Unable to print the generate result table because parsing of the URI failed with error:\n${error.message}.`
+          `Unable to print generate result table.`,
+          `Unable to print generate result table because parsing of the URI failed with error:\n${error.message}.`
         );
         return;
       }
-      const {
-        service,
-        reportId,
-        configuration,
+      const { serviceId, searchLocationId, reportId, ccid, objectName } =
+        uriParams;
+      const connectionParams = await getConnectionConfiguration(
         serviceId,
-        searchLocationId,
-        ccid,
-        objectName,
-      } = uriParams;
+        searchLocationId
+      );
+      if (!connectionParams) return;
+      const { service } = connectionParams;
+      logger.updateContext({ serviceId, searchLocationId });
       const retrieveReport = await withNotificationProgress(
-        `Retrieving the generate results for: ${objectName}`
+        `Retrieving generate results for ${objectName} ...`
       )((progressReporter) =>
-        downloadReportById(progressReporter)(service)(configuration)(reportId)
+        downloadReportById(progressReporter)(service)(reportId)
       );
       if (!retrieveReport) {
         const error = new Error(
-          `Unable to retrieve the Endevor report for ${objectName}`
+          `Unable to retrieve Endevor report for ${objectName}`
         );
-        logger.error(`${error.message}.`);
+        logger.errorWithDetails(`${error.message}.`);
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext: TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALLED,
@@ -136,7 +150,7 @@ const formatReportIntoResultTable =
       return cleanReport;
     }
 
-    const elementsToUpdate: Array<Omit<Element, 'id' | 'noSource'>> = [];
+    const elementsToUpdate: Array<Omit<Element, 'id'>> = [];
     /* 
     Use the lines of the table to populate the action object values.
     The actual Action type starts on the 11th position, preceeding characters are removed.
@@ -287,7 +301,7 @@ const updateTreeAfterUnsuccessfulGenerate =
   (serviceId: EndevorId) =>
   (searchLocationId: EndevorId) =>
   async (actionPayload: {
-    elements: ReadonlyArray<Omit<Element, 'id' | 'noSource'>>;
+    elements: ReadonlyArray<Omit<Element, 'id'>>;
   }): Promise<void> => {
     await dispatch({
       type: Actions.SELECTED_ELEMENTS_UPDATED,

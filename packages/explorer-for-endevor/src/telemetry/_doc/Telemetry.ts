@@ -14,6 +14,7 @@
 import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import { Source } from '../../store/storage/_doc/Storage';
+import { ElementToggleFilters } from '../../store/_doc/v2/Store';
 
 export const enum TelemetryEvents {
   ERROR = 'extension error',
@@ -40,6 +41,10 @@ export const enum TelemetryEvents {
   COMMAND_DELETE_SERVICE_COMPLETED = 'delete service command completed',
 
   COMMAND_DELETE_SEARCH_LOCATION_COMPLETED = 'delete search location command completed',
+
+  COMMAND_MOVE_ELEMENT_CALLED = 'move element command called',
+  COMMAND_MOVE_ELEMENT_COMPLETED = 'move element command completed',
+  COMMAND_FETCH_ELEMENT_COMPLETED = 'fetch element command completed',
 
   //Used in completed events
   COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED = 'generate element in place command called',
@@ -96,7 +101,7 @@ export const enum TelemetryEvents {
 
   COMMAND_EDIT_CREDENTIALS_COMPLETED = 'edit credentials command completed',
 
-  COMMAND_TOGGLE_MAP = 'map view changed in the tree',
+  COMMAND_TOGGLE_FILTER = 'filter toggle changed in the tree',
 
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL = 'update elements name filter command call performed',
   COMMAND_UPDATE_ELEMENT_NAME_FILTER_COMPLETED = 'update elements name filter command completed',
@@ -357,6 +362,46 @@ export type CommandDeleteSearchLocationCompletedEvent =
       status: CommandDeleteSearchLocationCompletedStatus.HIDED;
       inUseByServicesAmount: number;
       source: Source;
+    };
+
+export const enum FetchElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+}
+
+export type CommandFetchElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_FETCH_ELEMENT_COMPLETED;
+      status: FetchElementCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_FETCH_ELEMENT_COMPLETED;
+      context:
+        | TelemetryEvents.COMMAND_MOVE_ELEMENT_CALLED
+        | TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_CALLED;
+      status: FetchElementCommandCompletedStatus.SUCCESS;
+    };
+
+export const enum MoveElementCommandCompletedStatus {
+  SUCCESS = 'SUCCESS',
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  CANCELLED = 'CANCELLED',
+}
+
+export type CommandMoveElementCompletedEvent =
+  | {
+      type: TelemetryEvents.ERROR;
+      errorContext: TelemetryEvents.COMMAND_MOVE_ELEMENT_COMPLETED;
+      status: MoveElementCommandCompletedStatus.GENERIC_ERROR;
+      error: Error;
+    }
+  | {
+      type: TelemetryEvents.COMMAND_MOVE_ELEMENT_COMPLETED;
+      status:
+        | MoveElementCommandCompletedStatus.SUCCESS
+        | MoveElementCommandCompletedStatus.CANCELLED;
     };
 
 export const enum GenerateElementInPlaceCommandCompletedStatus {
@@ -700,10 +745,10 @@ export type CommandTestConnectionDetailsCompletedEvent =
       status: TestConnectionDetailsCommandCompletedStatus.SUCCESS;
     };
 
-export type MapViewToggled = {
-  type: TelemetryEvents.COMMAND_TOGGLE_MAP;
+export type FilterToggled = {
+  type: TelemetryEvents.COMMAND_TOGGLE_FILTER;
   source: Source;
-  showMap: boolean;
+  filter: ElementToggleFilters;
 };
 
 export const enum UpdateElementNameFilterCommandCompletedStatus {
@@ -944,7 +989,9 @@ export type ListingContentProviderCompletedEvent =
     }
   | {
       type: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED;
-      status: ListingContentProviderCompletedStatus.SUCCESS;
+      status:
+        | ListingContentProviderCompletedStatus.SUCCESS
+        | ListingContentProviderCompletedStatus.NO_LISTING;
     };
 
 export const enum HistoryContentProviderCompletedStatus {
@@ -1125,6 +1172,8 @@ export type TelemetryEvent =
   | CommandEditServiceCompletedEvent
   | CommandDeleteServiceCompletedEvent
   | CommandDeleteSearchLocationCompletedEvent
+  | CommandFetchElementCompletedEvent
+  | CommandMoveElementCompletedEvent
   | CommandGenerateElementCompletedEvent
   | CommandGenerateSubsystemElementsInPlaceCompletedEvent
   | CommandSignoutErrorRecoverCompletedEvent
@@ -1140,7 +1189,7 @@ export type TelemetryEvent =
   | CommandEditConnectionDetailsCompletedEvent
   | CommandEditCredentialsCompletedEvent
   | CommandTestConnectionDetailsCompletedEvent
-  | MapViewToggled
+  | FilterToggled
   | CommandUpdateElementNameFilterCompletedEvent
   | CommandUpdateElementTypeFilterCompletedEvent
   | CommandUpdateElementCcidFilterCompletedEvent

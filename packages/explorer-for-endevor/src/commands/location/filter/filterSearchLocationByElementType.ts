@@ -30,10 +30,11 @@ import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
 import {
   TelemetryEvents,
   UpdateElementTypeFilterCommandCompletedStatus,
-} from '../../../_doc/telemetry/Telemetry';
+} from '../../../telemetry/_doc/Telemetry';
 
 export const filterSearchLocationByElementTypeCommand =
   (
+    dispatch: (action: Action) => Promise<void>,
     configurations: {
       getElementTypesFilterValue: (
         serviceId: EndevorId
@@ -46,8 +47,7 @@ export const filterSearchLocationByElementTypeCommand =
             elements: ReadonlyArray<CachedElement>;
           }>
         | undefined;
-    },
-    dispatch: (action: Action) => Promise<void>
+    }
   ) =>
   async ({
     name: locationName,

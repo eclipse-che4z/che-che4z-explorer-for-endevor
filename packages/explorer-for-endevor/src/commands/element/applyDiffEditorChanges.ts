@@ -13,7 +13,7 @@
 
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { Uri } from 'vscode';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { formatWithNewLines, isError, isTheSameLocation } from '../../utils';
 import {
   closeActiveTextEditor,
@@ -23,7 +23,10 @@ import {
 import { fromComparedElementUri } from '../../uri/comparedElementUri';
 import { discardEditedElementChanges } from './discardEditedElementChanges';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
-import { signOutElement, updateElement } from '../../endevor';
+import {
+  signOutElementAndLogActivity,
+  updateElementAndLogActivity,
+} from '../../api/endevor';
 import { getFileContent } from '@local/vscode-wrapper/workspace';
 import { TextDecoder } from 'util';
 import { ENCODING } from '../../constants';
@@ -35,11 +38,9 @@ import { turnOnAutomaticSignOut } from '../../settings/settings';
 import {
   ActionChangeControlValue,
   Element,
-  Service,
   ChangeControlValue,
   ElementMapPath,
   SubSystemMapPath,
-  Value,
   SignoutElementResponse,
   ErrorResponseType,
   UpdateResponse,
@@ -52,23 +53,40 @@ import {
   ApplyDiffEditorChangesCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   UploadElementCommandCompletedStatus,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const applyDiffEditorChanges = async (
-  configurations: ConnectionConfigurations,
   dispatch: (action: Action) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >,
   incomingUri?: Uri
 ): Promise<void> => {
+  const logger = createEndevorLogger();
   const comparedElementUri = await toElementUriEvenInTheia(incomingUri);
   if (isError(comparedElementUri)) {
     const error = comparedElementUri;
     logger.error(
-      'Unable to apply the element changes.',
-      `Unable to apply the element changes because obtaining the element URI failed with an error:\n${error.message}`
+      'Unable to apply element changes.',
+      `Unable to apply element changes because obtaining the element URI failed with an error:\n${error.message}`
     );
     return;
   }
@@ -76,8 +94,8 @@ export const applyDiffEditorChanges = async (
   if (isError(uriParams)) {
     const error = uriParams;
     logger.error(
-      'Unable to apply the element changes.',
-      `Unable to apply the element changes because parsing of the element's URI failed with an error:\n${error.message}.`
+      'Unable to apply element changes.',
+      `Unable to apply element changes because parsing of the element's URI failed with an error:\n${error.message}.`
     );
     return;
   }
@@ -92,22 +110,22 @@ export const applyDiffEditorChanges = async (
       initialSearchLocation,
     },
   } = uriParams;
-  logger.trace(
-    `Apply diff changes for the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
-    of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+  logger.updateContext({ serviceId, searchLocationId });
+  logger.traceWithDetails(
+    `Apply diff changes for element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}.`
   );
-  const connectionParams = await getConnectionConfiguration(configurations)(
+  const connectionParams = await getConnectionConfiguration(
     serviceId,
     searchLocationId
   );
   if (!connectionParams) return;
-  const { service, configuration, searchLocation } = connectionParams;
+  const { service } = connectionParams;
   const elementData = await readComparedElementContent();
   if (isError(elementData)) {
     const error = elementData;
-    logger.error(
-      `Unable to apply changes for the element ${uploadTargetLocation.id}.`,
-      `Unable to apply changes for the element  ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} because of error ${error.message}.`
+    logger.errorWithDetails(
+      `Unable to apply changes for element ${uploadTargetLocation.id}.`,
+      `Unable to apply changes for element ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} because of error ${error.message}.`
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
@@ -117,15 +135,13 @@ export const applyDiffEditorChanges = async (
     });
     return;
   }
-  const uploadResult = await uploadElement(dispatch)(
+  const uploadResult = await uploadElement(logger)(dispatch)(
     serviceId,
-    searchLocationId,
-    initialSearchLocation
+    searchLocationId
+  )(service)(initialSearchLocation)(
+    uploadChangeControlValue,
+    uploadTargetLocation
   )(
-    service,
-    configuration,
-    searchLocation
-  )(uploadChangeControlValue, uploadTargetLocation)(
     element,
     comparedElementUri
   )({
@@ -135,16 +151,16 @@ export const applyDiffEditorChanges = async (
   });
   if (isError(uploadResult)) {
     const error = uploadResult;
-    logger.error(
-      `Unable to upload the element ${uploadTargetLocation.id} to Endevor.`,
+    logger.errorWithDetails(
+      `Unable to upload element ${uploadTargetLocation.id} to Endevor.`,
       `${error.message}.`
     );
     return;
   }
   if (uploadResult && isErrorEndevorResponse(uploadResult)) {
     const error = uploadResult;
-    logger.error(
-      `Unable to upload the element ${uploadTargetLocation.id} to Endevor.`,
+    logger.errorWithDetails(
+      `Unable to upload element ${uploadTargetLocation.id} to Endevor.`,
       `${formatWithNewLines(error.details.messages)}.`
     );
     return;
@@ -154,7 +170,7 @@ export const applyDiffEditorChanges = async (
     uploadResult.details?.returnCode &&
     uploadResult.details?.returnCode >= 4
   ) {
-    logger.warn(
+    logger.warnWithDetails(
       `Element ${element.name} was updated with warnings`,
       `Element  ${element.environment}/${element.stageNumber}/${
         element.system
@@ -183,6 +199,7 @@ export const applyDiffEditorChanges = async (
         noSource: false,
         extension: element.extension,
         lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     });
     return;
@@ -213,10 +230,11 @@ export const applyDiffEditorChanges = async (
       noSource: false,
       extension: element.extension,
       lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+      processorGroup: element.processorGroup,
     },
   });
-  logger.info(
-    `Applying changes for the element ${uploadTargetLocation.id} was successful!`
+  logger.infoWithDetails(
+    `Applying changes for element ${uploadTargetLocation.id} was successful!`
   );
   return;
 };
@@ -266,23 +284,17 @@ const readComparedElementContent = async (): Promise<ElementData | Error> => {
     };
   } catch (error) {
     return new Error(
-      `Unable to read the element content because of error ${error.message}`
+      `Unable to read element content because of error:\n${error.message}`
     );
   }
 };
 
 const uploadElement =
+  (logger: EndevorLogger) =>
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    serviceId: EndevorId,
-    searchLocationId: EndevorId,
-    initialSearchLocation: SubSystemMapPath
-  ) =>
-  (
-    endevorConnectionDetails: Service,
-    configuration: Value,
-    overallSearchLocation: ElementSearchLocation
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
     uploadTargetLocation: ElementMapPath
@@ -292,30 +304,36 @@ const uploadElement =
     elementData: ElementDataWithFingerprint
   ): Promise<UpdateResponse | Error | void> => {
     const uploadResult = await withNotificationProgress(
-      `Uploading the element ${uploadTargetLocation.id} ...`
+      `Uploading element ${uploadTargetLocation.id} ...`
     )((progressReporter) => {
-      return updateElement(progressReporter)(endevorConnectionDetails)(
-        configuration
-      )(uploadTargetLocation)(uploadChangeControlValue)(elementData);
+      return updateElementAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(uploadTargetLocation)(
+        uploadChangeControlValue
+      )(elementData);
     });
     if (isErrorEndevorResponse(uploadResult)) {
       const errorResponse = uploadResult;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to upload the element ${uploadTargetLocation.environment}/${
+        `Unable to upload element ${uploadTargetLocation.environment}/${
           uploadTargetLocation.stageNumber
         }/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${
           uploadTargetLocation.type
         }/${
           uploadTargetLocation.id
-        } to Endevor because of an error:${formatWithNewLines(
+        } to Endevor because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
-          logger.warn(
-            `The element ${uploadTargetLocation.id} requires a sign out action to update/add elements.`
+          logger.warnWithDetails(
+            `Element ${uploadTargetLocation.id} requires a sign out action to update/add elements.`
           );
           const signOutDialogResult = await askToSignOutElements([
             element.name,
@@ -324,8 +342,8 @@ const uploadElement =
             !signOutDialogResult.signOutElements &&
             !signOutDialogResult.automaticSignOut
           ) {
-            logger.error(
-              `Unable to upload the element ${element.name} to Endevor because it is signed out to somebody else or not at all.`
+            logger.errorWithDetails(
+              `Unable to upload element ${element.name} to Endevor because it is signed out to somebody else or not at all.`
             );
             return errorResponse;
           }
@@ -333,45 +351,41 @@ const uploadElement =
             try {
               await turnOnAutomaticSignOut();
             } catch (error) {
-              logger.warn(
+              logger.warnWithDetails(
                 `Unable to update the global sign out setting.`,
-                `Unable to update the global sign out setting because of an error:\n${error.message}.`
+                `Unable to update the global sign out setting because of error:\n${error.message}.`
               );
             }
           }
-          const preUpdateSignout = await complexSignoutElement(dispatch)(
-            endevorConnectionDetails,
-            configuration,
+          const preUpdateSignout = await complexSignoutElement(logger)(
+            dispatch
+          )(
             serviceId,
             searchLocationId
-          )(element)(uploadChangeControlValue);
+          )(service)(element)(uploadChangeControlValue);
           if (isErrorEndevorResponse(preUpdateSignout)) return errorResponse;
-          return uploadElement(dispatch)(
-            serviceId,
-            searchLocationId,
-            initialSearchLocation
+          return uploadElement(logger)(dispatch)(serviceId, searchLocationId)(
+            service
+          )(initialSearchLocation)(
+            uploadChangeControlValue,
+            uploadTargetLocation
           )(
-            endevorConnectionDetails,
-            configuration,
-            overallSearchLocation
-          )(uploadChangeControlValue, uploadTargetLocation)(
             element,
             elementUri
           )(elementData);
         }
         case ErrorResponseType.FINGERPRINT_MISMATCH_ENDEVOR_ERROR: {
-          return uploadFingerprintMismatch(
+          return uploadFingerprintMismatch(logger)(dispatch)(
             serviceId,
-            searchLocationId,
-            initialSearchLocation
-          )(endevorConnectionDetails, configuration)(
+            searchLocationId
+          )(service)(initialSearchLocation)(
             uploadChangeControlValue,
             uploadTargetLocation
           )(element, elementUri);
         }
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR: {
-          logger.error(
+          logger.errorWithDetails(
             `Endevor credentials are incorrect or expired.`,
             `${error.message}.`
           );
@@ -386,7 +400,7 @@ const uploadElement =
         }
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR: {
-          logger.error(
+          logger.errorWithDetails(
             `Unable to connect to Endevor Web Services.`,
             `${error.message}.`
           );
@@ -400,8 +414,8 @@ const uploadElement =
           return errorResponse;
         }
         case ErrorResponseType.GENERIC_ERROR: {
-          logger.error(
-            `Unable to upload the element ${element.name} to Endevor.`,
+          logger.errorWithDetails(
+            `Unable to upload element ${element.name} to Endevor.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -421,21 +435,24 @@ const uploadElement =
   };
 
 const complexSignoutElement =
+  (logger: EndevorLogger) =>
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    service: Service,
-    configuration: Value,
-    serviceId: EndevorId,
-    searchLocationId: EndevorId
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<SignoutElementResponse> => {
     let signOutResponse = await withNotificationProgress(
-      `Signing out the element ${element.name} ...`
+      `Signing out element ${element.name} ...`
     )((progressReporter) =>
-      signOutElement(progressReporter)(service)(configuration)(element)({
+      signOutElementAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)({
         signoutChangeControlValue,
       })
     );
@@ -443,20 +460,26 @@ const complexSignoutElement =
       const errorResponse = signOutResponse;
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR:
-          logger.warn(
-            `Element ${element.name} cannot be signout because the element is signed out to somebody else.`
+          logger.warnWithDetails(
+            `Element ${element.name} cannot be signout because it is signed out to somebody else.`
           );
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(`Override signout option was not chosen.`);
             return errorResponse;
           }
           logger.trace(
-            `Override signout option was chosen,  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be signed out with override.`
+            `Override signout option was chosen, ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be signed out with override.`
           );
           signOutResponse = await withNotificationProgress(
-            `Signing out the element with override ${element.name} ...`
+            `Signing out element with override ${element.name} ...`
           )((progressReporter) =>
-            signOutElement(progressReporter)(service)(configuration)(element)({
+            signOutElementAndLogActivity(
+              setLogActivityContext(dispatch, {
+                serviceId,
+                searchLocationId,
+                element,
+              })
+            )(progressReporter)(service)(element)({
               signoutChangeControlValue,
               overrideSignOut: true,
             })
@@ -500,18 +523,17 @@ const updateTreeAfterSuccessfulSignout =
   };
 
 const uploadFingerprintMismatch =
-  (
-    serviceId: EndevorId,
-    searchLocationId: EndevorId,
-    initialSearchLocation: SubSystemMapPath
-  ) =>
-  (endevorConnectionDetails: Service, configuration: Value) =>
+  (logger: EndevorLogger) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   async (element: Element, elementUri: Uri) => {
-    logger.warn(
+    logger.warnWithDetails(
       `There is a conflict with the remote copy of element ${uploadTargetLocation.id}. Please resolve it before uploading again.`
     );
     await closeActiveTextEditor();
@@ -520,14 +542,14 @@ const uploadFingerprintMismatch =
       context: TelemetryEvents.COMMAND_APPLY_DIFF_EDITOR_CHANGES_COMPLETED,
     });
     const showCompareDialogResult = await compareElementWithRemoteVersion(
-      endevorConnectionDetails,
-      configuration,
-      element
-    )(uploadChangeControlValue, uploadTargetLocation)(
+      dispatch
+    )(
       serviceId,
-      searchLocationId,
-      initialSearchLocation
-    )(elementUri.fsPath);
+      searchLocationId
+    )(service)(initialSearchLocation)(
+      uploadChangeControlValue,
+      uploadTargetLocation
+    )(element, elementUri.fsPath);
     if (isError(showCompareDialogResult)) {
       const error = showCompareDialogResult;
       return error;

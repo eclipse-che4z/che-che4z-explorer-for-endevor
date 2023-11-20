@@ -25,7 +25,7 @@ export interface GenericTelemetryReporter {
     properties?: TelemetryProperties,
     measurements?: TelemetryMeasurements
   ) => void;
-  sendTelemetryException: (
+  sendTelemetryErrorEvent: (
     error: Error,
     properties?: TelemetryProperties,
     measurements?: TelemetryMeasurements

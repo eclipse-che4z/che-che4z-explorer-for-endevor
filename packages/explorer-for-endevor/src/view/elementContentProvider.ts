@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import {
   Uri,
@@ -23,27 +20,42 @@ import {
   workspace,
   TextDocument,
 } from 'vscode';
-import {
-  ConnectionConfigurations,
-  getConnectionConfiguration,
-} from '../commands/utils';
-import { printElement } from '../endevor';
-import { logger, reporter } from '../globals';
+import { printElementAndLogActivity } from '../api/endevor';
+import { reporter } from '../globals';
 import { fromBasicElementUri } from '../uri/basicElementUri';
 import { formatWithNewLines, isError } from '../utils';
 import {
   ElementContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/Telemetry';
+} from '../telemetry/_doc/Telemetry';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../logger';
+import { Action } from '../store/_doc/Actions';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { EndevorAuthorizedService, SearchLocation } from '../api/_doc/Endevor';
 
 export const elementContentProvider = (
-  configurations: ConnectionConfigurations
+  dispatch: (action: Action) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+    | undefined
+  >
 ): TextDocumentContentProvider => {
   return {
     async provideTextDocumentContent(
       elementUri: Uri,
       _token: CancellationToken
     ): Promise<string | undefined> {
+      const logger = createEndevorLogger();
       const uriParams = fromBasicElementUri(elementUri);
       if (isError(uriParams)) {
         const error = uriParams;
@@ -53,42 +65,47 @@ export const elementContentProvider = (
         );
         return;
       }
-      logger.trace(
-        `Print element uri: \n  ${stringifyWithHiddenCredential(
-          JSON.parse(decodeURIComponent(elementUri.query))
-        )}.`
-      );
       const { serviceId, searchLocationId, element } = uriParams;
-      logger.trace(
-        `Print the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
-        of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+      logger.updateContext({ serviceId, searchLocationId });
+      logger.traceWithDetails(
+        `Print the content of element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} was called.`
       );
-      const connectionParams = await getConnectionConfiguration(configurations)(
+      const connectionParams = await getConnectionConfiguration(
         serviceId,
         searchLocationId
       );
       if (!connectionParams) return;
-      const { service, configuration } = connectionParams;
+      const { service } = connectionParams;
       const elementResponse = await withNotificationProgress(
-        `Printing element: ${element.name} content`
-      )((progress) => printElement(progress)(service)(configuration)(element));
+        `Printing element ${element.name} content ...`
+      )((progress) =>
+        printElementAndLogActivity(
+          setLogActivityContext(dispatch, {
+            serviceId,
+            searchLocationId,
+            element,
+          })
+        )(progress)(service)(element)
+      );
       if (isErrorEndevorResponse(elementResponse)) {
-        const errorMessage = `Unable to print content of the element ${
-          element.environment
-        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
-          element.type
-        }/${element.name} because of error:\n${formatWithNewLines(
-          elementResponse.details.messages
-        )}`;
-        logger.error(
-          `Unable to print element ${element.name} content.`,
-          errorMessage
+        const error = new Error(
+          `Unable to print the content of element ${element.environment}/${
+            element.stageNumber
+          }/${element.system}/${element.subSystem}/${element.type}/${
+            element.name
+          } because of error:\n${formatWithNewLines(
+            elementResponse.details.messages
+          )}`
+        );
+        logger.errorWithDetails(
+          `Unable to print the content of element ${element.name}.`,
+          `${error.message}.`
         );
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
           errorContext: TelemetryEvents.ELEMENT_CONTENT_PROVIDER_COMPLETED,
           status: ElementContentProviderCompletedStatus.GENERIC_ERROR,
-          error: new Error(errorMessage),
+          error,
         });
         return;
       }

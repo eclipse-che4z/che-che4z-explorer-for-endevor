@@ -12,12 +12,16 @@
  */
 
 import { ANY_VALUE } from '@local/endevor/const';
-import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  Credential,
+  CredentialTokenType,
+  CredentialType,
+} from '@local/endevor/_doc/Credential';
 import { Element, ServiceLocation } from '@local/endevor/_doc/Endevor';
 import { MarkdownString } from 'vscode';
 import { Source } from '../store/storage/_doc/Storage';
 import { EndevorId } from '../store/_doc/v2/Store';
-import { ElementSearchLocation } from '../_doc/Endevor';
+import { ElementSearchLocation } from '../api/_doc/Endevor';
 import {
   LocationNode,
   NonExistingLocationNode,
@@ -46,11 +50,11 @@ export const isNonExistingLocationNode = (
 export const toServiceTooltip = (
   {
     serviceId,
-    serviceLocation,
+    service,
     credential,
   }: {
     serviceId: EndevorId;
-    serviceLocation?: {
+    service?: {
       location: ServiceLocation;
       rejectUnauthorized: boolean;
     };
@@ -74,24 +78,24 @@ $(warning) *${warning}*`
     : ''
 }
 ${
-  serviceLocation?.location
+  service?.location
     ? `
 
 ***Connection information***
 | | |
 | :--------- | :----- |
-| **Protocol:** | ${serviceLocation.location.protocol} |
-| **Host:** | ${serviceLocation.location.hostname} |
-| **Port:** | ${serviceLocation.location.port} |
-| **Base path:** | ${serviceLocation.location.basePath} |
+| **Protocol:** | ${service.location.protocol} |
+| **Host:** | ${service.location.hostname} |
+| **Port:** | ${service.location.port} |
+| **Base path:** | ${service.location.basePath} |
 | **API version:** | ${
-        serviceLocation.location.basePath.endsWith('v2') ||
-        serviceLocation.location.basePath.endsWith('v2/')
+        service.location.basePath.endsWith('v2') ||
+        service.location.basePath.endsWith('v2/')
           ? 'V2'
           : 'V1'
       } |
 | **Uncertified connections:** | ${
-        serviceLocation.rejectUnauthorized ? 'Rejected' : 'Allowed'
+        service.rejectUnauthorized ? 'Rejected' : 'Allowed'
       } |`
     : ''
 }
@@ -99,17 +103,19 @@ ${
   credential
     ? `
 
-***Credential information***
+***Authentication information***
 | | |
 | :--------- | :----- |
-| **Type:** | ${
-        credential.type === CredentialType.BASE ? 'Basic' : 'Token-based'
-      } |
+| **Type:** | ${credential.type === CredentialType.BASE ? 'Basic' : 'Token'} |
 ${
   credential.type === CredentialType.BASE
     ? `| **User:** | ${credential.user} |
 | **Password:** | ******** |`
-    : ''
+    : `| **Token type:** | ${
+        credential.tokenType === CredentialTokenType.APIML
+          ? 'Zowe API ML token'
+          : 'Other'
+      } |`
 }`
     : ''
 }
@@ -152,16 +158,10 @@ ${
 | :--------- | :----- |
 | **Configuration:** | ${location.configuration} |
 | **Environment:** | ${
-        location.environment && location.environment !== ANY_VALUE
-          ? location.environment
-          : '*All*'
+        location.environment !== ANY_VALUE ? location.environment : '*All*'
       } |
 | **Stage #:** | ${location.stageNumber ? location.stageNumber : '*All*'} |
-| **System:** | ${
-        location.system && location.system !== ANY_VALUE
-          ? location.system
-          : '*All*'
-      } |
+| **System:** | ${location.system !== ANY_VALUE ? location.system : '*All*'} |
 | **Subsystem:** | ${
         location.subsystem && location.subsystem !== ANY_VALUE
           ? location.subsystem
@@ -193,9 +193,23 @@ ${location.comment ? `| **Comment:** | ${location.comment} |` : ''}
   );
 };
 
-export const toElementTooltip = (element: Element): MarkdownString => {
-  return new MarkdownString(`
-**Element name:** ${element.name}${element.noSource ? ' *(no-source)*' : ''}
+export const toElementTooltip = (
+  element: Element,
+  warning?: string
+): MarkdownString => {
+  return new MarkdownString(
+    `
+**Element name:** ${element.name}${element.noSource ? ' *(no-source)* ' : ''}
+${
+  warning
+    ? `
+$(warning) *${warning}*`
+    : ''
+}   
+
+**VVLL:** ${element.vvll ? element.vvll : '*N/A*'} ${
+      element.componentVvll ? '*(has-components)*' : ''
+    }
 
 ***Type information***
 | | |
@@ -215,7 +229,35 @@ export const toElementTooltip = (element: Element): MarkdownString => {
 | | |
 | :--------- | :----- |
 | **Last Action CCID:** | ${
-    element.lastActionCcid ? element.lastActionCcid : '*N/A*'
+      element.lastActionCcid ? element.lastActionCcid : '*N/A*'
+    } |
+  | **Processor Group Name:** | ${
+    element.processorGroup
+      ? element.processorGroup.replace('*', '\\*')
+      : '*N/A*'
   } |
-`);
+  | **Sign-out ID:** | ${element.signoutId ? element.signoutId : '*N/A*'} | 
+`,
+    true
+  );
+};
+
+export const toActivityMessageTooltip = (
+  messages: ReadonlyArray<string>,
+  level: 'Informational' | 'Warning' | 'Error'
+): MarkdownString => {
+  return new MarkdownString(
+    `
+**${level} messages:**
+${messages.reduce(
+  (messages, message) => `
+${messages}
+
+${message}
+
+`,
+  ''
+)}
+`
+  );
 };

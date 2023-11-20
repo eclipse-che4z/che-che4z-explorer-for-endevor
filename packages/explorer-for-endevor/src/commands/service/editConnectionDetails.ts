@@ -14,8 +14,8 @@
 import { toServiceUrl } from '../../utils';
 import { withCancellableNotificationProgress } from '@local/vscode-wrapper/window';
 import { askForConnectionDetails } from '../../dialogs/locations/endevorServiceDialogs';
-import { getApiVersion } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { getApiVersionAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   EndevorConnection,
@@ -27,28 +27,39 @@ import { InvalidLocationNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   EditConnectionDetailsCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const editConnectionDetailsCommand =
   (
-    getConnectionDetails: (id: EndevorId) => EndevorConnection | undefined,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionDetails: (id: EndevorId) => EndevorConnection | undefined
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
-    logger.trace('Modify Endevor connection command called.');
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
     };
+
+    const logger = createEndevorLogger({ serviceId });
+    logger.traceWithDetails('Modify Endevor connection command was called.');
+
     const connectionDetails = getConnectionDetails(serviceId);
     const editedConnection = await askForConnectionDetails(
       (location, rejectUnauthorized) =>
         withCancellableNotificationProgress('Testing Endevor connection ...')(
           (progressReporter) =>
-            getApiVersion(progressReporter)(location)(rejectUnauthorized)
+            getApiVersionAndLogActivity(
+              setLogActivityContext(dispatch, {
+                serviceId,
+              })
+            )(progressReporter)({ location, rejectUnauthorized })
         ),
       () => Promise.resolve(false),
       connectionDetails
@@ -80,7 +91,7 @@ export const editConnectionDetailsCommand =
     });
     switch (invalidLocationNode.source) {
       case Source.INTERNAL:
-        logger.info(
+        logger.infoWithDetails(
           'Updated Endevor connection details will be stored within the connection.'
         );
         dispatch({
@@ -105,7 +116,7 @@ export const editConnectionDetailsCommand =
         });
         break;
       case Source.SYNCHRONIZED:
-        logger.info(
+        logger.infoWithDetails(
           'Updated Endevor connection details will be stored within the current VSCode session.'
         );
         dispatch({

@@ -27,7 +27,14 @@ import {
   PROCESSOR_STEP_MAX_RC_EXCEEDED_SEVERE,
   WRONG_CREDENTIALS_SEVERE,
 } from './const';
-import { ErrorResponseType } from './_doc/Endevor';
+import {
+  AddResponseErrorType,
+  ErrorResponseType,
+  GenerateResponseErrorType,
+  PrintResponseErrorType,
+  RetrieveElementWithSignoutResponseErrorType,
+  UpdateResponseErrorType,
+} from './_doc/Endevor';
 
 const getConnectionErrorType = (
   code: string
@@ -47,41 +54,32 @@ const getConnectionErrorType = (
   }
 };
 
-export const getEndevorClientErrorResponseType = (error: {
-  details?: {
-    causeErrors?: {
-      code: string;
-    };
-    httpStatus?: number;
-  };
-}):
+export const getEndevorClientErrorResponseType = (
+  code?: string
+):
   | ErrorResponseType.CERT_VALIDATION_ERROR
   | ErrorResponseType.CONNECTION_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   // then, check if there are some connection errors
-  if (error.details?.causeErrors?.code) {
-    return getConnectionErrorType(error.details.causeErrors.code);
+  if (code) {
+    return getConnectionErrorType(code);
   }
   return ErrorResponseType.GENERIC_ERROR;
 };
 
-export const getAuthorizedEndevorClientErrorResponseType = (error: {
-  details?: {
-    causeErrors?: {
-      code: string;
-    };
-    httpStatus?: number;
-  };
-}):
+export const getAuthorizedEndevorClientErrorResponseType = (
+  code?: string,
+  httpStatus?: number
+):
   | ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR
   | ErrorResponseType.CERT_VALIDATION_ERROR
   | ErrorResponseType.CONNECTION_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   // first, check if there is an unauthorized response error
-  if (error.details?.httpStatus === HTTP_STATUS_UNAUTHORIZED) {
+  if (httpStatus === HTTP_STATUS_UNAUTHORIZED) {
     return ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR;
   }
-  return getEndevorClientErrorResponseType(error);
+  return getEndevorClientErrorResponseType(code);
 };
 
 export const getGenericAuthorizedEndevorErrorResponseType = (
@@ -101,8 +99,7 @@ export const getGenericAuthorizedEndevorErrorResponseType = (
 export const getGenerateErrorType = (
   messages: ReadonlyArray<string>
 ):
-  | ErrorResponseType.PROCESSOR_STEP_MAX_RC_EXCEEDED_ENDEVOR_ERROR
-  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR
+  | GenerateResponseErrorType
   | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   const errorMessagesString = messages.join(' ');
@@ -121,7 +118,7 @@ export const getGenerateErrorType = (
 export const getRetrieveElementWithSignOutElementErrorType = (
   messages: ReadonlyArray<string>
 ):
-  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR
+  | RetrieveElementWithSignoutResponseErrorType
   | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   const errorMessagesString = messages.join(' ');
@@ -137,8 +134,7 @@ export const getRetrieveElementWithSignOutElementErrorType = (
 export const getUpdateElementErrorType = (
   messages: ReadonlyArray<string>
 ):
-  | ErrorResponseType.FINGERPRINT_MISMATCH_ENDEVOR_ERROR
-  | ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR
+  | UpdateResponseErrorType
   | ErrorResponseType.GENERIC_ERROR
   | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR => {
   const errorMessagesString = messages.join(' ');
@@ -158,7 +154,7 @@ export const getUpdateElementErrorType = (
 export const getAddElementErrorType = (
   messages: ReadonlyArray<string>
 ):
-  | ErrorResponseType.DUPLICATE_ELEMENT_ENDEVOR_ERROR
+  | AddResponseErrorType
   | ErrorResponseType.CONNECTION_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   const errorMessagesString = messages.join(' ');
@@ -174,7 +170,7 @@ export const getAddElementErrorType = (
 export const getPrintElementErrorType = (
   messages: ReadonlyArray<string>
 ):
-  | ErrorResponseType.NO_COMPONENT_INFO_ENDEVOR_ERROR
+  | PrintResponseErrorType
   | ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR
   | ErrorResponseType.GENERIC_ERROR => {
   const errorMessagesString = messages.join(' ');

@@ -12,6 +12,7 @@
  */
 
 import { EndevorRestClient } from '@broadcom/endevor-for-zowe-cli/lib/api';
+import { IMemberActionRequestOptions } from '@broadcom/endevor-for-zowe-cli/lib/api/elements/doc/IMemberActionRequestOptions';
 import { ElementUtils } from '@broadcom/endevor-for-zowe-cli/lib/api/elements/ElementUtils';
 import { RetrieveElement } from '@broadcom/endevor-for-zowe-cli/lib/api/elements/RetrieveElement';
 import {
@@ -47,6 +48,25 @@ export class ProposedEndevorClient {
           session,
           ElementUtils.setElementRequestURI(configuration, elemDef),
           requestBody,
+          '2.0'
+        );
+        return response;
+      };
+  }
+
+  /*
+      TODO: Temporary code that uses directlly GET call for the Retrieve to 
+      bypass error in the CLI compatibility layer that adds `noSignout`
+      parameter for V1 based on the `signout` attribute.
+      Should be removed once the bug is fixed in CLI
+     */
+  public static listDirectory(session: Session) {
+    return (configuration: Value) =>
+      async (requestParams: IMemberActionRequestOptions) => {
+        const response = await EndevorRestClient.getJSONtoQueryExpectJSON(
+          session,
+          configuration + '/directory',
+          requestParams,
           '2.0'
         );
         return response;

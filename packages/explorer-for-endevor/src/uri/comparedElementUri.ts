@@ -19,7 +19,7 @@ import {
 } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
 import { EndevorId } from '../store/_doc/v2/Store';
-import { ComparedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
+import { ComparedElementUriQuery, QueryTypes, Schemas } from './_doc/Uri';
 
 type SerializedValue = Readonly<{
   serviceId: EndevorId;

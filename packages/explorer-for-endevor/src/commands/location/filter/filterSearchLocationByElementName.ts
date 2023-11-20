@@ -31,10 +31,11 @@ import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
 import {
   UpdateElementNameFilterCommandCompletedStatus,
   TelemetryEvents,
-} from '../../../_doc/telemetry/Telemetry';
+} from '../../../telemetry/_doc/Telemetry';
 
 export const filterSearchLocationByElementNameCommand =
   (
+    dispatch: (action: Action) => Promise<void>,
     configurations: {
       getElementNamesFilterValue: (
         serviceId: EndevorId
@@ -47,8 +48,7 @@ export const filterSearchLocationByElementNameCommand =
             elements: ReadonlyArray<CachedElement>;
           }>
         | undefined;
-    },
-    dispatch: (action: Action) => Promise<void>
+    }
   ) =>
   async ({
     name: locationName,

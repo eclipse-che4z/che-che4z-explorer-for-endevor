@@ -13,16 +13,16 @@
 
 import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
-import { ElementFilterType } from '../../store/_doc/v2/Store';
+import { ElementToggleFilters } from '../../store/_doc/v2/Store';
 import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../_doc/telemetry/Telemetry';
+import { TelemetryEvents } from '../../telemetry/_doc/Telemetry';
 
-export const toggleMapView =
+export const toggleFilterValue =
   (dispatch: (action: Action) => Promise<void>) =>
-  (showMap: boolean) =>
+  (filter: ElementToggleFilters) =>
   async (locationNode: LocationNode): Promise<void> => {
     dispatch({
-      type: Actions.ELEMENT_UP_THE_MAP_FILTER_UPDATED,
+      type: Actions.ELEMENT_TOGGLE_FILTER_UPDATED,
       serviceId: {
         name: locationNode.serviceName,
         source: locationNode.serviceSource,
@@ -31,15 +31,12 @@ export const toggleMapView =
         name: locationNode.name,
         source: locationNode.source,
       },
-      updatedFilter: {
-        type: ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER,
-        value: showMap,
-      },
+      updatedFilter: filter,
     });
 
     reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_TOGGLE_MAP,
+      type: TelemetryEvents.COMMAND_TOGGLE_FILTER,
       source: locationNode.source,
-      showMap,
+      filter,
     });
   };
