@@ -28,7 +28,7 @@ jobs:
       - name: Build E4E
         run: yarn workspace ${{ env.PROJECT_NAME }} build:dev
       - name: Run tests
-        uses: GabrielBB/xvfb-action@v1.0
+        uses: coactions/setup-xvfb@v1
         id: tests
         with:
           run: yarn test
