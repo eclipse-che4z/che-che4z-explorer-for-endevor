@@ -3,7 +3,7 @@
   "displayName": "Explorer for Endevor",
   "description": "Extension that modernizes the way you interact with Endevor inventory locations and elements",
   "author": "Broadcom",
-  "version": "1.5.4",
+  "version": "1.6.0",
   "publisher": "BroadcomMFD",
   "homepage": "https://github.com/eclipse/che-che4z-explorer-for-endevor",
   "repository": {
@@ -16,7 +16,8 @@
   "license": "SEE LICENSE IN LICENSE.txt",
   "icon": "resources/logo.png",
   "engines": {
-    "vscode": "^1.58.0"
+    "node": "^18.16.0",
+    "vscode": "^1.76.0"
   },
   "categories": [
     "SCM Providers"
@@ -29,16 +30,7 @@
     "zowe"
   ],
   "activationEvents": [
-    "onView:e4e.treeView",
-    "onCommand:e4e.submitIssue",
-    "onCommand:e4e.refreshTreeView",
-    "onCommand:e4e.addServiceAndLocation",
-    "onCommand:e4e.addNewService",
-    "onCommand:e4e.addNewSearchLocation",
-    "onCommand:e4e.cleanupStorage",
-    "onCommand:e4e.migrateLocationsFromSettings",
-    "workspaceContains:.endevor",
-    "onCommand:e4e.sync.initWorkspace"
+    "workspaceContains:.endevor"
   ],
   "main": "./dist/extension.bundle.js",
   "contributes": {
@@ -46,6 +38,13 @@
       "activitybar": [
         {
           "id": "e4eExplorerContainer",
+          "title": "Explorer for Endevor",
+          "icon": "./resources/logo.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "e4eExplorerPanel",
           "title": "Explorer for Endevor",
           "icon": "./resources/logo.svg"
         }
@@ -60,6 +59,12 @@
         {
           "id": "e4e.elementHistoryView",
           "name": "Element History"
+        }
+      ],
+      "e4eExplorerPanel": [
+        {
+          "id": "e4e.activityView",
+          "name": "Activity"
         }
       ]
     },
@@ -125,6 +130,16 @@
         "command": "e4e.showElementsInPlace",
         "title": "Show Endevor Elements in Place",
         "icon": "$(eye-closed)"
+      },
+      {
+        "command": "e4e.showEmptyTypes",
+        "title": "Show Empty Types",
+        "icon": "$(empty-window)"
+      },
+      {
+        "command": "e4e.hideEmptyTypes",
+        "title": "Hide Empty Types",
+        "icon": "$(clear-all)"
       },
       {
         "command": "e4e.hideService",
@@ -213,6 +228,10 @@
       {
         "command": "e4e.editElement",
         "title": "Edit"
+      },
+      {
+        "command": "e4e.moveElement",
+        "title": "Move"
       },
       {
         "command": "e4e.generateElement",
@@ -332,6 +351,10 @@
         "title": "Generate All Elements",
         "category": "Explorer for Endevor",
         "icon": "$(checklist)"
+      },
+      {
+        "command": "e4e.viewTypeDetails",
+        "title": "View Type Details"
       }
     ],
     "submenus": [
@@ -511,64 +534,79 @@
           "group": "2_e4e_generate_element_actions@1"
         },
         {
+          "command": "e4e.moveElement",
+          "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
+          "group": "3_e4e_move_element_actions@0"
+        },
+        {
           "command": "e4e.retrieveElement",
           "when": "viewItem == ELEMENT_IN_PLACE || viewItem == ELEMENT_UP_THE_MAP",
-          "group": "3_e4e_retrieve_actions@0"
+          "group": "4_e4e_retrieve_actions@0"
         },
         {
           "command": "e4e.retrieveElementWithDependencies",
           "when": "viewItem == ELEMENT_IN_PLACE || viewItem == ELEMENT_UP_THE_MAP",
-          "group": "3_e4e_retrieve_actions@1"
+          "group": "4_e4e_retrieve_actions@1"
         },
         {
           "command": "e4e.signOutElement",
           "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
-          "group": "4_e4e_sign_actions@0"
+          "group": "5_e4e_sign_actions@0"
         },
         {
           "command": "e4e.signInElement",
           "when": "!listMultiSelection && viewItem == ELEMENT_IN_PLACE || !listMultiSelection && viewItem == ELEMENT_UP_THE_MAP",
-          "group": "4_e4e_sign_actions@1"
+          "group": "5_e4e_sign_actions@1"
         },
         {
           "command": "e4e.hideSearchLocation",
-          "when": "viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CONNECTION",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && viewItem =~ /\\/(INVALID_CREDENTIALS|INVALID_CONNECTION)/",
           "group": "inline"
         },
         {
           "command": "e4e.hideSearchLocation",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CONNECTION || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && !(viewItem =~ /\\/NON_EXISTING/)",
           "group": "e4e_search_location_actions@0"
         },
         {
           "command": "e4e.deleteSearchLocation",
-          "when": "viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/NON_EXISTING",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && viewItem =~ /\\/NON_EXISTING/",
           "group": "inline"
         },
         {
           "command": "e4e.deleteSearchLocation",
-          "when": "viewItem == LOCATION || viewItem == LOCATION/NON_EXISTING || viewItem == LOCATION_PROFILE/NON_EXISTING || viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "when": "viewItem == LOCATION || viewItem =~ /^LOCATION\\// || viewItem == LOCATION_PROFILE/NON_EXISTING",
           "group": "e4e_search_location_actions@1"
         },
         {
           "submenu": "e4e.filterSearchLocationMenu",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && viewItem =~ /\\/VALID$/",
           "group": "inline@0"
         },
         {
           "command": "e4e.addElementFromFileSystem",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE || viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
-          "group": "inline@2"
+          "when": "(viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && viewItem =~ /\\/VALID$/) || viewItem == TYPE",
+          "group": "inline@3"
         },
         {
           "command": "e4e.showFirstFoundElements",
-          "when": "viewItem == LOCATION || viewItem == LOCATION_PROFILE",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && !(viewItem =~ /\\/WITH_MAP/) && viewItem =~ /\\/VALID$/",
           "group": "inline@1"
         },
         {
           "command": "e4e.showElementsInPlace",
-          "when": "viewItem == LOCATION/WITH_MAP || viewItem == LOCATION_PROFILE/WITH_MAP",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && viewItem =~ /\\/WITH_MAP/ && viewItem =~ /\\/VALID$/",
           "group": "inline@1"
+        },
+        {
+          "command": "e4e.showEmptyTypes",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && !(viewItem =~ /\\/WITH_EMPTY_TYPES/) && viewItem =~ /\\/VALID$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "e4e.hideEmptyTypes",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)/ && viewItem =~ /\\/WITH_EMPTY_TYPES/ && viewItem =~ /\\/VALID$/",
+          "group": "inline@2"
         },
         {
           "command": "e4e.clearSearchLocationFilters",
@@ -612,17 +650,17 @@
         },
         {
           "command": "e4e.editConnectionDetails",
-          "when": "viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CONNECTION",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && viewItem =~ /\\/INVALID_CONNECTION/",
           "group": "inline"
         },
         {
           "command": "e4e.testConnectionDetails",
-          "when": "viewItem == LOCATION/INVALID_CONNECTION || viewItem == LOCATION_PROFILE/INVALID_CONNECTION",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && viewItem =~ /\\/INVALID_CONNECTION/",
           "group": "inline"
         },
         {
           "command": "e4e.editCredentials",
-          "when": "viewItem == LOCATION/INVALID_CREDENTIALS || viewItem == LOCATION_PROFILE/INVALID_CREDENTIALS",
+          "when": "viewItem =~ /^(LOCATION|LOCATION_PROFILE)\\// && viewItem =~ /\\/INVALID_CREDENTIALS/",
           "group": "inline"
         },
         {
@@ -664,6 +702,10 @@
           "command": "e4e.generateSubsystemElements",
           "when": "viewItem == SUB",
           "group": "inline"
+        },
+        {
+          "command": "e4e.viewTypeDetails",
+          "when": "viewItem == TYPE"
         }
       ],
       "commandPalette": [
@@ -748,6 +790,10 @@
           "when": "false"
         },
         {
+          "command": "e4e.moveElement",
+          "when": "false"
+        },
+        {
           "command": "e4e.generateElement",
           "when": "false"
         },
@@ -828,11 +874,19 @@
           "when": "false"
         },
         {
+          "command": "e4e.showEmptyTypes",
+          "when": "false"
+        },
+        {
           "command": "e4e.sync.confirmAllConflictResolutions",
           "when": "false"
         },
         {
           "command": "e4e.generateSubsystemElements",
+          "when": "false"
+        },
+        {
+          "command": "e4e.viewTypeDetails",
           "when": "false"
         }
       ]
@@ -1119,16 +1173,18 @@
     "verify-pat:vsce": "vsce verify-pat --pat",
     "verify-pat:ovsx": "ovsx verify-pat --pat",
     "clean": "rimraf dist results vsce node_modules .vscode-test LICENSE.txt NOTICE.md",
+    "clean:test": "rimraf .vscode-test",
     "copy-into-repo-root": "copyfiles README.md CHANGELOG.md LICENSE.txt NOTICE.md CONTRIBUTING.md ../../"
   },
   "dependencies": {
-    "@broadcom/endevor-for-zowe-cli": "^7.4.0",
+    "@broadcom/endevor-for-zowe-cli": "^7.6.0",
     "@local/endevor": "1.0.0",
     "@local/extension": "1.0.0",
     "@local/profiles": "1.0.0",
+    "@local/telemetry": "1.0.0",
     "@local/type-parser": "1.0.0",
     "@local/vscode-wrapper": "1.0.0",
-    "@zowe/imperative": "^5.9.0",
+    "@local/views": "1.0.0",
     "table": "^6.8.1"
   },
   "extensionDependencies": [

@@ -20,5 +20,5 @@ module.exports = {
 
   // coverage
   coverageDirectory: '<rootDir>/results/unit/coverage',
-  coverageReporters: ['text', 'text-summary', 'lcov'],
+  coverageReporters: ['text', 'text-summary', 'json'],
 };

@@ -39,7 +39,7 @@ const config = {
   plugins: [
     new BundledLicensesPlugin({
       override: {
-        '@broadcom/endevor-for-zowe-cli@7.4.0': {
+        '@broadcom/endevor-for-zowe-cli@7.5.1': {
           licenseName: 'Broadcom Internal',
         },
         'promise-pool-tool@1.3.3': {
@@ -49,7 +49,7 @@ Copyright (c) 4-digit year, Company or Person's Name
 Permission to use, copy, modify, and/or distribute this software for any purpose
 with or without fee is hereby granted, provided that the above copyright notice
 and this permission notice appear in all copies.
-          
+
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
 REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
 FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
@@ -80,7 +80,6 @@ THIS SOFTWARE.`,
     filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
   },
-  devtool: 'false',
   externals: {
     // Add modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
@@ -96,6 +95,13 @@ THIS SOFTWARE.`,
   },
   module: {
     rules: [
+      // a rule to avoid @zowe/imperative's 'wontache' dependency build error
+      // suggested in https://stackoverflow.com/questions/75860031/compile-vscode-extension-with-webpack-now-failing-after-2-years-of-previously-co
+      {
+        test: /\.js$/,
+        include: /wontache/,
+        type: 'javascript/auto',
+      },
       {
         test: /\.ts$/,
         exclude: /node_modules/,

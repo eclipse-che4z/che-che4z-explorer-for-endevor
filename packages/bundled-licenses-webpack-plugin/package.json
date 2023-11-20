@@ -9,6 +9,8 @@
     "lint": "echo No Lint for 'bundled-licenses-webpack-plugin' Package",
     "pretty": "prettier --write .",
     "test": "echo No Test for 'bundled-licenses-webpack-plugin' Package",
+    "test:no-vscode": "echo No Test for 'bundled-licenses-webpack-plugin' Package",
+    "test:vscode": "echo No Tests for 'bundled-licenses-webpack-plugin' Package",
     "clean": "rimraf node_modules"
   },
   "main": "plugin.js",

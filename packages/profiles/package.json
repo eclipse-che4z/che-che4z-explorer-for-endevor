@@ -6,6 +6,8 @@
     "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
     "pretty": "prettier --write .",
     "test": "jest --config jest.config.js --coverage",
+    "test:no-vscode": "jest --config jest.config.js --coverage",
+    "test:vscode": "echo No Tests for 'profiles' Package",
     "tsc:watch": "tsc --noemit --watch",
     "clean": "rimraf results node_modules"
   },
