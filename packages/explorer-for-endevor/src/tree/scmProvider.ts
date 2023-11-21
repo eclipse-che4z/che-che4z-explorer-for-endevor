@@ -24,7 +24,7 @@ import {
   WorkspaceElementType,
 } from '../store/scm/_doc/Workspace';
 import { toCachedElementUri } from '../uri/cachedElementUri';
-import { Schemas } from '../_doc/Uri';
+import { Schemas } from '../uri/_doc/Uri';
 import { toFileExplorerChange, toScmProviderChange } from './scmRender';
 
 export const scmTreeProvider =

@@ -44,11 +44,11 @@ const createMockBuilder = (
 ): RequestRuleBuilder => {
   switch (method) {
     case 'GET':
-      return mockServer.get(absoluteUri);
+      return mockServer.forGet(absoluteUri);
     case 'PUT':
-      return mockServer.put(absoluteUri);
+      return mockServer.forPut(absoluteUri);
     case 'POST':
-      return mockServer.post(absoluteUri);
+      return mockServer.forPost(absoluteUri);
     default:
       throw new UnreachableCaseError(method);
   }

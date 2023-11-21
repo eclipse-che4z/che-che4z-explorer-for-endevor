@@ -16,4 +16,6 @@ export type Progress = Readonly<
 >;
 export type ProgressReporter = {
   report(value: Progress): void;
+  message?: string;
+  progressRemaining?: number;
 };

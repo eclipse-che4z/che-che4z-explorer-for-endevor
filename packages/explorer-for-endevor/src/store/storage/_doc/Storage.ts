@@ -13,7 +13,7 @@
 
 import { ServiceLocation } from '@local/endevor/_doc/Endevor';
 import { Credential as EndevorCredential } from '@local/endevor/_doc/Credential';
-import { ElementSearchLocation } from '../../../_doc/Endevor';
+import { ElementSearchLocation } from '../../../api/_doc/Endevor';
 
 export const STORAGE_VALUE_VERSION = '1';
 

@@ -15,7 +15,7 @@ import {
   isWorkspace as isEndevorWorkspace,
   syncWorkspace as syncEndevorWorkspace,
 } from '../../store/scm/workspace';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
   askForService,
@@ -30,10 +30,7 @@ import {
   dialogCancelled as changeControlDialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
 import {
-  EndevorConfiguration,
   EndevorId,
-  ValidEndevorConnection,
-  ValidEndevorCredential,
   ValidEndevorSearchLocationDescriptions,
   ExistingEndevorServiceDescriptions,
 } from '../../store/_doc/v2/Store';
@@ -47,40 +44,37 @@ import {
 import {
   SyncWorkspaceCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import {
   isWorkspaceSyncConflictResponse,
   isWorkspaceSyncErrorResponse,
 } from '../../store/scm/utils';
 import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
-import { SearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 import { Id } from '../../store/storage/_doc/Storage';
+import { createEndevorLogger } from '../../logger';
 
 export const syncWorkspace = async (
-  configurations: {
-    getValidServiceDescriptions: () => ExistingEndevorServiceDescriptions;
-    getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions;
-    getConnectionDetails: (
-      id: EndevorId
-    ) => Promise<ValidEndevorConnection | undefined>;
-    getEndevorConfiguration: (
-      serviceId?: EndevorId,
-      searchLocationId?: EndevorId
-    ) => Promise<EndevorConfiguration | undefined>;
-    getCredential: (
-      connection: ValidEndevorConnection,
-      configuration: EndevorConfiguration
-    ) => (
-      credentialId: EndevorId
-    ) => Promise<ValidEndevorCredential | undefined>;
-    getSearchLocation: (
-      searchLocationId: EndevorId
-    ) => Promise<SearchLocation | undefined>;
-  },
   dispatch: (action: WorkspaceSynced | UpdateLastUsed) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >,
+  getValidServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>,
+  getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions,
   getLastUsedServiceId: () => Id | undefined,
   getLastUsedSearchLocationId: () => Id | undefined
 ): Promise<void> => {
+  const logger = createEndevorLogger();
   logger.trace('Synchronization of an Endevor workspace called.');
   const folderUri = await getWorkspaceUri();
   if (!folderUri) {
@@ -110,7 +104,7 @@ export const syncWorkspace = async (
     return;
   }
   const serviceDialogResult = await askForService(
-    configurations.getValidServiceDescriptions(),
+    await getValidServiceDescriptions(),
     getLastUsedServiceId(),
     'Last Used'
   );
@@ -123,24 +117,9 @@ export const syncWorkspace = async (
     return;
   }
   const serviceId = serviceDialogResult.id;
-  const connectionDetails = await configurations.getConnectionDetails(
-    serviceId
-  );
-  if (!connectionDetails) {
-    const error = new Error(
-      `Unable to fetch the existing ${serviceId.source} Endevor connection with the name ${serviceId.name}`
-    );
-    logger.error(`${error.message}.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
-      status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
-      error,
-    });
-    return;
-  }
+  logger.updateContext({ serviceId });
   const locationDialogResult = await askForSearchLocation(
-    configurations.getValidSearchLocationDescriptions(),
+    getValidSearchLocationDescriptions(),
     getLastUsedSearchLocationId(),
     'Last Used'
   );
@@ -153,61 +132,18 @@ export const syncWorkspace = async (
     return;
   }
   const searchLocationId = locationDialogResult.id;
+  logger.updateContext({ serviceId, searchLocationId });
   dispatch({
     type: SyncActions.UPDATE_LAST_USED,
     lastUsedServiceId: serviceId,
     lastUsedSearchLocationId: searchLocationId,
   });
-  const configuration = await configurations.getEndevorConfiguration(
+  const connectionParams = await getConnectionConfiguration(
     serviceId,
     searchLocationId
   );
-  if (!configuration) {
-    const error = new Error(
-      `Unable to fetch the existing ${searchLocationId.source} inventory location with the name ${searchLocationId.name}`
-    );
-    logger.error(`${error.message}.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
-      status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
-      error,
-    });
-    return;
-  }
-  const credential = await configurations.getCredential(
-    connectionDetails,
-    configuration
-  )(serviceId);
-  if (!credential) {
-    const error = new Error(
-      `Unable to fetch the existing ${serviceId.source} Endevor credential with the name ${serviceId.name}`
-    );
-    logger.error(`${error.message}.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
-      status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
-      error,
-    });
-    return;
-  }
-  const searchLocation = await configurations.getSearchLocation(
-    searchLocationId
-  );
-  if (!searchLocation) {
-    const error = new Error(
-      `Unable to fetch the existing ${searchLocationId.source} inventory location with the name ${searchLocationId.name}`
-    );
-    logger.error(`${error.message}.`);
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
-      status: SyncWorkspaceCommandCompletedStatus.GENERIC_ERROR,
-      error,
-    });
-    return;
-  }
+  if (!connectionParams) return;
+  const { service, searchLocation } = connectionParams;
   const syncChangeControlValue = await askForChangeControlValue({
     ccid: searchLocation.ccid,
     comment: searchLocation.comment,
@@ -223,10 +159,7 @@ export const syncWorkspace = async (
   const syncResult = await withNotificationProgress(
     'Synchronizing Endevor workspace'
   )((progressReporter) =>
-    syncEndevorWorkspace(progressReporter)({
-      ...connectionDetails.value,
-      credential: credential.value,
-    })(configuration)({
+    syncEndevorWorkspace(progressReporter)(service)(service.configuration)({
       ...searchLocation,
       subSystem: searchLocation.subsystem,
       id: searchLocation.element,
@@ -234,7 +167,7 @@ export const syncWorkspace = async (
   );
   if (isError(syncResult)) {
     const error = syncResult;
-    logger.error(
+    logger.errorWithDetails(
       'Unable to synchronize Endevor workspace.',
       `${error.message}.`
     );
@@ -250,7 +183,7 @@ export const syncWorkspace = async (
   syncResult.messages.forEach((message) => logger.trace(message));
   if (isWorkspaceSyncErrorResponse(syncResult)) {
     const syncError = syncResult;
-    logger.error(
+    logger.errorWithDetails(
       `Unable to synchronize Endevor workspace for these elements: ${syncError.errorDetails
         .map((errorInfo) => errorInfo.element.name)
         .join(', ')}`

@@ -72,6 +72,7 @@ export type InternalLocationNode = Readonly<{
   serviceName: string;
   serviceSource: Source;
   duplicated: boolean;
+  withEmptyTypes?: boolean;
   tooltip?: MarkdownString | string;
   // showMap: boolean;
   // baseUrl: EndevorUrl;

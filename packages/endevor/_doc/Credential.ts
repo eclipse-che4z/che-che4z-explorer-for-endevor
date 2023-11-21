@@ -31,11 +31,12 @@ type TokenValidityParams = Readonly<{
   tokenValidForMs: number;
 }>;
 
-export type BearerTokenCredential = TokenValidityParams &
-  Readonly<{
-    type: CredentialType.TOKEN_BEARER;
-    tokenValue: string;
-  }>;
+export type BearerTokenCredential = Readonly<{
+  type: CredentialType.TOKEN_BEARER;
+  tokenType: CredentialTokenType;
+  tokenValue: string;
+}> &
+  Partial<TokenValidityParams>;
 
 // our own enum for token types not to expose imperative types
 export const enum CredentialTokenType {
@@ -47,12 +48,12 @@ export const enum CredentialTokenType {
   APIML = 'apimlAuthenticationToken',
 }
 
-export type CookieTokenCredential = TokenValidityParams &
-  Readonly<{
-    type: CredentialType.TOKEN_COOKIE;
-    tokenType: CredentialTokenType;
-    tokenValue: string;
-  }>;
+export type CookieTokenCredential = Readonly<{
+  type: CredentialType.TOKEN_COOKIE;
+  tokenType: CredentialTokenType;
+  tokenValue: string;
+}> &
+  Partial<TokenValidityParams>;
 
 export type TokenCredential = BearerTokenCredential | CookieTokenCredential;
 

@@ -14,20 +14,51 @@
 import { ANY_VALUE } from '@local/endevor/const';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { toEndevorStageNumber } from '@local/endevor/utils';
-import { ElementMapPath, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
-import { DEFAULT_TREE_IN_PLACE_SEARCH_MODE } from '../constants';
+import {
+  ElementMapPath,
+  ElementType,
+  ElementTypeMapPath,
+  EnvironmentStage,
+  EnvironmentStageMapPath,
+  SubSystem,
+  SubSystemMapPath,
+  System,
+  SystemMapPath,
+} from '@local/endevor/_doc/Endevor';
+import {
+  DEFAULT_SHOW_EMPTY_TYPES_MODE,
+  DEFAULT_TREE_IN_PLACE_SEARCH_MODE,
+} from '../constants';
 import { isDefined } from '../utils';
-import { ElementSearchLocation, SubsystemMapPathId } from '../_doc/Endevor';
+import {
+  ElementSearchLocation,
+  EndevorAuthorizedService,
+  EnvironmentStageMapPathId,
+  SearchLocation,
+  SubsystemMapPathId,
+  SystemMapPathId,
+  TypeMapPathId,
+} from '../api/_doc/Endevor';
 import { toCompositeKey as toStorageCompositeKey } from './storage/utils';
-import { ConnectionLocations, Id, Source } from './storage/_doc/Storage';
+import {
+  ConnectionLocations,
+  Credential,
+  Source,
+} from './storage/_doc/Storage';
 import {
   CachedElement,
+  CachedEnvironmentStage,
+  CachedEnvironmentStages,
+  CachedSystem,
   ElementCcidsFilter,
   ElementFilter,
   ElementFilterType,
   ElementNamesFilter,
   ElementsUpTheMapFilter,
   ElementTypesFilter,
+  EmptyTypesFilter,
+  EndevorConfiguration,
+  EndevorConnection,
   EndevorConnectionStatus,
   EndevorCredentialStatus,
   EndevorId,
@@ -41,8 +72,68 @@ import {
   NonExistingServiceDescription,
   ServiceLocationFilters,
   State,
+  ValidEndevorCredential,
   ValidEndevorSearchLocationDescription,
 } from './_doc/v2/Store';
+
+export const getConnectionConfiguration =
+  ({
+    getConnectionDetails,
+    getEndevorConfiguration,
+    getCredential,
+    getSearchLocation,
+  }: {
+    getConnectionDetails: (
+      id: EndevorId
+    ) => Promise<EndevorConnection | undefined>;
+    getEndevorConfiguration: (
+      serviceId?: EndevorId,
+      searchLocationId?: EndevorId
+    ) => Promise<EndevorConfiguration | undefined>;
+    getCredential: (
+      connection: EndevorConnection,
+      configuration: EndevorConfiguration
+    ) => (
+      credentialId: EndevorId
+    ) => Promise<ValidEndevorCredential | undefined>;
+    getSearchLocation: (
+      searchLocationId: EndevorId
+    ) => Promise<SearchLocation | undefined>;
+  }) =>
+  async (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ): Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  > => {
+    const connectionDetails = await getConnectionDetails(serviceId);
+    if (!connectionDetails) return;
+    const configuration = await getEndevorConfiguration(
+      serviceId,
+      searchLocationId
+    );
+    if (!configuration) return;
+    const credential = await getCredential(
+      connectionDetails,
+      configuration
+    )(serviceId);
+    if (!credential) return;
+    const searchLocation = await getSearchLocation(searchLocationId);
+    if (!searchLocation) return;
+    return {
+      service: {
+        location: connectionDetails.value.location,
+        rejectUnauthorized: connectionDetails.value.rejectUnauthorized,
+        credential: credential.value,
+        configuration,
+      },
+      searchLocation,
+    };
+  };
 
 export const toServiceLocationCompositeKey =
   (serviceId: EndevorId) =>
@@ -68,7 +159,7 @@ export const normalizeSearchLocation = (
 ): ElementSearchLocation => {
   return {
     configuration: searchLocation.configuration,
-    environment: searchLocation.environment?.toUpperCase(),
+    environment: searchLocation.environment.toUpperCase(),
     stageNumber: searchLocation.stageNumber,
     system: searchLocation.system
       ? searchLocation.system !== ANY_VALUE
@@ -88,6 +179,21 @@ export const normalizeSearchLocation = (
     ccid: searchLocation.ccid,
     comment: searchLocation.comment,
   };
+};
+
+export const toEnvironmentStageMapPathId = ({
+  environment,
+  stageNumber,
+}: EnvironmentStageMapPath): EnvironmentStageMapPathId => {
+  return `${environment}/${stageNumber}`;
+};
+
+export const toSystemMapPathId = ({
+  environment,
+  stageNumber,
+  system,
+}: SystemMapPath): SystemMapPathId => {
+  return `${environment}/${stageNumber}/${system}`;
 };
 
 export const toSubsystemMapPathId = ({
@@ -117,6 +223,32 @@ export const fromSubsystemMapPathId = (
   };
 };
 
+export const toTypeMapPathId = ({
+  environment,
+  stageNumber,
+  system,
+  type,
+}: ElementTypeMapPath): TypeMapPathId => {
+  return `${environment}/${stageNumber}/${system}/${type}`;
+};
+
+export const fromTypeMapPathId = (
+  typeMapPathId: TypeMapPathId
+): ElementTypeMapPath | undefined => {
+  const [environment, stageNumber, system, type] = typeMapPathId.split('/');
+  if (!environment || !stageNumber || !system || !type) {
+    return;
+  }
+  const stageNumberValue = toEndevorStageNumber(stageNumber);
+  if (!stageNumberValue) return;
+  return {
+    environment,
+    system,
+    type,
+    stageNumber: stageNumberValue,
+  };
+};
+
 export const isElementsNameFilter = (
   filter: ElementFilter
 ): filter is ElementNamesFilter => {
@@ -141,6 +273,12 @@ export const isElementsUpTheMapFilter = (
   return filter.type === ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER;
 };
 
+export const isEmptyTypesFilter = (
+  filter: ElementFilter
+): filter is EmptyTypesFilter => {
+  return filter.type === ElementFilterType.EMPTY_TYPES_FILTER;
+};
+
 const getFilterOrderIndex = (filterType: ElementFilterType): number => {
   switch (filterType) {
     case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
@@ -150,6 +288,8 @@ const getFilterOrderIndex = (filterType: ElementFilterType): number => {
     case ElementFilterType.ELEMENT_TYPES_FILTER:
       return 2;
     case ElementFilterType.ELEMENT_CCIDS_FILTER:
+      return 3;
+    case ElementFilterType.EMPTY_TYPES_FILTER:
       return 3;
     default:
       throw new UnreachableCaseError(filterType);
@@ -196,7 +336,8 @@ const filterElement =
         );
         break;
       case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
-        // ignore up the map filter on this level
+      case ElementFilterType.EMPTY_TYPES_FILTER:
+        // ignore up the map filter and empty types filter on this level
         return cachedElement;
       default:
         throw new UnreachableCaseError(filter);
@@ -208,6 +349,21 @@ export const getAllFilteredElements =
   (cachedElements: ReadonlyArray<CachedElement>) =>
   (filter: ElementFilter): ReadonlyArray<CachedElement> => {
     return cachedElements.map(filterElement(filter)).filter(isDefined);
+  };
+
+export const typeMatchesFilter =
+  (type: ElementType) =>
+  (filter: ElementFilter): boolean => {
+    return (
+      filter.type === ElementFilterType.ELEMENT_TYPES_FILTER &&
+      !!prepareFilterPattern(filter.value).exec(type.type)
+    );
+  };
+
+export const getAllFilteredTypes =
+  (cachedTypes: ReadonlyArray<ElementType>) =>
+  (filter: ElementTypesFilter): ReadonlyArray<ElementType> => {
+    return cachedTypes.filter((type) => typeMatchesFilter(type)(filter));
   };
 
 export const getFirstFoundFilteredElement =
@@ -242,9 +398,12 @@ export const toExistingServiceDescription =
     serviceKey: string,
     {
       id: serviceId,
-      value: persistentServiceLocationValue,
+      value: persistentServiceValue,
       credential: persistentCredential,
-    }: EndevorService
+    }: EndevorService &
+      Partial<{
+        credential: Credential;
+      }>
   ): ExistingEndevorServiceDescription => {
     const sessionDetails = state().sessions[serviceKey];
     const duplicated = isDuplicatedService(
@@ -256,10 +415,12 @@ export const toExistingServiceDescription =
       status: EndevorServiceStatus.VALID,
       duplicated,
       // always try to use the session overrides first
-      serviceLocation: sessionDetails?.connection
+      service: sessionDetails?.connection
         ? sessionDetails.connection.value
-        : persistentServiceLocationValue,
-      credential: sessionDetails?.credential
+        : persistentServiceValue,
+      // TODO ideally, to provide Endevor PassTicket too here, if available
+      // TODO so far, there is not enough info for that (configuration info is missing in the service details)
+      credential: sessionDetails?.credential?.value
         ? sessionDetails.credential.value
         : persistentCredential?.value,
     };
@@ -316,7 +477,7 @@ export const toExistingServiceDescription =
 
 export const toNonExistingServiceDescription =
   (state: () => State) =>
-  (serviceId: Id): NonExistingServiceDescription => {
+  (serviceId: EndevorId): NonExistingServiceDescription => {
     const duplicated = isDuplicatedService(
       state().services,
       state().serviceLocations
@@ -359,59 +520,110 @@ export const toValidLocationDescription =
               )
           );
         }).length >= 1;
+    let searchForFirstFoundElements = DEFAULT_TREE_IN_PLACE_SEARCH_MODE;
+    let showEmptyTypes = DEFAULT_SHOW_EMPTY_TYPES_MODE;
     if (availableFilters) {
       const firstFoundSearchFilter =
         availableFilters[ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER];
-      if (
-        firstFoundSearchFilter &&
-        isElementsUpTheMapFilter(firstFoundSearchFilter)
-      ) {
-        return {
-          id: endevorSearchLocation.id,
-          duplicated,
-          status: EndevorSearchLocationStatus.VALID,
-          searchForFirstFoundElements: firstFoundSearchFilter.value,
-          location: endevorSearchLocation.value,
-        };
-      }
+      const showEmptyTypesFilter =
+        availableFilters[ElementFilterType.EMPTY_TYPES_FILTER];
+      searchForFirstFoundElements = !!firstFoundSearchFilter?.value;
+      showEmptyTypes = !!showEmptyTypesFilter?.value;
     }
     return {
       id: endevorSearchLocation.id,
       duplicated,
       status: EndevorSearchLocationStatus.VALID,
-      searchForFirstFoundElements: DEFAULT_TREE_IN_PLACE_SEARCH_MODE,
+      searchForFirstFoundElements,
+      showEmptyTypes,
       location: endevorSearchLocation.value,
     };
   };
 
 export const toInvalidLocationDescription =
   (state: () => State) =>
-  (locationId: Id): InvalidEndevorSearchLocationDescription => {
+  (searchLocationId: EndevorId): InvalidEndevorSearchLocationDescription => {
     const duplicated =
       Object.values(Source)
-        .filter((source) => source !== locationId.source)
+        .filter((source) => source !== searchLocationId.source)
         // workaround for ridiculous typescript limitation
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         .map((source) => source as Source)
         .filter((source) => {
           return (
             state().searchLocations[
-              toStorageCompositeKey({ name: locationId.name, source })
+              toStorageCompositeKey({ name: searchLocationId.name, source })
             ] ||
             Object.values(state().serviceLocations)
               .flatMap((value) => Object.keys(value.value))
               .find(
                 (value) =>
                   toStorageCompositeKey({
-                    name: locationId.name,
+                    name: searchLocationId.name,
                     source,
                   }) === value
               )
           );
         }).length >= 1;
     return {
-      id: locationId,
+      id: searchLocationId,
       status: EndevorSearchLocationStatus.INVALID,
       duplicated,
     };
   };
+
+export const createEndevorInventory = (
+  allEnvironmentStages: ReadonlyArray<EnvironmentStage>,
+  allSystems: ReadonlyArray<System>,
+  allSubsystems: ReadonlyArray<SubSystem>,
+  allTypes: ReadonlyArray<ElementType>
+): CachedEnvironmentStages => {
+  return allEnvironmentStages.reduce(
+    (accEnvStages: { [id: string]: CachedEnvironmentStage }, envStage) => {
+      const envStageId = toEnvironmentStageMapPathId(envStage);
+      const systems = allSystems
+        .filter(
+          (system) =>
+            system.environment === envStage.environment &&
+            system.stageNumber === envStage.stageNumber
+        )
+        .reduce((accSystems: { [id: string]: CachedSystem }, system) => {
+          const systemId = `${envStageId}/${system.system}`;
+          const subsystems = allSubsystems
+            .filter(
+              (subsystem) =>
+                subsystem.environment === system.environment &&
+                subsystem.stageNumber === system.stageNumber &&
+                subsystem.system === system.system
+            )
+            .reduce((accSubsystems: { [id: string]: SubSystem }, subsystem) => {
+              accSubsystems[`${systemId}/${subsystem.subSystem}`] = subsystem;
+              return accSubsystems;
+            }, {});
+          const types = allTypes
+            .filter(
+              (type) =>
+                type.environment === system.environment &&
+                type.stageNumber === system.stageNumber &&
+                type.system === system.system
+            )
+            .reduce((accTypes: { [id: string]: ElementType }, type) => {
+              accTypes[`${systemId}/${type.type}`] = type;
+              return accTypes;
+            }, {});
+          accSystems[systemId] = {
+            system,
+            subsystems,
+            types,
+          };
+          return accSystems;
+        }, {});
+      accEnvStages[envStageId] = {
+        environmentStage: envStage,
+        systems,
+      };
+      return accEnvStages;
+    },
+    {}
+  );
+};

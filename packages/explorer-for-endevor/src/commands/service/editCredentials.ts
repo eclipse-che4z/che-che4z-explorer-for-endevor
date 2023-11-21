@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { InvalidLocationNode } from '../../tree/_doc/ServiceLocationTree';
 import { askForCredentialWithDefaultPasswordPolicy } from '../../dialogs/credentials/endevorCredentialDialogs';
@@ -23,19 +23,24 @@ import {
   ValidEndevorConnection,
 } from '../../store/_doc/v2/Store';
 import { withCancellableNotificationProgress } from '@local/vscode-wrapper/window';
-import { validateCredentials } from '../../endevor';
+import { validateCredentials } from '../../api/endevor';
 import { isError } from '../../utils';
 import { ENDEVOR_CREDENTIAL_VALIDATION_LIMIT } from '../../constants';
 import {
   EditCredentialsCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Source } from '../../store/storage/_doc/Storage';
 import { CredentialType } from '@local/endevor/_doc/Credential';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
 
 export const editCredentialsCommand =
   (
+    dispatch: (action: Action) => Promise<void>,
     getEndevorConfiguration: (
       serviceId?: EndevorId,
       searchLocationId?: EndevorId
@@ -43,11 +48,11 @@ export const editCredentialsCommand =
     getConnectionDetails: (
       id: EndevorId
     ) => Promise<ValidEndevorConnection | undefined>,
-    getCredentials: (id: EndevorId) => EndevorCredentialDescription | undefined,
-    dispatch: (action: Action) => Promise<void>
+    getCredentials: (
+      id: EndevorId
+    ) => Promise<EndevorCredentialDescription | undefined>
   ) =>
   async (invalidLocationNode: InvalidLocationNode): Promise<void> => {
-    logger.trace('Modify Endevor credentials command called');
     const serviceId = {
       name: invalidLocationNode.serviceName,
       source: invalidLocationNode.serviceSource,
@@ -56,6 +61,8 @@ export const editCredentialsCommand =
       name: invalidLocationNode.name,
       source: invalidLocationNode.source,
     };
+    const logger = createEndevorLogger({ serviceId, searchLocationId });
+    logger.traceWithDetails('Modify Endevor credentials command was called');
     const connectionDetails = await getConnectionDetails(serviceId);
     if (!connectionDetails) return;
     const configuration = await getEndevorConfiguration(
@@ -63,16 +70,23 @@ export const editCredentialsCommand =
       searchLocationId
     );
     if (!configuration) return;
-    const existingCredential = getCredentials(serviceId);
+    const existingCredential = await getCredentials(serviceId);
     const isCredentialPersistent = existingCredential?.isPersistent;
     const credential = await askForCredentialWithDefaultPasswordPolicy({
       validateCredential: async (credential) => {
         const result = await withCancellableNotificationProgress(
           'Testing Endevor credentials ...'
         )((progress) => {
-          return validateCredentials(progress)(connectionDetails.value)(
-            configuration
-          )(credential);
+          return validateCredentials(
+            setLogActivityContext(dispatch, {
+              serviceId,
+              searchLocationId,
+            })
+          )(progress)({
+            ...connectionDetails.value,
+            configuration,
+            credential,
+          });
         });
         if (!result) return;
         if (isError(result)) {
@@ -120,7 +134,7 @@ export const editCredentialsCommand =
       type: TelemetryEvents.COMMAND_EDIT_CREDENTIALS_COMPLETED,
       status: EditCredentialsCommandCompletedStatus.SUCCESS,
     });
-    switch (invalidLocationNode.source) {
+    switch (invalidLocationNode.serviceSource) {
       case Source.INTERNAL:
         if (isCredentialPersistent) {
           dispatch({
@@ -145,6 +159,6 @@ export const editCredentialsCommand =
         });
         break;
       default:
-        throw new UnreachableCaseError(invalidLocationNode.source);
+        throw new UnreachableCaseError(invalidLocationNode.serviceSource);
     }
   };

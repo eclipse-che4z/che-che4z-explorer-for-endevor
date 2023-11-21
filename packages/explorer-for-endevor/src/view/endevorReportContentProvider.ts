@@ -13,17 +13,30 @@
 
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import * as vscode from 'vscode';
-import { downloadReportById } from '../endevor';
+import { downloadReportById } from '../api/endevor';
 import { logger, reporter } from '../globals';
 import { fromGenericReportUri } from '../uri/genericReportUri';
 import { isError } from '../utils';
 import {
   ReportContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/Telemetry';
+} from '../telemetry/_doc/Telemetry';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { EndevorAuthorizedService, SearchLocation } from '../api/_doc/Endevor';
 
-export const endevorReportContentProvider: vscode.TextDocumentContentProvider =
-  {
+export const endevorReportContentProvider = (
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >
+): vscode.TextDocumentContentProvider => {
+  return {
     async provideTextDocumentContent(
       uri: vscode.Uri,
       _token: vscode.CancellationToken
@@ -32,20 +45,26 @@ export const endevorReportContentProvider: vscode.TextDocumentContentProvider =
       if (isError(uriParams)) {
         const error = uriParams;
         logger.error(
-          `Unable to print the Endevor report contents.`,
-          `Unable to print the Endevor report contents because parsing of the reports URI failed with error:\n${error.message}.`
+          `Unable to print Endevor report contents.`,
+          `Unable to print Endevor report contents because parsing of the reports URI failed with error:\n${error.message}.`
         );
         return;
       }
-      const { service, reportId, configuration, objectName } = uriParams;
+      const { serviceId, searchLocationId, reportId, objectName } = uriParams;
+      const connectionParams = await getConnectionConfiguration(
+        serviceId,
+        searchLocationId
+      );
+      if (!connectionParams) return;
+      const { service } = connectionParams;
       const retrieveReport = await withNotificationProgress(
-        `Retrieving Endevor report for ${objectName}`
+        `Retrieving Endevor report for ${objectName} ...`
       )((progressReporter) =>
-        downloadReportById(progressReporter)(service)(configuration)(reportId)
+        downloadReportById(progressReporter)(service)(reportId)
       );
       if (!retrieveReport) {
         const error = new Error(
-          `Unable to retrieve the Endevor report for ${objectName}`
+          `Unable to retrieve Endevor report for ${objectName}`
         );
         logger.error(`${error.message}.`);
         reporter.sendTelemetryEvent({
@@ -64,9 +83,10 @@ export const endevorReportContentProvider: vscode.TextDocumentContentProvider =
       return retrieveReport;
     },
   };
+};
 
 /**
- * {@link reportContentProvider} will be called by VSCode
+ * {@link endevorReportContentProvider} will be called by VSCode
  *
  * @returns document with report or empty content
  */

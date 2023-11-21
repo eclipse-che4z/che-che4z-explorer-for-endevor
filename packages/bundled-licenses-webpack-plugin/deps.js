@@ -35,7 +35,9 @@ async function bundleLicenses(compilation, options) {
 }
 
 function getDependenciesLicenseInfo(compilation, override) {
-  const filter = /(^.*[/\\]node_modules[/\\]((?:@[^/\\]+[/\\])?(?:[^/\\]+)))/;
+  // collect licenses for every production dependency, except @local scoped
+  const filter =
+    /(^.*[/\\]node_modules[/\\]((?:@(?:(?!local)[^@/\\])+[/\\])?(?:[^@/\\]+)))/;
   let licenses = getLicenseInformationForCompilation(compilation, filter);
   const overrideOverkill = duplicateLicenseObjectsForWindows(override);
   licenses = overrideLicenses(licenses, overrideOverkill);

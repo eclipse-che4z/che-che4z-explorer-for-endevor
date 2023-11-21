@@ -1,0 +1,15 @@
+{
+  "name": "@local/views",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo No Build for 'views' Package",
+    "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
+    "pretty": "prettier --write .",
+    "test": "jest --config jest.config.js --coverage --runInBand",
+    "test:no-vscode": "jest --config jest.config.js --coverage --runInBand",
+    "test:vscode": "echo No Tests for 'views' Package",
+    "tsc:watch": "tsc --noemit --watch",
+    "clean": "rimraf results node_modules"
+  },
+  "license": "UNLICENSED"
+}

@@ -11,8 +11,11 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { retrieveElement, retrieveElementWithSignout } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import {
+  retrieveElementAndLogActivity,
+  retrieveElementWithSignoutAndLogActivity,
+} from '../../api/endevor';
+import { reporter } from '../../globals';
 import {
   filterElementNodes,
   isDefined,
@@ -48,10 +51,8 @@ import {
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
 import {
-  Service,
   Element,
   ActionChangeControlValue,
-  Value,
   ErrorResponseType,
   RetrieveElementWithSignoutResponse,
   RetrieveElementWithoutSignoutResponse,
@@ -65,72 +66,105 @@ import {
   RetrieveElementCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
-import { Id } from '../../store/storage/_doc/Storage';
+} from '../../telemetry/_doc/Telemetry';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import path = require('path');
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ElementSearchLocation } from '../../_doc/Endevor';
-import { Content } from '@local/endevor/_ext/Endevor';
 import {
-  ConnectionConfigurations,
-  getConnectionConfiguration,
-  groupBySearchLocationId,
-} from '../utils';
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import { Content } from '@local/endevor/_ext/Endevor';
+import { groupBySearchLocationId } from '../utils';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { EndevorId } from '../../store/_doc/v2/Store';
 
 type SelectedElementNode = ElementNode;
 type SelectedMultipleNodes = ElementNode[];
 
-export const retrieveElementCommand = async (
-  configurations: ConnectionConfigurations,
-  dispatch: (action: Action) => Promise<void>,
-  elementNode?: SelectedElementNode,
-  nodes?: SelectedMultipleNodes
-) => {
-  if (nodes && nodes.length) {
-    const elementNodes = filterElementNodes(nodes);
-    logger.trace(
-      `Retrieve element command was called for ${elementNodes
-        .map((node) => {
-          const element = node.element;
-          `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${node.name}`;
-        })
-        .join(',\n ')}.`
-    );
-    if (isAutomaticSignOut()) {
-      const groupedElementNodes = groupBySearchLocationId(elementNodes);
-      for (const elementNodesGroup of Object.values(groupedElementNodes)) {
-        await retrieveMultipleElementsWithSignoutOption(
-          configurations,
-          dispatch
-        )(elementNodesGroup);
+export const retrieveElementCommand =
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
+  ) =>
+  async (elementNode?: SelectedElementNode, nodes?: SelectedMultipleNodes) => {
+    const logger = createEndevorLogger();
+    if (nodes && nodes.length) {
+      const elementNodes = filterElementNodes(nodes);
+      logger.trace(
+        `Retrieve element command was called for ${elementNodes
+          .map((node) => {
+            const element = node.element;
+            return `${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${node.name}`;
+          })
+          .join(',\n')}.`
+      );
+      if (isAutomaticSignOut()) {
+        const groupedElementNodes = groupBySearchLocationId(elementNodes);
+        for (const elementNodesGroup of Object.values(groupedElementNodes)) {
+          await retrieveMultipleElementsWithSignoutOption(logger)(
+            dispatch,
+            getConnectionConfiguration
+          )(elementNodesGroup);
+        }
+        return;
       }
+      await retrieveMultipleElements(logger)(
+        dispatch,
+        getConnectionConfiguration
+      )(elementNodes);
       return;
-    }
-    await retrieveMultipleElements(configurations)(elementNodes);
-    return;
-  } else if (elementNode) {
-    logger.trace(
-      `Retrieve element command was called for ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}.`
-    );
-    if (isAutomaticSignOut()) {
-      await retrieveSingleElementWithSignoutOption(
-        configurations,
-        dispatch
+    } else if (elementNode) {
+      logger.updateContext({
+        serviceId: elementNode.serviceId,
+        searchLocationId: elementNode.searchLocationId,
+      });
+      logger.traceWithDetails(
+        `Retrieve element command was called for ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}.`
+      );
+      if (isAutomaticSignOut()) {
+        await retrieveSingleElementWithSignoutOption(
+          dispatch,
+          getConnectionConfiguration
+        )(elementNode);
+        return;
+      }
+      await retrieveSingleElement(
+        dispatch,
+        getConnectionConfiguration
       )(elementNode);
       return;
+    } else {
+      return;
     }
-    await retrieveSingleElement(configurations)(elementNode);
-    return;
-  } else {
-    return;
-  }
-};
+  };
 
 const retrieveSingleElementWithSignoutOption =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async ({
     name,
@@ -138,12 +172,16 @@ const retrieveSingleElementWithSignoutOption =
     searchLocationId,
     element,
   }: Readonly<ElementNode>): Promise<void> => {
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
         'At least one workspace in this project should be opened to retrieve elements'
       );
-      logger.error(`${error.message}.`);
+      logger.errorWithDetails(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
@@ -152,12 +190,12 @@ const retrieveSingleElementWithSignoutOption =
       });
       return;
     }
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
+    const { service, searchLocation } = connectionParams;
     const signoutChangeControlValue = await askForChangeControlValue({
       ccid: searchLocation.ccid,
       comment: searchLocation.comment,
@@ -170,11 +208,8 @@ const retrieveSingleElementWithSignoutOption =
     }
     let retrieveResponse = await complexRetrieve(dispatch)(
       serviceId,
-      service,
-      configuration,
-      searchLocationId,
-      searchLocation
-    )(element)(signoutChangeControlValue);
+      searchLocationId
+    )(service)(element)(signoutChangeControlValue);
     if (isErrorEndevorResponse(retrieveResponse)) {
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
@@ -183,22 +218,23 @@ const retrieveSingleElementWithSignoutOption =
           element.stageNumber
         }/${element.system}/${element.subSystem}/${element.type}/${
           element.name
-        } because of an error:${formatWithNewLines(
+        } because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR:
-          retrieveResponse = await retrieveSingleElementCopy(service)(
-            configuration
-          )(element);
+          retrieveResponse = await retrieveSingleElementCopy(dispatch)(
+            serviceId,
+            searchLocationId
+          )(service)(element);
           if (isErrorEndevorResponse(retrieveResponse)) {
             const copyErrorResponse = retrieveResponse;
             // TODO: format using all possible error details
             const copyError = new Error(
-              `Unable to retrieve a copy of the element ${
+              `Unable to retrieve a copy of element ${
                 element.name
-              } because of an error:${formatWithNewLines(
+              } because of error:${formatWithNewLines(
                 copyErrorResponse.details.messages
               )}`
             );
@@ -209,7 +245,10 @@ const retrieveSingleElementWithSignoutOption =
               status: SignoutErrorRecoverCommandCompletedStatus.GENERIC_ERROR,
               error: copyError,
             });
-            logger.error(copyError.message);
+            logger.errorWithDetails(
+              `Unable to retrieve a copy of element ${element.name}.`,
+              `${copyError.message}.`
+            );
             return;
           }
           reporter.sendTelemetryEvent({
@@ -220,7 +259,7 @@ const retrieveSingleElementWithSignoutOption =
           break;
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Endevor credentials are incorrect or expired.',
             `${error.message}.`
           );
@@ -234,7 +273,7 @@ const retrieveSingleElementWithSignoutOption =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Unable to connect to Endevor Web Services.',
             `${error.message}.`
           );
@@ -247,7 +286,7 @@ const retrieveSingleElementWithSignoutOption =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Unable to retrieve element with sign out ${element.name}.`,
             `${error.message}.`
           );
@@ -268,8 +307,8 @@ const retrieveSingleElementWithSignoutOption =
     )(element, retrieveResponse.result.content);
     if (isError(saveResult)) {
       const error = saveResult;
-      logger.error(
-        `Unable to save the element ${name} into the file system.`,
+      logger.errorWithDetails(
+        `Unable to save element ${name} into the file system.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -284,8 +323,8 @@ const retrieveSingleElementWithSignoutOption =
     const showResult = await showElementInEditor(savedElementUri);
     if (isError(showResult)) {
       const error = showResult;
-      logger.error(
-        `Unable to open the element ${name} for editing.`,
+      logger.errorWithDetails(
+        `Unable to open element ${name} for editing.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -304,26 +343,28 @@ const retrieveSingleElementWithSignoutOption =
 
 const complexRetrieve =
   (dispatch: (action: Action) => Promise<void>) =>
-  (
-    serviceId: Id,
-    service: Service,
-    configuration: Value,
-    searchLocationId: Id,
-    _searchLocation: ElementSearchLocation
-  ) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<RetrieveElementWithSignoutResponse> => {
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
     const retrieveWithSignoutResponse = await retrieveSingleElementWithSignout(
-      service
-    )(configuration)(element)(signoutChangeControlValue);
+      dispatch
+    )(
+      serviceId,
+      searchLocationId
+    )(service)(element)(signoutChangeControlValue);
     if (isErrorEndevorResponse(retrieveWithSignoutResponse)) {
       const errorResponse = retrieveWithSignoutResponse;
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
-          logger.warn(
-            `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
+          logger.warnWithDetails(
+            `Element ${element.name} cannot be retrieved with signout because it is signed out to somebody else.`
           );
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(
@@ -335,9 +376,10 @@ const complexRetrieve =
             `Override signout option was chosen, ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} will be retrieved with override signout.`
           );
           const retrieveWithOverrideSignoutResponse =
-            await retrieveSingleElementWithOverrideSignout(service)(
-              configuration
-            )(element)(signoutChangeControlValue);
+            await retrieveSingleElementWithOverrideSignout(dispatch)(
+              serviceId,
+              searchLocationId
+            )(service)(element)(signoutChangeControlValue);
           updateTreeAfterSuccessfulSignout(dispatch)({
             serviceId,
             searchLocationId,
@@ -363,23 +405,29 @@ const complexRetrieve =
   };
 
 const retrieveSingleElementWithSignout =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   async (signoutChangeControlValue: ActionChangeControlValue) =>
     withNotificationProgress(
       `Retrieving element ${element.name} with signout ...`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(
-        configuration
-      )(element)({
+      return retrieveElementWithSignoutAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)({
         signoutChangeControlValue,
       });
     });
 
 const retrieveSingleElementWithOverrideSignout =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
@@ -387,23 +435,32 @@ const retrieveSingleElementWithOverrideSignout =
     withNotificationProgress(
       `Retrieving element ${element.name} with override signout ...`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(
-        configuration
-      )(element)({
+      return retrieveElementWithSignoutAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)({
         signoutChangeControlValue,
         overrideSignOut: true,
       });
     });
 
 const retrieveSingleElementCopy =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   async (element: Element): Promise<RetrieveElementWithoutSignoutResponse> => {
     return withNotificationProgress(`Retrieving element ${element.name} ...`)(
       async (progressReporter) => {
-        return retrieveElement(progressReporter)(service)(configuration)(
-          element
-        );
+        return retrieveElementAndLogActivity(
+          setLogActivityContext(dispatch, {
+            serviceId,
+            searchLocationId,
+            element,
+          })
+        )(progressReporter)(service)(element);
       }
     );
   };
@@ -436,7 +493,7 @@ const saveIntoWorkspace =
     if (isError(saveResult)) {
       const error = saveResult;
       return new Error(
-        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of an error:\n${error.message}`
+        `Unable to save element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of error:\n${error.message}`
       );
     }
     const savedFileUri = saveResult;
@@ -487,25 +544,41 @@ const showElementInEditor = async (
     await showFileContent(fileUri);
   } catch (e) {
     return new Error(
-      `Unable to open the file ${fileUri.fsPath} because of error ${e.message}`
+      `Unable to open file ${fileUri.fsPath} because of error ${e.message}`
     );
   }
 };
 
 const retrieveSingleElement =
-  (configurations: ConnectionConfigurations) =>
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
+  ) =>
   async ({
     name,
     serviceId,
     searchLocationId,
     element,
   }: SelectedElementNode): Promise<void> => {
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
       const error = new Error(
         'At least one workspace in this project should be opened to retrieve elements'
       );
-      logger.error(`${error.message}.`);
+      logger.errorWithDetails(`${error.message}.`);
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
         errorContext: TelemetryEvents.COMMAND_RETRIEVE_ELEMENT_COMPLETED,
@@ -514,31 +587,32 @@ const retrieveSingleElement =
       });
       return;
     }
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration } = connectionParams;
-    const retrieveResponse = await retrieveSingleElementCopy(service)(
-      configuration
-    )(element);
+    const { service } = connectionParams;
+    const retrieveResponse = await retrieveSingleElementCopy(dispatch)(
+      serviceId,
+      searchLocationId
+    )(service)(element);
     if (isErrorEndevorResponse(retrieveResponse)) {
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element ${element.environment}/${
+        `Unable to retrieve element ${element.environment}/${
           element.stageNumber
         }/${element.system}/${element.subSystem}/${
           element.type
-        }/${name} because of an error:${formatWithNewLines(
+        }/${name} because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Endevor credentials are incorrect or expired.',
             `${error.message}.`
           );
@@ -552,7 +626,7 @@ const retrieveSingleElement =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Unable to connect to Endevor Web Services.',
             `${error.message}.`
           );
@@ -565,8 +639,8 @@ const retrieveSingleElement =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
-            `Unable to retrieve the element ${name}.`,
+          logger.errorWithDetails(
+            `Unable to retrieve element ${name}.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -586,8 +660,8 @@ const retrieveSingleElement =
     )(element, retrieveResponse.result.content);
     if (isError(saveResult)) {
       const error = saveResult;
-      logger.error(
-        `Unable to save the element ${name} into the file system.`,
+      logger.errorWithDetails(
+        `Unable to save element ${name} into the file system.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -602,8 +676,8 @@ const retrieveSingleElement =
     const showResult = await showElementInEditor(savedElementUri);
     if (isError(showResult)) {
       const error = showResult;
-      logger.error(
-        `Unable to open the element ${name} for editing.`,
+      logger.errorWithDetails(
+        `Unable to open element ${name} for editing.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -621,7 +695,20 @@ const retrieveSingleElement =
   };
 
 export const retrieveMultipleElements =
-  (configurations: ConnectionConfigurations) =>
+  (logger: EndevorLogger) =>
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
+  ) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
     const workspaceUri = await getWorkspaceUri();
     if (!workspaceUri) {
@@ -641,24 +728,22 @@ export const retrieveMultipleElements =
     const elementDetails: Array<ElementDetails | Error> = [];
     for (const elementNode of elementNodes) {
       const { name, serviceId, searchLocationId, element } = elementNode;
-      const connectionParams = await getConnectionConfiguration(configurations)(
+      const connectionParams = await getConnectionConfiguration(
         serviceId,
         searchLocationId
       );
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
+            `Unable to retrieve element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
           )
         );
         continue;
       }
-      const { service, configuration, searchLocation } = connectionParams;
+      const { service } = connectionParams;
       elementDetails.push({
         element,
         service,
-        configuration,
-        searchLocation,
         serviceId,
         searchLocationId,
       });
@@ -670,8 +755,8 @@ export const retrieveMultipleElements =
       })
       .filter(isDefined);
     const retrievedContentResponses = await retrieveMultipleElementCopies(
-      endevorMaxRequestsNumber
-    )(validElementDetails);
+      dispatch
+    )(endevorMaxRequestsNumber)(validElementDetails);
     const invalidElements = elementDetails
       .map((element) => {
         if (!isError(element)) return undefined;
@@ -693,11 +778,11 @@ export const retrieveMultipleElements =
         const element = elementDetails.element;
         // TODO: format using all possible error details
         const error = new Error(
-          `Unable to retrieve the element ${element.environment}/${
+          `Unable to retrieve element ${element.environment}/${
             element.stageNumber
           }/${element.system}/${element.subSystem}/${element.type}/${
             element.name
-          }} because of an error:${formatWithNewLines(
+          }} because of error:${formatWithNewLines(
             errorResponse.details.messages
           )}`
         );
@@ -812,8 +897,8 @@ export const retrieveMultipleElements =
         })
         .join(',\n ');
       logger.error(
-        `There were some issues during retrieving of the elements ${elementNames}.`,
-        `There were some issues during retrieving of the elements ${elementsPaths}: ${[
+        `There were some issues during retrieving of elements ${elementNames}.`,
+        `There were some issues during retrieving of elements ${elementsPaths}: ${[
           '',
           ...overallErrors.map((error) => error.message),
         ].join('\n')}.`
@@ -822,15 +907,14 @@ export const retrieveMultipleElements =
   };
 
 type ElementDetails = Readonly<{
-  serviceId: Id;
-  searchLocationId: Id;
-  service: Service;
-  configuration: Value;
+  serviceId: EndevorId;
+  searchLocationId: EndevorId;
+  service: EndevorAuthorizedService;
   element: Element;
-  searchLocation: ElementSearchLocation;
 }>;
 
 const retrieveMultipleElementCopies =
+  (dispatch: (action: Action) => Promise<void>) =>
   (endevorMaxRequestsNumber: number) =>
   async (
     elements: ReadonlyArray<ElementDetails>
@@ -839,16 +923,22 @@ const retrieveMultipleElementCopies =
   > => {
     return (
       await withNotificationProgress(
-        `Retrieving element copies: ${elements
+        `Retrieving element copies ${elements
           .map((element) => element.element.name)
-          .join(', ')}`
+          .join(', ')} ...`
       )((progressReporter) => {
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElement(
-                toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.configuration)(element.element);
+              return retrieveElementAndLogActivity(
+                setLogActivityContext(dispatch, {
+                  serviceId: element.serviceId,
+                  searchLocationId: element.searchLocationId,
+                  element: element.element,
+                })
+              )(toSeveralTasksProgress(progressReporter)(elements.length))(
+                element.service
+              )(element.element);
             };
           }),
           {
@@ -863,9 +953,19 @@ const retrieveMultipleElementCopies =
   };
 
 const retrieveMultipleElementsWithSignoutOption =
+  (logger: EndevorLogger) =>
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async (elementNodes: ReadonlyArray<ElementNode>): Promise<void> => {
     const workspaceUri = await getWorkspaceUri();
@@ -886,7 +986,7 @@ const retrieveMultipleElementsWithSignoutOption =
     // we are 100% sure, that at least one element is selected
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const firstElementNode = elementNodes[0]!;
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const connectionParams = await getConnectionConfiguration(
       firstElementNode.serviceId,
       firstElementNode.searchLocationId
     );
@@ -906,24 +1006,22 @@ const retrieveMultipleElementsWithSignoutOption =
     const elementDetails: Array<ElementDetails | Error> = [];
     for (const elementNode of elementNodes) {
       const { name, element, serviceId, searchLocationId } = elementNode;
-      const connectionParams = await getConnectionConfiguration(configurations)(
+      const connectionParams = await getConnectionConfiguration(
         serviceId,
         searchLocationId
       );
       if (!connectionParams) {
         elementDetails.push(
           new Error(
-            `Unable to retrieve the element  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
+            `Unable to retrieve element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of missing connection configuration`
           )
         );
         continue;
       }
-      const { service, configuration, searchLocation } = connectionParams;
+      const { service } = connectionParams;
       elementDetails.push({
         element,
         service,
-        configuration,
-        searchLocation,
         serviceId,
         searchLocationId,
       });
@@ -934,9 +1032,9 @@ const retrieveMultipleElementsWithSignoutOption =
         return element;
       })
       .filter(isDefined);
-    const retrieveResults = await complexRetrieveMultipleElements(dispatch)(
-      endevorMaxRequestsNumber
-    )(validElementDetails)(signoutChangeControlValue);
+    const retrieveResults = await complexRetrieveMultipleElements(logger)(
+      dispatch
+    )(endevorMaxRequestsNumber)(validElementDetails)(signoutChangeControlValue);
     const allResults = await new PromisePool(
       retrieveResults.map(([elementDetails, retrieveResponse]) => {
         const retrieveMainElementCallback: () => Promise<
@@ -953,31 +1051,34 @@ const retrieveMultipleElementsWithSignoutOption =
           const element = elementDetails.element;
           // TODO: format using all possible error details
           const error = new Error(
-            `Unable to retrieve the element ${element.environment}/${
+            `Unable to retrieve element ${element.environment}/${
               element.stageNumber
             }/${element.system}/${element.subSystem}/${element.type}/${
               element.name
-            } because of an error:${formatWithNewLines(
+            } because of error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
           );
           switch (errorResponse.type) {
             case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
               const retrieveCopyResponse = await retrieveSingleElementCopy(
-                elementDetails.service
-              )(elementDetails.configuration)(elementDetails.element);
+                dispatch
+              )(
+                elementDetails.serviceId,
+                elementDetails.searchLocationId
+              )(elementDetails.service)(elementDetails.element);
               if (isErrorEndevorResponse(retrieveCopyResponse)) {
                 const retrieveCopyErrorResponse = retrieveCopyResponse;
                 const element = elementDetails.element;
                 // TODO: format using all possible error details
                 const retrieveCopyError = new Error(
-                  `Unable to retrieve a copy of the element ${
+                  `Unable to retrieve a copy of element ${
                     element.environment
                   }/${element.stageNumber}/${element.system}/${
                     element.subSystem
                   }/${element.type}/${
                     element.name
-                  } because of an error:${formatWithNewLines(
+                  } because of error:${formatWithNewLines(
                     retrieveCopyErrorResponse.details.messages
                   )}`
                 );
@@ -1109,8 +1210,8 @@ const retrieveMultipleElementsWithSignoutOption =
         })
         .join(',\n ');
       logger.error(
-        `There were some issues during retrieving of the elements ${elementNames}`,
-        `There were some issues during retrieving of the elements ${elementsPaths}:\n${[
+        `There were some issues during retrieving of elements ${elementNames}`,
+        `There were some issues during retrieving of elements ${elementsPaths}:\n${[
           '',
           ...overallErrors.map((error) => error.message),
         ].join('\n')}`
@@ -1119,16 +1220,15 @@ const retrieveMultipleElementsWithSignoutOption =
   };
 
 const complexRetrieveMultipleElements =
+  (logger: EndevorLogger) =>
   (dispatch: (action: Action) => Promise<void>) =>
   (endevorMaxRequestsNumber: number) =>
   (
     elements: ReadonlyArray<{
-      serviceId: Id;
-      searchLocationId: Id;
-      service: Service;
-      configuration: Value;
+      serviceId: EndevorId;
+      searchLocationId: EndevorId;
+      service: EndevorAuthorizedService;
       element: Element;
-      searchLocation: ElementSearchLocation;
     }>
   ) =>
   async (
@@ -1137,8 +1237,8 @@ const complexRetrieveMultipleElements =
     ReadonlyArray<[ElementDetails, RetrieveElementWithSignoutResponse]>
   > => {
     const retrieveWithSignoutResult = await retrieveMultipleElementsWithSignout(
-      endevorMaxRequestsNumber
-    )(elements)(signoutChangeControlValue);
+      dispatch
+    )(endevorMaxRequestsNumber)(elements)(signoutChangeControlValue);
     const successRetrievedElementsWithSignout = withoutErrors(
       retrieveWithSignoutResult
     );
@@ -1171,7 +1271,7 @@ const complexRetrieveMultipleElements =
       notRetrievedElementsWithSignout.length;
     if (allErrorsAreGeneric) {
       logger.trace(
-        `Unable to retrieve the elements ${notRetrievedElementsWithSignout
+        `Unable to retrieve elements ${notRetrievedElementsWithSignout
           .map(
             ([elementDetails]) =>
               `${elementDetails.element.environment}/${elementDetails.element.stageNumber}/${elementDetails.element.system}/${elementDetails.element.subSystem}/${elementDetails.element.type}/${elementDetails.element.name}`
@@ -1194,7 +1294,7 @@ const complexRetrieveMultipleElements =
         .map((elementDetails) => elementDetails.element.name)
         .join(
           ', '
-        )} cannot be retrieved with signout because the elements are signed out to somebody else.`
+        )} cannot be retrieved with signout because they are signed out to somebody else.`
     );
     const overrideSignout = await askToOverrideSignOutForElements(
       signoutErrorsAfterSignoutRetrieve.map(
@@ -1227,7 +1327,7 @@ const complexRetrieveMultipleElements =
         .join(',\n ')} will be retrieved with override signout.`
     );
     const retrieveWithOverrideSignoutResult =
-      await retrieveMultipleElementsWithOverrideSignout(
+      await retrieveMultipleElementsWithOverrideSignout(dispatch)(
         endevorMaxRequestsNumber
       )(signoutErrorsAfterSignoutRetrieve)(signoutChangeControlValue);
     const successRetrievedElementsWithOverrideSignout = withoutErrors(
@@ -1247,15 +1347,14 @@ const complexRetrieveMultipleElements =
   };
 
 const retrieveMultipleElementsWithSignout =
+  (dispatch: (action: Action) => Promise<void>) =>
   (endevorMaxRequestsNumber: number) =>
   (
     elements: ReadonlyArray<{
-      serviceId: Id;
-      searchLocationId: Id;
-      service: Service;
-      configuration: Value;
+      serviceId: EndevorId;
+      searchLocationId: EndevorId;
+      service: EndevorAuthorizedService;
       element: Element;
-      searchLocation: ElementSearchLocation;
     }>
   ) =>
   async (
@@ -1265,16 +1364,22 @@ const retrieveMultipleElementsWithSignout =
   > => {
     return (
       await withNotificationProgress(
-        `Retrieving elements: ${elements
+        `Retrieving elements ${elements
           .map((element) => element.element.name)
           .join(', ')} with signout ...`
       )((progressReporter) => {
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElementWithSignout(
-                toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.configuration)(element.element)({
+              return retrieveElementWithSignoutAndLogActivity(
+                setLogActivityContext(dispatch, {
+                  serviceId: element.serviceId,
+                  searchLocationId: element.searchLocationId,
+                  element: element.element,
+                })
+              )(toSeveralTasksProgress(progressReporter)(elements.length))(
+                element.service
+              )(element.element)({
                 signoutChangeControlValue,
               });
             };
@@ -1291,15 +1396,14 @@ const retrieveMultipleElementsWithSignout =
   };
 
 const retrieveMultipleElementsWithOverrideSignout =
+  (dispatch: (action: Action) => Promise<void>) =>
   (endevorMaxRequestsNumber: number) =>
   (
     elements: ReadonlyArray<{
-      serviceId: Id;
-      searchLocationId: Id;
-      service: Service;
-      configuration: Value;
+      serviceId: EndevorId;
+      searchLocationId: EndevorId;
+      service: EndevorAuthorizedService;
       element: Element;
-      searchLocation: ElementSearchLocation;
     }>
   ) =>
   async (
@@ -1309,16 +1413,22 @@ const retrieveMultipleElementsWithOverrideSignout =
   > => {
     return (
       await withNotificationProgress(
-        `Retrieving elements: ${elements
+        `Retrieving elements ${elements
           .map((element) => element.element.name)
           .join(', ')} with override signout ...`
       )((progressReporter) => {
         return new PromisePool(
           elements.map((element) => {
             return async () => {
-              return retrieveElementWithSignout(
-                toSeveralTasksProgress(progressReporter)(elements.length)
-              )(element.service)(element.configuration)(element.element)({
+              return retrieveElementWithSignoutAndLogActivity(
+                setLogActivityContext(dispatch, {
+                  serviceId: element.serviceId,
+                  searchLocationId: element.searchLocationId,
+                  element: element.element,
+                })
+              )(toSeveralTasksProgress(progressReporter)(elements.length))(
+                element.service
+              )(element.element)({
                 signoutChangeControlValue,
                 overrideSignOut: true,
               });
@@ -1370,11 +1480,11 @@ const genericErrors = (
         const mappedValue: [ElementDetails, Error] = [
           elementDetails,
           new Error(
-            `Unable to retrieve the element ${element.environment}/${
+            `Unable to retrieve element ${element.environment}/${
               element.stageNumber
             }/${element.system}/${element.subSystem}/${element.type}/${
               element.name
-            } with sign out because of an error:${formatWithNewLines(
+            } with sign out because of error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
           ),
@@ -1403,11 +1513,11 @@ const allErrors = (
         const mappedValue: [ElementDetails, Error] = [
           elementDetails,
           new Error(
-            `Unable to retrieve the element ${element.environment}/${
+            `Unable to retrieve element ${element.environment}/${
               element.stageNumber
             }/${element.system}/${element.subSystem}/${element.type}/${
               element.name
-            } with sign out because of an error:${formatWithNewLines(
+            } with sign out because of error:${formatWithNewLines(
               errorResponse.details.messages
             )}`
           ),

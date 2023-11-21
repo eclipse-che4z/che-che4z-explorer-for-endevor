@@ -6,6 +6,8 @@
     "lint": "echo No Lint for 'extension' Package",
     "pretty": "prettier --write .",
     "test": "echo No Tests for 'extension' Package",
+    "test:no-vscode": "echo No Tests for 'extension' Package",
+    "test:vscode": "echo No Tests for 'extension' Package",
     "clean": "rimraf node_modules"
   },
   "license": "UNLICENSED"

@@ -45,7 +45,7 @@ import {
 } from '../../constants';
 import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
 import { getFirstFoundFilteredElement } from '../../store/utils';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import { ElementSearchLocation } from '../../api/_doc/Endevor';
 import { isTimeoutError, toPromiseWithTimeout } from '../utils';
 
 const enum DialogResultTypes {
@@ -192,7 +192,7 @@ export const askForSearchLocation = async (
   moveItemInFrontOfArray(locationQuickPickItems, defaultQuickPickItem);
   const quickPickOptions: QuickPickOptions = {
     title: 'Select from the available inventory locations',
-    placeholder: 'Start typing a name to filter...',
+    placeHolder: 'Start typing a name to filter...',
     ignoreFocusOut: true,
   };
   const choice = await createVscodeQuickPick(
@@ -248,7 +248,7 @@ const showLocationsInQuickPick = async (
 ): Promise<QuickPick<LocationQuickPickItem> | undefined> => {
   const quickPickOptions: QuickPickOptions = {
     title: 'Add an inventory location',
-    placeholder:
+    placeHolder:
       'Choose "Create new..." to define a new inventory location or select an existing one',
     ignoreFocusOut: true,
   };
@@ -341,7 +341,7 @@ const askForConfigurationName = async (
     existingConfigurations.map(toQuickPickItem),
     {
       title: 'Select from the available Endevor configurations',
-      placeholder: 'Start typing to filter...',
+      placeHolder: 'Start typing to filter...',
       ignoreFocusOut: true,
       canPickMany: false,
     }

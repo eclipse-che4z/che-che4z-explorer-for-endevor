@@ -30,11 +30,18 @@ type CredentialValue =
       status: EndevorCredentialStatus.INVALID;
       value: BaseCredential;
     };
+type CredentialValueWithUnknownStatus = Readonly<{
+  status: EndevorCredentialStatus.UNKNOWN;
+  value: BaseCredential;
+}>;
 type OperationCancelled = undefined;
 type DialogResult = CredentialValue | OperationCancelled;
+type DialogWithoutValidationResult =
+  | CredentialValueWithUnknownStatus
+  | OperationCancelled;
 
 export const dialogCancelled = (
-  dialogResult: DialogResult
+  dialogResult: DialogResult | DialogWithoutValidationResult
 ): dialogResult is OperationCancelled => {
   return dialogResult === undefined;
 };
@@ -137,14 +144,26 @@ export const askForCredentialWithDefaultPasswordPolicy = askForCredential(
   defaultPasswordPolicy
 );
 
-export const askForCredentialWithoutValidation =
-  askForCredentialWithDefaultPasswordPolicy({
-    validateCredential: async (credential) => ({
-      status: EndevorCredentialStatus.VALID,
-      value: credential,
-    }),
-    validationAttempts: 1,
-  });
+export const askForCredentialWithoutValidation = async (
+  prefilledValue?: {
+    user?: string;
+    password?: string;
+  },
+  prompt?: string
+): Promise<DialogWithoutValidationResult> => {
+  const credential = await askForCredentialValue(defaultPasswordPolicy)(
+    prefilledValue,
+    prompt
+  );
+  if (!credential) {
+    logger.trace('Operation cancelled.');
+    return;
+  }
+  return {
+    status: EndevorCredentialStatus.UNKNOWN,
+    value: credential,
+  };
+};
 
 export type EmptyValue = null;
 export const askForUsername = async (options: {

@@ -20,20 +20,29 @@ import {
   toSecuredEndevorSession,
   toEndevorSession,
   toServiceApiVersion,
+  incrementPartialProgress,
+  getReportsFromParsedResponse,
+  isEndevorApiError,
+  isEndevorResponseError,
+  getSearchStrategies,
 } from './utils';
 import {
   AddUpdElement,
   AddUpdElmDictionary,
   ElmSpecDictionary,
+  EncodingDictionary,
   EndevorClient,
   GenerateElmDictionary,
   IElementBasicData,
   ListElmDictionary,
+  MoveElmDictionary,
   PrintElmCompDictionary,
+  PrintMemberDictionary,
   QueryAcmDictionary,
   RetrieveElmDictionary,
   SigninElmDictionary,
 } from '@broadcom/endevor-for-zowe-cli/lib/api';
+import { IMemberActionRequestOptions } from '@broadcom/endevor-for-zowe-cli/lib/api/elements/doc/IMemberActionRequestOptions';
 import {
   ActionChangeControlValue,
   Component,
@@ -75,6 +84,21 @@ import {
   SignoutElementResponse,
   UpdateResponse,
   RetrieveSearchStrategies,
+  ProcessorGroupsResponse,
+  Dataset,
+  MembersResponse,
+  Member,
+  EndevorApiError,
+  EndevorResponseError,
+  MoveParams,
+  MoveResponse,
+  AddResponseErrorType,
+  ErrorEndevorAuthorizedResponse,
+  ErrorEndevorAuthorizedType,
+  UpdateResponseErrorType,
+  GenerateResponseErrorType,
+  RetrieveElementWithSignoutResponseErrorType,
+  PrintResponseErrorType,
 } from './_doc/Endevor';
 import { UnreachableCaseError } from './typeHelpers';
 import { parseToType, parseToTypeAndConvert } from '@local/type-parser/parser';
@@ -83,6 +107,7 @@ import {
   Element as ExternalElement,
   ComponentsResponse as ExternalComponentsResponse,
   Configuration as ExternalConfiguration,
+  Member as ExternalMember,
   RetrieveResponse,
   UpdateResponse as ExternalUpdateResponse,
   AddResponse as ExternalAddResponse,
@@ -90,18 +115,24 @@ import {
   SubSystem as ExternalSubSystem,
   System as ExternalSystem,
   ElementType as ExternalElementType,
+  ProcessorGroup as ExternalProcessorGroup,
   SignInElementResponse as ExternalSignInElementResponse,
   V1ApiVersionResponse,
   V2ApiVersionResponse,
   PrintResponse as ExternalPrintResponse,
   AuthenticationTokenResponse as ExternalAuthenticationTokenResponse,
   ConfigurationsResponse as ExternalConfigurationsResponse,
+  MembersResponse as ExternalMembersResponse,
   EnvironmentStagesResponse as ExternalEnvironmentStagesResponse,
   SystemsResponse as ExternalSystemsResponse,
   SubSystemsResponse as ExternalSubSystemsResponse,
   ElementTypesResponse as ExternalElementTypesResponse,
   ElementsResponse as ExternalElementsResponse,
+  MoveResponse as ExternalMoveResponse,
   GenerateResponse as ExternalGenerateResponse,
+  ProcessorGroupsRepsonse as ExternalProcessorGroupResponse,
+  BaseResponseWithUnknownDataOrNull,
+  BaseResponseWithNoData,
 } from './_ext/Endevor';
 import { Logger } from '@local/extension/_doc/Logger';
 import { ANY_VALUE, MS_IN_MIN } from './const';
@@ -117,7 +148,84 @@ import {
   getRetrieveElementWithSignOutElementErrorType,
   getUpdateElementErrorType,
 } from './error';
-import { CredentialType } from './_doc/Credential';
+import { CredentialTokenType, CredentialType } from './_doc/Credential';
+import * as t from 'io-ts';
+
+const executeEndevorRequest =
+  <T extends BaseResponseWithUnknownDataOrNull | BaseResponseWithNoData>(
+    logger: Logger
+  ) =>
+  (progress: ProgressReporter) =>
+  async (
+    externalType: t.Type<T>,
+    endevorRequest: () => Promise<unknown>
+  ): Promise<T | EndevorApiError | EndevorResponseError> => {
+    let response;
+    try {
+      response = await endevorRequest();
+    } catch (error) {
+      progress.report({ increment: 100 });
+      const messages = error.details?.causeErrors?.message
+        ? [error.details.causeErrors.message]
+        : error.details?.msg
+        ? [error.details.msg]
+        : [];
+      const connectionCode = error.details?.causeErrors?.code;
+      const httpStatusCode = error.details?.httpStatus;
+      return new EndevorApiError(messages, connectionCode, httpStatusCode);
+    }
+    progress.report({ increment: 50 });
+    let parsedResponse;
+    try {
+      parsedResponse = parseToType(externalType, response);
+    } catch (error) {
+      progress.report({ increment: 100 });
+      logger.trace(
+        `Unable to parse Endevor response:\n${stringifyPretty(
+          response
+        )}\nbecause of error:\n${error.message}.`
+      );
+      return new EndevorResponseError([error.message], undefined, undefined);
+    }
+    const cleanedResponseMessages = parsedResponse.body.messages.map(
+      (message) => message.trim()
+    );
+    if (!isResponseSuccessful(parsedResponse.body)) {
+      progress.report({ increment: 100 });
+      return new EndevorResponseError(
+        cleanedResponseMessages,
+        parsedResponse.body.returnCode,
+        getReportsFromParsedResponse(parsedResponse.body.reports)
+      );
+    }
+    parsedResponse.body.messages = cleanedResponseMessages;
+    return parsedResponse;
+  };
+
+const getErrorEndevorAuthorizedResponse = <
+  E extends ErrorResponseType | undefined
+>(
+  parsedResponse: EndevorApiError | EndevorResponseError,
+  getEndevorResponseType?: (
+    messages: readonly string[]
+  ) => (E extends undefined ? never : E) | ErrorEndevorAuthorizedType
+): ErrorEndevorAuthorizedResponse<E> => {
+  const errorType = isEndevorApiError(parsedResponse)
+    ? getAuthorizedEndevorClientErrorResponseType(
+        parsedResponse.details.connectionCode,
+        parsedResponse.details.httpStatusCode
+      )
+    : getEndevorResponseType
+    ? getEndevorResponseType(parsedResponse.details.messages)
+    : getGenericAuthorizedEndevorErrorResponseType(
+        parsedResponse.details.messages
+      );
+  return {
+    status: ResponseStatus.ERROR,
+    type: errorType,
+    details: parsedResponse.details,
+  };
+};
 
 export const getApiVersion =
   (logger: Logger) =>
@@ -133,7 +241,9 @@ export const getApiVersion =
       progress.report({ increment: 100 });
       return {
         status: ResponseStatus.ERROR,
-        type: getEndevorClientErrorResponseType(error),
+        type: getEndevorClientErrorResponseType(
+          error.details?.causeErrors?.code
+        ),
         details: {
           messages: error.details?.causeErrors?.message
             ? [error.details.causeErrors.message]
@@ -183,56 +293,26 @@ export const getConfigurations =
   async (rejectUnauthorized: boolean): Promise<ConfigurationsResponse> => {
     const session = toEndevorSession(serviceLocation)(rejectUnauthorized);
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listInstances(session);
-    } catch (error) {
-      progress.report({ increment: 100 });
+    const parsedResponse =
+      await executeEndevorRequest<ExternalConfigurationsResponse>(logger)(
+        progress
+      )(ExternalConfigurationsResponse, async () => {
+        return EndevorClient.listInstances(session);
+      });
+    if (isEndevorApiError(parsedResponse)) {
       return {
         status: ResponseStatus.ERROR,
-        type: getEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
+        type: getEndevorClientErrorResponseType(
+          parsedResponse.details.connectionCode
+        ),
+        details: parsedResponse.details,
       };
     }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalConfigurationsResponse;
-    try {
-      parsedResponse = parseToType(ExternalConfigurationsResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
+    if (isEndevorResponseError(parsedResponse)) {
       return {
         status: ResponseStatus.ERROR,
         type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
+        details: parsedResponse.details,
       };
     }
     const configurations = parsedResponse.body.data
@@ -258,7 +338,7 @@ export const getConfigurations =
       status: ResponseStatus.OK,
       result: configurations,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
       },
     };
@@ -278,7 +358,10 @@ export const getAuthenticationToken =
       progress.report({ increment: 100 });
       return {
         status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
+        type: getAuthorizedEndevorClientErrorResponseType(
+          error.details?.causeErrors?.code,
+          error.details?.httpStatus
+        ),
         details: {
           messages: error.details?.causeErrors?.message
             ? [error.details.causeErrors.message]
@@ -335,11 +418,13 @@ export const getAuthenticationToken =
       result: authorizationToken
         ? {
             type: CredentialType.TOKEN_BEARER,
+            // EWS provides JSON Web Tokens (JWT)
+            tokenType: CredentialTokenType.JWT,
+            tokenValue: authorizationToken.token,
             // generate an epoch as soon as possible
             // timestamp from the EWS response might be in a different timezone
             tokenCreatedMs: Date.now(),
             tokenValidForMs: authorizationToken.tokenValidFor * MS_IN_MIN,
-            tokenValue: authorizationToken.token,
           }
         : null,
       details: {
@@ -376,61 +461,17 @@ export const getAllEnvironmentStages =
       return: 'ALL',
     };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listStage(session)(configuration)(
-        requestArgs
-      );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalEnvironmentStagesResponse;
-    try {
-      parsedResponse = parseToType(ExternalEnvironmentStagesResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    const parsedResponse =
+      await executeEndevorRequest<ExternalEnvironmentStagesResponse>(logger)(
+        progress
+      )(ExternalEnvironmentStagesResponse, async () => {
+        return EndevorClient.listStage(session)(configuration)(requestArgs);
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // TODO this check is a workaround for the v1 api only, remove when unnecessary
     const environments = (parsedResponse.body.data ?? [])
@@ -466,8 +507,9 @@ export const getAllEnvironmentStages =
       status: ResponseStatus.OK,
       result: environments,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -480,20 +522,8 @@ export const getAllSystems =
   ({ environment, stageNumber, system }: Partial<SystemMapPath>) =>
   async (searchStrategy: SearchStrategies): Promise<SystemsResponse> => {
     const session = toSecuredEndevorSession(logger)(service);
-    let searchUpInMap = true;
-    let firstOccurrence = 'FIR';
-    switch (searchStrategy) {
-      case SearchStrategies.IN_PLACE:
-        searchUpInMap = false;
-        break;
-      case SearchStrategies.ALL:
-        firstOccurrence = 'ALL';
-        break;
-      case SearchStrategies.FIRST_FOUND:
-        break;
-      default:
-        throw new UnreachableCaseError(searchStrategy);
-    }
+    const { searchUpInMap, firstOccurrence } =
+      getSearchStrategies(searchStrategy);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: environment || ANY_VALUE,
       'stage-number': stageNumber || ANY_VALUE,
@@ -502,61 +532,16 @@ export const getAllSystems =
       return: firstOccurrence,
     };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listSystem(session)(configuration)(
-        requestArgs
-      );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalSystemsResponse;
-    try {
-      parsedResponse = parseToType(ExternalSystemsResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    const parsedResponse = await executeEndevorRequest<ExternalSystemsResponse>(
+      logger
+    )(progress)(ExternalSystemsResponse, async () => {
+      return EndevorClient.listSystem(session)(configuration)(requestArgs);
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // TODO this check is a workaround for the v1 api only, remove when unnecessary
     const systems = (parsedResponse.body.data ?? [])
@@ -587,8 +572,9 @@ export const getAllSystems =
       status: ResponseStatus.OK,
       result: systems,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -645,20 +631,8 @@ export const getAllSubSystems =
   }: Partial<SubSystemMapPath>) =>
   async (searchStrategy: SearchStrategies): Promise<SubSystemsResponse> => {
     const session = toSecuredEndevorSession(logger)(service);
-    let searchUpInMap = true;
-    let firstOccurrence = 'FIR';
-    switch (searchStrategy) {
-      case SearchStrategies.IN_PLACE:
-        searchUpInMap = false;
-        break;
-      case SearchStrategies.ALL:
-        firstOccurrence = 'ALL';
-        break;
-      case SearchStrategies.FIRST_FOUND:
-        break;
-      default:
-        throw new UnreachableCaseError(searchStrategy);
-    }
+    const { searchUpInMap, firstOccurrence } =
+      getSearchStrategies(searchStrategy);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: environment || ANY_VALUE,
       'stage-number': stageNumber || ANY_VALUE,
@@ -668,61 +642,20 @@ export const getAllSubSystems =
       return: firstOccurrence,
     };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listSubsystem(session)(configuration)(
-        requestArgs
+    const parsedResponse =
+      await executeEndevorRequest<ExternalSubSystemsResponse>(logger)(progress)(
+        ExternalSubSystemsResponse,
+        async () => {
+          return EndevorClient.listSubsystem(session)(configuration)(
+            requestArgs
+          );
+        }
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalSubSystemsResponse;
-    try {
-      parsedResponse = parseToType(ExternalSubSystemsResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // TODO this check is a workaround for the v1 api only, remove when unnecessary
     const subSystems = (parsedResponse.body.data ?? [])
@@ -754,8 +687,9 @@ export const getAllSubSystems =
       status: ResponseStatus.OK,
       result: subSystems,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -810,20 +744,8 @@ export const getAllElementTypes =
   ({ environment, stageNumber, system, type }: Partial<ElementTypeMapPath>) =>
   async (searchStrategy: SearchStrategies): Promise<ElementTypesResponse> => {
     const session = toSecuredEndevorSession(logger)(service);
-    let searchUpInMap = true;
-    let firstOccurrence = 'FIR';
-    switch (searchStrategy) {
-      case SearchStrategies.IN_PLACE:
-        searchUpInMap = false;
-        break;
-      case SearchStrategies.ALL:
-        firstOccurrence = 'ALL';
-        break;
-      case SearchStrategies.FIRST_FOUND:
-        break;
-      default:
-        throw new UnreachableCaseError(searchStrategy);
-    }
+    const { searchUpInMap, firstOccurrence } =
+      getSearchStrategies(searchStrategy);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: environment || ANY_VALUE,
       'stage-number': stageNumber || ANY_VALUE,
@@ -833,61 +755,17 @@ export const getAllElementTypes =
       return: firstOccurrence,
     };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listType(session)(configuration)(
-        requestArgs
-      );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalElementTypesResponse;
-    try {
-      parsedResponse = parseToType(ExternalElementTypesResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    const parsedResponse =
+      await executeEndevorRequest<ExternalElementTypesResponse>(logger)(
+        progress
+      )(ExternalElementTypesResponse, async () => {
+        return EndevorClient.listType(session)(configuration)(requestArgs);
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // TODO this check is a workaround for the v1 api only, remove when unnecessary
     const types = (parsedResponse.body.data ?? [])
@@ -903,24 +781,30 @@ export const getAllElementTypes =
           return;
         }
       })
+      .filter(isDefined)
       .map((type) => {
-        if (!type) return;
         return {
           environment: type.envName,
+          stageNumber: type.stgNum,
           stageId: type.stgId,
           system: type.sysName,
           type: type.typeName,
           nextType: type.nextType,
+          description: type.description,
+          defaultPrcGrp: type.dfltProcGrp,
+          dataFm: type.dataFm === null ? undefined : type.dataFm,
+          fileExt: type.fileExt === null ? undefined : type.fileExt,
+          lang: type.lang,
         };
-      })
-      .filter(isDefined);
+      });
     progress.report({ increment: 20 });
     return {
       status: ResponseStatus.OK,
       result: types,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -930,7 +814,7 @@ export const searchForElementTypesInPlace =
   (progress: ProgressReporter) =>
   (service: Service) =>
   (configuration: Value) =>
-  ({ environment, stageNumber }: EnvironmentStageMapPath) =>
+  ({ environment, stageNumber }: Partial<EnvironmentStageMapPath>) =>
   async (system?: Value, typeName?: Value): Promise<ElementTypesResponse> => {
     return getAllElementTypes(logger)(progress)(service)(configuration)({
       environment,
@@ -967,6 +851,104 @@ export const searchForAllElementTypes =
     })(SearchStrategies.IN_PLACE);
   };
 
+export const getProcessorGroupsByType =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  (
+    { environment, stageNumber, system, type }: Partial<ElementTypeMapPath>,
+    processorGroup?: Value
+  ) =>
+  async (
+    searchStrategy: SearchStrategies
+  ): Promise<ProcessorGroupsResponse> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const { searchUpInMap, firstOccurrence } =
+      getSearchStrategies(searchStrategy);
+    const requestArgs: ElmSpecDictionary & ListElmDictionary = {
+      environment: environment || ANY_VALUE,
+      'stage-number': stageNumber || ANY_VALUE,
+      system: system || ANY_VALUE,
+      type: type || ANY_VALUE,
+      search: searchUpInMap,
+      return: firstOccurrence,
+      'proc-group': processorGroup || ANY_VALUE,
+    };
+    progress.report({ increment: 30 });
+    const parsedResponse =
+      await executeEndevorRequest<ExternalProcessorGroupResponse>(logger)(
+        progress
+      )(ExternalProcessorGroupResponse, async () => {
+        return EndevorClient.listProcessorGroup(session)(configuration)(
+          requestArgs
+        );
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
+    }
+    // TODO this check is a workaround for the v1 api only, remove when unnecessary
+    const processorGroups = (parsedResponse.body.data ?? [])
+      .map((procGroup) => {
+        try {
+          return parseToType(ExternalProcessorGroup, procGroup);
+        } catch (e) {
+          logger.trace(
+            `Unable to parse Endevor response:\n${stringifyPretty(
+              procGroup
+            )}\nbecause of error:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((procGroup) => {
+        return {
+          environment: procGroup.envName,
+          stageNumber: procGroup.stgNum,
+          stageId: procGroup.stgId,
+          system: procGroup.sysName,
+          type: procGroup.typeName,
+          procGroupName: procGroup.procGrpName,
+          nextProcGoup: procGroup.nextProcGrp,
+          description: procGroup.description,
+        };
+      });
+    progress.report({ increment: 20 });
+    return {
+      status: ResponseStatus.OK,
+      result: processorGroups,
+      details: {
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
+      },
+    };
+  };
+
+export const searchForProcessorGroupsInPlace =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (
+    typeMap: Partial<ElementTypeMapPath>,
+    procGroupName?: Value
+  ): Promise<ProcessorGroupsResponse> => {
+    return getProcessorGroupsByType(logger)(progress)(service)(configuration)(
+      {
+        environment: typeMap.environment,
+        stageNumber: typeMap.stageNumber,
+        system: typeMap.system,
+        type: typeMap.type,
+      },
+      procGroupName
+    )(SearchStrategies.IN_PLACE);
+  };
+
 const searchForElements =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
@@ -983,20 +965,8 @@ const searchForElements =
   async (searchStrategy: SearchStrategies): Promise<ElementsResponse> => {
     const session = toSecuredEndevorSession(logger)(service);
     const allElementInfo = 'ALL';
-    let searchUpInMap = true;
-    let firstOccurrence = 'FIR';
-    switch (searchStrategy) {
-      case SearchStrategies.IN_PLACE:
-        searchUpInMap = false;
-        break;
-      case SearchStrategies.ALL:
-        firstOccurrence = 'ALL';
-        break;
-      case SearchStrategies.FIRST_FOUND:
-        break;
-      default:
-        throw new UnreachableCaseError(searchStrategy);
-    }
+    const { searchUpInMap, firstOccurrence } =
+      getSearchStrategies(searchStrategy);
     const requestArgs: ElmSpecDictionary & ListElmDictionary = {
       environment: environment || ANY_VALUE,
       'stage-number': fromStageNumber(stageNumber),
@@ -1008,62 +978,19 @@ const searchForElements =
       search: searchUpInMap,
       return: firstOccurrence,
     };
-    progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.listElement(session)(configuration)(
-        requestArgs
+    incrementPartialProgress(progress, true)(30);
+    const parsedResponse =
+      await executeEndevorRequest<ExternalElementsResponse>(logger)(progress)(
+        ExternalElementsResponse,
+        async () => {
+          return EndevorClient.listElement(session)(configuration)(requestArgs);
+        }
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalElementsResponse;
-    try {
-      parsedResponse = parseToType(ExternalElementsResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // TODO this check is a workaround for the v1 api only, remove when unnecessary
     const elements = (parsedResponse.body.data ?? [])
@@ -1092,15 +1019,21 @@ const searchForElements =
           extension: element.fileExt ? element.fileExt : undefined,
           lastActionCcid: element.lastActCcid ? element.lastActCcid : undefined,
           noSource: element.nosource === 'Y' ? true : false,
+          vvll: element.elmVVLL,
+          processorGroup: element.procGrpName,
+          signoutId: element.signoutId ? element.signoutId : undefined,
+          componentVvll: element.cmpntVVLL ? element.cmpntVVLL : undefined,
+          fingerprint: element.fingerprint ? element.fingerprint : undefined,
         };
       });
-    progress.report({ increment: 20 });
+    incrementPartialProgress(progress)(20);
     return {
       status: ResponseStatus.OK,
       result: elements,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -1184,7 +1117,7 @@ export const printElement =
     type,
     id: name,
   }: ElementMapPath): Promise<PrintResponse> => {
-    return printGeneral(logger)(progress)(service)(configuration)({
+    return printElementGeneral(logger)(progress)(service)(configuration)({
       environment,
       stageNumber,
       system,
@@ -1207,7 +1140,7 @@ export const printListing =
     type,
     id: name,
   }: ElementMapPath): Promise<PrintResponse> => {
-    return printGeneral(logger)(progress)(service)(configuration)({
+    return printElementGeneral(logger)(progress)(service)(configuration)({
       environment,
       stageNumber,
       system,
@@ -1230,7 +1163,7 @@ export const printHistory =
     type,
     id: name,
   }: ElementMapPath): Promise<PrintResponse> => {
-    return printGeneral(logger)(progress)(service)(configuration)({
+    return printElementGeneral(logger)(progress)(service)(configuration)({
       environment,
       stageNumber,
       system,
@@ -1240,7 +1173,7 @@ export const printHistory =
     })(PrintActionTypes.HISTORY);
   };
 
-const printGeneral =
+const printElementGeneral =
   (logger: Logger) =>
   (progress: ProgressReporter) =>
   (service: Service) =>
@@ -1266,65 +1199,51 @@ const printGeneral =
       headings: printType === PrintActionTypes.LISTING,
     };
     const session = toSecuredEndevorSession(logger)(service);
+    return printGeneral(logger)(progress)(async () => {
+      return EndevorClient.printElement(session)(configuration)(requestParams);
+    });
+  };
+
+export const printMember =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (member: Member): Promise<PrintResponse> => {
+    const requestParams: PrintMemberDictionary & EncodingDictionary = {
+      member: member.name,
+      'from-dataset': member.dataset.name,
+      headings: false,
+    };
+    const session = toSecuredEndevorSession(logger)(service);
+    return printGeneral(logger)(progress)(async () => {
+      return EndevorClient.printMember(session)(configuration)(requestParams);
+    });
+  };
+
+const printGeneral =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  async (endevorRequest: () => Promise<unknown>): Promise<PrintResponse> => {
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.printElement(session)(configuration)(
-        requestParams
+    const parsedResponse = await executeEndevorRequest<ExternalPrintResponse>(
+      logger
+    )(progress)(ExternalPrintResponse, async () => {
+      return endevorRequest();
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<PrintResponseErrorType>(
+        parsedResponse,
+        getPrintElementErrorType
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalPrintResponse;
-    try {
-      parsedResponse = parseToType(ExternalPrintResponse, response);
-    } catch (e) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse the Endevor response because of an error:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${e.message}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [e.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getPrintElementErrorType(cleanedResponseMessages),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
     }
     const [content] = parsedResponse.body.data ? parsedResponse.body.data : [];
     if (!content) {
       logger.trace(
-        `Got the Endevor error response:\n${stringifyPretty(response)}.`
+        `Got the Endevor error response:\n${stringifyPretty(parsedResponse)}.`
       );
       progress.report({ increment: 100 });
       return {
@@ -1342,8 +1261,9 @@ const printGeneral =
       status: ResponseStatus.OK,
       result: content,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -1390,75 +1310,36 @@ const retrieveElementWithFingerprint =
       search: searchUpInMap,
     };
     const session = toSecuredEndevorSession(logger)(service);
-    progressReporter.report({ increment: 30 });
-    let response;
-    try {
-      response = await ProposedEndevorClient.retrieveElement(session)(
-        configuration
-      )(requestParams);
-    } catch (error) {
-      progressReporter.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progressReporter.report({ increment: 50 });
-    let parsedResponse: RetrieveResponse;
-    try {
-      parsedResponse = parseToType(RetrieveResponse, response);
-    } catch (error) {
-      logger.trace(
-        `Unable to retrieve the element ${system}/${subSystem}/${type}/${name} because of error:\n${
-          error.message
-        }\nof an incorrect response:\n${stringifyPretty(response)}.`
+    incrementPartialProgress(progressReporter, true)(30);
+    const parsedResponse = await executeEndevorRequest<RetrieveResponse>(
+      logger
+    )(progressReporter)(RetrieveResponse, async () => {
+      return ProposedEndevorClient.retrieveElement(session)(configuration)(
+        requestParams
       );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    progressReporter.report({ increment: 20 });
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progressReporter.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getRetrieveElementWithSignOutElementErrorType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-        },
-      };
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<RetrieveElementWithSignoutResponseErrorType>(
+        parsedResponse,
+        getRetrieveElementWithSignOutElementErrorType
+      );
     }
     const elementFingerprint = parsedResponse.headers.fingerprint;
     // It is very unlikely that this condition will ever be sufficed,
     // but because of our types we need to do the check. Sorry.
     if (!elementFingerprint) {
-      progressReporter.report({ increment: 100 });
+      incrementPartialProgress(progressReporter)(100);
       return {
         status: ResponseStatus.ERROR,
         type: ErrorResponseType.GENERIC_ERROR,
         details: {
-          messages: cleanedResponseMessages.concat([
+          messages: parsedResponse.body.messages.concat([
             'Element fingerprint is missing',
           ]),
+          reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
         },
       };
     }
@@ -1470,8 +1351,9 @@ const retrieveElementWithFingerprint =
         content: elementContent ? elementContent.toString() : '',
       },
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -1576,68 +1458,27 @@ export const signInElement =
       type,
     };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.signinElement(session)(configuration)(
-        requestParams
-      );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalSignInElementResponse;
-    try {
-      parsedResponse = parseToType(ExternalSignInElementResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${stringifyPretty(response)}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(response.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: response.body.returnCode,
-        },
-      };
+    const parsedResponse =
+      await executeEndevorRequest<ExternalSignInElementResponse>(logger)(
+        progress
+      )(ExternalSignInElementResponse, async () => {
+        return EndevorClient.signinElement(session)(configuration)(
+          requestParams
+        );
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     progress.report({ increment: 20 });
     return {
       status: ResponseStatus.OK,
       details: {
-        messages: cleanedResponseMessages,
-        returnCode: response.body.returnCode,
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -1666,62 +1507,20 @@ export const retrieveElementComponents =
       excIndirect: 'yes',
     };
     const session = toSecuredEndevorSession(logger)(service);
-    progressReporter.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.queryAcmComponent(session)(configuration)(
-        requestParams
-      );
-    } catch (error) {
-      progressReporter.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progressReporter.report({ increment: 50 });
-    let parsedResponse: ExternalComponentsResponse;
-    try {
-      parsedResponse = parseToType(ExternalComponentsResponse, response);
-    } catch (error) {
-      progressReporter.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${stringifyPretty(response)}.`
-      );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(response.body)) {
-      progressReporter.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenericAuthorizedEndevorErrorResponseType(
-          cleanedResponseMessages
-        ),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: response.body.returnCode,
-        },
-      };
+    incrementPartialProgress(progressReporter, true)(30);
+    const parsedResponse =
+      await executeEndevorRequest<ExternalComponentsResponse>(logger)(
+        progressReporter
+      )(ExternalComponentsResponse, async () => {
+        return EndevorClient.queryAcmComponent(session)(configuration)(
+          requestParams
+        );
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
     }
     // Because of some magic happening in the SDK which alters the
     // endevor web service response we are forced to do this horror.
@@ -1731,9 +1530,10 @@ export const retrieveElementComponents =
         status: ResponseStatus.ERROR,
         type: ErrorResponseType.GENERIC_ERROR,
         details: {
-          messages: cleanedResponseMessages.concat([
+          messages: parsedResponse.body.messages.concat([
             'Element components not found',
           ]),
+          reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
         },
       };
     }
@@ -1761,14 +1561,75 @@ export const retrieveElementComponents =
           type: element.typeName,
         };
       });
-    progressReporter.report({ increment: 20 });
+    incrementPartialProgress(progressReporter)(20);
     return {
       status: ResponseStatus.OK,
       details: {
-        messages: cleanedResponseMessages,
-        returnCode: response.body.returnCode,
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
       result: components,
+    };
+  };
+
+export const moveElements =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({
+    environment,
+    stageNumber,
+    system,
+    subSystem,
+    type,
+    id: element,
+  }: Partial<ElementMapPath>) =>
+  ({ ccid, comment }: ActionChangeControlValue) =>
+  async ({
+    withHistory,
+    bypassElementDelete,
+    synchronize,
+    retainSignout,
+    ackElementJump,
+  }: MoveParams): Promise<MoveResponse> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestParams: ElmSpecDictionary & MoveElmDictionary = {
+      element: element ?? ANY_VALUE,
+      environment: environment ?? ANY_VALUE,
+      'stage-number': stageNumber ?? ANY_VALUE,
+      system: system ?? ANY_VALUE,
+      subsystem: subSystem ?? ANY_VALUE,
+      type: type ?? ANY_VALUE,
+      'with-history': withHistory ? 'yes' : undefined,
+      'bypass-element-delete': bypassElementDelete ? 'yes' : undefined,
+      sync: synchronize ? 'yes' : undefined,
+      'retain-signout': retainSignout ? 'yes' : undefined,
+      jump: ackElementJump ? 'yes' : undefined,
+      ccid,
+      comment,
+    };
+    progress.report({ increment: 30 });
+    const parsedResponse = await executeEndevorRequest<ExternalMoveResponse>(
+      logger
+    )(progress)(ExternalMoveResponse, async () => {
+      return EndevorClient.moveElement(session)(configuration)(requestParams);
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
+    }
+    progress.report({ increment: 20 });
+    return {
+      status: ResponseStatus.OK,
+      details: {
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
+      },
     };
   };
 
@@ -1790,6 +1651,7 @@ const generateElements =
     copyBack,
     noSource,
     overrideSignOut,
+    processorGroup,
   }: GenerateParams): Promise<GenerateResponse> => {
     const session = toSecuredEndevorSession(logger)(service);
     const requestParams: ElmSpecDictionary & GenerateElmDictionary = {
@@ -1807,73 +1669,33 @@ const generateElements =
       ccid,
       comment,
     };
+    if (processorGroup) requestParams['proc-group'] = processorGroup;
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await EndevorClient.generateElement(session)(configuration)(
-        requestParams
+    const parsedResponse =
+      await executeEndevorRequest<ExternalGenerateResponse>(logger)(progress)(
+        ExternalGenerateResponse,
+        async () => {
+          return EndevorClient.generateElement(session)(configuration)(
+            requestParams
+          );
+        }
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalGenerateResponse;
-    try {
-      parsedResponse = parseToType(ExternalGenerateResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<GenerateResponseErrorType>(
+        parsedResponse,
+        getGenerateErrorType
       );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(parsedResponse.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getGenerateErrorType(cleanedResponseMessages),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: parsedResponse.body.returnCode,
-          reportIds: {
-            executionReportId: parsedResponse.body.reports.C1MSGS1,
-          },
-        },
-      };
     }
     progress.report({ increment: 20 });
     return {
       status: ResponseStatus.OK,
       details: {
-        messages: cleanedResponseMessages,
+        messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
-        reportIds: {
-          executionReportId: parsedResponse.body.reports.C1MSGS1,
-        },
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -1884,6 +1706,7 @@ export const generateElementInPlace =
   (service: Service) =>
   (configuration: Value) =>
   (elementSearchParams: ElementMapPath) =>
+  (processorGroup: Value | undefined) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (signOutParams?: GenerateSignOutParams): Promise<GenerateResponse> =>
     generateElements(logger)(progress)(service)(configuration)(
@@ -1894,6 +1717,7 @@ export const generateElementInPlace =
       overrideSignOut: signOutParams?.overrideSignOut
         ? signOutParams.overrideSignOut
         : false,
+      processorGroup,
     });
 
 export const generateElementWithCopyBack =
@@ -1902,6 +1726,7 @@ export const generateElementWithCopyBack =
   (service: Service) =>
   (configuration: Value) =>
   (elementSearchParams: ElementMapPath) =>
+  (processorGroup: Value | undefined) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   (copyBackParams?: GenerateWithCopyBackParams) =>
   (signOutParams?: GenerateSignOutParams): Promise<GenerateResponse> =>
@@ -1913,6 +1738,7 @@ export const generateElementWithCopyBack =
       overrideSignOut: signOutParams?.overrideSignOut
         ? signOutParams.overrideSignOut
         : false,
+      processorGroup,
     });
 
 export const generateSubSystemElementsInPlace =
@@ -1971,69 +1797,32 @@ export const updateElement =
         fingerprint,
       };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await AddUpdElement.updElement(
+    const parsedResponse = await executeEndevorRequest<ExternalUpdateResponse>(
+      logger
+    )(progress)(ExternalUpdateResponse, async () => {
+      return AddUpdElement.updElement(
         session,
         configuration,
         elementData,
         requestParams
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalUpdateResponse;
-    try {
-      parsedResponse = parseToType(ExternalUpdateResponse, response);
-    } catch (error) {
-      progress.report({ increment: 100 });
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<UpdateResponseErrorType>(
+        parsedResponse,
+        getUpdateElementErrorType
       );
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(response.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getUpdateElementErrorType(cleanedResponseMessages),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: response.body.returnCode,
-        },
-      };
     }
     progress.report({ increment: 20 });
     return {
       status: ResponseStatus.OK,
       details: {
-        messages: cleanedResponseMessages,
-        returnCode: response.body.returnCode,
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };
@@ -2051,6 +1840,7 @@ export const addElement =
     type,
     id: name,
   }: ElementMapPath) =>
+  (processorGroup: Value | undefined) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
   async ({ content, elementFilePath }: ElementData): Promise<AddResponse> => {
     const elementMapPath: IElementBasicData = {
@@ -2069,71 +1859,90 @@ export const addElement =
         'from-file-content': content,
         ccid,
         comment,
+        'proc-group': processorGroup,
       };
     progress.report({ increment: 30 });
-    let response;
-    try {
-      response = await AddUpdElement.addElement(
+    const parsedResponse = await executeEndevorRequest<ExternalAddResponse>(
+      logger
+    )(progress)(ExternalAddResponse, async () => {
+      return AddUpdElement.addElement(
         session,
         configuration,
         elementMapPath,
         requestParams
       );
-    } catch (error) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAuthorizedEndevorClientErrorResponseType(error),
-        details: {
-          messages: error.details?.causeErrors?.message
-            ? [error.details.causeErrors.message]
-            : error.details?.msg
-            ? [error.details.msg]
-            : [],
-          connectionCode: error.details?.errorCause?.code,
-          httpStatusCode: error.details?.httpStatus,
-        },
-      };
-    }
-    progress.report({ increment: 50 });
-    let parsedResponse: ExternalAddResponse;
-    try {
-      parsedResponse = parseToType(ExternalAddResponse, response);
-    } catch (error) {
-      logger.trace(
-        `Unable to parse Endevor response:\n${stringifyPretty(
-          response
-        )}\nbecause of error:\n${error.message}.`
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<AddResponseErrorType>(
+        parsedResponse,
+        getAddElementErrorType
       );
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: ErrorResponseType.GENERIC_ERROR,
-        details: {
-          messages: [error.message],
-        },
-      };
-    }
-    const cleanedResponseMessages = parsedResponse.body.messages.map(
-      (message) => message.trim()
-    );
-    if (!isResponseSuccessful(response.body)) {
-      progress.report({ increment: 100 });
-      return {
-        status: ResponseStatus.ERROR,
-        type: getAddElementErrorType(cleanedResponseMessages),
-        details: {
-          messages: cleanedResponseMessages,
-          returnCode: response.body.returnCode,
-        },
-      };
     }
     progress.report({ increment: 20 });
     return {
       status: ResponseStatus.OK,
       details: {
-        messages: cleanedResponseMessages,
-        returnCode: response.body.returnCode,
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
+      },
+    };
+  };
+
+export const getMembersFromDataset =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  async (dataset: Dataset): Promise<MembersResponse> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    progress.report({ increment: 30 });
+    const requestParams: IMemberActionRequestOptions = {
+      dsname: dataset.name,
+    };
+    const parsedResponse = await executeEndevorRequest<ExternalMembersResponse>(
+      logger
+    )(progress)(ExternalMembersResponse, async () => {
+      return ProposedEndevorClient.listDirectory(session)(configuration)(
+        requestParams
+      );
+    });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
+    }
+    const members = parsedResponse.body.data
+      .map((member) => {
+        try {
+          return parseToType(ExternalMember, member);
+        } catch (e) {
+          logger.trace(
+            `Unable to parse Endevor response:\n${stringifyPretty(
+              member
+            )}\nbecause of error:\n${e.message}.`
+          );
+          return;
+        }
+      })
+      .filter(isDefined)
+      .map((member) => ({
+        name: member.mbrName,
+        dataset: {
+          name: dataset.name,
+        },
+      }));
+    progress.report({ increment: 20 });
+    return {
+      status: ResponseStatus.OK,
+      result: members,
+      details: {
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
       },
     };
   };

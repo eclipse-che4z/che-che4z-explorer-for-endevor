@@ -13,25 +13,23 @@
 
 import { Uri } from 'vscode';
 import { isError } from '../utils';
-import { BasicElementUriQuery, Schemas } from '../_doc/Uri';
+import { BasicElementUriQuery, Schemas } from './_doc/Uri';
 import { fromEditedElementUri } from './editedElementUri';
-import {
-  fromElementChangeUri,
-  fromElementHistoryUri,
-} from './elementHistoryUri';
 import { fromElementListingUri } from './elementListingUri';
 import { fromBasicElementUri } from './basicElementUri';
+import { fromElementChangeUri } from '@local/views/uri/elementHistoryUri';
 
 export const getElementParmsFromUri = (
-  uri: Uri
+  uri?: Uri
 ): BasicElementUriQuery | Error => {
+  if (!uri) return new Error('Uri does not contain element data');
   switch (uri.scheme) {
     case Schemas.ELEMENT_LISTING:
       return fromElementListingUri(uri);
     case Schemas.ELEMENT_CHANGE_LVL:
-      return fromElementChangeUri(uri);
-    case Schemas.ELEMENT_HISTORY:
-      return fromElementHistoryUri(uri);
+      return fromElementChangeUri<Omit<BasicElementUriQuery, 'element'>>(uri)(
+        Schemas.ELEMENT_CHANGE_LVL
+      );
     case Schemas.TREE_ELEMENT:
       return fromBasicElementUri(uri);
     case Schemas.FILE: {

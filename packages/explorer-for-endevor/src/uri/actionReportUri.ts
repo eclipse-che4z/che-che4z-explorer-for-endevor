@@ -11,17 +11,13 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Service } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
-import { EndevorConfiguration, EndevorId } from '../store/_doc/v2/Store';
-import { Schemas, Extensions, ActionReportUriQuery } from '../_doc/Uri';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { Schemas, Extensions, ActionReportUriQuery } from './_doc/Uri';
 
 export const toActionReportUri =
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
   (objectName: string) =>
-  (configuration: EndevorConfiguration) =>
-  (service: Service) =>
-  (serviceId: EndevorId) =>
-  (searchLocationId: EndevorId) =>
   (ccid: string) =>
   (reportId: string): Uri | Error => {
     try {
@@ -32,8 +28,6 @@ export const toActionReportUri =
         query: encodeURIComponent(
           JSON.stringify({
             objectName,
-            configuration,
-            service,
             serviceId,
             searchLocationId,
             ccid,

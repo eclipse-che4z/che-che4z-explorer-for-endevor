@@ -12,7 +12,7 @@
  */
 
 import { Uri } from 'vscode';
-import { ElementListingUriQuery, Schemas, Extensions } from '../_doc/Uri';
+import { ElementListingUriQuery, Schemas, Extensions } from './_doc/Uri';
 
 export const toElementListingUri =
   ({ serviceId, searchLocationId, element }: ElementListingUriQuery) =>

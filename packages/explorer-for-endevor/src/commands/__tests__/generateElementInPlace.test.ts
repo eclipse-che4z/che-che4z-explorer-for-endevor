@@ -19,7 +19,6 @@ import {
   Element,
   ErrorResponseType,
   ResponseStatus,
-  Service,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { generateElementInPlaceCommand } from '../element/generateElementInPlace';
@@ -27,42 +26,29 @@ import { mockGenerateElementInPlace } from './_mocks/endevor';
 import * as sinon from 'sinon';
 import { UNIQUE_ELEMENT_FRAGMENT } from '../../constants';
 import {
+  mockAskingForProcGroup,
   mockAskingForChangeControlValue,
   mockAskingForListing,
   mockAskingForOverrideSignout,
 } from '../../commands/__tests__/_mocks/dialogs';
 import { Actions, ElementGeneratedInPlace } from '../../store/_doc/Actions';
 import * as printListingCommand from '../element/printListing';
-import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 import { ElementNode, TypeNode } from '../../tree/_doc/ElementTree';
 
 describe('generating an element in place', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.GENERATE_ELEMENT,
-      (
-        getConnectionDetails,
-        getEndevorConfiguration,
-        getCredential,
-        getSearchLocation,
-        dispatch,
-        elementNode
-      ) =>
+      (dispatch, getConnectionConfiguration, elementNode) =>
         generateElementInPlaceCommand(
-          {
-            getConnectionDetails,
-            getEndevorConfiguration,
-            getCredential,
-            getSearchLocation,
-          },
-          dispatch
+          dispatch,
+          getConnectionConfiguration
         )(elementNode)
     );
   });
@@ -73,13 +59,13 @@ describe('generating an element in place', () => {
     sinon.restore();
   });
 
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -92,18 +78,16 @@ describe('generating an element in place', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-  };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
+    configuration,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
   };
   const element: Element = {
     environment: 'ENV',
@@ -116,8 +100,9 @@ describe('generating an element in place', () => {
     noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
-
+  const procGroup = 'ProcessAllToCobol';
   const actionChangeControlValue = {
     ccid: '111',
     comment: 'aaa',
@@ -162,12 +147,13 @@ describe('generating an element in place', () => {
 
   it('should generate an element in place with printing an element listing afterwards', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
-      configuration,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
         mockResult: {
@@ -189,18 +175,8 @@ describe('generating an element in place', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchGenerateAction,
+        async () => ({ service, searchLocation }),
         elementNode
       );
     } catch (e) {
@@ -208,7 +184,6 @@ describe('generating an element in place', () => {
         `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
-    // assert
     const [generalFunctionStub] = generateElementStub;
     assert.ok(
       generalFunctionStub.called,
@@ -250,12 +225,13 @@ describe('generating an element in place', () => {
 
   it('should print an element listing for the generate processor element error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
-      configuration,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
         mockResult: {
@@ -276,18 +252,10 @@ describe('generating an element in place', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchGenerateAction,
+        () => {
+          return { service, searchLocation };
+        },
         elementNode
       );
     } catch (e) {
@@ -327,12 +295,13 @@ describe('generating an element in place', () => {
 
   it('should generate an element with overriding the signout', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
-      configuration,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
         mockResult: {
@@ -367,18 +336,10 @@ describe('generating an element in place', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchGenerateAction,
+        () => {
+          return { service, searchLocation };
+        },
         elementNode
       );
     } catch (e) {
@@ -387,7 +348,7 @@ describe('generating an element in place', () => {
       );
     }
     // assert
-    const [, , , , generalFunctionStub] = generateElementStub;
+    const [generalFunctionStub] = generateElementStub;
     assert.ok(
       generalFunctionStub.calledTwice,
       `Generate element in place Endevor API was not called twice`
@@ -418,12 +379,13 @@ describe('generating an element in place', () => {
 
   it('should cancel the command in case of signout error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
-      configuration,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
         mockResult: {
@@ -446,18 +408,10 @@ describe('generating an element in place', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchGenerateAction,
+        () => {
+          return { service, searchLocation };
+        },
         elementNode
       );
     } catch (e) {
@@ -483,12 +437,13 @@ describe('generating an element in place', () => {
 
   it('should not show an element listing for the generic generate error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
-      configuration,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
         mockResult: {
@@ -508,18 +463,10 @@ describe('generating an element in place', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchGenerateAction,
+        () => {
+          return { service, searchLocation };
+        },
         elementNode
       );
     } catch (e) {

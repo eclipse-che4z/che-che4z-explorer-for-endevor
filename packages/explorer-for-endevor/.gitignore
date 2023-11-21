@@ -1,4 +1,5 @@
 dist
+resources/lspwasm
 .env
 README.md
 CHANGELOG.md

@@ -12,7 +12,7 @@
  */
 
 import { Uri } from 'vscode';
-import { Schemas } from '../_doc/Uri';
+import { Schemas } from './_doc/Uri';
 
 export const toCachedElementUri = (elementUri: Uri): Uri => {
   const uniqueFragment = Date.now().toString();

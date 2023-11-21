@@ -12,26 +12,43 @@
  */
 
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { signInElement } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { signInElementAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import { formatWithNewLines } from '../../utils';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
   SignInElementCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 type SelectedElementNode = ElementNode;
 
 export const signInElementCommand =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async ({
     name,
@@ -39,36 +56,46 @@ export const signInElementCommand =
     searchLocationId,
     element,
   }: SelectedElementNode): Promise<void> => {
-    logger.trace(
-      `Signin command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
+    logger.traceWithDetails(
+      `Sign in command was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name}.`
     );
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration } = connectionParams;
+    const { service } = connectionParams;
     const signInResponse = await withNotificationProgress(
-      `Signing in the element ${element.name} ...`
+      `Signing in element ${element.name} ...`
     )((progressReporter) =>
-      signInElement(progressReporter)(service)(configuration)(element)
+      signInElementAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)
     );
     if (isErrorEndevorResponse(signInResponse)) {
       const errorResponse = signInResponse;
       // TODO: format using all possible details
       const error = new Error(
-        `Unable to sign in the element  ${element.environment}/${
+        `Unable to sign in element  ${element.environment}/${
           element.stageNumber
         }/${element.system}/${element.subSystem}/${
           element.type
-        }/${name} because of an error:${formatWithNewLines(
+        }/${name} because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Endevor credentials are incorrect or expired.`,
             `${error.message}.`
           );
@@ -82,7 +109,7 @@ export const signInElementCommand =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Unable to connect to Endevor Web Services.`,
             `${error.message}.`
           );
@@ -95,8 +122,8 @@ export const signInElementCommand =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
-            `Unable to sign in the element ${name}.`,
+          logger.errorWithDetails(
+            `Unable to sign in element ${name}.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -120,5 +147,7 @@ export const signInElementCommand =
       type: TelemetryEvents.COMMAND_SIGNIN_ELEMENT_COMPLETED,
       status: SignInElementCommandCompletedStatus.SUCCESS,
     });
-    logger.info(`Element ${element.name} was signed in successfully!`);
+    logger.infoWithDetails(
+      `Element ${element.name} was signed in successfully!`
+    );
   };

@@ -15,27 +15,20 @@ import { describe } from 'mocha';
 import * as vscode from 'vscode';
 import { CommandId } from '../id';
 import * as assert from 'assert';
-import {
-  Element,
-  ResponseStatus,
-  Service,
-  ServiceApiVersion,
-} from '@local/endevor/_doc/Endevor';
+import { Element, ResponseStatus } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { printElement } from '../element/printElement';
-import { Schemas } from '../../_doc/Uri';
+import { Schemas } from '../../uri/_doc/Uri';
 import { elementContentProvider } from '../../view/elementContentProvider';
 import { mockPrintingElementWith } from './_mocks/endevor';
 import { mockShowingDocumentWith } from './_mocks/window';
 import * as sinon from 'sinon';
-import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('printing element content', () => {
   before(() => {
@@ -49,13 +42,13 @@ describe('printing element content', () => {
   });
 
   // arrange
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -68,6 +61,7 @@ describe('printing element content', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    configuration,
   };
   const element: Element = {
     environment: 'ENV',
@@ -80,42 +74,24 @@ describe('printing element content', () => {
     noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
   };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
-  };
+  const dispatchActions = sinon.spy();
   vscode.workspace.registerTextDocumentContentProvider(
     Schemas.TREE_ELEMENT,
-    elementContentProvider({
-      getConnectionDetails: async () => {
-        return {
-          status: EndevorConnectionStatus.VALID,
-          value: {
-            location: service.location,
-            rejectUnauthorized: service.rejectUnauthorized,
-            apiVersion: ServiceApiVersion.V2,
-          },
-        };
-      },
-      getEndevorConfiguration: async () => {
-        return searchLocation.configuration;
-      },
-      getCredential: () => async () => {
-        return credential;
-      },
-      getSearchLocation: async () => {
-        return searchLocation;
-      },
-    })
+    elementContentProvider(dispatchActions, async () => ({
+      service,
+      searchLocation,
+    }))
   );
 
   it('should show fetched element content', async () => {
@@ -123,7 +99,6 @@ describe('printing element content', () => {
 
     const printElementStub = mockPrintingElementWith(
       service,
-      configuration,
       element
     )({
       status: ResponseStatus.OK,
@@ -152,8 +127,8 @@ describe('printing element content', () => {
     // assert
     const [
       generalPrintFunctionStub,
+      ,
       printWithServiceStub,
-      _,
       printElementContentStub,
     ] = printElementStub;
     assert.ok(

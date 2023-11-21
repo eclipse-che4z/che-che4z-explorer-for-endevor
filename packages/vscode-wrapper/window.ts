@@ -88,10 +88,11 @@ export const showInputBox = (
   });
 
 export const showVscodeQuickPick = (
-  items: vscode.QuickPickItem[],
-  showOptions?: QuickPickOptions
+  items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>,
+  showOptions?: QuickPickOptions,
+  token?: vscode.CancellationToken
 ): Thenable<vscode.QuickPickItem | undefined> => {
-  return vscode.window.showQuickPick(items, showOptions);
+  return vscode.window.showQuickPick(items, showOptions, token);
 };
 
 export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
@@ -101,7 +102,7 @@ export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
   const quickpick = vscode.window.createQuickPick<I>();
   quickpick.items = items;
   quickpick.title = options?.title;
-  quickpick.placeholder = options?.placeholder;
+  quickpick.placeholder = options?.placeHolder;
   quickpick.ignoreFocusOut = options?.ignoreFocusOut || false;
   quickpick.show();
   const choice = await new Promise<I | undefined>((choice) => {

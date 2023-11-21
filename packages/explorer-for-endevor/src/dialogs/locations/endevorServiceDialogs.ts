@@ -40,7 +40,7 @@ import {
 import {
   ServiceConnectionTestStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import {
   EndevorConnection,
   EndevorConnectionStatus,
@@ -209,7 +209,7 @@ export const askForService = async (
   moveItemInFrontOfArray(serviceQuickPickItems, defaultQuickPickItem);
   const quickPickOptions: QuickPickOptions = {
     title: 'Select from the available Endevor connections',
-    placeholder: 'An Endevor connection name',
+    placeHolder: 'An Endevor connection name',
     ignoreFocusOut: true,
   };
   const choice = await createVscodeQuickPick(
@@ -236,7 +236,7 @@ const toServiceQuickPickItem = (
   {
     id,
     duplicated,
-    serviceLocation,
+    service,
     credential,
   }: ValidEndevorServiceDescription | InvalidEndevorServiceDescription,
   isDefault?: boolean,
@@ -244,7 +244,7 @@ const toServiceQuickPickItem = (
 ): ServiceQuickPickItem => {
   const serviceQuickPickItem: ServiceQuickPickItem = {
     label: id.name,
-    detail: toServiceUrl(serviceLocation.location, credential),
+    detail: toServiceUrl(service.location, credential),
     id,
     picked: !!isDefault,
     description,
@@ -270,7 +270,7 @@ const showServicesInQuickPick = async (
 ): Promise<QuickPick<ServiceQuickPickItem> | undefined> => {
   const quickPickOptions: QuickPickOptions = {
     title: 'Add an Endevor connection',
-    placeholder:
+    placeHolder:
       'Choose "Create new..." to define a new Endevor connection or select an existing one',
     ignoreFocusOut: true,
   };

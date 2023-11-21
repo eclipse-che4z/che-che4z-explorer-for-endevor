@@ -27,8 +27,6 @@ import {
   Element,
   ErrorResponseType,
   ResponseStatus,
-  Service,
-  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { getEditFolderUri, joinUri } from '../../utils';
@@ -38,7 +36,7 @@ import {
 } from './_mocks/workspace';
 import { mockShowingFileContentWith } from './_mocks/window';
 import { fromEditedElementUri } from '../../uri/editedElementUri';
-import { EditedElementUriQuery } from '../../_doc/Uri';
+import { EditedElementUriQuery } from '../../uri/_doc/Uri';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
@@ -47,13 +45,11 @@ import { Actions } from '../../store/_doc/Actions';
 import { TypeNode } from '../../tree/_doc/ElementTree';
 import { Source } from '../../store/storage/_doc/Storage';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 import {
   mockRetrieveElement,
   mockRetrieveElementWithSignout,
@@ -99,13 +95,13 @@ describe('starting edit session for element', () => {
     sinon.restore();
   });
 
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -118,10 +114,7 @@ describe('starting edit session for element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-  };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
+    configuration,
   };
   const element: Element = {
     environment: 'ENV',
@@ -134,14 +127,14 @@ describe('starting edit session for element', () => {
     noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'TEST-INST',
+  const searchLocation: SearchLocation = {
     environment: 'ANY-ENV',
     stageNumber: '1',
   };
@@ -160,7 +153,6 @@ describe('starting edit session for element', () => {
     const fingerprint = 'finger';
     const retrieveElementStub = mockRetrieveElement(
       service,
-      configuration,
       element
     )({
       status: ResponseStatus.OK,
@@ -229,31 +221,9 @@ describe('starting edit session for element', () => {
     };
     try {
       await editElementCommand(
-        {
-          getConnectionDetails: async () => {
-            return {
-              status: EndevorConnectionStatus.VALID,
-              value: {
-                location: service.location,
-                rejectUnauthorized: service.rejectUnauthorized,
-                apiVersion: ServiceApiVersion.V2,
-              },
-            };
-          },
-          getEndevorConfiguration: async () => {
-            return searchLocation.configuration;
-          },
-          getCredential: () => async () => {
-            return credential;
-          },
-          getSearchLocation: async () => {
-            return searchLocation;
-          },
-        },
-        {
-          getTempEditFolderUri: () => tempEditFolderUri,
-          dispatch: dispatchActions,
-        }
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
       )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
@@ -275,7 +245,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.called,
       'Retrieve an element Endevor API was not called'
@@ -355,7 +325,6 @@ describe('starting edit session for element', () => {
     const fingerprint = 'finger';
     const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
-      configuration,
       element
     )([
       {
@@ -431,31 +400,9 @@ describe('starting edit session for element', () => {
     };
     try {
       await editElementCommand(
-        {
-          getConnectionDetails: async () => {
-            return {
-              status: EndevorConnectionStatus.VALID,
-              value: {
-                location: service.location,
-                rejectUnauthorized: service.rejectUnauthorized,
-                apiVersion: ServiceApiVersion.V2,
-              },
-            };
-          },
-          getEndevorConfiguration: async () => {
-            return searchLocation.configuration;
-          },
-          getCredential: () => async () => {
-            return credential;
-          },
-          getSearchLocation: async () => {
-            return searchLocation;
-          },
-        },
-        {
-          getTempEditFolderUri: () => tempEditFolderUri,
-          dispatch: dispatchActions,
-        }
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
       )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
@@ -477,7 +424,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.called,
       'Retrieve an element Endevor API was not called'
@@ -579,7 +526,6 @@ describe('starting edit session for element', () => {
     const fingerprint = 'finger';
     const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
-      configuration,
       element
     )([
       {
@@ -668,31 +614,9 @@ describe('starting edit session for element', () => {
     };
     try {
       await editElementCommand(
-        {
-          getConnectionDetails: async () => {
-            return {
-              status: EndevorConnectionStatus.VALID,
-              value: {
-                location: service.location,
-                rejectUnauthorized: service.rejectUnauthorized,
-                apiVersion: ServiceApiVersion.V2,
-              },
-            };
-          },
-          getEndevorConfiguration: async () => {
-            return searchLocation.configuration;
-          },
-          getCredential: () => async () => {
-            return credential;
-          },
-          getSearchLocation: async () => {
-            return searchLocation;
-          },
-        },
-        {
-          getTempEditFolderUri: () => tempEditFolderUri,
-          dispatch: dispatchActions,
-        }
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
       )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
@@ -714,7 +638,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.calledTwice,
       'Retrieve an element Endevor API was not called twice'
@@ -816,7 +740,6 @@ describe('starting edit session for element', () => {
     const fingerprint = 'finger';
     const retrieveElementWithSignOutStub = mockRetrieveElementWithSignout(
       service,
-      configuration,
       element
     )([
       {
@@ -834,7 +757,6 @@ describe('starting edit session for element', () => {
     ]);
     const retrieveElementStub = mockRetrieveElement(
       service,
-      configuration,
       element
     )({
       status: ResponseStatus.OK,
@@ -903,31 +825,9 @@ describe('starting edit session for element', () => {
     };
     try {
       await editElementCommand(
-        {
-          getConnectionDetails: async () => {
-            return {
-              status: EndevorConnectionStatus.VALID,
-              value: {
-                location: service.location,
-                rejectUnauthorized: service.rejectUnauthorized,
-                apiVersion: ServiceApiVersion.V2,
-              },
-            };
-          },
-          getEndevorConfiguration: async () => {
-            return searchLocation.configuration;
-          },
-          getCredential: () => async () => {
-            return credential;
-          },
-          getSearchLocation: async () => {
-            return searchLocation;
-          },
-        },
-        {
-          getTempEditFolderUri: () => tempEditFolderUri,
-          dispatch: dispatchActions,
-        }
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
       )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
@@ -949,7 +849,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , retrieveElementWithSignOutContentStub] =
+    const [, , , , retrieveElementWithSignOutContentStub] =
       retrieveElementWithSignOutStub;
     assert.ok(
       retrieveElementWithSignOutContentStub.calledOnce,

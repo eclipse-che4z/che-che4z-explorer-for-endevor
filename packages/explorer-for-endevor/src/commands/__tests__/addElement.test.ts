@@ -18,7 +18,6 @@ import * as sinon from 'sinon';
 import {
   ActionChangeControlValue,
   ElementMapPath,
-  Service,
   Element,
   ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
@@ -29,43 +28,29 @@ import { TextEncoder } from 'util';
 import { mockAddingElement } from './_mocks/endevor';
 import {
   mockAskingForChangeControlValue,
+  mockAskingForProcGroup,
   mockAskingForUploadLocation,
   mockChooseFileUriFromFs,
 } from './_mocks/dialogs';
 import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
 import { Actions } from '../../store/_doc/Actions';
-import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
 import { toServiceLocationCompositeKey } from '../../store/utils';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('adding new element', () => {
   before(() => {
     commands.registerCommand(
       CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
-      (
-        getConnectionDetails,
-        getEndevorConfiguration,
-        getCredential,
-        getSearchLocation,
-        dispatch,
-        elementNode
-      ) =>
+      (dispatch, getConnectionConfiguration, elementNode) =>
         addElementFromFileSystem(
-          {
-            getConnectionDetails,
-            getEndevorConfiguration,
-            getCredential,
-            getSearchLocation,
-          },
           dispatch,
-          elementNode
-        )
+          getConnectionConfiguration
+        )(elementNode)
     );
   });
 
@@ -75,29 +60,26 @@ describe('adding new element', () => {
     sinon.restore();
   });
 
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'GenU';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
       hostname: 'anything',
       basePath: 'anythingx2',
     },
+    rejectUnauthorized: false,
     credential: {
       type: CredentialType.BASE,
       user: 'test',
       password: 'something',
     },
-    rejectUnauthorized: false,
-  };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
+    configuration,
   };
   const searchLocationNodeName = 'LOC';
   const searchLocationNodeId: EndevorId = {
@@ -118,8 +100,9 @@ describe('adding new element', () => {
 
   it('should add element to endevor', async () => {
     // arrange
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
+    const searchLocation: SearchLocation = {
+      environment: 'ENV',
+      stageNumber: '1',
     };
     mockChooseFileUriFromFs(Uri.file(uploadedElementFilePath));
     const elementContent =
@@ -135,14 +118,13 @@ describe('adding new element', () => {
       type: 'TYP',
       id: 'ELM',
     };
-    const prefilledLocationDialogValue: ElementSearchLocation = {
+    const prefilledLocationDialogValue: SearchLocation = {
       environment: addLocation.environment,
       stageNumber: addLocation.stageNumber,
       system: addLocation.system,
       subsystem: addLocation.subSystem,
       type: addLocation.type,
       element: addLocation.id,
-      configuration: searchLocation.configuration,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(addLocation);
     const addChangeControlValue: ActionChangeControlValue = {
@@ -150,10 +132,12 @@ describe('adding new element', () => {
       comment: 'test',
     };
     mockAskingForChangeControlValue(addChangeControlValue);
+    const procGroup = 'ProcessAllToCobol';
+    mockAskingForProcGroup(procGroup);
     const addElementStub = mockAddingElement(
       service,
-      configuration,
       addLocation,
+      procGroup,
       addChangeControlValue,
       { content: elementContent, elementFilePath: uploadedElementFilePath }
     )([
@@ -170,18 +154,10 @@ describe('adding new element', () => {
     try {
       await commands.executeCommand(
         CommandId.ADD_ELEMENT_FROM_FILE_SYSTEM,
-        () => {
-          return {
-            status: EndevorConnectionStatus.VALID,
-            value: service,
-          };
-        },
-        () => searchLocation.configuration,
-        () => () => credential,
-        () => {
-          return searchLocation;
-        },
         dispatchAddedAction,
+        () => {
+          return { service, searchLocation };
+        },
         locationNode
       );
     } catch (e) {

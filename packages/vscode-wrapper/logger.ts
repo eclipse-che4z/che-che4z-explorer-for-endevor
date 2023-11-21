@@ -24,28 +24,48 @@ const prependTimestamp = (message: string): string =>
 const logAndDisplay =
   (outputChannel: LoggerChannel) =>
   (lvl: LOG_LEVEL) =>
-  (userMsg: string, logMsg?: string) => {
-    outputChannel.appendLine(prependTimestamp(userMsg));
+  (
+    userMsg:
+      | string
+      | {
+          value: string;
+          options: ReadonlyArray<string>;
+          optionsCallback: (choice: string | undefined) => Promise<void>;
+        },
+    logMsg?: string
+  ) => {
+    const userMsgValue: {
+      value: string;
+      options: ReadonlyArray<string>;
+      optionsCallback?: (choice: string | undefined) => Promise<void>;
+    } = typeof userMsg === 'string' ? { value: userMsg, options: [] } : userMsg;
+    const options: Array<string> = [...userMsgValue.options, showLogsOption];
+
+    outputChannel.appendLine(prependTimestamp(userMsgValue.value));
     if (logMsg) outputChannel.appendLine(prependTimestamp(logMsg));
 
     switch (lvl) {
       case LOG_LEVEL.TRACE:
         break;
       case LOG_LEVEL.INFO:
-        vscode.window.showInformationMessage(userMsg);
+        vscode.window.showInformationMessage(userMsgValue.value);
         break;
       case LOG_LEVEL.WARN:
         vscode.window
-          .showWarningMessage(userMsg, showLogsOption)
-          .then((showLogsChosen) => {
-            if (showLogsChosen) outputChannel.showLogs();
+          .showWarningMessage(userMsgValue.value, ...options)
+          .then((choice) => {
+            if (choice === showLogsOption) outputChannel.showLogs();
+            else if (userMsgValue.optionsCallback)
+              userMsgValue.optionsCallback(choice);
           });
         break;
       case LOG_LEVEL.ERROR:
         vscode.window
-          .showErrorMessage(userMsg, showLogsOption)
-          .then((showLogsChosen) => {
-            if (showLogsChosen) outputChannel.showLogs();
+          .showErrorMessage(userMsgValue.value, ...options)
+          .then((choice) => {
+            if (choice === showLogsOption) outputChannel.showLogs();
+            else if (userMsgValue.optionsCallback)
+              userMsgValue.optionsCallback(choice);
           });
         break;
       default:

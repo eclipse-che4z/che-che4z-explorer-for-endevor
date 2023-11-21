@@ -20,8 +20,6 @@ import {
   ElementMapPath,
   ErrorResponseType,
   ResponseStatus,
-  Service,
-  ServiceApiVersion,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { generateElementWithCopyBackCommand } from '../element/generateElementWithCopyBack';
@@ -32,6 +30,7 @@ import {
   mockAskingForOverrideSignout,
   mockAskingForListing,
   mockAskingForUploadLocation,
+  mockAskingForProcGroup,
 } from './_mocks/dialogs';
 import { TypeNode } from '../../tree/_doc/ElementTree';
 import * as printListingCommand from '../element/printListing';
@@ -40,21 +39,22 @@ import {
   ElementGeneratedInPlace,
   ElementGeneratedWithCopyBack,
 } from '../../store/_doc/Actions';
-import {
-  EndevorConnectionStatus,
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
-import { ElementSearchLocation } from '../../_doc/Endevor';
-import { ConnectionConfigurations } from '../utils';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('generating an element with copy back', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-      generateElementWithCopyBackCommand
+      (dispatch, getConnectionConfiguration, elementNode, options) =>
+        generateElementWithCopyBackCommand(
+          dispatch,
+          getConnectionConfiguration
+        )(elementNode, options)
     );
   });
 
@@ -64,13 +64,13 @@ describe('generating an element with copy back', () => {
     sinon.restore();
   });
 
-  const configuration = 'TEST-INST';
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -83,40 +83,18 @@ describe('generating an element with copy back', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
+    configuration,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
   };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
-  };
-  const configurations: ConnectionConfigurations = {
-    getConnectionDetails: async () => {
-      return {
-        status: EndevorConnectionStatus.VALID,
-        value: {
-          location: service.location,
-          rejectUnauthorized: service.rejectUnauthorized,
-          apiVersion: ServiceApiVersion.V2,
-        },
-      };
-    },
-    getEndevorConfiguration: async () => {
-      return searchLocation.configuration;
-    },
-    getCredential: () => async () => {
-      return credential;
-    },
-    getSearchLocation: async () => {
-      return searchLocation;
-    },
-  };
+  const procGroup = 'ProcessAllToCobol';
   const changeControlValue = {
     ccid: '111',
     comment: 'aaa',
@@ -132,6 +110,7 @@ describe('generating an element with copy back', () => {
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
     noSource: false,
+    processorGroup: '*NOPROC*',
   };
   const parent: TypeNode = {
     type: 'TYPE',
@@ -172,14 +151,15 @@ describe('generating an element with copy back', () => {
       type: parent.type,
       id: element.name,
     };
+    mockAskingForProcGroup(procGroup);
     mockAskingForUploadLocation(element)(targetLocation);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -201,8 +181,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        async () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -210,7 +190,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -248,6 +229,7 @@ describe('generating an element with copy back', () => {
         noSource: false,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -284,13 +266,14 @@ describe('generating an element with copy back', () => {
       id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: true }
+      { noSource: true },
+      procGroup
     )([
       {
         mockResult: {
@@ -311,8 +294,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -321,7 +304,7 @@ describe('generating an element with copy back', () => {
           serviceId,
           searchLocationId,
         },
-        true
+        { noSource: true }
       );
     } catch (e) {
       assert.fail(
@@ -359,6 +342,7 @@ describe('generating an element with copy back', () => {
         noSource: true,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -378,13 +362,14 @@ describe('generating an element with copy back', () => {
     // arrange
     const targetLocation: ElementMapPath = element;
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -405,8 +390,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -414,7 +399,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -462,13 +448,14 @@ describe('generating an element with copy back', () => {
       id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -505,8 +492,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -514,7 +501,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -536,6 +524,7 @@ describe('generating an element with copy back', () => {
       [{ overrideSignOut: true }],
       'Second generate was not called with override signout set'
     );
+    generateElementStub.shift(); // do not test first argument which is logActivity
     generateElementStub.shift(); // do not test first argument which is progressReporter
     generateElementStub.forEach((stub) =>
       assert.deepStrictEqual(
@@ -565,6 +554,7 @@ describe('generating an element with copy back', () => {
         noSource: element.noSource,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -576,7 +566,7 @@ describe('generating an element with copy back', () => {
     );
     assert.ok(
       askForListingStub.called,
-      'Prompt for the generated elemen listing was not called'
+      'Prompt for the generated element listing was not called'
     );
   });
 
@@ -591,13 +581,14 @@ describe('generating an element with copy back', () => {
       id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -618,8 +609,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -627,7 +618,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -665,6 +657,7 @@ describe('generating an element with copy back', () => {
         noSource: element.noSource,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -691,13 +684,14 @@ describe('generating an element with copy back', () => {
       id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -718,8 +712,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -727,7 +721,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -757,13 +752,14 @@ describe('generating an element with copy back', () => {
       id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
-      configuration,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
         mockResult: {
@@ -787,8 +783,8 @@ describe('generating an element with copy back', () => {
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-        configurations,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
@@ -796,7 +792,8 @@ describe('generating an element with copy back', () => {
           parent,
           serviceId,
           searchLocationId,
-        }
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(

@@ -11,9 +11,24 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+export type LoggerMessageWithOptions = {
+  value: string;
+  options: ReadonlyArray<string>;
+  optionsCallback: (choice: string | undefined) => Promise<void>;
+};
+
 export interface Logger {
   trace: (msg: string) => void;
   info: (userMsg: string, logMsg?: string) => void;
-  warn: (userMsg: string, logMsg?: string) => void;
-  error: (userMsg: string, logMsg?: string) => void;
+  warn: (
+    userMsg:
+      | string
+      | {
+          value: string;
+          options: ReadonlyArray<string>;
+          optionsCallback: (choice: string | undefined) => Promise<void>;
+        },
+    logMsg?: string
+  ) => void;
+  error: (userMsg: string | LoggerMessageWithOptions, logMsg?: string) => void;
 }

@@ -24,13 +24,14 @@ import {
 } from '../../../store/_doc/v2/Store';
 import { FilterNodeType, FilterValueNode } from '../../../tree/_doc/FilterTree';
 import { LocationNode } from '../../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../../_doc/telemetry/Telemetry';
+import { TelemetryEvents } from '../../../telemetry/_doc/Telemetry';
 import { filterSearchLocationByElementCcidCommand } from './filterSearchLocationByElementCcid';
 import { filterSearchLocationByElementNameCommand } from './filterSearchLocationByElementName';
 import { filterSearchLocationByElementTypeCommand } from './filterSearchLocationByElementType';
 
 export const editSearchLocationFilterTypeCommand =
   (
+    dispatch: (action: Action) => Promise<void>,
     configurations: {
       getElementNamesFilterValue: (
         serviceId: EndevorId
@@ -49,8 +50,7 @@ export const editSearchLocationFilterTypeCommand =
             elements: ReadonlyArray<CachedElement>;
           }>
         | undefined;
-    },
-    dispatch: (action: Action) => Promise<void>
+    }
   ) =>
   async (node: FilterValueNode): Promise<void> => {
     const serviceName = node.serviceName;
@@ -66,8 +66,8 @@ export const editSearchLocationFilterTypeCommand =
           type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_CCID_FILTER_CALL,
         });
         filterSearchLocationByElementCcidCommand(
-          configurations,
-          dispatch
+          dispatch,
+          configurations
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         )({
           name: locationName,
@@ -82,8 +82,8 @@ export const editSearchLocationFilterTypeCommand =
           type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_NAME_FILTER_CALL,
         });
         filterSearchLocationByElementNameCommand(
-          configurations,
-          dispatch
+          dispatch,
+          configurations
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         )({
           name: locationName,
@@ -98,8 +98,8 @@ export const editSearchLocationFilterTypeCommand =
           type: TelemetryEvents.COMMAND_UPDATE_ELEMENT_TYPE_FILTER_CALL,
         });
         filterSearchLocationByElementTypeCommand(
-          configurations,
-          dispatch
+          dispatch,
+          configurations
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         )({
           name: locationName,

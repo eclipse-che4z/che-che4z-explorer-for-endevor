@@ -11,10 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  isErrorEndevorResponse,
-  stringifyWithHiddenCredential,
-} from '@local/endevor/utils';
+import { isErrorEndevorResponse } from '@local/endevor/utils';
 import { ErrorResponseType } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import type {
@@ -22,110 +19,131 @@ import type {
   CancellationToken,
   TextDocumentContentProvider,
 } from 'vscode';
-import { printListing } from '../endevor';
-import { logger, reporter } from '../globals';
+import { printListingAndLogActivity } from '../api/endevor';
+import { reporter } from '../globals';
 import { fromElementListingUri } from '../uri/elementListingUri';
 import { formatWithNewLines, isError } from '../utils';
 import {
   ListingContentProviderCompletedStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/Telemetry';
+} from '../telemetry/_doc/Telemetry';
 import {
-  ConnectionConfigurations,
-  getConnectionConfiguration,
-} from '../commands/utils';
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../logger';
+import { Action } from '../store/_doc/Actions';
+import { EndevorId } from '../store/_doc/v2/Store';
+import { EndevorAuthorizedService, SearchLocation } from '../api/_doc/Endevor';
 
 export const listingContentProvider = (
-  configurations: ConnectionConfigurations
+  dispatch: (action: Action) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >
 ): TextDocumentContentProvider => {
   return {
     async provideTextDocumentContent(
       uri: Uri,
       _token: CancellationToken
     ): Promise<string | undefined> {
-      logger.trace(
-        `Print listing uri: \n  ${stringifyWithHiddenCredential(
-          JSON.parse(decodeURIComponent(uri.query))
-        )}.`
-      );
+      const logger = createEndevorLogger();
       const uriParams = fromElementListingUri(uri);
       if (isError(uriParams)) {
         const error = uriParams;
         logger.error(
-          `Unable to print the element listing.`,
-          `Unable to print the element listing because parsing of the element's URI failed with an error:\n${error.message}.`
+          `Unable to print element listing.`,
+          `Unable to print element listing because parsing of the element's URI failed with an error:\n${error.message}.`
         );
         return;
       }
       const { serviceId, searchLocationId, element } = uriParams;
-      logger.trace(
-        `Print listing for the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} 
-        of ${serviceId.source} connection ${serviceId.name} and ${searchLocationId.source} location ${searchLocationId.name}.`
+      logger.updateContext({ serviceId, searchLocationId });
+      logger.traceWithDetails(
+        `Print a listing for element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} was called.`
       );
-      const connectionParams = await getConnectionConfiguration(configurations)(
+      const connectionParams = await getConnectionConfiguration(
         serviceId,
         searchLocationId
       );
       if (!connectionParams) return;
-      const { service, configuration } = connectionParams;
-      const listingResponse = await printListing({
+      const { service } = connectionParams;
+      const listingResponse = await printListingAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )({
         report: () => {
           // progress bar is already implemented in command
         },
-      })(service)(configuration)(element);
+      })(service)(element);
       if (isErrorEndevorResponse(listingResponse)) {
-        const message = `Unable to print listing for the element 
+        const error = new Error(`Unable to print a listing for element 
           ${element.environment}/${element.stageNumber}/${element.system}/${
           element.subSystem
         }/${element.type}/${element.name} 
           because of error:\n${formatWithNewLines(
             listingResponse.details.messages
-          )}.`;
+          )}.`);
         switch (listingResponse.type) {
           case ErrorResponseType.NO_COMPONENT_INFO_ENDEVOR_ERROR:
-            logger.info(
-              `Listing for the element ${element.name} is not available, try to generate it first.`,
-              message
+            logger.infoWithDetails(
+              `Listing for element ${element.name} is not available, try to generate it first.`,
+              `${error.message}.`
             );
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.NO_LISTING,
-              error: new Error(message),
+              error,
             });
             return;
           case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
           case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-            logger.error(`Endevor credentials are incorrect or expired.`);
+            logger.errorWithDetails(
+              `Endevor credentials are incorrect or expired.`,
+              `${error.message}.`
+            );
             // TODO: introduce a quick credentials recovery process (e.g. button to show a credentials prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-              error: new Error(message),
+              error,
             });
             return;
           case ErrorResponseType.CERT_VALIDATION_ERROR:
           case ErrorResponseType.CONNECTION_ERROR:
-            logger.error(`Unable to connect to Endevor Web Services.`);
+            logger.errorWithDetails(
+              `Unable to connect to Endevor Web Services.`,
+              `${error.message}.`
+            );
             // TODO: introduce a quick connection details recovery process (e.g. button to show connection details prompt to fix, etc.)
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-              error: new Error(message),
+              error,
             });
             return;
           case ErrorResponseType.GENERIC_ERROR:
-            logger.error(
-              `Unable to print listing for the element ${element.name}.`,
-              message
+            logger.errorWithDetails(
+              `Unable to print a listing for element ${element.name}.`,
+              `${error.message}.`
             );
             reporter.sendTelemetryEvent({
               type: TelemetryEvents.ERROR,
               errorContext: TelemetryEvents.LISTING_CONTENT_PROVIDER_COMPLETED,
               status: ListingContentProviderCompletedStatus.GENERIC_ERROR,
-              error: new Error(message),
+              error,
             });
             return;
           default:
@@ -133,7 +151,7 @@ export const listingContentProvider = (
         }
       }
       if (listingResponse.details && listingResponse.details.returnCode >= 4) {
-        logger.warn(
+        logger.warnWithDetails(
           `Listing for ${element.name} was printed with warnings.`,
           `Listing for ${element.environment}/${element.stageNumber}/${
             element.system

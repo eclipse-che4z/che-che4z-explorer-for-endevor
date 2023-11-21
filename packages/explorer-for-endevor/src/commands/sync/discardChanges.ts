@@ -27,7 +27,7 @@ import {
 import {
   DiscardElementChangesCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import * as path from 'path';
 import {
   deleteFile,

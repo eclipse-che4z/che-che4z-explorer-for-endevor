@@ -37,12 +37,16 @@ export const CommandId = {
   HIDE_SEARCH_LOCATION: `${COMMAND_PREFIX}.hideSearchLocation`,
   DELETE_SEARCH_LOCATION: `${COMMAND_PREFIX}.deleteSearchLocation`,
 
+  // type commands
+  VIEW_TYPE_DETAILS: `${COMMAND_PREFIX}.viewTypeDetails`,
+
   // element commands
   VIEW_ELEMENT_DETAILS: `${COMMAND_PREFIX}.viewElementDetails`,
   ADD_ELEMENT_FROM_FILE_SYSTEM: `${COMMAND_PREFIX}.addElementFromFileSystem`,
   RETRIEVE_ELEMENT: `${COMMAND_PREFIX}.retrieveElement`,
   RETRIEVE_WITH_DEPENDENCIES: `${COMMAND_PREFIX}.retrieveElementWithDependencies`,
   QUICK_EDIT_ELEMENT: `${COMMAND_PREFIX}.editElement`,
+  MOVE_ELEMENT: `${COMMAND_PREFIX}.moveElement`,
   GENERATE_ELEMENT: `${COMMAND_PREFIX}.generateElement`,
   GENERATE_ELEMENT_WITH_COPY_BACK: `${COMMAND_PREFIX}.generateElementWithCopyBack`,
   GENERATE_ELEMENT_WITH_NO_SOURCE: `${COMMAND_PREFIX}.generateElementWithNoSource`,
@@ -54,9 +58,12 @@ export const CommandId = {
   SIGN_IN_ELEMENT: `${COMMAND_PREFIX}.signInElement`,
   SHOW_FIRST_FOUND: `${COMMAND_PREFIX}.showFirstFoundElements`,
   SHOW_IN_PLACE: `${COMMAND_PREFIX}.showElementsInPlace`,
+  SHOW_EMPTY_TYPES: `${COMMAND_PREFIX}.showEmptyTypes`,
+  HIDE_EMPTY_TYPES: `${COMMAND_PREFIX}.hideEmptyTypes`,
   PRINT_ELEMENT: `${COMMAND_PREFIX}.printElement`,
   PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
   PRINT_HISTORY: `${COMMAND_PREFIX}.printHistory`,
+  SHOW_REPORT: `${COMMAND_PREFIX}.showReport`,
 
   // filter commands
   CLEAR_SEARCH_LOCATION_FILTERS: `${COMMAND_PREFIX}.clearSearchLocationFilters`,

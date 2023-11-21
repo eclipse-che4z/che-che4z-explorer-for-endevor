@@ -25,7 +25,7 @@ import { DIFF_EDITOR_WHEN_CONTEXT_NAME } from './constants';
 import { EnvironmentStage } from '../../endevor/_doc/Endevor';
 import { Id } from './store/storage/_doc/Storage';
 import { setContextVariable } from '@local/vscode-wrapper/window';
-import { ElementSearchLocation } from './_doc/Endevor';
+import { ElementSearchLocation, SearchLocation } from './api/_doc/Endevor';
 import { Credential, CredentialType } from '@local/endevor/_doc/Credential';
 import { ANY_VALUE } from '@local/endevor/const';
 
@@ -168,7 +168,7 @@ export const replaceWith =
   };
 
 export const isElementUpTheMap =
-  (elementsSearchLocation: ElementSearchLocation) => (element: Element) => {
+  (elementsSearchLocation: SearchLocation) => (element: Element) => {
     return (
       element.environment !== elementsSearchLocation.environment ||
       element.stageNumber !== elementsSearchLocation.stageNumber
@@ -221,6 +221,13 @@ export const toServiceUrl = (
   }/${basePath}`;
 };
 
+export const toUrl = (service: ServiceLocation): string => {
+  let basePath = service.basePath;
+  if (basePath.startsWith('/')) basePath = basePath.slice(1);
+  if (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
+  return `${service.protocol}:/${service.hostname}:${service.port}/${basePath}`;
+};
+
 export const toSearchLocationPath = (
   elementSearchLocation: ElementSearchLocation
 ): string => {
@@ -232,8 +239,8 @@ export const toSearchLocationPath = (
   const type = elementSearchLocation.type;
   return [
     configuration,
-    env ? env : ANY_VALUE,
-    stage ?? ANY_VALUE,
+    env,
+    stage,
     sys ? sys : ANY_VALUE,
     subsys ? subsys : ANY_VALUE,
     type ? type : ANY_VALUE,

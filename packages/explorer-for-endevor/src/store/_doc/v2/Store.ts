@@ -12,9 +12,19 @@
  */
 
 import { TokenCredential } from '@local/endevor/_doc/Credential';
-import { Element, ServiceApiVersion } from '@local/endevor/_doc/Endevor';
-import { ChangeLevels, HistoryLines } from '../../../tree/_doc/ChangesTree';
-import { EndevorMap, SubsystemMapPathId } from '../../../_doc/Endevor';
+import {
+  Element,
+  ElementType,
+  EnvironmentStage,
+  ServiceApiVersion,
+  SubSystem,
+  System,
+} from '@local/endevor/_doc/Endevor';
+import {
+  EndevorMap,
+  EnvironmentStageMapPathId,
+  SubsystemMapPathId,
+} from '../../../api/_doc/Endevor';
 import {
   ConnectionKey,
   ConnectionName,
@@ -26,6 +36,7 @@ import {
   ConnectionLocations,
   InventoryLocation,
 } from '../../storage/_doc/Storage';
+import { ElementHistoryData } from '@local/views/tree/_doc/ChangesTree';
 
 // internal types
 export type EndevorServiceName = ConnectionName;
@@ -42,9 +53,11 @@ export const enum EndevorCacheVersion {
   OUTDATED = 'OUTDATED',
 }
 
-export type CachedEndevorMap = Readonly<{
+export type CachedEndevorInventory = Readonly<{
   cacheVersion: EndevorCacheVersion;
-  value: EndevorMap;
+  endevorMap: EndevorMap;
+  environmentStages: CachedEnvironmentStages;
+  startEnvironmentStage?: EnvironmentStageMapPathId;
 }>;
 
 export type CachedElement = {
@@ -52,6 +65,7 @@ export type CachedElement = {
   lastRefreshTimestamp: number;
   elementIsUpTheMap: boolean;
   historyData?: ElementHistoryData;
+  outOfDate?: boolean;
 };
 
 export type ElementId = string;
@@ -64,11 +78,38 @@ export type EndevorCachedElements = Readonly<{
   elements: CachedElements;
 }>;
 
+export type CachedTypes = Readonly<{
+  [id: string]: ElementType;
+}>;
+
+export type CachedSubsystems = Readonly<{
+  [id: string]: SubSystem;
+}>;
+
+export type CachedSystem = Readonly<{
+  system: System;
+  subsystems: CachedSubsystems;
+  types: CachedTypes;
+}>;
+
+export type CachedSystems = Readonly<{
+  [id: string]: CachedSystem;
+}>;
+
+export type CachedEnvironmentStage = Readonly<{
+  environmentStage: EnvironmentStage;
+  systems: CachedSystems;
+}>;
+
+export type CachedEnvironmentStages = Readonly<{
+  [id: string]: CachedEnvironmentStage;
+}>;
+
 // key based on service name and search location name
 type CompositeKey = string;
 type EndevorMapItem = SubsystemMapPathId;
 export type CacheItem = {
-  endevorMap: CachedEndevorMap;
+  endevorInventory: CachedEndevorInventory;
   mapItemsContent: Readonly<{
     [endevorMapItem: EndevorMapItem]: EndevorCachedElements | undefined;
   }>;
@@ -107,18 +148,37 @@ export const enum EndevorCredentialStatus {
   INVALID = 'INVALID',
   UNKNOWN = 'UNKNOWN',
 }
+type EndevorCredentialValue = Readonly<{
+  value: Credential['value'];
+}>;
+export type ValidEndevorSessionCredential = Readonly<{
+  status: EndevorCredentialStatus.VALID;
+}> &
+  Partial<EndevorCredentialValue>;
+export type InvalidEndevorSessionCredential = Readonly<{
+  status: EndevorCredentialStatus.INVALID;
+}> &
+  Partial<EndevorCredentialValue>;
+export type UnknownEndevorSessionCredential = Readonly<{
+  status: EndevorCredentialStatus.UNKNOWN;
+}> &
+  Partial<EndevorCredentialValue>;
+export type EndevorSessionCredential =
+  | UnknownEndevorSessionCredential
+  | ValidEndevorSessionCredential
+  | InvalidEndevorSessionCredential;
 export type ValidEndevorCredential = Readonly<{
   status: EndevorCredentialStatus.VALID;
-  value: Credential['value'];
-}>;
+}> &
+  EndevorCredentialValue;
 export type InvalidEndevorCredential = Readonly<{
   status: EndevorCredentialStatus.INVALID;
-  value: Credential['value'];
-}>;
+}> &
+  EndevorCredentialValue;
 export type UnknownEndevorCredential = Readonly<{
   status: EndevorCredentialStatus.UNKNOWN;
-  value: Credential['value'];
-}>;
+}> &
+  EndevorCredentialValue;
 export type EndevorCredential =
   | UnknownEndevorCredential
   | ValidEndevorCredential
@@ -134,6 +194,7 @@ export const enum ElementFilterType {
   ELEMENT_TYPES_FILTER = 'ELEMENT_TYPES_FILTER',
   ELEMENT_CCIDS_FILTER = 'ELEMENT_CCIDS_FILTER',
   ELEMENTS_UP_THE_MAP_FILTER = 'ELEMENTS_UP_THE_MAP_FILTER',
+  EMPTY_TYPES_FILTER = 'EMPTY_TYPES_FILTER',
 }
 
 type Pattern = string;
@@ -157,11 +218,19 @@ export type ElementsUpTheMapFilter = {
   value: boolean;
 };
 
+export type EmptyTypesFilter = {
+  type: ElementFilterType.EMPTY_TYPES_FILTER;
+  value: boolean;
+};
+
+export type ElementToggleFilters = ElementsUpTheMapFilter | EmptyTypesFilter;
+
 export type ElementFilter =
   | ElementNamesFilter
   | ElementTypesFilter
   | ElementCcidsFilter
-  | ElementsUpTheMapFilter;
+  | ElementsUpTheMapFilter
+  | EmptyTypesFilter;
 
 export type ServiceLocationFilters = Partial<{
   [key in ElementFilterType]: ElementFilter;
@@ -190,19 +259,17 @@ export type EndevorTokens = {
 };
 
 export type EndevorSession = Partial<{
+  id: EndevorId;
   connection: EndevorConnection;
-  credential: EndevorCredential;
-  tokens?: EndevorTokens;
+  credential: EndevorSessionCredential;
+  tokens: EndevorTokens;
 }>;
 
 export type EndevorSessions = {
   [key: EndevorServiceKey]: EndevorSession | undefined;
 };
 
-export type EndevorService = Connection &
-  Partial<{
-    credential: Credential;
-  }>;
+export type EndevorService = Connection;
 export type EndevorServices = {
   [key: EndevorServiceKey]: EndevorService | undefined;
 };
@@ -212,6 +279,28 @@ export type EndevorSearchLocations = {
   [key: EndevorLocationKey]: EndevorSearchLocation | undefined;
 };
 
+export type EndevorReport = {
+  name: string;
+  id: string;
+  objectName: string;
+  content?: string;
+};
+
+export type ActivityRecord = {
+  time: number;
+  name: string;
+  details?: Partial<{
+    serviceId: EndevorId;
+    searchLocationId: EndevorId;
+    element: Element;
+    messages: ReadonlyArray<string>;
+    returnCode: number;
+    reports: ReadonlyArray<EndevorReport>;
+  }>;
+};
+
+export type ActivityRecords = Array<ActivityRecord>;
+
 export type State = {
   filters: ElementFilters;
   sessions: EndevorSessions;
@@ -219,6 +308,7 @@ export type State = {
   services: EndevorServices;
   searchLocations: EndevorSearchLocations;
   serviceLocations: ConnectionLocations;
+  activityEntries: ActivityRecords;
 };
 
 // external types
@@ -241,7 +331,7 @@ export type ValidEndevorServiceDescription = Readonly<{
     | EndevorServiceStatus.UNKNOWN_CREDENTIAL;
   duplicated: boolean;
   id: EndevorId;
-  serviceLocation: Connection['value'];
+  service: Connection['value'];
   credential?: Credential['value'];
 }>;
 
@@ -251,7 +341,7 @@ export type InvalidEndevorServiceDescription = Readonly<{
     | EndevorServiceStatus.INVALID_CREDENTIAL;
   duplicated: boolean;
   id: EndevorId;
-  serviceLocation: Connection['value'];
+  service: Connection['value'];
   credential?: Credential['value'];
 }>;
 
@@ -290,6 +380,7 @@ export type ValidEndevorSearchLocationDescription = Readonly<{
   id: EndevorId;
   location: EndevorSearchLocation['value'];
   searchForFirstFoundElements: boolean;
+  showEmptyTypes: boolean;
 }>;
 
 export type InvalidEndevorSearchLocationDescription = Readonly<{
@@ -324,9 +415,4 @@ export type EndevorServiceLocations = {
 
 export type ElementsPerRoute = Readonly<{
   [searchLocation: SubsystemMapPathId]: ReadonlyArray<CachedElement>;
-}>;
-
-export type ElementHistoryData = Partial<{
-  historyLines: HistoryLines;
-  changeLevels: ChangeLevels;
 }>;

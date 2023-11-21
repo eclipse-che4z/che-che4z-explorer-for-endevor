@@ -16,7 +16,7 @@ import { ElementMapPath, StageNumber } from '@local/endevor/_doc/Endevor';
 import { showInputBox } from '@local/vscode-wrapper/window';
 import { logger } from '../../globals';
 import { isError } from '../../utils';
-import { SearchLocation } from '../../_doc/Endevor';
+import { SearchLocation } from '../../api/_doc/Endevor';
 
 type OperationCancelled = undefined;
 type DialogResult = ElementMapPath | OperationCancelled;

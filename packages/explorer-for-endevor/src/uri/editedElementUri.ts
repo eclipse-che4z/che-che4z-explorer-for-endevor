@@ -14,7 +14,7 @@
 import { Element, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
 import { EndevorId } from '../store/_doc/v2/Store';
-import { EditedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
+import { EditedElementUriQuery, QueryTypes, Schemas } from './_doc/Uri';
 
 type SerializedValue = Readonly<{
   serviceId: EndevorId;

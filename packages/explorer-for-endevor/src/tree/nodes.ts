@@ -98,30 +98,32 @@ export const toServiceNodes = (
 };
 
 const toValidServiceNode =
-  (service: ValidEndevorServiceDescription) =>
-  (locations: EndevorSearchLocationDescriptions): ValidServiceNode => {
+  (serviceDescription: ValidEndevorServiceDescription) =>
+  (
+    locationDescriptions: EndevorSearchLocationDescriptions
+  ): ValidServiceNode => {
     const serviceNodeParams: Omit<ValidServiceNode, 'type'> = {
-      id: toCompositeKey(service.id),
-      name: service.id.name,
-      source: service.id.source,
-      duplicated: service.duplicated,
+      id: toCompositeKey(serviceDescription.id),
+      name: serviceDescription.id.name,
+      source: serviceDescription.id.source,
+      duplicated: serviceDescription.duplicated,
       tooltip: toServiceTooltip({
-        serviceId: service.id,
-        serviceLocation: service.serviceLocation,
-        credential: service.credential,
+        serviceId: serviceDescription.id,
+        service: serviceDescription.service,
+        credential: serviceDescription.credential,
       }),
-      children: Object.values(locations)
+      children: Object.values(locationDescriptions)
         .map((location) => {
           switch (location.status) {
             case EndevorSearchLocationStatus.VALID:
-              return toSearchLocationNode(service)(location);
+              return toSearchLocationNode(serviceDescription)(location);
             case EndevorSearchLocationStatus.INVALID:
-              return toInvalidSearchLocationNode(service)(location);
+              return toInvalidSearchLocationNode(serviceDescription)(location);
           }
         })
         .sort(byNameOrder),
     };
-    switch (service.id.source) {
+    switch (serviceDescription.id.source) {
       case Source.INTERNAL:
         return {
           ...serviceNodeParams,
@@ -133,25 +135,27 @@ const toValidServiceNode =
           type: 'SERVICE_PROFILE',
         };
       default:
-        throw new UnreachableCaseError(service.id.source);
+        throw new UnreachableCaseError(serviceDescription.id.source);
     }
   };
 const toEmptyServiceNode = (
-  service: ValidEndevorServiceDescription | InvalidEndevorServiceDescription
+  serviceDescription:
+    | ValidEndevorServiceDescription
+    | InvalidEndevorServiceDescription
 ): ValidServiceNode => {
   const serviceNodeParams: Omit<ValidServiceNode, 'type'> = {
-    id: toCompositeKey(service.id),
-    name: service.id.name,
-    source: service.id.source,
-    duplicated: service.duplicated,
+    id: toCompositeKey(serviceDescription.id),
+    name: serviceDescription.id.name,
+    source: serviceDescription.id.source,
+    duplicated: serviceDescription.duplicated,
     tooltip: toServiceTooltip({
-      serviceId: service.id,
-      serviceLocation: service.serviceLocation,
-      credential: service.credential,
+      serviceId: serviceDescription.id,
+      service: serviceDescription.service,
+      credential: serviceDescription.credential,
     }),
     children: [],
   };
-  switch (service.id.source) {
+  switch (serviceDescription.id.source) {
     case Source.INTERNAL:
       return {
         ...serviceNodeParams,
@@ -163,32 +167,34 @@ const toEmptyServiceNode = (
         type: 'SERVICE_PROFILE',
       };
     default:
-      throw new UnreachableCaseError(service.id.source);
+      throw new UnreachableCaseError(serviceDescription.id.source);
   }
 };
 const toInvalidConnectionServiceNode =
-  (service: InvalidEndevorServiceDescription) =>
+  (serviceDescription: InvalidEndevorServiceDescription) =>
   (
-    locations: EndevorSearchLocationDescriptions
+    locationDescriptions: EndevorSearchLocationDescriptions
   ): InvalidConnectionServiceNode => {
     const serviceNodeParams: Omit<InvalidConnectionServiceNode, 'type'> = {
-      id: toCompositeKey(service.id),
-      name: service.id.name,
-      source: service.id.source,
-      duplicated: service.duplicated,
+      id: toCompositeKey(serviceDescription.id),
+      name: serviceDescription.id.name,
+      source: serviceDescription.id.source,
+      duplicated: serviceDescription.duplicated,
       tooltip: toServiceTooltip(
         {
-          serviceId: service.id,
-          serviceLocation: service.serviceLocation,
-          credential: service.credential,
+          serviceId: serviceDescription.id,
+          service: serviceDescription.service,
+          credential: serviceDescription.credential,
         },
         'Unable to validate this Endevor connection. Edit the configuration or hide the connection.'
       ),
-      children: Object.entries(locations)
-        .map(([, location]) => toInvalidSearchLocationNode(service)(location))
+      children: Object.entries(locationDescriptions)
+        .map(([, location]) =>
+          toInvalidSearchLocationNode(serviceDescription)(location)
+        )
         .sort(byNameOrder),
     };
-    switch (service.id.source) {
+    switch (serviceDescription.id.source) {
       case Source.INTERNAL:
         return {
           ...serviceNodeParams,
@@ -200,28 +206,36 @@ const toInvalidConnectionServiceNode =
           type: 'SERVICE_PROFILE/INVALID_CONNECTION',
         };
       default:
-        throw new UnreachableCaseError(service.id.source);
+        throw new UnreachableCaseError(serviceDescription.id.source);
     }
   };
 const toNonExistingServiceNode =
-  (service: InvalidEndevorServiceDescription | NonExistingServiceDescription) =>
-  (locations: EndevorSearchLocationDescriptions): NonExistingServiceNode => {
+  (
+    serviceDescription:
+      | InvalidEndevorServiceDescription
+      | NonExistingServiceDescription
+  ) =>
+  (
+    locationDescriptions: EndevorSearchLocationDescriptions
+  ): NonExistingServiceNode => {
     const serviceNodeParams: Omit<NonExistingServiceNode, 'type'> = {
-      id: toCompositeKey(service.id),
-      name: service.id.name,
-      source: service.id.source,
-      duplicated: service.duplicated,
+      id: toCompositeKey(serviceDescription.id),
+      name: serviceDescription.id.name,
+      source: serviceDescription.id.source,
+      duplicated: serviceDescription.duplicated,
       tooltip: toServiceTooltip(
         {
-          serviceId: service.id,
+          serviceId: serviceDescription.id,
         },
         'Unable to locate this Endevor connection. Review the configuration or delete the connection.'
       ),
-      children: Object.entries(locations)
-        .map(([, location]) => toInvalidSearchLocationNode(service)(location))
+      children: Object.entries(locationDescriptions)
+        .map(([, location]) =>
+          toInvalidSearchLocationNode(serviceDescription)(location)
+        )
         .sort(byNameOrder),
     };
-    switch (service.id.source) {
+    switch (serviceDescription.id.source) {
       case Source.INTERNAL:
         return {
           ...serviceNodeParams,
@@ -233,33 +247,35 @@ const toNonExistingServiceNode =
           type: 'SERVICE_PROFILE/NON_EXISTING',
         };
       default:
-        throw new UnreachableCaseError(service.id.source);
+        throw new UnreachableCaseError(serviceDescription.id.source);
     }
   };
 
 const toWrongCredentialsServiceNode =
-  (service: InvalidEndevorServiceDescription) =>
+  (serviceDescription: InvalidEndevorServiceDescription) =>
   (
-    locations: EndevorSearchLocationDescriptions
+    locationDescriptions: EndevorSearchLocationDescriptions
   ): InvalidCredentialsServiceNode => {
     const serviceNodeParams: Omit<InvalidCredentialsServiceNode, 'type'> = {
-      id: toCompositeKey(service.id),
-      name: service.id.name,
-      source: service.id.source,
-      duplicated: service.duplicated,
+      id: toCompositeKey(serviceDescription.id),
+      name: serviceDescription.id.name,
+      source: serviceDescription.id.source,
+      duplicated: serviceDescription.duplicated,
       tooltip: toServiceTooltip(
         {
-          serviceId: service.id,
-          serviceLocation: service.serviceLocation,
-          credential: service.credential,
+          serviceId: serviceDescription.id,
+          service: serviceDescription.service,
+          credential: serviceDescription.credential,
         },
         'Unable to validate credentials for this Endevor connection.'
       ),
-      children: Object.entries(locations)
-        .map(([, location]) => toInvalidSearchLocationNode(service)(location))
+      children: Object.entries(locationDescriptions)
+        .map(([, location]) =>
+          toInvalidSearchLocationNode(serviceDescription)(location)
+        )
         .sort(byNameOrder),
     };
-    switch (service.id.source) {
+    switch (serviceDescription.id.source) {
       case Source.INTERNAL:
         return {
           ...serviceNodeParams,
@@ -271,28 +287,33 @@ const toWrongCredentialsServiceNode =
           type: 'SERVICE_PROFILE/INVALID_CREDENTIALS',
         };
       default:
-        throw new UnreachableCaseError(service.id.source);
+        throw new UnreachableCaseError(serviceDescription.id.source);
     }
   };
 
 const toSearchLocationNode =
-  (service: EndevorServiceDescription) =>
-  (location: ValidEndevorSearchLocationDescription): ValidLocationNode => {
+  (serviceDescription: EndevorServiceDescription) =>
+  (
+    locationDescription: ValidEndevorSearchLocationDescription
+  ): ValidLocationNode => {
     const locationNodeParams: Omit<ValidLocationNode, 'type'> = {
-      id: toServiceLocationCompositeKey(service.id)(location.id),
-      name: location.id.name,
-      source: location.id.source,
-      serviceName: service.id.name,
-      serviceSource: service.id.source,
-      duplicated: location.duplicated,
+      id: toServiceLocationCompositeKey(serviceDescription.id)(
+        locationDescription.id
+      ),
+      name: locationDescription.id.name,
+      source: locationDescription.id.source,
+      serviceName: serviceDescription.id.name,
+      serviceSource: serviceDescription.id.source,
+      duplicated: locationDescription.duplicated,
+      withEmptyTypes: locationDescription.showEmptyTypes,
       tooltip: toSearchLocationTooltip({
-        locationId: location.id,
-        location: location.location,
+        locationId: locationDescription.id,
+        location: locationDescription.location,
       }),
     };
-    switch (location.id.source) {
+    switch (locationDescription.id.source) {
       case Source.INTERNAL:
-        return location.searchForFirstFoundElements
+        return locationDescription.searchForFirstFoundElements
           ? {
               ...locationNodeParams,
               type: 'LOCATION/WITH_MAP',
@@ -302,7 +323,7 @@ const toSearchLocationNode =
               type: 'LOCATION',
             };
       case Source.SYNCHRONIZED:
-        return location.searchForFirstFoundElements
+        return locationDescription.searchForFirstFoundElements
           ? {
               ...locationNodeParams,
               type: 'LOCATION_PROFILE/WITH_MAP',
@@ -312,49 +333,53 @@ const toSearchLocationNode =
               type: 'LOCATION_PROFILE',
             };
       default:
-        throw new UnreachableCaseError(location.id.source);
+        throw new UnreachableCaseError(locationDescription.id.source);
     }
   };
 
 const toInvalidSearchLocationNode =
-  (service: EndevorServiceDescription) =>
-  (location: EndevorSearchLocationDescription): InvalidLocationNode => {
+  (serviceDescription: EndevorServiceDescription) =>
+  (
+    locationDescription: EndevorSearchLocationDescription
+  ): InvalidLocationNode => {
     const locationNodeParams = {
-      id: toServiceLocationCompositeKey(service.id)(location.id),
-      name: location.id.name,
-      source: location.id.source,
-      duplicated: location.duplicated,
-      serviceName: service.id.name,
-      serviceSource: service.id.source,
+      id: toServiceLocationCompositeKey(serviceDescription.id)(
+        locationDescription.id
+      ),
+      name: locationDescription.id.name,
+      source: locationDescription.id.source,
+      duplicated: locationDescription.duplicated,
+      serviceName: serviceDescription.id.name,
+      serviceSource: serviceDescription.id.source,
     };
-    if (location.status === EndevorSearchLocationStatus.INVALID) {
+    if (locationDescription.status === EndevorSearchLocationStatus.INVALID) {
       return {
         ...locationNodeParams,
         type:
-          location.id.source === Source.INTERNAL
+          locationDescription.id.source === Source.INTERNAL
             ? 'LOCATION/NON_EXISTING'
             : 'LOCATION_PROFILE/NON_EXISTING',
         tooltip: toSearchLocationTooltip(
           {
-            locationId: location.id,
+            locationId: locationDescription.id,
           },
           'Unable to locate this Endevor inventory location. Review the configuration or delete the inventory location.'
         ),
       };
     }
-    switch (service.status) {
+    switch (serviceDescription.status) {
       case EndevorServiceStatus.VALID:
       case EndevorServiceStatus.UNKNOWN_CONNECTION:
       case EndevorServiceStatus.UNKNOWN_CREDENTIAL:
         return {
           ...locationNodeParams,
           type:
-            location.id.source === Source.INTERNAL
+            locationDescription.id.source === Source.INTERNAL
               ? 'LOCATION/NON_EXISTING'
               : 'LOCATION_PROFILE/NON_EXISTING',
           tooltip: toSearchLocationTooltip(
             {
-              locationId: location.id,
+              locationId: locationDescription.id,
             },
             'Unable to locate this Endevor inventory location. Review the configuration or delete the inventory location.'
           ),
@@ -363,13 +388,13 @@ const toInvalidSearchLocationNode =
         return {
           ...locationNodeParams,
           type:
-            location.id.source === Source.INTERNAL
+            locationDescription.id.source === Source.INTERNAL
               ? 'LOCATION/NON_EXISTING'
               : 'LOCATION_PROFILE/NON_EXISTING',
           tooltip: toSearchLocationTooltip(
             {
-              locationId: location.id,
-              location: location.location,
+              locationId: locationDescription.id,
+              location: locationDescription.location,
             },
             'Unable to use this inventory location because the corresponding Endevor connection is not found. Review the configuration.'
           ),
@@ -378,15 +403,15 @@ const toInvalidSearchLocationNode =
         return {
           ...locationNodeParams,
           type:
-            location.id.source === Source.INTERNAL
+            locationDescription.id.source === Source.INTERNAL
               ? 'LOCATION/INVALID_CREDENTIALS'
               : 'LOCATION_PROFILE/INVALID_CREDENTIALS',
           tooltip: toSearchLocationTooltip(
             {
-              locationId: location.id,
-              location: location.location,
+              locationId: locationDescription.id,
+              location: locationDescription.location,
             },
-            `Incorrect credentials provided for ${service.id.name}. Click on the inventory location to enter new credentials.`
+            `Incorrect credentials provided for ${serviceDescription.id.name}. Click on the inventory location to enter new credentials.`
           ),
           command: {
             command: CommandId.EDIT_CREDENTIALS,
@@ -398,15 +423,15 @@ const toInvalidSearchLocationNode =
         return {
           ...locationNodeParams,
           type:
-            location.id.source === Source.INTERNAL
+            locationDescription.id.source === Source.INTERNAL
               ? 'LOCATION/INVALID_CONNECTION'
               : 'LOCATION_PROFILE/INVALID_CONNECTION',
           tooltip: toSearchLocationTooltip(
             {
-              locationId: location.id,
-              location: location.location,
+              locationId: locationDescription.id,
+              location: locationDescription.location,
             },
-            `Incorrect connection details provided for ${service.id.name}. Click on the inventory location to enter new details.`
+            `Incorrect connection details provided for ${serviceDescription.id.name}. Click on the inventory location to enter new details.`
           ),
           command: {
             command: CommandId.EDIT_CONNECTION_DETAILS,
@@ -415,7 +440,7 @@ const toInvalidSearchLocationNode =
           },
         };
       default:
-        throw new UnreachableCaseError(service);
+        throw new UnreachableCaseError(serviceDescription);
     }
   };
 
@@ -460,6 +485,7 @@ const toFilterNode =
         filterType = FilterNodeType.CCIDS_FILTER;
         break;
       case ElementFilterType.ELEMENTS_UP_THE_MAP_FILTER:
+      case ElementFilterType.EMPTY_TYPES_FILTER:
         return;
       default:
         throw new UnreachableCaseError(filter);

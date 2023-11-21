@@ -14,7 +14,7 @@
 import { logger, reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../_doc/telemetry/Telemetry';
+import { TelemetryEvents } from '../../telemetry/_doc/Telemetry';
 
 export const hideSearchLocation =
   (dispatch: (action: Action) => Promise<void>) =>
@@ -25,7 +25,7 @@ export const hideSearchLocation =
     serviceSource,
   }: LocationNode): Promise<void> => {
     logger.trace(
-      `Hide the ${source} Endevor inventory location ${name} for the ${serviceSource} Endevor service ${serviceName} called.`
+      `Hide ${source} Endevor inventory location ${name} for ${serviceSource} Endevor service ${serviceName} was called.`
     );
     dispatch({
       type: Actions.ENDEVOR_SEARCH_LOCATION_HIDDEN,

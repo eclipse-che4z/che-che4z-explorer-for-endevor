@@ -4,7 +4,7 @@
 
 [![Build Status](https://ci.eclipse.org/che4z/buildStatus/icon?job=endevorExplorer%2Fdevelopment)](https://ci.eclipse.org/che4z/job/endevorExplorer/job/master/)
 [![GitHub issues](https://img.shields.io/github/issues-raw/eclipse/che-che4z-explorer-for-endevor)](https://github.com/eclipse/che-che4z-explorer-for-endevor/issues)
-[![slack](https://img.shields.io/badge/chat-on%20Slack-blue)](https://communityinviter.com/apps/che4z/code4z)
+[![slack](https://img.shields.io/badge/chat-on%20Slack-blue)](https://join.slack.com/t/che4z/shared_invite/zt-22b0064vn-nBh~Fs9Fl47Prp5ItWOLWw)
 
 </div>
 
@@ -16,6 +16,7 @@ The Explorer for Endevor VS Code extension modernizes the way you interact with 
 - Add an element
 - View an element
 - Edit an element
+- Move an element
 - Retrieve an element with dependencies
 - View element details
 - View history of elements
@@ -38,7 +39,9 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
 - [Workspace Synchronization](#workspace-synchronization)
 - [Use Cases](#use-cases)
 - [Base Profiles](#base-profiles)
+  - [Access API Mediation Layer Services](#access-api-mediation-layer-services)
 - [Team Configuration File](#team-configuration-file)
+- [Activity View](#activity-view)
 - [Manage the Extension Tree](#manage-the-extension-tree)
 - [Environment Variables](#environment-variables)
 - [Configure Explorer for Endevor](#configure-explorer-for-endevor)
@@ -67,13 +70,17 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 Create an Endevor connection and Endevor inventory location and review use cases to see how you can use the full potential of Explorer for Endevor. Alternatively, use your existing Zowe CLI Endevor profiles to get started.
 
-With the 1.4.0 release, Explorer for Endevor introduces a feature that enables you to filter the elements in the tree by names and/or last action CCID. For more information, see the [Filter Elements](#filter-elements) section in this Readme.
+With the 1.6.0 release, Explorer for Endevor introduces a number of features that further improve user experience.
 
-From now on, the default behavior of the extension is to display the elements from the inventory location only. However, you can use a new functionality that combines the Endevor **Build using map** and **Return first found** options to display the first found elements from up the Endevor map in the tree. For more information, see the [Fetch Elements from up the Map](#fetch-elements-from-up-the-map) section in this Readme.
+- The **Move** command enables you to move (promote) elements one stage up the map.
 
-With the 1.2.0 release, Explorer for Endevor introduces a new setting — **Profiles: Keep in Sync**. The setting enables you to use team configuration files. The profiles sync setting is enabled by default. With this setting enabled, the extension automatically reads available team configuration files or Endevor profiles and Endevor location profiles on startup. The default location of team config files and Endevor profiles is `~/.zowe` or `C:\Users\.zowe`. Learn more about team configuration files in the [Team Configuration File](#team-configuration-file) section. For more information about the new setting, see [Configure Explorer for Endevor](#configure-explorer-for-endevor) in this Readme.
+- Activity View tracks the session activity and provides the Execution and API reports.
 
-**Note**: The term `connection` has the same connotation as the term `profile` starting from the 1.2.0 release and pertains to all `profiles` that are created in the extension.
+- Ability to connect to API Mediation Layer (ML) and take advantage of microservices using your base profile.
+
+- Ability to specify a processor group when you add or generate an element.
+
+- Ability to view important information including available processor groups, definition details, and last action CCID by hovering over the Endevor location, element types, and elements.
 
 ### Get Started Walkthroughs
 
@@ -164,6 +171,7 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Fetch elements from up the Endevor map](#fetch-elements-from-up-the-map): Fetch the first found elements from up the Endevor map.
 - [Add an element](#add-an-element): Upload an element from your workstation to a chosen Endevor inventory location.
 - [View an element](#view-an-element): View the contents, summary report, and source level information of the selected element.
+- [Move an element](#move-an-element): Move an element up the map by using the Endevor `move statement` with such options as **With History**, **Bypass Element Delete**, **Synchronize**, **Retain Signout**, and **Jump**.
 - [View details](#view-details): View the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
 - [Show history](#show-history): Review the history of a selected element.
 - [Generate elements for the entire subsystem](#generate-Elements-for-the-entire-subsystem): Review the summary of a C1MSGS1 Endevor batch execution report that is available to you once the **Generate All Elements** function is executed.
@@ -232,7 +240,7 @@ You successfully fetched the elements from up the map.
 
 ### Add an Element
 
-You can upload a new element to your inventory location. The uploaded element appears under the selected type in the tree.
+You can upload a new element to your inventory location. Also, you can assign a processor group to your element in the process of uploading the element. The uploaded element appears under the selected type in the tree.
 
 1. Hover over an inventory location in the tree.
 
@@ -243,6 +251,8 @@ You can upload a new element to your inventory location. The uploaded element ap
    The Explorer dialog appears. You can now select an element that you want to upload from your workstation.
 
 3. Select an element that you want to upload from your workstation.
+
+4. (Optional) Select an available processor group from the drop-down list.
 
 ![Add an Element](packages/explorer-for-endevor/images/E4E-add.gif?raw=true 'Add an Element')
 <br /><br />
@@ -260,6 +270,30 @@ You can view the contents, summary, and source level information of an element b
 
 ![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true 'View an Element')
 <br /><br />
+
+### Move an Element
+
+Use the **Move** option against an element to move the selected element up the map. When the move is successful, the element is displayed in the next stage up the map. To see the result of the move, click the **Show Endevor Elements Up The Map** option that fetches the elements from up the map into the tree. By default, the up the map view is not enabled.
+
+1. (Optional) Hover over your environment location in the tree and click the **Show Endevor Elements Up The Map** option.
+
+   The up the map elements display in the tree.
+
+2. Right-click the element you want to move and select the **Move** option.
+
+3. Enter the CCID.
+
+4. Enter the comment.
+
+5. (Optional) Select the following **Move** options:
+
+   - **With History**: The option preserves source element change history. If you move the element without history, Endevor searches through the element levels at the source location to find a matching level at the target location. Endevor then compares the two and creates a new level at the target location that reflects the differences.
+   - **Bypass Element Delete**: Retains the element in the source stage after the move.
+   - **Synchronize**: Compensates for differences between the base level of a source element and the current level of a target element. If differences are found, Endevor compares the two elements and creates a new level at the target that reflects the differences. If Endevor differences are not found, Endevor proceeds with a regular move action.
+   - **Retain Signout**: The moved element retains the source location signout at the target location.
+   - **Jump**: Moves an element even if the element exists at an intermediate stage, not on the map.
+
+You successfully moved the element up the map.
 
 ### View Details
 
@@ -370,7 +404,7 @@ You successfully edited, saved, and uploaded the element.
 
 ### Generate
 
-The **Generate** action creates an executable form of the element, together with any associated outputs such as listings, and has the following available options:
+The **Generate** action enables you to select a processor group and create an executable form of the element, together with any associated outputs such as listings, and has the following available options:
 
 - **Generate in Place** enables you to generate the selected element in the same location where the element resides.
 
@@ -400,7 +434,9 @@ You can use the **Generate in Place**, **Generate with Copyback**, or **Generate
    Successfully generated the elements: ... Would you like to see the listing?
    ```
 
-2. (Optional) Click **Print a listing** to see the Generate output.
+2. (Optional) Select an available processor group from the drop-down list.
+
+3. (Optional) Click **Print a listing** to see the Generate output.
 
    **Note**: You can always review the Generate output by selecting the **Print a listing** option.
 
@@ -449,6 +485,54 @@ You successfully signed in the element.
 
 Explorer for Endevor enables you to use Zowe CLI base profiles. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and rejectUnauthorized in the base profile. For more information, see [the Base Profile section](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#base-profiles) on Zowe Docs.
 
+### Access Zowe API Mediation
+
+The extension enables you to connect to Endevor Web Services that are integrated with the Zowe API Mediation Layer, using your existing base profile. Ensure that you log in to the Zowe API Mediation layer authentication service, using your credentials and edit your current Endevor location to include the API ML endpoint for Endevor Web Services.
+
+1. Navigate to Zowe Explorer.
+
+2. Right-click your profile in the tree and select the **Log in to Authentication Service** option.
+
+3. Enter your username and password when prompted.
+
+   Alternatively, you can authenticate to API ML, using the `zowe auth login apiml` Zowe CLI command. For more information about how to authenticate using the Zowe CLI command, see [Integrating with API Mediation Layer](https://docs.zowe.org/stable/user-guide/cli-using-integrating-apiml/#logging-in) on Zowe Docs.
+
+   Explorer for Endevor re-uses your authentication information from the API ML setup.
+
+4. Open your team configuration file.
+
+5. Add a new Endevor connection with the following properties:
+
+   ```json
+   {
+     "$schema": "./zowe.schema.json",
+     "profiles": {
+       "base": {
+         "type": "base",
+         "properties": {
+           "host": "api-ml-service.net", // specify your base URL for the Zowe API Mediation Layer
+           "port": 8080, // specify the port of your Zowe API Mediation Layer
+           "rejectUnauthorized": true,
+           "tokenType": "apimlAuthenticationToken"
+         },
+         "secure": ["tokenValue"]
+       },
+       "endevor-via-apiml": {
+         "type": "endevor",
+         "properties": {
+           "basePath": "/endevor/api/v2" // Specify the basePath of your Endevor Web Services integrated with the Zowe API Mediation Layer
+         }
+       }
+     }
+   }
+   ```
+
+   where `host` and `port` are the common endpoint of your Zowe API ML services, and `basePath` is the specific endpoint where your Endevor Web Services are deployed under the Zowe API ML.
+
+6. Save your team configuration file.
+
+You successfully established a connection to the API ML services from your Endevor connection.
+
 ## Team Configuration File
 
 Explorer for Endevor supports reading a global team configuration (team config) file. A team configuration file enables you to manage your Endevor connection details efficiently in one location. You can use global team configs with your team members to share access to Endevor inventory locations. For more information about team config, see [Using Team Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-team-profiles) on Zowe Docs. The extension reads team configuration files only if the profile sync setting is enabled. To configure the setting, navigate to > **Settings** > **Extensions** > **Explorer for Endevor** > **Profiles: Keep in sync**.
@@ -456,6 +540,26 @@ Explorer for Endevor supports reading a global team configuration (team config) 
 As an application developer, you can obtain a shared global configuration file from your system administrator and use the file to access shared systems. As a system administrator, you need to have [Zowe CLI 7.2.1](https://docs.zowe.org/stable/user-guide/cli-installcli) or higher on your workstation before you create a team configuration file.
 
 > **Tip**: You can convert your existing Zowe CLI profiles into team configuration files with the `zowe config convert-profiles` command. For more information about team config conversion, see [Using Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#important-information-about-team-profiles) on Zowe Docs.
+
+## Activity View
+
+The extension enables you to monitor activity of the session in the Explorer for Endevor tab that you can access using the View tab. The Activity View feature helps you troubleshoot any errors that occur in the extension more efficiently.
+
+Use Activity View to keep track of events that happen during an active session of the extension and review execution errors or API notification messages.
+
+1. Navigate to the **View** tab in VS Code.
+
+2. Click **Command Palette...**.
+
+   The command prompt is displayed.
+
+3. Type **Explorer for Endevor: Focus of Activity View** and press Enter.
+
+The Activity View is displayed.
+
+You can now click on events to expand them and access execution or API error reports.
+
+To see a list of Endevor messages and codes that were reported, hover over records of the warning or error messages.
 
 ## Manage the Extension Tree
 

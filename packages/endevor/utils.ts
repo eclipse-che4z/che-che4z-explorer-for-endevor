@@ -17,7 +17,12 @@ import { URL } from 'url';
 import { TEN_SEC_IN_MS } from './const';
 import { UnreachableCaseError } from './typeHelpers';
 import { AuthType } from './_doc/Auth';
-import { CredentialType, TokenCredential } from './_doc/Credential';
+import {
+  BearerTokenCredential,
+  Credential,
+  CredentialType,
+  TokenCredential,
+} from './_doc/Credential';
 import {
   EnvironmentStageResponseObject,
   ServiceProtocol,
@@ -34,6 +39,9 @@ import {
   Service,
   ServiceLocation,
   ServiceApiVersion,
+  EndevorApiError,
+  EndevorResponseError,
+  SearchStrategies,
 } from './_doc/Endevor';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
@@ -176,6 +184,15 @@ export const fromStageNumber = (value: StageNumber | undefined): number => {
   return value ? parseInt(value) : defaultStageNumber;
 };
 
+export const validateStageNumber = (
+  stage: string | undefined
+): StageNumber | Error => {
+  if (stage === '1' || stage === '2') {
+    return stage;
+  }
+  return new Error('Stage number is incorrect, should be only "1" or "2".');
+};
+
 // Endevor base path should contain no slash at the end
 export const toCorrectBasePathFormat = (basePath: string) =>
   basePath.replace(/\/$/, '');
@@ -201,11 +218,24 @@ export const stringifyPretty = (value: unknown): string => {
 
 export const isErrorEndevorResponse = <
   E extends ErrorResponseType | undefined,
-  R
+  R,
+  T extends Record<string, unknown>
 >(
-  value: EndevorResponse<E, R>
+  value: EndevorResponse<E, R> | T
 ): value is ErrorEndevorResponse<E> => {
-  return value.status === ResponseStatus.ERROR;
+  return 'status' in value && value.status === ResponseStatus.ERROR;
+};
+
+export const isEndevorApiError = <T>(
+  value: T | EndevorApiError
+): value is EndevorApiError => {
+  return value instanceof EndevorApiError;
+};
+
+export const isEndevorResponseError = <T>(
+  value: T | EndevorResponseError
+): value is EndevorResponseError => {
+  return value instanceof EndevorResponseError;
 };
 
 export const toSeveralTasksProgress =
@@ -216,13 +246,32 @@ export const toSeveralTasksProgress =
         if (progress.increment) {
           const progressPerTask = progress.increment / tasksNumber;
           progressReporter.report({
+            message: progress.message,
             increment: progressPerTask,
           });
         } else {
           progressReporter.report(progress);
         }
       },
+      message: progressReporter.message,
     };
+  };
+
+export const incrementPartialProgress =
+  (progressReporter: ProgressReporter, startPartialProgress?: boolean) =>
+  (increment: number) => {
+    progressReporter.progressRemaining = startPartialProgress
+      ? 100
+      : progressReporter.progressRemaining || 0;
+    const actualIncrement =
+      progressReporter.progressRemaining >= increment
+        ? increment
+        : progressReporter.progressRemaining;
+    progressReporter.report({
+      message: progressReporter.message,
+      increment: actualIncrement,
+    });
+    progressReporter.progressRemaining -= actualIncrement;
   };
 
 export const subsystemStageIdToStageNumber =
@@ -311,6 +360,21 @@ export const isResponseSuccessful = (response: {
   return response.statusCode.toString().startsWith(successHttpStatusStart);
 };
 
+export const getReportsFromParsedResponse = (
+  responseReports?: {
+    C1MSGS1: string | undefined;
+    APIMSGS: string | undefined;
+  } | null
+) => {
+  if (responseReports?.C1MSGS1 || responseReports?.APIMSGS) {
+    return {
+      C1MSGS1: responseReports?.C1MSGS1,
+      APIMSGS: responseReports?.APIMSGS,
+    };
+  }
+  return;
+};
+
 export const toEndevorReportId = (value: string): string => {
   const matcher = value.match('^(?:http.*)?/reports/(.*)$');
   if (matcher && matcher[1]) {
@@ -319,6 +383,35 @@ export const toEndevorReportId = (value: string): string => {
   return value;
 };
 
-export const isTokenCredentialExpired = (token: TokenCredential): boolean =>
+export const isBearerTokenCredential = (
+  value: Credential
+): value is BearerTokenCredential => {
+  return value.type === CredentialType.TOKEN_BEARER;
+};
+
+export const isTokenCredentialExpired = (token: TokenCredential): boolean => {
+  // if the validation values are unknown, consider the token is valid (API ML token case)
+  if (!token.tokenCreatedMs || !token.tokenValidForMs) return false;
   // decrease token validity time for 10 seconds to lower a probability of immediate invalidation
-  Date.now() - token.tokenCreatedMs >= token.tokenValidForMs - TEN_SEC_IN_MS;
+  return (
+    Date.now() - token.tokenCreatedMs >= token.tokenValidForMs - TEN_SEC_IN_MS
+  );
+};
+
+export const getSearchStrategies = (searchStrategy: SearchStrategies) => {
+  let searchUpInMap = true;
+  let firstOccurrence = 'FIR';
+  switch (searchStrategy) {
+    case SearchStrategies.IN_PLACE:
+      searchUpInMap = false;
+      break;
+    case SearchStrategies.ALL:
+      firstOccurrence = 'ALL';
+      break;
+    case SearchStrategies.FIRST_FOUND:
+      break;
+    default:
+      throw new UnreachableCaseError(searchStrategy);
+  }
+  return { searchUpInMap, firstOccurrence };
+};

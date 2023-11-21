@@ -18,7 +18,6 @@ import * as assert from 'assert';
 import {
   Element,
   ResponseStatus,
-  Service,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
@@ -28,16 +27,15 @@ import {
 } from './_mocks/endevor';
 import * as sinon from 'sinon';
 import { UNIQUE_ELEMENT_FRAGMENT } from '../../constants';
-import { mockAskingForChangeControlValue } from './_mocks/dialogs';
+import {
+  mockAskingForChangeControlValue,
+  mockAskingForGenerateAllElements,
+} from './_mocks/dialogs';
 import {
   Actions,
   SubsystemElementsUpdatedInPlace,
 } from '../../store/_doc/Actions';
-import {
-  EndevorCredential,
-  EndevorCredentialStatus,
-  EndevorId,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { Source } from '../../store/storage/_doc/Storage';
 import { generateSubsystemElementsCommand } from '../subsystem/generateSubsystemElements';
 import {
@@ -45,16 +43,19 @@ import {
   SubSystemNode,
   TypeNode,
 } from '../../tree/_doc/ElementTree';
-import { ElementSearchLocation } from '../../_doc/Endevor';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('generating subsystem elements in place', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.GENERATE_SUBSYSTEM_ELEMENTS,
-      async (dispatch, configurations, subSystemNode) =>
+      async (dispatch, getConnectionConfiguration, subSystemNode) =>
         generateSubsystemElementsCommand(
           dispatch,
-          configurations
+          getConnectionConfiguration
         )(subSystemNode)
     );
   });
@@ -65,12 +66,13 @@ describe('generating subsystem elements in place', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -83,18 +85,16 @@ describe('generating subsystem elements in place', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-  };
-  const credential: EndevorCredential = {
-    value: service.credential,
-    status: EndevorCredentialStatus.VALID,
+    configuration,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const configuration = 'ANY-CONFIG';
-  const searchLocation: ElementSearchLocation = {
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
     ccid: 'TEST_CCID',
     comment: 'TEST_COMMENT',
   };
@@ -155,6 +155,7 @@ describe('generating subsystem elements in place', () => {
     lastActionCcid: 'LAST-CCID',
     noSource: false,
     id: 'TEST-ID',
+    processorGroup: '*NOPROC*',
   };
   const element1Node: ElementNode = {
     serviceId: {
@@ -183,6 +184,7 @@ describe('generating subsystem elements in place', () => {
     lastActionCcid: 'LAST-CCID',
     noSource: false,
     id: 'TEST-ID',
+    processorGroup: '*NOPROC*',
   };
   const element2Node: ElementNode = {
     serviceId: {
@@ -211,6 +213,7 @@ describe('generating subsystem elements in place', () => {
     lastActionCcid: 'LAST-CCID',
     noSource: false,
     id: 'TEST-ID',
+    processorGroup: '*NOPROC*',
   };
   const element3Node: ElementNode = {
     serviceId: {
@@ -269,10 +272,10 @@ describe('generating subsystem elements in place', () => {
   it('should generate all of the elements in place within a subsystem', async () => {
     // arrange
     mockAskingForChangeControlValue(actionChangeControlValue);
+    mockAskingForGenerateAllElements(true);
     const generateSubsystemElementsStub = mockGenerateSubsystemElementsInPlace(
       service,
       subSystemMapPath,
-      configuration,
       actionChangeControlValue
     )([
       {
@@ -287,7 +290,6 @@ describe('generating subsystem elements in place', () => {
     ]);
     const searchForElementsStub = mockSearchForElements(
       service,
-      configuration,
       {
         environment: subSystemMapPath.environment,
         stageNumber: subSystemMapPath.stageNumber,
@@ -304,17 +306,7 @@ describe('generating subsystem elements in place', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_SUBSYSTEM_ELEMENTS,
         dispatchGenerateAction,
-        {
-          getConnectionDetails: () => {
-            return {
-              value: service,
-              status: EndevorCredentialStatus.VALID,
-            };
-          },
-          getCredential: () => () => credential,
-          getSearchLocation: () => () => searchLocation,
-          getEndevorConfiguration: () => () => searchLocation,
-        },
+        async () => ({ service, searchLocation }),
         subSystemNode
       );
     } catch (e) {

@@ -34,6 +34,9 @@ import {
   generateSubSystemElementsInPlace,
   getAuthenticationToken,
   downloadReportById,
+  getProcessorGroupsByType,
+  searchForProcessorGroupsInPlace,
+  moveElements,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import { toEndevorProtocol, isErrorEndevorResponse, isDefined } from '../utils';
@@ -60,6 +63,7 @@ import {
   SearchStrategies,
   Value,
   ErrorResponseType,
+  ProcessorGroupResponseObject,
 } from '../_doc/Endevor';
 import { join } from 'path';
 import { ANY_VALUE } from '../const';
@@ -95,7 +99,8 @@ const mockServer = getLocal();
 
 beforeEach(async () => {
   await mockServer.start();
-  mockServer.enableDebug();
+  // enable for debug messages
+  // mockServer.enableDebug();
 });
 afterEach(() => mockServer.stop());
 
@@ -2411,9 +2416,15 @@ describe('endevor public api v1', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const invalidElementTypes: ReadonlyArray<unknown> = [
@@ -2440,8 +2451,14 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2450,6 +2467,7 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.typeName,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
               };
@@ -2499,9 +2517,15 @@ describe('endevor public api v1', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const invalidElementTypes: ReadonlyArray<unknown> = [
@@ -2528,8 +2552,14 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2538,6 +2568,7 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.typeName,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
               };
@@ -2588,22 +2619,40 @@ describe('endevor public api v1', () => {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
           stageId: '1',
+          stageNumber: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV1',
           system: 'TEST-SYS1',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE1',
           nextType: 'NEXT_TYPE1',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV2',
           system: 'TEST-SYS2',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE2',
           nextType: 'NEXT_TYPE2',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2621,8 +2670,14 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -2674,23 +2729,41 @@ describe('endevor public api v1', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV1',
           system: 'TEST-SYS1',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE1',
           nextType: 'NEXT_TYPE1',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV2',
           system: 'TEST-SYS2',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE2',
           nextType: 'NEXT_TYPE2',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2708,8 +2781,14 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -2761,9 +2840,15 @@ describe('endevor public api v1', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TEST-TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2781,8 +2866,14 @@ describe('endevor public api v1', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -2978,6 +3069,199 @@ describe('endevor public api v1', () => {
     });
   });
 
+  describe('fetching type processor groups', () => {
+    const requestArgs: ElementTypeMapPath = {
+      environment: 'TEST-ENV',
+      stageNumber: '1',
+      system: 'TEST-SYS',
+      type: 'TEST-TYPE',
+    };
+    const toRequestPath =
+      (basePath: string) =>
+      (
+        configuration: string,
+        environment: string = ANY_VALUE,
+        stageNumber: string = ANY_VALUE,
+        system: string = ANY_VALUE,
+        type: string = ANY_VALUE
+      ): string => {
+        return join(
+          basePath,
+          configuration,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'type',
+          type,
+          'pgroup',
+          '*'
+        );
+      };
+
+    it('should return the list of filtered element types', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(basePath)(
+          configuration,
+          requestArgs.environment,
+          requestArgs.stageNumber,
+          requestArgs.system,
+          requestArgs.type
+        ),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const validProcGroups: ReadonlyArray<ProcessorGroupResponseObject> = [
+        {
+          environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          stageId: '1',
+          stageNumber: '1',
+          type: 'TYPE',
+          procGroupName: 'TEST_PRCS',
+          nextProcGoup: 'NEXT_TYPE',
+          description: 'TEST PROC GROUP DESCRIPTION',
+        },
+      ];
+      const invalidProcGroups: ReadonlyArray<unknown> = [
+        {
+          //environment: 'TEST-ENV',
+          system: 'TEST-SYS',
+          stageId: '1',
+          type: 'TYPE',
+          procGroupName: 'TEST_PRCS',
+          nextProcGoup: 'NEXT_TYPE',
+        },
+      ];
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: responseHeaders,
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: [
+            ...validProcGroups.map((procGroup) => {
+              return {
+                envName: procGroup.environment,
+                sysName: procGroup.system,
+                typeName: procGroup.type,
+                stgId: procGroup.stageId,
+                stgNum: procGroup.stageNumber,
+                procGrpName: procGroup.procGroupName,
+                nextProcGrp: procGroup.nextProcGoup,
+                description: procGroup.description,
+              };
+            }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...invalidProcGroups.map((procGroup: any) => {
+              return {
+                envName: procGroup.environment,
+                sysName: procGroup.system,
+                typeName: procGroup.typeName,
+                stgId: procGroup.stageId,
+                stgNum: procGroup.stageNumber,
+                procGrpName: procGroup.procGroupName,
+                nextProcGrp: procGroup.nextProcGoup,
+              };
+            }),
+          ],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const typeProcGroupResponse = await searchForProcessorGroupsInPlace(
+        logger
+      )(progress)(service)(configuration)({
+        environment: requestArgs.environment,
+        stageNumber: requestArgs.stageNumber,
+        system: requestArgs.system,
+        type: requestArgs.type,
+      });
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      const isErrorResponse = isErrorEndevorResponse(typeProcGroupResponse);
+      expect(isErrorResponse).toBe(false);
+      expect(
+        isErrorResponse ? undefined : typeProcGroupResponse.result
+      ).toEqual(validProcGroups);
+    });
+
+    it('should return an error in case of critical failure on Endevor sides', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(basePath)(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const endevorEndpoint = await mockEndpoint(
+        request,
+        criticalFailureResponse
+      )(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const elementTypesResponse = await getProcessorGroupsByType(logger)(
+        progress
+      )(service)(configuration)({})(SearchStrategies.ALL);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(
+        isErrorEndevorResponse(elementTypesResponse) &&
+          elementTypesResponse.type === ErrorResponseType.GENERIC_ERROR
+      ).toBe(true);
+    });
+
+    it('should return an error if response data parsing failed', async () => {
+      // arrange
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(basePath)(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+      };
+      const endevorEndpoint = await mockEndpoint(
+        request,
+        invalidFormatResponse
+      )(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const elementTypesResponse = await getProcessorGroupsByType(logger)(
+        progress
+      )(service)(configuration)({})(SearchStrategies.FIRST_FOUND);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+      expect(
+        isErrorEndevorResponse(elementTypesResponse) &&
+          elementTypesResponse.type === ErrorResponseType.GENERIC_ERROR
+      ).toBe(true);
+    });
+  });
+
   describe('searching elements', () => {
     const toRequestPath =
       (basePath: string) =>
@@ -3052,6 +3336,8 @@ describe('endevor public api v1', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3088,6 +3374,8 @@ describe('endevor public api v1', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3101,6 +3389,7 @@ describe('endevor public api v1', () => {
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
                 lastActCcid: element.lastActionCcid,
+                procGrpName: element.processorGroup,
               };
             }),
           ],
@@ -3159,6 +3448,8 @@ describe('endevor public api v1', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3195,6 +3486,8 @@ describe('endevor public api v1', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3208,6 +3501,7 @@ describe('endevor public api v1', () => {
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
                 lastActCcid: element.lastActionCcid,
+                procGrpName: element.procGroup,
               };
             }),
           ],
@@ -3266,6 +3560,8 @@ describe('endevor public api v1', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3303,6 +3599,8 @@ describe('endevor public api v1', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3316,6 +3614,7 @@ describe('endevor public api v1', () => {
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
                 lastActCcid: element.lastActionCcid,
+                procGrpName: element.procGroup,
               };
             }),
           ],
@@ -3375,6 +3674,8 @@ describe('endevor public api v1', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3387,6 +3688,8 @@ describe('endevor public api v1', () => {
           extension: 'ext',
           configuration: 'TEST-CONFIG',
           lastActionCcid: 'TEST-CCID',
+          procGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -3411,6 +3714,8 @@ describe('endevor public api v1', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3424,6 +3729,7 @@ describe('endevor public api v1', () => {
                 stgNum: element.stageNumber,
                 fileExt: element.extension,
                 lastActCcid: element.lastActionCcid,
+                procGrpName: element.procGroup,
               };
             }),
           ],
@@ -4063,6 +4369,7 @@ describe('endevor public api v1', () => {
         details: {
           returnCode: 0,
           messages: [],
+          reportIds: undefined,
         },
       });
     });
@@ -5422,7 +5729,7 @@ describe('endevor public api v1', () => {
         status: ResponseStatus.ERROR,
         type: 'CONNECTION_ERROR',
         details: {
-          connectionCode: undefined,
+          connectionCode: 'ECONNREFUSED',
           httpStatusCode: undefined,
           messages: [
             `connect ECONNREFUSED ${nonExistingService.location.hostname}:${nonExistingService.location.port}`,
@@ -6359,6 +6666,193 @@ describe('endevor public api v1', () => {
       expect(calledOnce).toBe(true);
 
       expect(actualContent).toBe(undefined);
+    });
+  });
+  describe('moving an element', () => {
+    const configuration = 'TEST-INST';
+    const element: ElementMapPath = {
+      environment: 'TEST-ENV',
+      stageNumber: '1',
+      system: 'TEST-SYS',
+      subSystem: 'TEST-SBS',
+      type: 'TEST-TYPE',
+      id: 'ELM1',
+    };
+    const toRequestPath =
+      (basePath: string) =>
+      (configuration: Value) =>
+      ({
+        environment,
+        stageNumber,
+        system,
+        subSystem,
+        type,
+        id: name,
+      }: ElementMapPath): string => {
+        return join(
+          basePath,
+          configuration,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'subsys',
+          subSystem,
+          'type',
+          type,
+          'ele',
+          name
+        );
+      };
+    const signoutChangeControlValue = {
+      ccid: 'test',
+      comment: 'testComment',
+    };
+    const moveOptions = {
+      withHistory: false,
+      bypassElementDelete: false,
+      synchronize: false,
+      retainSignout: false,
+      ackElementJump: false,
+    };
+
+    it('should move an element', async () => {
+      // arrange
+      const moveOptions = {
+        withHistory: false,
+        bypassElementDelete: false,
+        synchronize: false,
+        retainSignout: false,
+        ackElementJump: false,
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0000',
+          reasonCode: '0000',
+          reports: {
+            APIMSGS: '/reports/1631287369-1243603095386082-APIMSGS',
+            C1MSGS1: '/reports/1631287369-1243603095386082-C1MSGS1',
+          },
+          data: [],
+          messages: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(!isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect connection details', async () => {
+      // arrange
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const moveResponse = await moveElements(logger)(progress)(
+        nonExistingService
+      )(configuration)(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect base credentials', async () => {
+      // arrange
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0020',
+          reasonCode: '0034',
+          reports: null,
+          data: [],
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error if something goes wrong in Endevor side', async () => {
+      // arrange
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          'api-version': '1.1',
+          'content-type': 'application/json',
+        },
+        data: {
+          realData: ['Is it real data or not???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
     });
   });
 });

@@ -17,7 +17,7 @@ import {
   Extensions,
   FragmentType,
   BasicElementUriQuery,
-} from '../_doc/Uri';
+} from './_doc/Uri';
 import * as path from 'path';
 
 export const toBasicElementUri =

@@ -12,18 +12,20 @@
  */
 
 import { askForServiceDeletion } from '../../dialogs/locations/endevorServiceDialogs';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { ServiceNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   CommandDeleteServiceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
+import { createEndevorLogger } from '../../logger';
 
 export const deleteServiceCommand =
   (dispatch: (action: Action) => Promise<void>) =>
   async ({ name, source }: ServiceNode): Promise<void> => {
-    logger.trace(`Delete ${source} Endevor connection ${name} called.`);
+    const logger = createEndevorLogger({ serviceId: { name, source } });
+    logger.traceWithDetails(`Delete Endevor connection command was called.`);
     if (await askForServiceDeletion(name)) {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_DELETE_SERVICE_COMPLETED,

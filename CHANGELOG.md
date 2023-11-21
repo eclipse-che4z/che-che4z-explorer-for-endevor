@@ -2,6 +2,27 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.6.0] &ndash; 2023-11-21
+
+### Added
+
+- Added preliminary Zowe API ML authentication support.
+- Added a service and location with source information to log messages.
+- Added an Activity panel to display performed Endevor Web Services requests during the working session with an ability to see the response statuses and reports.
+- Added a View type details command.
+- Added a toggle to allow the explorer tree to show empty types. The default state is not to show.
+
+### Changed
+
+- Added a verification step to the generating elements in the subsystem functionality. You must confirm your action before generation is started.
+- Adjusted the Retrieve with dependencies progress reporting functionality to avoid multiple progress bars appearing.
+- Enhanced element details with additional information.
+- Updated the generate and add a new element commands with a processor group override option.
+
+### Fixed
+
+- Fixed an issue that overloaded the extension OUTPUT channel with confusing error messages.
+
 ## [1.5.4] &ndash; 2023-07-04
 
 ### Fixed
@@ -100,7 +121,7 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 ### Fixed
 
-- Fixed an issue with collapsing the Endevor tree on refresh.
+- Fixed an issue with collapsing the explorer tree on refresh.
 - Fixed an issue with fetching environments, systems and subsystem outside of the specified Endevor map.
 
 ### Changed
@@ -113,7 +134,7 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 - Added the experimental feature that enables you to create a workspace and synchronize it with Endevor on the mainframe.
 - Added an ability to correct Endevor connection information and credentials for the current VSCode session.
-- Added cancellation for the connection testing and Endevor tree refresh operations.
+- Added cancellation for the connection testing and explorer tree refresh operations.
 - Added Zowe V2 Conformance information to README.
 - Added Get Started with Explorer for Endevor VSCode Walkthrough.
 - Added Introduction to the Endevor Synchronized Workspace VSCode Walkthrough.
@@ -126,7 +147,7 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 ### Changed
 
-- Improved the extension UI. Now the Endevor tree is provided with welcome views and the get started walkthrough.
+- Improved the extension UI. Now Explorer for Endeovor is provided with welcome views and the get started walkthrough.
 - Improved the indication of the error messages for incorrect credentials or connection issues.
 - Improved the Endevor connection and inventory location related dialogs and messages.
 
@@ -137,8 +158,8 @@ You can find all notable changes to Explorer for Endevor in this document.
 - Added the functionality to create Endevor connections that work independently from Zowe profiles.
 - Added the compatibility with the Zowe Secure Credential Store.
 - Added the functionality that reads the Zowe Global Team and User Configuration files.
-- Added the **Add an Inventory Location** button to the extension tree.
-- Added the extension tree nodes tooltips based on their real values.
+- Added the **Add an Inventory Location** button to the explorer tree.
+- Added the explorer tree nodes tooltips based on their real values.
 - Added the dialogs descriptions about the real connection and inventory location values.
 - Added the UI option to submit the extension issue.
 - Added the **Cancel** button to the Endevor Web Services URL and Endevor configurations validation.
@@ -149,15 +170,15 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 - Fixed the performance issue with the long list of elements that are fetched from Endevor.
 - Fixed the issue with ignoring the rejectUnauthorized value from the Zowe Base profiles.
-- Fixed the issue with displaying non-existing Zowe profiles in the extension tree.
-- Fixed the issue that causes the refreshing of the extension tree after errors.
-- Fixed the issue that causes invalid Zowe profiles be accessible in the extension tree.
+- Fixed the issue with displaying non-existing Zowe profiles in the explorer tree.
+- Fixed the issue that causes the refreshing of the explorer tree after errors.
+- Fixed the issue that causes invalid Zowe profiles be accessible in the explorer tree.
 
 ### Changed
 
 - Changed the edited elements file system path to an internal one.
 - Changed the dialogs with an option to create an Endevor connection or inventory location right away.
-- Changed the extension tree to show full element names.
+- Changed the explorer tree to show full element names.
 
 ## [1.1.1] &ndash; 2022-05-23
 
@@ -200,11 +221,11 @@ You can find all notable changes to Explorer for Endevor in this document.
 
 ### Added
 
-- Added alphabetical sorting to all levels of the Explorer for Endevor tree.
+- Added alphabetical sorting to all levels of the explorer tree.
 
 ### Fixed
 
-- Fixed an issue that caused the wrong representation of elements in the Explorer for Endevor tree.
+- Fixed an issue that caused the wrong representation of elements in the explorer tree.
 
 ## [1.0.0] &ndash; 2022-02-23
 

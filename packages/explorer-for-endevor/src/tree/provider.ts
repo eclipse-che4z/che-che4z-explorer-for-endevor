@@ -23,22 +23,23 @@ import { buildTree } from './endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import {
   CachedElement,
-  CachedEndevorMap,
+  CachedEndevorInventory,
   ElementFilter,
   ElementsPerRoute,
   ElementsUpTheMapFilter,
+  EmptyTypesFilter,
   EndevorCacheVersion,
   EndevorConfiguration,
-  EndevorConnection,
-  EndevorCredential,
   EndevorId,
   EndevorServiceLocations,
 } from '../store/_doc/v2/Store';
 import {
   Element,
+  ElementType,
   EnvironmentStage,
   EnvironmentStageResponseObject,
   ErrorResponseType,
+  Service,
   SubSystem,
   System,
 } from '@local/endevor/_doc/Endevor';
@@ -57,14 +58,15 @@ import {
   withCancellableNotificationProgress,
 } from '@local/vscode-wrapper/window';
 import {
-  getAllEnvironmentStages,
-  searchForAllElements,
-  searchForSubSystemsFromEnvironmentStage,
-  searchForSystemsFromEnvironmentStage,
-  searchForElementsInPlace,
-} from '../endevor';
-import { logger, reporter } from '../globals';
-import { toElementCompositeKey } from '../store/utils';
+  getAllEnvironmentStagesAndLogActivity,
+  searchForAllElementsAndLogActivity,
+  searchForSubSystemsFromEnvironmentStageAndLogActivity,
+  searchForSystemsFromEnvironmentStageAndLogActivity,
+  searchForElementsInPlaceAndLogActivity,
+  searchForTypesInPlaceAndLogActivity,
+} from '../api/endevor';
+import { reporter } from '../globals';
+import { createEndevorInventory, toElementCompositeKey } from '../store/utils';
 import {
   isErrorEndevorResponse,
   subsystemStageIdToStageNumber,
@@ -75,34 +77,34 @@ import {
   ElementsFetchingStatus,
   EndevorMapBuildingStatus,
   TelemetryEvents,
-} from '../_doc/telemetry/Telemetry';
-import { EndevorMap, SearchLocation } from '../_doc/Endevor';
+} from '../telemetry/_doc/Telemetry';
+import {
+  EndevorAuthorizedService,
+  EndevorMap,
+  SearchLocation,
+} from '../api/_doc/Endevor';
 import { toEndevorMap, toEndevorMapWithWildcards } from './endevorMap';
 import {
+  DEFAULT_SHOW_EMPTY_TYPES_MODE,
   DEFAULT_TREE_IN_PLACE_SEARCH_MODE,
   TREE_VIEW_INITIALIZED_CONTEXT_NAME,
 } from '../constants';
 import { Source } from '../store/storage/_doc/Storage';
+import {
+  EndevorLogger,
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../logger';
+import { ProgressReporter } from '@local/endevor/_doc/Progress';
 
 type DataGetters = Readonly<{
-  getServiceLocations: () => EndevorServiceLocations;
-  getConnectionDetails: (
-    id: EndevorId
-  ) => Promise<EndevorConnection | undefined>;
-  getCredential: (
-    connection: EndevorConnection,
-    configuration: EndevorConfiguration
-  ) => (credentialId: EndevorId) => Promise<EndevorCredential | undefined>;
-  getSearchLocation: (
-    searchLocationId: EndevorId
-  ) => Promise<SearchLocation | undefined>;
-  getEndevorConfiguration: (
-    serviceId?: EndevorId,
-    searchLocationId?: EndevorId
-  ) => Promise<EndevorConfiguration | undefined>;
+  getServiceLocations: () => Promise<EndevorServiceLocations>;
   getElementsUpTheMapFilterValue: (
     serviceId: EndevorId
   ) => (searchLocationId: EndevorId) => ElementsUpTheMapFilter | undefined;
+  getEmptyTypesFilterValue: (
+    serviceId: EndevorId
+  ) => (searchLocationId: EndevorId) => EmptyTypesFilter | undefined;
   getAllElementFilterValues: (
     serviceId: EndevorId
   ) => (searchLocationId: EndevorId) => ReadonlyArray<ElementFilter>;
@@ -122,13 +124,26 @@ type DataGetters = Readonly<{
         elementsPerRoute: ElementsPerRoute;
       }>
     | undefined;
-  getEndevorMap: (
+  getEndevorInventory: (
     serviceId: EndevorId
-  ) => (searchLocationId: EndevorId) => CachedEndevorMap | undefined;
+  ) => (searchLocationId: EndevorId) => CachedEndevorInventory | undefined;
 }>;
 
 export const make =
-  (dataGetters: DataGetters, dispatch: (action: Action) => Promise<void>) =>
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >,
+    dataGetters: DataGetters
+  ) =>
   (
     treeChangeEmitter: vscode.EventEmitter<Node | null>
   ): vscode.TreeDataProvider<Node> => {
@@ -141,7 +156,7 @@ export const make =
         if (!node) {
           setContextVariable(TREE_VIEW_INITIALIZED_CONTEXT_NAME, true);
           const serviceNodes = toServiceNodes(
-            dataGetters.getServiceLocations()
+            await dataGetters.getServiceLocations()
           ).sort(byNameOrder);
           sendTreeRefreshTelemetry(serviceNodes);
           return serviceNodes;
@@ -178,14 +193,22 @@ export const make =
               dataGetters.getElementsUpTheMapFilterValue(serviceId)(
                 searchLocationId
               )?.value ?? DEFAULT_TREE_IN_PLACE_SEARCH_MODE;
+            const showEmptyTypes =
+              dataGetters.getEmptyTypesFilterValue(serviceId)(searchLocationId)
+                ?.value ?? DEFAULT_SHOW_EMPTY_TYPES_MODE;
+            const elementFilters =
+              dataGetters.getAllElementFilterValues(serviceId)(
+                searchLocationId
+              );
             // acts like a React effect:
             //    get data from a cache (if available) and render it immediately
             //    or
             //    render with existing value (if available) and fetch the actual data from REST API with the following rerender afterwards
             let endevorCache: EndevorData | PendingTask | undefined =
               endevorCacheEffect(
-                dataGetters,
-                dispatch
+                dispatch,
+                getConnectionConfiguration,
+                dataGetters
               )(searchForFirstFoundElements)(serviceId, searchLocationId);
             if (!isCachedData(endevorCache)) {
               await endevorCache.pendingTask;
@@ -193,16 +216,19 @@ export const make =
             }
             if (
               !endevorCache?.elementsPerRoute ||
-              !Object.keys(endevorCache.elementsPerRoute).length
+              !Object.keys(endevorCache.elementsPerRoute).length ||
+              !endevorCache.endevorInventory
             ) {
               return [];
             }
-            const endevorTree = buildTree(
-              serviceId,
-              searchLocationId
-            )(endevorCache.elementsPerRoute)({
+            const endevorTree = buildTree(serviceId, searchLocationId)(
+              endevorCache.elementsPerRoute,
+              endevorCache.endevorInventory,
+              elementFilters
+            )({
               withElementsUpTheMap: searchForFirstFoundElements,
               showEmptyRoutes: false,
+              showEmptyTypes,
             }).sort(byNameOrder);
             const filteredNode = toFilteredNode(serviceId)(searchLocationId)(
               dataGetters.getAllElementFilterValues(serviceId)(searchLocationId)
@@ -258,12 +284,22 @@ export const make =
 
 type EndevorData = Readonly<{
   elementsPerRoute: ElementsPerRoute | undefined;
+  endevorInventory: CachedEndevorInventory | undefined;
 }>;
 
 type PendingTask = Readonly<{
   pendingTask: Promise<undefined>;
   outdatedCacheValue: EndevorData | undefined;
 }>;
+
+type InventoryResult = [
+  ReadonlyArray<EnvironmentStage> | Error,
+  ReadonlyArray<System> | Error,
+  ReadonlyArray<SubSystem> | Error,
+  ReadonlyArray<ElementType> | Error
+];
+
+const emptyInventoryResult: InventoryResult = [[], [], [], []];
 
 const isCachedData = (
   value: PendingTask | EndevorData
@@ -272,381 +308,67 @@ const isCachedData = (
 };
 
 const endevorCacheEffect =
-  (dataGetters: DataGetters, dispatch: (action: Action) => Promise<void>) =>
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          // TODO create AuthorizedService type to use everywhere
+          service: Service & Readonly<{ configuration: EndevorConfiguration }>;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >,
+    dataGetters: DataGetters
+  ) =>
   (searchForFirstFound: boolean) =>
   (
     serviceId: EndevorId,
     searchLocationId: EndevorId
   ): EndevorData | PendingTask => {
-    if (!searchForFirstFound) {
-      const elements =
-        dataGetters.getElementsInPlace(serviceId)(searchLocationId);
-      if (elements?.cacheVersion === EndevorCacheVersion.UP_TO_DATE) {
-        return {
-          elementsPerRoute: elements.elementsPerRoute,
-        };
-      }
-      return {
-        outdatedCacheValue: {
-          elementsPerRoute: elements?.elementsPerRoute,
-        },
-        pendingTask: new Promise((resolve) => {
-          (async (): Promise<ReadonlyArray<Element> | Error | undefined> => {
-            const connection = await dataGetters.getConnectionDetails(
-              serviceId
-            );
-            if (!connection) {
-              resolve(undefined);
-              return [];
-            }
-            const configuration = await dataGetters.getEndevorConfiguration(
-              serviceId,
-              searchLocationId
-            );
-            if (!configuration) {
-              resolve(undefined);
-              return [];
-            }
-            const credential = await dataGetters.getCredential(
-              connection,
-              configuration
-            )(serviceId);
-            if (!credential) {
-              resolve(undefined);
-              return [];
-            }
-            const searchLocation = await dataGetters.getSearchLocation(
-              searchLocationId
-            );
-            if (!searchLocation) {
-              resolve(undefined);
-              return [];
-            }
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const searchEnvironment = searchLocation.environment!;
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const searchStage = searchLocation.stageNumber!;
-            const elementsResponse = await withCancellableNotificationProgress(
-              'Fetching elements ...'
-            )((progress) =>
-              searchForElementsInPlace(progress)({
-                ...connection.value,
-                credential: credential.value,
-              })(configuration)({
-                environment: searchEnvironment,
-                stageNumber: searchStage,
-              })(
-                searchLocation.system,
-                searchLocation.subsystem,
-                searchLocation.type,
-                searchLocation.element
-              )
-            );
-            const operationCancelled = !elementsResponse;
-            if (operationCancelled) {
-              dispatch({
-                type: Actions.ELEMENTS_FETCH_CANCELED,
-                serviceId,
-                searchLocationId,
-              });
-              resolve(undefined);
-              return;
-            }
-            if (isErrorEndevorResponse(elementsResponse)) {
-              const errorResponse = elementsResponse;
-              // TODO: format using all possible error details
-              const error = new Error(
-                `Unable to fetch elements information because of error:${formatWithNewLines(
-                  errorResponse.details.messages
-                )}`
-              );
-              switch (errorResponse.type) {
-                case ErrorResponseType.CONNECTION_ERROR:
-                case ErrorResponseType.CERT_VALIDATION_ERROR: {
-                  logger.error(
-                    'Unable to connect to Endevor Web Services.',
-                    `${error.message}.`
-                  );
-                  dispatch({
-                    type: Actions.ELEMENTS_FETCH_FAILED,
-                    serviceId,
-                    searchLocationId,
-                  });
-                  break;
-                }
-                case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
-                case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR: {
-                  logger.error(
-                    'Endevor credentials are incorrect.',
-                    `${error.message}.`
-                  );
-                  dispatch({
-                    type: Actions.ELEMENTS_FETCH_FAILED,
-                    serviceId,
-                    searchLocationId,
-                  });
-                  break;
-                }
-                case ErrorResponseType.GENERIC_ERROR: {
-                  logger.error(
-                    'Unable to fetch elements from Endevor.',
-                    `${error.message}.`
-                  );
-                  dispatch({
-                    type: Actions.ELEMENTS_FETCH_FAILED,
-                    serviceId,
-                    searchLocationId,
-                  });
-                  break;
-                }
-                default:
-                  throw new UnreachableCaseError(errorResponse.type);
-              }
-              reporter.sendTelemetryEvent({
-                type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                status: ElementsFetchingStatus.GENERIC_ERROR,
-                elementsAmount: 0,
-              });
-              reporter.sendTelemetryEvent({
-                type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                // TODO specific statuses for each error type?
-                status: ElementsFetchingStatus.GENERIC_ERROR,
-                error,
-              });
-              resolve(undefined);
-              return error;
-            }
-            if (
-              elementsResponse.details &&
-              elementsResponse.details.returnCode >= 4
-            ) {
-              // TODO: format using all possible details
-              logger.warn(
-                'Fetching elements finished with warnings.',
-                `Fetching elements finished with warnings:${formatWithNewLines(
-                  elementsResponse.details.messages
-                )}`
-              );
-            }
-            const elements = elementsResponse.result;
-            const lastRefreshTimestamp = Date.now();
-            dispatch({
-              type: Actions.ELEMENTS_IN_PLACE_FETCHED,
-              serviceId,
-              searchLocationId,
-              elements: elements.reduce(
-                (acc: { [id: string]: CachedElement }, element) => {
-                  const newElementId =
-                    toElementCompositeKey(serviceId)(searchLocationId)(element);
-                  acc[newElementId] = {
-                    element,
-                    elementIsUpTheMap:
-                      isElementUpTheMap(searchLocation)(element),
-                    lastRefreshTimestamp,
-                  };
-                  return acc;
-                },
-                {}
-              ),
-            });
-            reporter.sendTelemetryEvent({
-              type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-              status: ElementsFetchingStatus.SUCCESS,
-              elementsAmount: elements.length,
-            });
-            resolve(undefined);
-            return;
-          })();
-        }),
-      };
-    }
-    const elements =
-      dataGetters.getFirstFoundElements(serviceId)(searchLocationId);
+    const logger = createEndevorLogger({ serviceId, searchLocationId });
+
+    const endevorInventory =
+      dataGetters.getEndevorInventory(serviceId)(searchLocationId);
+
+    const elements = (
+      searchForFirstFound
+        ? dataGetters.getFirstFoundElements
+        : dataGetters.getElementsInPlace
+    )(serviceId)(searchLocationId);
     if (elements?.cacheVersion === EndevorCacheVersion.UP_TO_DATE) {
       return {
         elementsPerRoute: elements.elementsPerRoute,
+        endevorInventory,
       };
     }
-    const elementsMap = dataGetters.getEndevorMap(serviceId)(searchLocationId);
-    if (elementsMap?.cacheVersion === EndevorCacheVersion.UP_TO_DATE) {
-      return {
-        outdatedCacheValue: {
-          elementsPerRoute: elements?.elementsPerRoute,
-        },
-        pendingTask: new Promise((resolve) => {
-          (async () => {
-            const connection = await dataGetters.getConnectionDetails(
-              serviceId
-            );
-            if (!connection) {
-              resolve(undefined);
-              return [];
-            }
-            const configuration = await dataGetters.getEndevorConfiguration(
-              serviceId,
-              searchLocationId
-            );
-            if (!configuration) {
-              resolve(undefined);
-              return [];
-            }
-            const credential = await dataGetters.getCredential(
-              connection,
-              configuration
-            )(serviceId);
-            if (!credential) {
-              resolve(undefined);
-              return [];
-            }
-            const searchLocation = await dataGetters.getSearchLocation(
-              searchLocationId
-            );
-            if (!searchLocation) {
-              resolve(undefined);
-              return [];
-            }
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const searchEnvironment = searchLocation.environment!;
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const searchStage = searchLocation.stageNumber!;
-            const elementsResponse = await withCancellableNotificationProgress(
-              'Fetching elements ...'
-            )((progress) =>
-              searchForAllElements(progress)({
-                ...connection.value,
-                credential: credential.value,
-              })(configuration)({
-                environment: searchEnvironment,
-                stageNumber: searchStage,
-              })(
-                searchLocation.system,
-                searchLocation.subsystem,
-                searchLocation.type,
-                searchLocation.element
-              )
-            );
-            const operationCancelled = !elementsResponse;
-            if (operationCancelled) {
-              dispatch({
-                type: Actions.ELEMENTS_FETCH_CANCELED,
-                serviceId,
-                searchLocationId,
-              });
-              resolve(undefined);
-              return;
-            }
-            if (isErrorEndevorResponse(elementsResponse)) {
-              const errorResponse = elementsResponse;
-              // TODO: format using all possible error details
-              const error = new Error(
-                `Unable to fetch elements information because of error:${formatWithNewLines(
-                  errorResponse.details.messages
-                )}`
-              );
-              dispatch({
-                type: Actions.ELEMENTS_FETCH_FAILED,
-                serviceId,
-                searchLocationId,
-              });
-              reporter.sendTelemetryEvent({
-                type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                status: ElementsFetchingStatus.GENERIC_ERROR,
-                elementsAmount: 0,
-              });
-              reporter.sendTelemetryEvent({
-                type: TelemetryEvents.ERROR,
-                errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                status: ElementsFetchingStatus.GENERIC_ERROR,
-                error,
-              });
-              logger.error(
-                'Unable to fetch elements from Endevor.',
-                `${error.message}.`
-              );
-              resolve(undefined);
-              return;
-            }
-            if (
-              elementsResponse.details &&
-              elementsResponse.details.returnCode >= 4
-            ) {
-              // TODO: format using all possible details
-              logger.warn(
-                'Fetching elements finished with warnings.',
-                `Fetching elements finished with warnings:${formatWithNewLines(
-                  elementsResponse.details.messages
-                )}`
-              );
-            }
-            const lastRefreshTimestamp = Date.now();
-            dispatch({
-              type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
-              serviceId,
-              searchLocationId,
-              elements: elementsResponse.result.reduce(
-                (acc: { [id: string]: CachedElement }, element) => {
-                  const newElementId =
-                    toElementCompositeKey(serviceId)(searchLocationId)(element);
-                  acc[newElementId] = {
-                    element,
-                    elementIsUpTheMap:
-                      isElementUpTheMap(searchLocation)(element),
-                    lastRefreshTimestamp,
-                  };
-                  return acc;
-                },
-                {}
-              ),
-            });
-            resolve(undefined);
-            return;
-          })();
-        }),
-      };
-    }
+
     return {
       outdatedCacheValue: {
         elementsPerRoute: elements?.elementsPerRoute,
+        endevorInventory,
       },
       pendingTask: new Promise((resolve) => {
-        (async () => {
-          const connection = await dataGetters.getConnectionDetails(serviceId);
-          if (!connection) {
-            resolve(undefined);
-            return [];
-          }
-          const configuration = await dataGetters.getEndevorConfiguration(
+        (async (): Promise<ReadonlyArray<Element> | Error | undefined> => {
+          const connectionParams = await getConnectionConfiguration(
             serviceId,
             searchLocationId
           );
-          if (!configuration) {
+          if (!connectionParams) {
             resolve(undefined);
             return [];
           }
-          const credential = await dataGetters.getCredential(
-            connection,
-            configuration
-          )(serviceId);
-          if (!credential) {
-            resolve(undefined);
-            return [];
-          }
-          const searchLocation = await dataGetters.getSearchLocation(
-            searchLocationId
-          );
-          if (!searchLocation) {
-            resolve(undefined);
-            return [];
-          }
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const searchEnvironment = searchLocation.environment!;
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const searchStage = searchLocation.stageNumber!;
-          // use the first task to test connections and credentials issues
-          const tasksNumber = 4;
+          const { service, searchLocation } = connectionParams;
+          const shouldFetchInventory =
+            endevorInventory?.cacheVersion !== EndevorCacheVersion.UP_TO_DATE;
+          const tasksNumber = shouldFetchInventory ? 5 : 1;
+          const progressTitle = `Fetching ${
+            shouldFetchInventory ? 'inventory and ' : ''
+          }elements ...`;
           const result = await withCancellableNotificationProgress(
-            'Fetching Endevor elements and map structure ...'
+            progressTitle
           )((progress, cancellationToken) => {
             // decline all other tasks if first is already unsuccessful
             const testTaskCompletionEmitter: vscode.EventEmitter<
@@ -659,208 +381,45 @@ const endevorCacheEffect =
                 resolve(value);
               });
             });
+            const inventoryPromises = shouldFetchInventory
+              ? endevorInventoryPromises(logger)(dispatch)(
+                  progress,
+                  tasksNumber
+                )(serviceId, searchLocationId)(service, searchLocation)(
+                  testTaskCompletionEmitter,
+                  testTaskCompletion
+                )(cancellationToken)
+              : Promise.resolve(emptyInventoryResult);
             return Promise.all([
-              (async (): Promise<ReadonlyArray<EnvironmentStage> | Error> => {
-                const environmentStagesResponse = await getAllEnvironmentStages(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
-                  ...connection.value,
-                  credential: credential.value,
-                })(configuration)(searchLocation);
-                if (cancellationToken?.isCancellationRequested) {
-                  testTaskCompletionEmitter.fire(undefined);
-                  return [];
-                }
-                if (isErrorEndevorResponse(environmentStagesResponse)) {
-                  const errorResponse = environmentStagesResponse;
-                  // TODO: format using all possible error details
-                  const error = new Error(
-                    `Unable to fetch environment stages information because of error:${formatWithNewLines(
-                      errorResponse.details.messages
-                    )}`
-                  );
-                  switch (errorResponse.type) {
-                    case ErrorResponseType.CONNECTION_ERROR:
-                    case ErrorResponseType.CERT_VALIDATION_ERROR:
-                      logger.error(
-                        'Unable to connect to Endevor Web Services.',
-                        `${error.message}.`
-                      );
-                      dispatch({
-                        type: Actions.ELEMENTS_FETCH_FAILED,
-                        serviceId,
-                        searchLocationId,
-                      });
-                      break;
-                    case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
-                    case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-                      logger.error(
-                        'Endevor credentials are incorrect.',
-                        `${error.message}.`
-                      );
-                      dispatch({
-                        type: Actions.ELEMENTS_FETCH_FAILED,
-                        serviceId,
-                        searchLocationId,
-                      });
-                      break;
-                    case ErrorResponseType.GENERIC_ERROR:
-                      logger.error(
-                        'Unable to fetch environment stages information from Endevor.',
-                        `${error.message}.`
-                      );
-                      dispatch({
-                        type: Actions.ELEMENTS_FETCH_FAILED,
-                        serviceId,
-                        searchLocationId,
-                      });
-                      break;
-                    default:
-                      throw new UnreachableCaseError(errorResponse.type);
-                  }
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ERROR,
-                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    // TODO specific statuses for each error type?
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  testTaskCompletionEmitter.fire(error);
-                  return error;
-                }
-                // TODO report warnings
-                const environmentStages = environmentStagesResponse.result;
-                testTaskCompletionEmitter.fire(environmentStages);
-                return environmentStages;
-              })(),
-              (async (): Promise<ReadonlyArray<System> | Error> => {
-                const testResult = await testTaskCompletion;
-                if (
-                  isError(testResult) ||
-                  !isDefined(testResult) ||
-                  cancellationToken?.isCancellationRequested
-                )
-                  return [];
-                const systemsResponse =
-                  await searchForSystemsFromEnvironmentStage(
-                    toSeveralTasksProgress(progress)(tasksNumber)
-                  )({
-                    ...connection.value,
-                    credential: credential.value,
-                  })(configuration)({
-                    environment: searchEnvironment,
-                    stageNumber: searchStage,
-                  })(searchLocation.system);
-                if (cancellationToken?.isCancellationRequested) {
-                  return [];
-                }
-                if (isErrorEndevorResponse(systemsResponse)) {
-                  const errorResponse = systemsResponse;
-                  // TODO: format using all possible error details
-                  const error = new Error(
-                    `Unable to fetch systems information from Endevor because of error:${formatWithNewLines(
-                      errorResponse.details.messages
-                    )}`
-                  );
-                  logger.error(
-                    'Unable to fetch systems information from Endevor.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ERROR,
-                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  return error;
-                }
-                // TODO report warnings
-                return systemStageIdToStageNumber(testResult)(
-                  systemsResponse.result
-                );
-              })(),
-              (async (): Promise<ReadonlyArray<SubSystem> | Error> => {
-                const testResult = await testTaskCompletion;
-                if (
-                  isError(testResult) ||
-                  !isDefined(testResult) ||
-                  cancellationToken?.isCancellationRequested
-                )
-                  return [];
-                const subsystemsResponse =
-                  await searchForSubSystemsFromEnvironmentStage(
-                    toSeveralTasksProgress(progress)(tasksNumber)
-                  )({
-                    ...connection.value,
-                    credential: credential.value,
-                  })(configuration)({
-                    environment: searchEnvironment,
-                    stageNumber: searchStage,
-                  })(searchLocation.system, searchLocation.subsystem);
-                if (cancellationToken?.isCancellationRequested) {
-                  return [];
-                }
-                if (isErrorEndevorResponse(subsystemsResponse)) {
-                  const errorResponse = subsystemsResponse;
-                  // TODO: format using all possible error details
-                  const error = new Error(
-                    `Unable to fetch systems information from Endevor because of error:${formatWithNewLines(
-                      errorResponse.details.messages
-                    )}`
-                  );
-                  logger.error(
-                    'Unable to fetch subsystems information from Endevor.',
-                    `${error.message}.`
-                  );
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ERROR,
-                    errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
-                    status: EndevorMapBuildingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  return error;
-                }
-                // TODO report warnings
-                return subsystemStageIdToStageNumber(testResult)(
-                  subsystemsResponse.result
-                );
-              })(),
+              inventoryPromises,
               (async (): Promise<ReadonlyArray<Element> | Error> => {
-                const testResult = await testTaskCompletion;
+                const testResult = shouldFetchInventory
+                  ? await testTaskCompletion
+                  : [];
                 if (
                   isError(testResult) ||
+                  !isDefined(testResult) ||
                   cancellationToken?.isCancellationRequested
-                )
+                ) {
                   return [];
-                const elementsResponse = await searchForAllElements(
-                  toSeveralTasksProgress(progress)(tasksNumber)
-                )({
-                  ...connection.value,
-                  credential: credential.value,
-                })(configuration)({
-                  environment: searchEnvironment,
-                  stageNumber: searchStage,
+                }
+                const elementsResponse = await (searchForFirstFound
+                  ? searchForAllElementsAndLogActivity
+                  : searchForElementsInPlaceAndLogActivity)(
+                  setLogActivityContext(dispatch, {
+                    serviceId,
+                    searchLocationId,
+                  })
+                )(toSeveralTasksProgress(progress)(tasksNumber))(service)({
+                  environment: searchLocation.environment,
+                  stageNumber: searchLocation.stageNumber,
                 })(
                   searchLocation.system,
                   searchLocation.subsystem,
                   searchLocation.type,
                   searchLocation.element
                 );
+
                 if (cancellationToken?.isCancellationRequested) {
                   return [];
                 }
@@ -868,25 +427,37 @@ const endevorCacheEffect =
                   const errorResponse = elementsResponse;
                   // TODO: format using all possible error details
                   const error = new Error(
-                    `Unable to fetch elements information from Endevor because of error:${formatWithNewLines(
+                    `Unable to fetch elements information because of error:${formatWithNewLines(
                       errorResponse.details.messages
                     )}`
                   );
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                    status: ElementsFetchingStatus.GENERIC_ERROR,
-                    elementsAmount: 0,
-                  });
-                  reporter.sendTelemetryEvent({
-                    type: TelemetryEvents.ERROR,
-                    errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                    status: ElementsFetchingStatus.GENERIC_ERROR,
-                    error,
-                  });
-                  logger.error(
-                    'Unable to fetch elements from Endevor.',
-                    `${error.message}.`
-                  );
+                  switch (errorResponse.type) {
+                    case ErrorResponseType.CONNECTION_ERROR:
+                    case ErrorResponseType.CERT_VALIDATION_ERROR: {
+                      logger.errorWithDetails(
+                        'Unable to connect to Endevor Web Services.',
+                        `${error.message}.`
+                      );
+                      break;
+                    }
+                    case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
+                    case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR: {
+                      logger.errorWithDetails(
+                        'Endevor credentials are incorrect.',
+                        `${error.message}.`
+                      );
+                      break;
+                    }
+                    case ErrorResponseType.GENERIC_ERROR: {
+                      logger.errorWithDetails(
+                        'Unable to fetch elements from Endevor.',
+                        `${error.message}.`
+                      );
+                      break;
+                    }
+                    default:
+                      throw new UnreachableCaseError(errorResponse.type);
+                  }
                   return error;
                 }
                 if (
@@ -894,7 +465,7 @@ const endevorCacheEffect =
                   elementsResponse.details.returnCode >= 4
                 ) {
                   // TODO: format using all possible details
-                  logger.warn(
+                  logger.warnWithDetails(
                     'Fetching elements finished with warnings.',
                     `Fetching elements finished with warnings:${formatWithNewLines(
                       elementsResponse.details.messages
@@ -902,11 +473,6 @@ const endevorCacheEffect =
                   );
                 }
                 const elements = elementsResponse.result;
-                reporter.sendTelemetryEvent({
-                  type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
-                  status: ElementsFetchingStatus.SUCCESS,
-                  elementsAmount: elements.length,
-                });
                 return elements;
               })(),
             ]);
@@ -921,12 +487,35 @@ const endevorCacheEffect =
             resolve(undefined);
             return;
           }
-          const [environmentStages, systems, subsystems, elements] = result;
+          const [inventoryResult, elements] = result;
+          const [environmentStages, systems, subsystems, types] =
+            inventoryResult;
           if (isError(environmentStages)) {
             resolve(undefined);
             return;
           }
-          if (isError(systems) || isError(subsystems) || isError(elements)) {
+          if (
+            isError(systems) ||
+            isError(subsystems) ||
+            isError(elements) ||
+            isError(types)
+          ) {
+            reporter.sendTelemetryEvent({
+              type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+              status: ElementsFetchingStatus.GENERIC_ERROR,
+              elementsAmount: 0,
+            });
+            result.forEach((actionResult) => {
+              if (isError(actionResult)) {
+                reporter.sendTelemetryEvent({
+                  type: TelemetryEvents.ERROR,
+                  errorContext: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+                  // TODO specific statuses for each error type?
+                  status: ElementsFetchingStatus.GENERIC_ERROR,
+                  error: actionResult,
+                });
+              }
+            });
             dispatch({
               type: Actions.ELEMENTS_FETCH_FAILED,
               serviceId,
@@ -935,34 +524,29 @@ const endevorCacheEffect =
             resolve(undefined);
             return;
           }
-          let endevorMap: EndevorMap;
-          if (
-            !isDefined(searchLocation.subsystem) ||
-            !isDefined(searchLocation.system)
-          ) {
-            endevorMap = toEndevorMapWithWildcards(environmentStages)(systems)(
-              subsystems
-            )({
-              environment: searchEnvironment,
-              stageNumber: searchStage,
-            });
-          } else {
-            endevorMap = toEndevorMap(environmentStages)(systems)(subsystems)({
-              environment: searchEnvironment,
-              stageNumber: searchStage,
-              system: searchLocation.system,
-              subSystem: searchLocation.subsystem,
-            });
-          }
+          const endevorMap = shouldFetchInventory
+            ? createEndevorMap(searchLocation)(environmentStages)(systems)(
+                subsystems
+              )
+            : undefined;
+          const cachedEnvironmentStages = shouldFetchInventory
+            ? createEndevorInventory(
+                environmentStages,
+                systems,
+                subsystems,
+                types
+              )
+            : undefined;
           const lastRefreshTimestamp = Date.now();
           dispatch({
-            type: Actions.ELEMENTS_UP_THE_MAP_FETCHED,
-            endevorMap,
+            type: Actions.ELEMENTS_FETCHED,
+            serviceId,
+            searchLocationId,
             elements: elements.reduce(
               (acc: { [id: string]: CachedElement }, element) => {
-                acc[
-                  toElementCompositeKey(serviceId)(searchLocationId)(element)
-                ] = {
+                const newElementId =
+                  toElementCompositeKey(serviceId)(searchLocationId)(element);
+                acc[newElementId] = {
                   element,
                   elementIsUpTheMap: isElementUpTheMap(searchLocation)(element),
                   lastRefreshTimestamp,
@@ -971,14 +555,319 @@ const endevorCacheEffect =
               },
               {}
             ),
-            serviceId,
-            searchLocationId,
+            endevorMap,
+            environmentStages: cachedEnvironmentStages,
+          });
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ELEMENTS_WERE_FETCHED,
+            status: ElementsFetchingStatus.SUCCESS,
+            elementsAmount: elements.length,
           });
           resolve(undefined);
           return;
         })();
       }),
     };
+  };
+
+const createEndevorMap =
+  (searchLocation: SearchLocation) =>
+  (environmentStages: ReadonlyArray<EnvironmentStage>) =>
+  (systems: ReadonlyArray<System>) =>
+  (subsystems: ReadonlyArray<SubSystem>): EndevorMap | undefined => {
+    const searchEnvironment = searchLocation.environment;
+    const searchStage = searchLocation.stageNumber;
+    if (
+      !isDefined(searchLocation.subsystem) ||
+      !isDefined(searchLocation.system)
+    ) {
+      return toEndevorMapWithWildcards(environmentStages)(systems)(subsystems)({
+        environment: searchEnvironment,
+        stageNumber: searchStage,
+      });
+    } else {
+      return toEndevorMap(environmentStages)(systems)(subsystems)({
+        environment: searchEnvironment,
+        stageNumber: searchStage,
+        system: searchLocation.system,
+        subSystem: searchLocation.subsystem,
+      });
+    }
+  };
+
+const endevorInventoryPromises =
+  (logger: EndevorLogger) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (progress: ProgressReporter, tasksNumber: number) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService, searchLocation: SearchLocation) =>
+  (
+    testTaskCompletionEmitter: vscode.EventEmitter<
+      Error | ReadonlyArray<EnvironmentStageResponseObject> | undefined
+    >,
+    testTaskCompletion: Promise<
+      Error | ReadonlyArray<EnvironmentStageResponseObject> | undefined
+    >
+  ) =>
+  async (
+    cancellationToken?: vscode.CancellationToken
+  ): Promise<InventoryResult> => {
+    const searchEnvironment = searchLocation.environment;
+    const searchStage = searchLocation.stageNumber;
+    const promiseResult = Promise.all([
+      (async (): Promise<ReadonlyArray<EnvironmentStage> | Error> => {
+        const environmentStagesResponse =
+          await getAllEnvironmentStagesAndLogActivity(
+            setLogActivityContext(dispatch, {
+              serviceId,
+              searchLocationId,
+            })
+          )(toSeveralTasksProgress(progress)(tasksNumber))(service)(
+            searchLocation
+          );
+        if (cancellationToken?.isCancellationRequested) {
+          testTaskCompletionEmitter.fire(undefined);
+          return [];
+        }
+        if (isErrorEndevorResponse(environmentStagesResponse)) {
+          const errorResponse = environmentStagesResponse;
+          // TODO: format using all possible error details
+          const error = new Error(
+            `Unable to fetch environment stages information because of error:${formatWithNewLines(
+              errorResponse.details.messages
+            )}`
+          );
+          switch (errorResponse.type) {
+            case ErrorResponseType.CONNECTION_ERROR:
+            case ErrorResponseType.CERT_VALIDATION_ERROR:
+              logger.errorWithDetails(
+                'Unable to connect to Endevor Web Services.',
+                `${error.message}.`
+              );
+              dispatch({
+                type: Actions.ELEMENTS_FETCH_FAILED,
+                serviceId,
+                searchLocationId,
+              });
+              break;
+            case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
+            case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
+              logger.errorWithDetails(
+                'Endevor credentials are incorrect.',
+                `${error.message}.`
+              );
+              dispatch({
+                type: Actions.ELEMENTS_FETCH_FAILED,
+                serviceId,
+                searchLocationId,
+              });
+              break;
+            case ErrorResponseType.GENERIC_ERROR:
+              logger.errorWithDetails(
+                'Unable to fetch environment stages information from Endevor.',
+                `${error.message}.`
+              );
+              dispatch({
+                type: Actions.ELEMENTS_FETCH_FAILED,
+                serviceId,
+                searchLocationId,
+              });
+              break;
+            default:
+              throw new UnreachableCaseError(errorResponse.type);
+          }
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            // TODO specific statuses for each error type?
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          testTaskCompletionEmitter.fire(error);
+          return error;
+        }
+        // TODO report warnings
+        const environmentStages = environmentStagesResponse.result;
+        testTaskCompletionEmitter.fire(environmentStages);
+        return environmentStages;
+      })(),
+      (async (): Promise<ReadonlyArray<System> | Error> => {
+        const testResult = await testTaskCompletion;
+        if (
+          isError(testResult) ||
+          !isDefined(testResult) ||
+          cancellationToken?.isCancellationRequested
+        )
+          return [];
+        const systemsResponse =
+          await searchForSystemsFromEnvironmentStageAndLogActivity(
+            setLogActivityContext(dispatch, {
+              serviceId,
+              searchLocationId,
+            })
+          )(toSeveralTasksProgress(progress)(tasksNumber))(service)({
+            environment: searchEnvironment,
+            stageNumber: searchStage,
+          })(searchLocation.system);
+        if (cancellationToken?.isCancellationRequested) {
+          return [];
+        }
+        if (isErrorEndevorResponse(systemsResponse)) {
+          const errorResponse = systemsResponse;
+          // TODO: format using all possible error details
+          const error = new Error(
+            `Unable to fetch systems information from Endevor because of error:${formatWithNewLines(
+              errorResponse.details.messages
+            )}`
+          );
+          logger.errorWithDetails(
+            'Unable to fetch systems information from Endevor.',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          return error;
+        }
+        // TODO report warnings
+        return systemStageIdToStageNumber(testResult)(systemsResponse.result);
+      })(),
+      (async (): Promise<ReadonlyArray<SubSystem> | Error> => {
+        const testResult = await testTaskCompletion;
+        if (
+          isError(testResult) ||
+          !isDefined(testResult) ||
+          cancellationToken?.isCancellationRequested
+        )
+          return [];
+        const subsystemsResponse =
+          await searchForSubSystemsFromEnvironmentStageAndLogActivity(
+            setLogActivityContext(dispatch, {
+              serviceId,
+              searchLocationId,
+            })
+          )(toSeveralTasksProgress(progress)(tasksNumber))(service)({
+            environment: searchEnvironment,
+            stageNumber: searchStage,
+          })(searchLocation.system, searchLocation.subsystem);
+        if (cancellationToken?.isCancellationRequested) {
+          return [];
+        }
+        if (isErrorEndevorResponse(subsystemsResponse)) {
+          const errorResponse = subsystemsResponse;
+          // TODO: format using all possible error details
+          const error = new Error(
+            `Unable to fetch systems information from Endevor because of error:${formatWithNewLines(
+              errorResponse.details.messages
+            )}`
+          );
+          logger.errorWithDetails(
+            'Unable to fetch subsystems information from Endevor.',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.ENDEVOR_MAP_STRUCTURE_BUILT,
+            status: EndevorMapBuildingStatus.GENERIC_ERROR,
+            error,
+          });
+          return error;
+        }
+        // TODO report warnings
+        return subsystemStageIdToStageNumber(testResult)(
+          subsystemsResponse.result
+        );
+      })(),
+      (async (): Promise<ReadonlyArray<ElementType> | Error> => {
+        const testResult = await testTaskCompletion;
+        if (
+          isError(testResult) ||
+          !isDefined(testResult) ||
+          cancellationToken?.isCancellationRequested
+        ) {
+          return [];
+        }
+        const typesResponse = await searchForTypesInPlaceAndLogActivity(
+          setLogActivityContext(dispatch, {
+            serviceId,
+            searchLocationId,
+          })
+        )(progress)(service)({
+          environment: searchEnvironment,
+          stageNumber: searchStage,
+        })(searchLocation);
+        if (cancellationToken?.isCancellationRequested) {
+          return [];
+        }
+        if (isErrorEndevorResponse(typesResponse)) {
+          const errorResponse = typesResponse;
+          // TODO: format using all possible error details
+          const error = new Error(
+            `Unable to fetch types information because of error:${formatWithNewLines(
+              errorResponse.details.messages
+            )}`
+          );
+          switch (errorResponse.type) {
+            case ErrorResponseType.CONNECTION_ERROR:
+            case ErrorResponseType.CERT_VALIDATION_ERROR: {
+              logger.errorWithDetails(
+                'Unable to connect to Endevor Web Services.',
+                `${error.message}.`
+              );
+              break;
+            }
+            case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
+            case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR: {
+              logger.errorWithDetails(
+                'Endevor credentials are incorrect.',
+                `${error.message}.`
+              );
+              break;
+            }
+            case ErrorResponseType.GENERIC_ERROR: {
+              logger.errorWithDetails(
+                'Unable to get types information from Endevor.',
+                `${error.message}.`
+              );
+              break;
+            }
+            default:
+              throw new UnreachableCaseError(errorResponse.type);
+          }
+          return error;
+        }
+        if (typesResponse.details && typesResponse.details.returnCode >= 4) {
+          // TODO: format using all possible details
+          logger.warnWithDetails(
+            'Fetching types finished with warnings.',
+            `Fetching types finished with warnings:${formatWithNewLines(
+              typesResponse.details.messages
+            )}`
+          );
+        }
+        const types = typesResponse.result;
+        return types;
+      })(),
+    ]);
+    return promiseResult;
   };
 
 // TODO: We can move this in the future.

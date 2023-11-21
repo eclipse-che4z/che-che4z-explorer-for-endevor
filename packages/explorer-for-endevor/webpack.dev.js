@@ -77,6 +77,13 @@ const config = {
   },
   module: {
     rules: [
+      // a rule to avoid @zowe/imperative's 'wontache' dependency build error
+      // suggested in https://stackoverflow.com/questions/75860031/compile-vscode-extension-with-webpack-now-failing-after-2-years-of-previously-co
+      {
+        test: /\.js$/,
+        include: /wontache/,
+        type: 'javascript/auto',
+      },
       {
         test: /\.ts$/,
         exclude: /node_modules/,

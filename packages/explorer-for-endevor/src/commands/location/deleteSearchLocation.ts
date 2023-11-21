@@ -16,7 +16,7 @@ import {
   askForSearchLocationDeletion,
   askToDeleteSearchLocationForAllServices,
 } from '../../dialogs/locations/endevorSearchLocationDialogs';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { Source } from '../../store/storage/_doc/Storage';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
@@ -27,17 +27,16 @@ import { LocationNode } from '../../tree/_doc/ServiceLocationTree';
 import {
   CommandDeleteSearchLocationCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { hideSearchLocation } from './hideSearchLocation';
+import { createEndevorLogger } from '../../logger';
 
 export const deleteSearchLocation =
   (
-    configurations: {
-      getServiceDescriptionsBySearchLocationId: (
-        searchLocationId: EndevorId
-      ) => EndevorServiceDescriptions;
-    },
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getServiceDescriptionsBySearchLocationId: (
+      searchLocationId: EndevorId
+    ) => Promise<EndevorServiceDescriptions>
   ) =>
   async (node: LocationNode): Promise<void> => {
     const searchLocationId: EndevorId = {
@@ -46,11 +45,15 @@ export const deleteSearchLocation =
     };
     const serviceName = node.serviceName;
     const serviceSource = node.serviceSource;
-    logger.trace(
-      `Delete the ${searchLocationId.source} Endevor inventory location ${searchLocationId.name} for the ${serviceSource} Endevor service ${serviceName} called.`
+    const logger = createEndevorLogger({
+      serviceId: { name: serviceName, source: serviceSource },
+      searchLocationId,
+    });
+    logger.traceWithDetails(
+      `Delete the Endevor inventory location from the Endevor service was called.`
     );
     const usedByServices = Object.values(
-      configurations.getServiceDescriptionsBySearchLocationId(searchLocationId)
+      await getServiceDescriptionsBySearchLocationId(searchLocationId)
     );
     if (
       usedByServices.length === 1 &&

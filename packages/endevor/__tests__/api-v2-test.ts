@@ -40,6 +40,9 @@ import {
   generateSubSystemElementsInPlace,
   getAuthenticationToken,
   downloadReportById,
+  moveElements,
+  printMember,
+  getMembersFromDataset,
 } from '../endevor';
 import { mockEndpoint } from '../testUtils';
 import { isDefined, isErrorEndevorResponse, toEndevorProtocol } from '../utils';
@@ -66,6 +69,8 @@ import {
   SearchStrategies,
   Value,
   ErrorResponseType,
+  Member,
+  Dataset,
 } from '../_doc/Endevor';
 import { MockRequest, MockResponse } from '../_doc/MockServer';
 import { ProgressReporter } from '../_doc/Progress';
@@ -99,7 +104,8 @@ const configuration = 'TEST-CONFIG';
 const mockServer = getLocal();
 beforeEach(async () => {
   await mockServer.start();
-  mockServer.enableDebug();
+  // enable for debug messages
+  // mockServer.enableDebug();
 });
 afterEach(() => mockServer.stop());
 
@@ -2418,9 +2424,15 @@ describe('endevor public api v2', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const invalidElementTypes: ReadonlyArray<unknown> = [
@@ -2447,8 +2459,14 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2457,6 +2475,7 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.typeName,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
               };
@@ -2506,9 +2525,15 @@ describe('endevor public api v2', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const invalidElementTypes: ReadonlyArray<unknown> = [
@@ -2535,8 +2560,14 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2545,6 +2576,7 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.typeName,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
               };
@@ -2594,23 +2626,41 @@ describe('endevor public api v2', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV1',
           system: 'TEST-SYS1',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE1',
           nextType: 'NEXT_TYPE1',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV2',
           system: 'TEST-SYS2',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE2',
           nextType: 'NEXT_TYPE2',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2628,8 +2678,14 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -2681,23 +2737,41 @@ describe('endevor public api v2', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV1',
           system: 'TEST-SYS1',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE1',
           nextType: 'NEXT_TYPE1',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
         {
           environment: 'TEST-ENV2',
           system: 'TEST-SYS2',
+          stageNumber: '2',
           stageId: '2',
           type: 'TYPE2',
           nextType: 'NEXT_TYPE2',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2715,8 +2789,14 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -2768,9 +2848,15 @@ describe('endevor public api v2', () => {
         {
           environment: 'TEST-ENV',
           system: 'TEST-SYS',
+          stageNumber: '1',
           stageId: '1',
           type: 'TEST-TYPE',
           nextType: 'NEXT_TYPE',
+          description: 'TYPE-DESC',
+          defaultPrcGrp: 'DEF-PROC',
+          dataFm: 'DATA-FM',
+          fileExt: '.TXT',
+          lang: 'EN',
         },
       ];
       const response: MockResponse<unknown> = {
@@ -2788,8 +2874,14 @@ describe('endevor public api v2', () => {
                 envName: elementType.environment,
                 sysName: elementType.system,
                 typeName: elementType.type,
+                stgNum: elementType.stageNumber,
                 stgId: elementType.stageId,
                 nextType: elementType.nextType,
+                description: elementType.description,
+                dfltProcGrp: elementType.defaultPrcGrp,
+                dataFm: elementType.dataFm,
+                fileExt: elementType.fileExt,
+                lang: elementType.lang,
               };
             }),
           ],
@@ -3059,6 +3151,8 @@ describe('endevor public api v2', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3095,6 +3189,8 @@ describe('endevor public api v2', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3166,6 +3262,8 @@ describe('endevor public api v2', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3202,6 +3300,8 @@ describe('endevor public api v2', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3273,6 +3373,8 @@ describe('endevor public api v2', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3310,6 +3412,8 @@ describe('endevor public api v2', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3382,6 +3486,8 @@ describe('endevor public api v2', () => {
           stageNumber: '1',
           extension: 'ext',
           lastActionCcid: 'TEST-CCID',
+          processorGroup: '*NOPROC*',
+          vvll: '0100',
         },
       ];
       const invalidElements: ReadonlyArray<unknown> = [
@@ -3418,6 +3524,8 @@ describe('endevor public api v2', () => {
                 fullElmName: element.name,
                 lastActCcid: element.lastActionCcid,
                 nosource: element.noSource ? 'Y' : 'N',
+                procGrpName: element.processorGroup,
+                elmVVLL: element.vvll,
               };
             }),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -4072,6 +4180,7 @@ describe('endevor public api v2', () => {
         details: {
           returnCode: 0,
           messages: [],
+          reportIds: undefined,
         },
       });
     });
@@ -4723,6 +4832,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -4768,7 +4878,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -4789,6 +4899,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -4797,7 +4908,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           nonExistingService
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -4817,6 +4928,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -4854,7 +4966,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -4878,6 +4990,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -4923,7 +5036,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -4948,6 +5061,7 @@ describe('endevor public api v2', () => {
           type: 'NONEXIST',
           id: 'NONEXIST',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -4995,7 +5109,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(incorrectElementLocation)(
+        )(configuration)(incorrectElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -5016,6 +5130,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5065,7 +5180,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(signedOutElementLocation)(
+        )(configuration)(signedOutElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -5089,6 +5204,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5136,7 +5252,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )();
         // assert
@@ -5153,6 +5269,7 @@ describe('endevor public api v2', () => {
 
       it('should return an error if something went wrong in Endevor side', async () => {
         // arrange
+        const testProcGroup = 'TEST-PROC';
         mockServer.forAnyRequest().thenJson(
           500,
           {
@@ -5183,7 +5300,7 @@ describe('endevor public api v2', () => {
         // act
         const updateResult = await generateElementInPlace(logger)(progress)(
           service
-        )(configuration)(existingElementLocation)(
+        )(configuration)(existingElementLocation)(testProcGroup)(
           updateActionChangeControlValue
         )();
         // assert
@@ -5203,6 +5320,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5251,7 +5369,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5273,6 +5391,7 @@ describe('endevor public api v2', () => {
           id: 'ELM',
         };
         const targetElementLocation = existingElementLocation;
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5321,7 +5440,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5342,6 +5461,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5390,7 +5510,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5411,6 +5531,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5423,8 +5544,8 @@ describe('endevor public api v2', () => {
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
         )(nonExistingService)(configuration)(targetElementLocation)(
-          generateActionChangeControlValue
-        )(generateWithCopyBackParams)();
+          testProcGroup
+        )(generateActionChangeControlValue)(generateWithCopyBackParams)();
         // assert
         expect(
           isErrorEndevorResponse(generateResult) &&
@@ -5442,6 +5563,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5482,7 +5604,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5506,6 +5628,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5554,7 +5677,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5579,6 +5702,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5629,7 +5753,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5653,6 +5777,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5701,7 +5826,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(incorrectTargetLocation)(
+        )(service)(configuration)(incorrectTargetLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5723,6 +5848,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: nonExistingElementName,
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5771,7 +5897,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5792,6 +5918,7 @@ describe('endevor public api v2', () => {
           type: 'TEST-TYPE',
           id: 'ELM',
         };
+        const testProcGroup = 'TEST-PROC';
         const generateActionChangeControlValue: ActionChangeControlValue = {
           ccid: 'test',
           comment: 'test',
@@ -5842,7 +5969,7 @@ describe('endevor public api v2', () => {
         // act
         const generateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(targetElementLocation)(
+        )(service)(configuration)(targetElementLocation)(testProcGroup)(
           generateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -5859,6 +5986,7 @@ describe('endevor public api v2', () => {
 
       it('should return an error if something went wrong in Endevor side', async () => {
         // arrange
+        const testProcGroup = 'TEST-PROC';
         mockServer.forAnyRequest().thenJson(
           500,
           {
@@ -5892,7 +6020,7 @@ describe('endevor public api v2', () => {
         // act
         const updateResult = await generateElementWithCopyBack(logger)(
           progress
-        )(service)(configuration)(existingElementLocation)(
+        )(service)(configuration)(existingElementLocation)(testProcGroup)(
           updateActionChangeControlValue
         )(generateWithCopyBackParams)();
         // assert
@@ -6448,7 +6576,7 @@ describe('endevor public api v2', () => {
         {
           data: [],
           messages,
-          reports: [],
+          reports: {},
           returnCode,
         },
         {
@@ -6494,7 +6622,7 @@ describe('endevor public api v2', () => {
         {
           data: [],
           messages,
-          reports: [],
+          reports: {},
           returnCode,
         },
         {
@@ -6778,7 +6906,7 @@ describe('endevor public api v2', () => {
         {
           data: [],
           messages,
-          reports: [],
+          reports: {},
           returnCode,
         },
         {
@@ -6803,6 +6931,7 @@ describe('endevor public api v2', () => {
         details: {
           returnCode,
           messages: messages.map((message) => message.trim()),
+          reportIds: undefined,
         },
       });
     });
@@ -6927,7 +7056,7 @@ describe('endevor public api v2', () => {
         {
           data: [],
           messages: [],
-          reports: [],
+          reports: {},
           returnCode: 0,
         },
         {
@@ -6943,6 +7072,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6951,7 +7081,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.status).toEqual('OK');
     });
@@ -6966,6 +7096,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6974,7 +7105,9 @@ describe('endevor public api v2', () => {
       // act
       const addElementResponse = await addElement(logger)(progress)(
         nonExistingService
-      )(configuration)(element)(addActionChangeControlValue)(elementData);
+      )(configuration)(element)(testProcGroup)(addActionChangeControlValue)(
+        elementData
+      );
       // assert
       expect(
         isErrorEndevorResponse(addElementResponse) &&
@@ -7009,6 +7142,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7017,7 +7151,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.details?.messages).toEqual([expectedMessage]);
     });
@@ -7049,6 +7183,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7057,7 +7192,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.details?.messages).toEqual([expectedMessage]);
     });
@@ -7072,6 +7207,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7080,7 +7216,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(nonExistingService)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.details?.messages).toEqual([
         `connect ECONNREFUSED ${nonExistingService.location.hostname}:${nonExistingService.location.port}`,
@@ -7115,6 +7251,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: '',
         comment: '',
@@ -7123,7 +7260,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.details?.messages).toEqual([expectedMessage]);
     });
@@ -7155,6 +7292,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7163,7 +7301,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.details?.messages).toEqual([expectedMessage]);
     });
@@ -7194,6 +7332,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const testProcGroup = 'TEST-PROC';
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7202,7 +7341,7 @@ describe('endevor public api v2', () => {
       // act
       const addResult = await addElement(logger)(progress)(service)(
         configuration
-      )(element)(addActionChangeControlValue)(elementData);
+      )(element)(testProcGroup)(addActionChangeControlValue)(elementData);
       // assert
       expect(addResult.status).toEqual(ResponseStatus.ERROR);
     });
@@ -9080,6 +9219,481 @@ describe('endevor public api v2', () => {
       expect(calledOnce).toBe(true);
 
       expect(actualContent).toBe(undefined);
+    });
+  });
+  describe('moving an element', () => {
+    const configuration = 'TEST-INST';
+    const element: ElementMapPath = {
+      environment: 'TEST-ENV',
+      stageNumber: '1',
+      system: 'TEST-SYS',
+      subSystem: 'TEST-SBS',
+      type: 'TEST-TYPE',
+      id: 'ELM1',
+    };
+    const toRequestPath =
+      (basePath: string) =>
+      (configuration: Value) =>
+      ({
+        environment,
+        stageNumber,
+        system,
+        subSystem,
+        type,
+        id: name,
+      }: ElementMapPath): string => {
+        return join(
+          basePath,
+          configuration,
+          'env',
+          environment,
+          'stgnum',
+          stageNumber,
+          'sys',
+          system,
+          'subsys',
+          subSystem,
+          'type',
+          type,
+          'ele',
+          name
+        );
+      };
+    const signoutChangeControlValue = {
+      ccid: 'test',
+      comment: 'testComment',
+    };
+    const moveOptions = {
+      withHistory: false,
+      bypassElementDelete: false,
+      synchronize: false,
+      retainSignout: false,
+      ackElementJump: false,
+    };
+
+    it('should move an element', async () => {
+      // arrange
+      const moveOptions = {
+        withHistory: false,
+        bypassElementDelete: false,
+        synchronize: false,
+        retainSignout: false,
+        ackElementJump: false,
+      };
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          ...responseHeaders,
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0000',
+          reasonCode: '0000',
+          reports: {
+            APIMSGS: '/reports/1631287369-1243603095386082-APIMSGS',
+            C1MSGS1: '/reports/1631287369-1243603095386082-C1MSGS1',
+          },
+          data: [],
+          messages: [],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(!isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect connection details', async () => {
+      // arrange
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const moveResponse = await moveElements(logger)(progress)(
+        nonExistingService
+      )(configuration)(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error for incorrect base credentials', async () => {
+      // arrange
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: '0020',
+          reasonCode: '0034',
+          reports: null,
+          data: [],
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+
+    it('should return error if something goes wrong in Endevor side', async () => {
+      // arrange
+      const request: MockRequest<{ action: string }> = {
+        method: 'PUT',
+        path: toRequestPath(basePath)(configuration)(element),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: { action: 'move' },
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: {
+          'content-type': 'application/json',
+        },
+        data: {
+          realData: ['Is it real data or not???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const moveResponse = await moveElements(logger)(progress)(service)(
+        configuration
+      )(element)(signoutChangeControlValue)(moveOptions);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(moveResponse)).toBe(true);
+    });
+  });
+
+  describe('printing members', () => {
+    const configuration = 'TEST-INST';
+    const member: Member = {
+      name: 'TESTMEM',
+      dataset: {
+        name: 'BST.M2.TEST',
+      },
+    };
+    const toRequestPath = (configuration: Value): string => {
+      return join(basePath, configuration, 'member');
+    };
+
+    it('should return member content', async () => {
+      // arrange
+      const requestQuery = `?memName=${member.name}&dsname=${member.dataset.name}&headings=no`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'text/plain',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const content = 'very important content';
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          ...responseHeaders,
+          'content-type': 'text/plain',
+        },
+        data: content,
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await printMember(logger)(progress)(service)(
+        configuration
+      )(member);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+      if (isErrorEndevorResponse(actualResponse)) {
+        assert.fail(
+          `Print member failed because of: ${actualResponse.details.messages}`
+        );
+      }
+      expect(actualResponse.result).toStrictEqual(content);
+    });
+
+    it('should return an error for incorrect connection details', async () => {
+      // arrange
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const actualResponse = await printMember(logger)(progress)(
+        nonExistingService
+      )(configuration)(member);
+      // assert
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
+    });
+
+    it('should return an error for incorrect base credentials', async () => {
+      // arrange
+      const requestQuery = `?memName=${member.name}&dsname=${member.dataset.name}&headings=no`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'text/plain',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: responseHeaders,
+        data: {
+          returnCode: '20',
+          reasonCode: '34',
+          reports: null,
+          data: [],
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await printMember(logger)(progress)(service)(
+        configuration
+      )(member);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
+    });
+
+    it('should return an error if something went wrong in Endevor side', async () => {
+      // arrange
+      const requestQuery = `?memName=${member.name}&dsname=${member.dataset.name}&headings=no`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'text/plain',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: responseHeaders,
+        data: {
+          realData: ['Is it real data or not???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await printMember(logger)(progress)(service)(
+        configuration
+      )(member);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
+    });
+  });
+
+  describe('getting members from dataset', () => {
+    const configuration = 'TEST-INST';
+    const dataset: Dataset = {
+      name: 'BST.M2.TEST',
+    };
+    const toRequestPath = (configuration: Value): string => {
+      return join(basePath, configuration, 'directory');
+    };
+
+    it('should return list of members', async () => {
+      // arrange
+      const members: ReadonlyArray<Member> = [
+        {
+          name: 'MEM1',
+          dataset,
+        },
+        {
+          name: 'MEM2',
+          dataset,
+        },
+      ];
+      const requestQuery = `?dsname=${dataset.name}`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const response: MockResponse<unknown> = {
+        status: 200,
+        statusMessage: 'OK',
+        headers: {
+          ...responseHeaders,
+          'content-type': 'application/json',
+        },
+        data: {
+          returnCode: 0,
+          reasonCode: 0,
+          reports: {},
+          messages: [],
+          data: members.map((member) => ({ mbrName: member.name })),
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await getMembersFromDataset(logger)(progress)(
+        service
+      )(configuration)(dataset);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+      if (isErrorEndevorResponse(actualResponse)) {
+        assert.fail(
+          `Print member failed because of: ${actualResponse.details.messages}`
+        );
+      }
+      expect(actualResponse.result).toStrictEqual(members);
+    });
+
+    it('should return an error for incorrect connection details', async () => {
+      // arrange
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const actualResponse = await getMembersFromDataset(logger)(progress)(
+        nonExistingService
+      )(configuration)(dataset);
+      // assert
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
+    });
+
+    it('should return an error for incorrect base credentials', async () => {
+      // arrange
+      const requestQuery = `?dsname=${dataset.name}`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: responseHeaders,
+        data: {
+          returnCode: '20',
+          reasonCode: '34',
+          reports: null,
+          data: [],
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await getMembersFromDataset(logger)(progress)(
+        service
+      )(configuration)(dataset);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
+    });
+
+    it('should return an error if something went wrong in Endevor side', async () => {
+      // arrange
+      const requestQuery = `?dsname=${dataset.name}`;
+      const request: MockRequest<null> = {
+        method: 'GET',
+        path: toRequestPath(configuration),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${toBase64(credential)}`,
+        },
+        body: null,
+        query: requestQuery,
+      };
+      const response: MockResponse<unknown> = {
+        status: 500,
+        statusMessage: 'Internal server error',
+        headers: responseHeaders,
+        data: {
+          realData: ['Is it real data or not???'],
+        },
+      };
+      const endevorEndpoint = await mockEndpoint(request, response)(mockServer);
+      const service = toService(mockServer.urlFor(request.path));
+      // act
+      const actualResponse = await getMembersFromDataset(logger)(progress)(
+        service
+      )(configuration)(dataset);
+      // assert
+      const seenRequests = await endevorEndpoint.getSeenRequests();
+      const calledOnce = seenRequests.length === 1;
+      expect(calledOnce).toBe(true);
+
+      expect(isErrorEndevorResponse(actualResponse)).toBe(true);
     });
   });
 });

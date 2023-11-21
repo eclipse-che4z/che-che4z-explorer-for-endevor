@@ -24,7 +24,7 @@ import { logger, reporter } from '../../globals';
 import {
   TelemetryEvents,
   ProfileMigrationCompletedStatus,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { toCompositeKey } from './utils';
 
 const getSettingsConnectionLocations = (): ConnectionLocations | Error => {

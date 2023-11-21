@@ -13,13 +13,17 @@
 
 import { Element } from '@local/endevor/_doc/Endevor';
 
-export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
+export const renderElementAttributes = (
+  element: Element,
+  warningMessage?: string
+) => `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>${element.name} - Details</title>
 </head>
 <body>
+  ${warningMessage ? '<p>&#x26A0;<i> ' + warningMessage + '</i></p>' : ''}
   <table>
     <tr>
       <td> envName </td>
@@ -46,6 +50,10 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
       <td>: ${element.name} </td>
     </tr>
     <tr>
+      <td> vvll </td>
+      <td>: ${element.vvll} </td>
+    </tr>
+    <tr>
       <td> fileExt </td>
       <td>: ${element.extension ? element.extension : ''} </td>
     </tr>
@@ -56,7 +64,19 @@ export const renderElementAttributes = (element: Element) => `<!DOCTYPE html>
     <tr>
       <td> noSource </td>
       <td>: ${element.noSource ? 'yes' : 'no'} </td>
-    </tr>    
+    </tr>   
+    <tr>
+      <td> processorGroup </td>
+      <td>: ${element.processorGroup ? element.processorGroup : ''} </td>
+    </tr>   
+    <tr>
+      <td> signoutId </td>
+      <td>: ${element.signoutId ? element.signoutId : ''} </td>
+    </tr>   
+    <tr>
+      <td> componentVvll </td>
+      <td>: ${element.componentVvll ? element.componentVvll : ''} </td>
+    </tr>  
   </table>
 </body>
 </html>`;

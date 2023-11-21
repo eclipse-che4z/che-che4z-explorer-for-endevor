@@ -15,82 +15,109 @@ import {
   askForChangeControlValue,
   dialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
-import { generateSubsystemElementsInPlace } from '../../endevor';
-import { logger, reporter } from '../../globals';
+import { generateSubsystemElementsInPlaceAndLogActivity } from '../../api/endevor';
+import { reporter } from '../../globals';
 import { SubSystemNode } from '../../tree/_doc/ElementTree';
 import { Action, Actions } from '../../store/_doc/Actions';
-import { Service, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
+import { SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 import {
   GenerateSubsystemElementsInPlaceCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
-import { EndevorConfiguration, EndevorId } from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { printResultTableCommand } from '../printResultTable';
 import { formatWithNewLines } from '../../utils';
-import { SearchLocation } from '../../_doc/Endevor';
-import { ConnectionConfigurations, getConnectionConfiguration } from '../utils';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import { askForGenerateAllElements } from '../../dialogs/locations/endevorSubsystemDialogs';
 
 type SelectedSubSystemNode = SubSystemNode;
 
 export const generateSubsystemElementsCommand =
   (
     dispatch: (action: Action) => Promise<void>,
-    configurations: ConnectionConfigurations
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
   ) =>
   async (subSystemNode: SelectedSubSystemNode) => {
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const logger = createEndevorLogger({
+      serviceId: subSystemNode.serviceId,
+      searchLocationId: subSystemNode.searchLocationId,
+    });
+    if (!(await askForGenerateAllElements(subSystemNode.name))) return;
+    const connectionParams = await getConnectionConfiguration(
       subSystemNode.serviceId,
       subSystemNode.searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
-    logger.trace(
-      `Generate elements in the subsystem command was called for ${subSystemNode.name}.`
+    const { service, searchLocation } = connectionParams;
+    logger.traceWithDetails(
+      `Generate elements in subsystem command was called for ${subSystemNode.name}.`
     );
-    await generateSubsystemElements(dispatch)(configuration)(service)(
-      searchLocation
-    )(subSystemNode);
+    await generateSubsystemElements(dispatch)(service)(searchLocation)(
+      subSystemNode
+    );
   };
 
 const generateSubsystemElements =
   (dispatch: (action: Action) => Promise<void>) =>
-  (configuration: EndevorConfiguration) =>
-  (service: Service) =>
+  (service: EndevorAuthorizedService) =>
   (searchLocation: SearchLocation) =>
   async (subSystemNode: SelectedSubSystemNode): Promise<void> => {
+    const logger = createEndevorLogger({
+      serviceId: subSystemNode.serviceId,
+      searchLocationId: subSystemNode.searchLocationId,
+    });
     const actionControlValue = await askForChangeControlValue({
       ccid: searchLocation?.ccid,
       comment: searchLocation?.comment,
     });
     if (dialogCancelled(actionControlValue)) {
       logger.error(
-        `Elements is the subsystem ${subSystemNode.name} could be generated only with CCID and Comment specified.`
+        `Elements in subsystem ${subSystemNode.name} could be generated only with CCID and Comment specified.`
       );
       return;
     }
     const generateResponse = await withNotificationProgress(
-      `Generating elements in the subsystem: ${subSystemNode.name}`
+      `Generating elements in subsystem ${subSystemNode.name} ...`
     )((progressReporter) =>
-      generateSubsystemElementsInPlace(progressReporter)(service)(
-        configuration
-      )(subSystemNode.subSystemMapPath)(actionControlValue)()
+      generateSubsystemElementsInPlaceAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId: subSystemNode.serviceId,
+          searchLocationId: subSystemNode.searchLocationId,
+        })
+      )(progressReporter)(service)(subSystemNode.subSystemMapPath)(
+        actionControlValue
+      )()
     );
     if (isErrorEndevorResponse(generateResponse)) {
-      const executionReportId =
-        generateResponse.details.reportIds?.executionReportId;
+      const executionReportId = generateResponse.details.reportIds?.C1MSGS1;
       if (executionReportId) {
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.COMMAND_PRINT_RESULT_TABLE_CALL,
           context:
             TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED,
         });
-        await printResultTableCommand(subSystemNode.name)(configuration)(
-          service
-        )(subSystemNode.serviceId)(subSystemNode.searchLocationId)(
-          actionControlValue.ccid
-        )(executionReportId);
+        await printResultTableCommand(
+          subSystemNode.serviceId,
+          subSystemNode.searchLocationId
+        )(subSystemNode.name)(actionControlValue.ccid)(executionReportId);
       }
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.COMMAND_GENERATE_SUBSYSTEM_ELEMENTS_IN_PLACE_COMPLETED,
@@ -99,17 +126,17 @@ const generateSubsystemElements =
       return;
     }
     if (generateResponse.details && generateResponse.details.returnCode >= 4) {
-      logger.warn(
-        `Elements in the subsystem ${subSystemNode.name} were generated with warnings.`,
-        `Elements in the subsystem ${
+      logger.warnWithDetails(
+        `Elements in subsystem ${subSystemNode.name} were generated with warnings.`,
+        `Elements in subsystem ${
           subSystemNode.name
         } were generated with warnings:\n${formatWithNewLines(
           generateResponse.details.messages
         )}`
       );
     } else {
-      logger.info(
-        `Elements in the subsystem ${subSystemNode.name} are generated successfully.`
+      logger.infoWithDetails(
+        `Elements in subsystem ${subSystemNode.name} are generated successfully.`
       );
     }
     updateTreeAfterGenerate(dispatch)(

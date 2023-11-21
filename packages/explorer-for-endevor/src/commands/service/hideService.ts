@@ -11,15 +11,17 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { Action, Actions } from '../../store/_doc/Actions';
 import { ServiceNode } from '../../tree/_doc/ServiceLocationTree';
-import { TelemetryEvents } from '../../_doc/telemetry/Telemetry';
+import { TelemetryEvents } from '../../telemetry/_doc/Telemetry';
+import { createEndevorLogger } from '../../logger';
 
 export const hideServiceCommand =
   (dispatch: (action: Action) => Promise<void>) =>
   async ({ name, source }: ServiceNode): Promise<void> => {
-    logger.trace(`Hide ${source} Endevor connection ${name} called.`);
+    const logger = createEndevorLogger({ serviceId: { name, source } });
+    logger.traceWithDetails(`Hide Endevor connection was called.`);
     dispatch({
       type: Actions.ENDEVOR_SERVICE_HIDDEN,
       serviceId: {

@@ -18,8 +18,8 @@ export interface Command {
   category: string;
 }
 
-export interface Extension {
-  activate: (context: ExtensionContext) => Promise<void>;
+export interface Extension<T = void> {
+  activate: (context: ExtensionContext) => Promise<T>;
   deactivate: () => void;
 }
 

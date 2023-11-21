@@ -18,7 +18,7 @@ import { ZOWE_PROFILE_DESCRIPTION } from '../constants';
 import { Source } from '../store/storage/_doc/Storage';
 import { toBasicElementUri } from '../uri/basicElementUri';
 import { isError } from '../utils';
-import { ElementNode } from './_doc/ElementTree';
+import { ElementNode, TypeNode } from './_doc/ElementTree';
 import { FilteredNode, FilterNode, FilterValueNode } from './_doc/FilterTree';
 import { AddNewSearchLocationNode, Node } from './_doc/ServiceLocationTree';
 
@@ -39,6 +39,18 @@ class BasicItem extends vscode.TreeItem {
   constructor(name: string, type: string) {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = type;
+  }
+}
+
+class TypeItem extends vscode.TreeItem {
+  constructor(node: TypeNode) {
+    super(
+      node.name,
+      !node.elements.length && !node.map?.elements.length
+        ? vscode.TreeItemCollapsibleState.None
+        : vscode.TreeItemCollapsibleState.Collapsed
+    );
+    this.contextValue = node.type;
   }
 }
 
@@ -68,6 +80,23 @@ class ServiceLocationItem extends vscode.TreeItem {
       default:
         throw new UnreachableCaseError(source);
     }
+  }
+}
+
+class ValidServiceLocationItem extends ServiceLocationItem {
+  constructor(
+    name: string,
+    source: Source,
+    type: string,
+    duplicate: boolean,
+    showEmptyTypes: boolean,
+    collapsable: boolean,
+    tooltip?: vscode.MarkdownString | string
+  ) {
+    super(name, source, type, duplicate, collapsable, tooltip);
+    this.contextValue = `${type}${
+      showEmptyTypes ? '/WITH_EMPTY_TYPES' : ''
+    }/VALID`;
   }
 }
 
@@ -103,6 +132,12 @@ class ElementItem extends vscode.TreeItem {
     this.contextValue = node.type;
     this.tooltip = node.tooltip;
     this.description = node.noSource ? 'no-source' : undefined;
+    this.iconPath = node.outOfDate
+      ? new vscode.ThemeIcon(
+          'history',
+          new vscode.ThemeColor('list.warningForeground')
+        )
+      : undefined;
     this.command = {
       title: 'Print Element',
       command: CommandId.PRINT_ELEMENT,
@@ -134,16 +169,25 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
     case 'BUTTON_ADD_SEARCH_LOCATION':
       return new ButtonItem(node);
     case 'SERVICE':
-    case 'LOCATION':
-    case 'LOCATION/WITH_MAP':
     case 'SERVICE_PROFILE':
-    case 'LOCATION_PROFILE':
-    case 'LOCATION_PROFILE/WITH_MAP':
       return new ServiceLocationItem(
         node.name,
         node.source,
         node.type,
         node.duplicated,
+        true,
+        node.tooltip
+      );
+    case 'LOCATION':
+    case 'LOCATION/WITH_MAP':
+    case 'LOCATION_PROFILE':
+    case 'LOCATION_PROFILE/WITH_MAP':
+      return new ValidServiceLocationItem(
+        node.name,
+        node.source,
+        node.type,
+        node.duplicated,
+        !!node.withEmptyTypes,
         true,
         node.tooltip
       );
@@ -179,8 +223,9 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
     case 'MAP':
     case 'SYS':
     case 'SUB':
-    case 'TYPE':
       return new BasicItem(node.name, node.type);
+    case 'TYPE':
+      return new TypeItem(node);
     case 'EMPTY_MAP_NODE':
       return new EmptyMapItem();
     case 'FILTERED':

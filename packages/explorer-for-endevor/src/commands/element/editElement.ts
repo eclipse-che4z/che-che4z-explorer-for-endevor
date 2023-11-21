@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import * as vscode from 'vscode';
 import { ElementNode } from '../../tree/_doc/ElementTree';
 import {
@@ -23,18 +23,17 @@ import {
   Actions,
   SignedOutElementsPayload,
 } from '../../store/_doc/Actions';
-import {
-  ConnectionConfigurations,
-  getConnectionConfiguration,
-  showElementToEdit,
-} from '../utils';
+import { showElementToEdit } from '../utils';
 import {
   EditElementCommandCompletedStatus,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
-import { retrieveElement, retrieveElementWithSignout } from '../../endevor';
+import {
+  retrieveElementAndLogActivity,
+  retrieveElementWithSignoutAndLogActivity,
+} from '../../api/endevor';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
 import {
   formatWithNewLines,
@@ -50,8 +49,6 @@ import {
   ErrorResponseType,
   RetrieveElementWithSignoutResponse,
   RetrieveElementWithoutSignoutResponse,
-  Service,
-  Value,
 } from '@local/endevor/_doc/Endevor';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { toEditedElementUri } from '../../uri/editedElementUri';
@@ -66,33 +63,52 @@ import {
 } from '@local/vscode-wrapper/workspace';
 import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
 import { askToOverrideSignOutForElements } from '../../dialogs/change-control/signOutDialogs';
+import {
+  createEndevorLogger,
+  logActivity as setLogActivityContext,
+} from '../../logger';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 type SelectedElementNode = ElementNode;
 
-type CommandContext = Readonly<{
-  getTempEditFolderUri: () => vscode.Uri;
-  dispatch: (action: Action) => Promise<void>;
-}>;
-
 export const editElementCommand =
   (
-    configurations: ConnectionConfigurations,
-    { getTempEditFolderUri, dispatch }: CommandContext
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >,
+    getTempEditFolderUri: () => vscode.Uri
   ) =>
   async (elementNode: SelectedElementNode) => {
-    logger.trace(
-      `Edit element command was called for  ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}`
+    const logger = createEndevorLogger({
+      searchLocationId: elementNode.searchLocationId,
+      serviceId: elementNode.serviceId,
+    });
+    logger.traceWithDetails(
+      `Edit element command was called for ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name}`
     );
     if (isAutomaticSignOut()) {
       await editSingleElementWithSignout(
-        configurations,
-        dispatch
-      )(getTempEditFolderUri)(elementNode);
+        dispatch,
+        getConnectionConfiguration,
+        getTempEditFolderUri
+      )(elementNode);
       return;
     }
     try {
       await editSingleElement(
-        configurations,
+        dispatch,
+        getConnectionConfiguration,
         getTempEditFolderUri
       )(elementNode);
     } catch (e) {
@@ -103,26 +119,44 @@ export const editElementCommand =
 
 const editSingleElement =
   (
-    configurations: ConnectionConfigurations,
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >,
     getTempEditFolderUri: () => vscode.Uri
   ) =>
   async (elementNode: ElementNode): Promise<void> => {
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const element = elementNode.element;
+    const logger = createEndevorLogger({
+      searchLocationId: elementNode.searchLocationId,
+      serviceId: elementNode.serviceId,
+    });
+    const connectionParams = await getConnectionConfiguration(
       elementNode.serviceId,
       elementNode.searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
+    const { service, searchLocation } = connectionParams;
     const retrieveResponse = await withNotificationProgress(
       `Retrieving element ${elementNode.name} ...`
     )(async (progressReporter) => {
-      return retrieveElement(progressReporter)(service)(configuration)(
-        elementNode.element
-      );
+      return retrieveElementAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId: elementNode.serviceId,
+          searchLocationId: elementNode.searchLocationId,
+          element: elementNode.element,
+        })
+      )(progressReporter)(service)(elementNode.element);
     });
     if (isErrorEndevorResponse(retrieveResponse)) {
       const errorResponse = retrieveResponse;
-      const element = elementNode.element;
       // TODO: format using all possible error details
       const error = new Error(
         `Unable to retrieve the element ${element.environment}/${
@@ -136,7 +170,7 @@ const editSingleElement =
       switch (errorResponse.type) {
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Endevor credentials are incorrect or expired.',
             `${error.message}.`
           );
@@ -150,7 +184,7 @@ const editSingleElement =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Unable to connect to Endevor Web Services.',
             `${error.message}.`
           );
@@ -163,7 +197,7 @@ const editSingleElement =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             `Unable to edit the element ${elementNode.element.name}.`,
             `${error.message}.`
           );
@@ -184,7 +218,7 @@ const editSingleElement =
     )(elementNode.element, retrieveResponse.result.content);
     if (isError(saveResult)) {
       const error = saveResult;
-      logger.error(
+      logger.errorWithDetails(
         `Unable to save the element ${elementNode.name} into the file system.`,
         `${error.message}.`
       );
@@ -214,7 +248,7 @@ const editSingleElement =
     });
     if (isError(uploadableElementUri)) {
       const error = uploadableElementUri;
-      logger.error(
+      logger.errorWithDetails(
         `Unable to open the element ${elementNode.name} for editing.`,
         `Unable to open the element ${elementNode.element.environment}/${elementNode.element.stageNumber}/${elementNode.element.system}/${elementNode.element.subSystem}/${elementNode.element.type}/${elementNode.name} because of an error:\n${error.message}.`
       );
@@ -223,7 +257,7 @@ const editSingleElement =
     const showResult = await showElementToEdit(uploadableElementUri);
     if (isError(showResult)) {
       const error = showResult;
-      logger.error(
+      logger.errorWithDetails(
         `Unable to open the element ${elementNode.name} for editing.`,
         `${error.message}.`
       );
@@ -243,10 +277,19 @@ const editSingleElement =
 
 const editSingleElementWithSignout =
   (
-    configurations: ConnectionConfigurations,
-    dispatch: (action: Action) => Promise<void>
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >,
+    getTempEditFolderUri: () => vscode.Uri
   ) =>
-  (getTempEditFolderUri: () => vscode.Uri) =>
   async ({
     name,
     parent,
@@ -254,54 +297,55 @@ const editSingleElementWithSignout =
     searchLocationId,
     element,
   }: ElementNode): Promise<void> => {
-    const connectionParams = await getConnectionConfiguration(configurations)(
+    const logger = createEndevorLogger({
+      searchLocationId,
+      serviceId,
+    });
+    const connectionParams = await getConnectionConfiguration(
       serviceId,
       searchLocationId
     );
     if (!connectionParams) return;
-    const { service, configuration, searchLocation } = connectionParams;
+    const { service, searchLocation } = connectionParams;
     const signoutChangeControlValue = await askForChangeControlValue({
       ccid: searchLocation.ccid,
       comment: searchLocation.comment,
     });
     if (dialogCancelled(signoutChangeControlValue)) {
       logger.error(
-        `CCID and Comment must be specified to sign out the element ${name}.`,
-        'Edit element command cancelled'
+        `CCID and Comment must be specified to sign out element ${name}.`,
+        'Edit element command was cancelled.'
       );
       return;
     }
     let retrieveResponse = await complexRetrieve(dispatch)(
-      service,
-      configuration
-    )(
       serviceId,
-      searchLocationId,
-      element
-    )(signoutChangeControlValue);
+      searchLocationId
+    )(service)(element)(signoutChangeControlValue);
     if (isErrorEndevorResponse(retrieveResponse)) {
       const errorResponse = retrieveResponse;
       // TODO: format using all possible error details
       const error = new Error(
-        `Unable to retrieve the element with sign out ${element.environment}/${
+        `Unable to retrieve element with sign out ${element.environment}/${
           element.stageNumber
         }/${element.system}/${element.subSystem}/${element.type}/${
           element.name
-        } because of an error:${formatWithNewLines(
+        } because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR:
-          retrieveResponse = await retrieveSingleCopy(service)(configuration)(
-            element
-          );
+          retrieveResponse = await retrieveSingleCopy(dispatch)(
+            serviceId,
+            searchLocationId
+          )(service)(element);
           if (isErrorEndevorResponse(retrieveResponse)) {
             const errorResponse = retrieveResponse;
             const error = new Error(
-              `Unable to retrieve a copy of the element ${
+              `Unable to retrieve a copy of element ${
                 element.name
-              } because of an error:${formatWithNewLines(
+              } because of error:${formatWithNewLines(
                 errorResponse.details.messages
               )}`
             );
@@ -322,7 +366,7 @@ const editSingleElementWithSignout =
           break;
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
         case ErrorResponseType.UNAUTHORIZED_REQUEST_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Endevor credentials are incorrect or expired.',
             `${error.message}.`
           );
@@ -336,7 +380,7 @@ const editSingleElementWithSignout =
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
         case ErrorResponseType.CONNECTION_ERROR:
-          logger.error(
+          logger.errorWithDetails(
             'Unable to connect to Endevor Web Services.',
             `${error.message}.`
           );
@@ -349,8 +393,8 @@ const editSingleElementWithSignout =
           });
           return;
         case ErrorResponseType.GENERIC_ERROR:
-          logger.error(
-            `Unable to edit with sign out the element ${element.name}.`,
+          logger.errorWithDetails(
+            `Unable to edit element ${element.name} with sign out.`,
             `${error.message}.`
           );
           reporter.sendTelemetryEvent({
@@ -371,7 +415,7 @@ const editSingleElementWithSignout =
     if (isError(saveResult)) {
       const error = saveResult;
       logger.error(
-        `Unable to save the element ${name} into the file system.`,
+        `Unable to save element ${name} into the file system.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -401,8 +445,8 @@ const editSingleElementWithSignout =
     if (isError(uploadableElementUri)) {
       const error = uploadableElementUri;
       logger.error(
-        `Unable to open the element ${name} for editing.`,
-        `Unable to open the element  ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of an error:\n${error.message}.`
+        `Unable to open element ${name} for editing.`,
+        `Unable to open element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${name} because of error:\n${error.message}.`
       );
       return;
     }
@@ -410,7 +454,7 @@ const editSingleElementWithSignout =
     if (isError(showResult)) {
       const error = showResult;
       logger.error(
-        `Unable to open the element ${name} for editing.`,
+        `Unable to open element ${name} for editing.`,
         `${error.message}.`
       );
       reporter.sendTelemetryEvent({
@@ -429,14 +473,22 @@ const editSingleElementWithSignout =
 
 const complexRetrieve =
   (dispatch: (action: Action) => Promise<void>) =>
-  (service: Service, configuration: Value) =>
-  (serviceId: EndevorId, searchLocationId: EndevorId, element: Element) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  (element: Element) =>
   async (
     signoutChangeControlValue: ActionChangeControlValue
   ): Promise<RetrieveElementWithSignoutResponse> => {
+    const logger = createEndevorLogger({
+      searchLocationId,
+      serviceId,
+    });
     const retrieveWithSignoutResponse = await retrieveSingleElementWithSignout(
-      service
-    )(configuration)(element)(signoutChangeControlValue);
+      dispatch
+    )(
+      serviceId,
+      searchLocationId
+    )(service)(element)(signoutChangeControlValue);
     if (!isError(signoutChangeControlValue)) {
       await updateTreeAfterSuccessfulSignout(dispatch)({
         serviceId,
@@ -448,8 +500,8 @@ const complexRetrieve =
       const errorResponse = retrieveWithSignoutResponse;
       switch (errorResponse.type) {
         case ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR: {
-          logger.warn(
-            `Element ${element.name} cannot be retrieved with signout because the element is signed out to somebody else.`
+          logger.warnWithDetails(
+            `Element ${element.name} cannot be retrieved with signout because it is signed out to somebody else.`
           );
           if (!(await askToOverrideSignOutForElements([element.name]))) {
             logger.trace(`Override signout option was not chosen.`);
@@ -459,9 +511,10 @@ const complexRetrieve =
             `Override signout option was chosen, ${element.name} will be retrieved with override signout.`
           );
           const retrieveWithOverrideSignoutResponse =
-            await retrieveSingleElementWithSignoutOverride(service)(
-              configuration
-            )(element)(signoutChangeControlValue);
+            await retrieveSingleElementWithSignoutOverride(dispatch)(
+              serviceId,
+              searchLocationId
+            )(service)(element)(signoutChangeControlValue);
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.COMMAND_SIGNOUT_ERROR_RECOVER_COMPLETED,
             context: TelemetryEvents.COMMAND_EDIT_ELEMENT_CALLED,
@@ -477,8 +530,9 @@ const complexRetrieve =
   };
 
 const retrieveSingleElementWithSignout =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   (
     signoutChangeControlValue: ActionChangeControlValue
@@ -486,15 +540,22 @@ const retrieveSingleElementWithSignout =
     return withNotificationProgress(
       `Retrieving element ${element.name} with signout ...`
     )(async (progressReporter) => {
-      return await retrieveElementWithSignout(progressReporter)(service)(
-        configuration
-      )(element)({ signoutChangeControlValue });
+      return await retrieveElementWithSignoutAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)({
+        signoutChangeControlValue,
+      });
     });
   };
 
 const retrieveSingleElementWithSignoutOverride =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element) =>
   (
     signoutChangeControlValue: ActionChangeControlValue
@@ -502,21 +563,33 @@ const retrieveSingleElementWithSignoutOverride =
     return withNotificationProgress(
       `Retrieving element ${element.name} with override signout ...`
     )(async (progressReporter) => {
-      return retrieveElementWithSignout(progressReporter)(service)(
-        configuration
-      )(element)({ signoutChangeControlValue, overrideSignOut: true });
+      return retrieveElementWithSignoutAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element,
+        })
+      )(progressReporter)(service)(element)({
+        signoutChangeControlValue,
+        overrideSignOut: true,
+      });
     });
   };
 
 const retrieveSingleCopy =
-  (service: Service) =>
-  (configuration: Value) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
   (element: Element): Promise<RetrieveElementWithoutSignoutResponse> => {
     return withNotificationProgress(`Retrieving element ${element.name} ...`)(
       async (progressReporter) => {
-        return retrieveElement(progressReporter)(service)(configuration)(
-          element
-        );
+        return retrieveElementAndLogActivity(
+          setLogActivityContext(dispatch, {
+            serviceId,
+            searchLocationId,
+            element,
+          })
+        )(progressReporter)(service)(element);
       }
     );
   };
@@ -546,7 +619,7 @@ const saveIntoEditFolder =
       saveLocationUri = await createDirectory(editFolderUri);
     } catch (error) {
       return new Error(
-        `Unable to create a required temp directory ${editFolderUri.fsPath} for editing the elements because of error ${error.message}`
+        `Unable to create required temp directory ${editFolderUri.fsPath} for editing the elements because of error ${error.message}`
       );
     }
     try {
@@ -559,7 +632,7 @@ const saveIntoEditFolder =
       return saveResult;
     } catch (error) {
       return new Error(
-        `Unable to save the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of error ${error.message}`
+        `Unable to save element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into the file system because of error ${error.message}`
       );
     }
   };

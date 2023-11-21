@@ -12,12 +12,10 @@
  */
 
 import {
-  Service,
   ChangeControlValue,
   Element,
   ElementMapPath,
   SubSystemMapPath,
-  Value,
 } from '@local/endevor/_doc/Endevor';
 import {
   withNotificationProgress,
@@ -26,41 +24,47 @@ import {
 import { saveFileIntoWorkspaceFolder } from '@local/vscode-wrapper/workspace';
 import * as path from 'path';
 import { Uri } from 'vscode';
-import { retrieveElementFirstFound } from '../../endevor';
+import { retrieveElementFirstFoundAndLogActivity } from '../../api/endevor';
 import { reporter } from '../../globals';
 import { toComparedElementUri } from '../../uri/comparedElementUri';
 import { formatWithNewLines, isError } from '../../utils';
-import { Schemas } from '../../_doc/Uri';
+import { Schemas } from '../../uri/_doc/Uri';
 import {
   TelemetryEvents,
   ResolveConflictWithRemoteCompletedStatus,
-} from '../../_doc/telemetry/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { EndevorId } from '../../store/_doc/v2/Store';
 import { isErrorEndevorResponse } from '@local/endevor/utils';
+import { logActivity as setLogActivityContext } from '../../logger';
+import { Action } from '../../store/_doc/Actions';
+import { EndevorAuthorizedService } from '../../api/_doc/Endevor';
 
 export const compareElementWithRemoteVersion =
-  (service: Service, configuration: Value, element: Element) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
     uploadTargetLocation: ElementMapPath
   ) =>
-  (
-    serviceId: EndevorId,
-    searchLocationId: EndevorId,
-    initialSearchLocation: SubSystemMapPath
-  ) =>
-  async (localVersionElementTempFilePath: string): Promise<void | Error> => {
+  async (
+    element: Element,
+    localVersionElementTempFilePath: string
+  ): Promise<void | Error> => {
     const tempFolder = path.dirname(localVersionElementTempFilePath);
     if (!tempFolder) {
       return new Error(
-        'Unable to get a valid edit folder name to compare the elements'
+        'Unable to get a valid edit folder name to compare elements'
       );
     }
     const tempFolderUri = Uri.file(tempFolder);
     const savedRemoteElementVersion = await retrieveRemoteVersionIntoFolder(
-      service,
-      configuration
-    )({
+      dispatch
+    )(
+      serviceId,
+      searchLocationId
+    )(service)({
       ...uploadTargetLocation,
       name: uploadTargetLocation.id,
       extension: element.extension,
@@ -92,7 +96,7 @@ export const compareElementWithRemoteVersion =
     if (isError(localElementVersionUploadableUri)) {
       const error = localElementVersionUploadableUri;
       return new Error(
-        `Unable to open a local version of the element ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} to compare because of error ${error.message}`
+        `Unable to open a local version of element ${uploadTargetLocation.environment}/${uploadTargetLocation.stageNumber}/${uploadTargetLocation.system}/${uploadTargetLocation.subSystem}/${uploadTargetLocation.type}/${uploadTargetLocation.id} to compare because of error ${error.message}`
       );
     }
     const remoteElementVersionReadonlyUri = savedRemoteVersionUri.with({
@@ -121,32 +125,46 @@ export const compareElementWithRemoteVersion =
     });
   };
 
-type LocalElement = Omit<Element, 'lastActionCcid' | 'noSource'>;
+type LocalElement = Omit<
+  Element,
+  'lastActionCcid' | 'noSource' | 'processorGroup'
+>;
 type RetrieveResult = {
   savedRemoteVersionUri: Uri;
   fingerprint: string;
 };
 
 const retrieveRemoteVersionIntoFolder =
-  (service: Service, configuration: Value) =>
-  (element: LocalElement) =>
+  (dispatch: (action: Action) => Promise<void>) =>
+  (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (service: EndevorAuthorizedService) =>
+  (localElement: LocalElement) =>
   async (folder: Uri): Promise<RetrieveResult | Error> => {
     const retrieveRemoteElementVersionResponse = await withNotificationProgress(
-      `Retrieving a remote version of the element ${element.name} ...`
+      `Retrieving a remote version of element ${localElement.name} ...`
     )((progressReporter) => {
-      return retrieveElementFirstFound(progressReporter)(service)(
-        configuration
-      )(element);
+      return retrieveElementFirstFoundAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+          element: {
+            ...localElement,
+            noSource: false,
+          },
+        })
+      )(progressReporter)(service)(localElement);
     });
     if (isErrorEndevorResponse(retrieveRemoteElementVersionResponse)) {
       const errorResponse = retrieveRemoteElementVersionResponse;
       // TODO: format using all possible details
       const error = new Error(
-        `Unable to save a remote version of the element ${
-          element.environment
-        }/${element.stageNumber}/${element.system}/${element.subSystem}/${
-          element.type
-        }/${element.name} because of an error:${formatWithNewLines(
+        `Unable to save a remote version of element ${
+          localElement.environment
+        }/${localElement.stageNumber}/${localElement.system}/${
+          localElement.subSystem
+        }/${localElement.type}/${
+          localElement.name
+        } because of error:${formatWithNewLines(
           errorResponse.details.messages
         )}`
       );
@@ -155,8 +173,8 @@ const retrieveRemoteVersionIntoFolder =
     try {
       const savedFileUri = await saveFileIntoWorkspaceFolder(folder)(
         {
-          fileName: `${element.name}-remote-version`,
-          fileExtension: `${element.extension}`,
+          fileName: `${localElement.name}-remote-version`,
+          fileExtension: `${localElement.extension}`,
         },
         retrieveRemoteElementVersionResponse.result.content
       );
@@ -166,7 +184,7 @@ const retrieveRemoteVersionIntoFolder =
       };
     } catch (error) {
       return new Error(
-        `Unable to save a remote version of the element ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name} into file system because of error ${error.message}`
+        `Unable to save a remote version of element ${localElement.environment}/${localElement.stageNumber}/${localElement.system}/${localElement.subSystem}/${localElement.type}/${localElement.name} into the file system because of error ${error.message}`
       );
     }
   };
