@@ -19,6 +19,6 @@ module.exports = {
   preset: 'ts-jest',
 
   // coverage
-  coverageDirectory: '<rootDir>/results/unit/coverage',
+  coverageDirectory: '<rootDir>/results/coverage/unit',
   coverageReporters: ['text', 'text-summary', 'json'],
 };
