@@ -15,6 +15,7 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
+  ProcessorGroupValue,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
@@ -28,6 +29,7 @@ type SerializedValue = Readonly<{
   element: Element;
   fingerprint: string;
   uploadChangeControlValue: ChangeControlValue;
+  uploadProcessorGroupValue: ProcessorGroupValue;
   uploadTargetLocation: ElementMapPath;
   remoteVersionTempFilePath: string;
 }> & {
@@ -46,6 +48,7 @@ export const toComparedElementUri =
         element: uriQuery.element,
         fingerprint: uriQuery.fingerprint,
         uploadChangeControlValue: uriQuery.uploadChangeControlValue,
+        uploadProcessorGroupValue: uriQuery.uploadProcessorGroupValue,
         uploadTargetLocation: uriQuery.uploadTargetLocation,
         elementTreePath: uriQuery.initialSearchContext.initialSearchLocation,
         remoteVersionTempFilePath: uriQuery.remoteVersionTempFilePath,
@@ -110,6 +113,7 @@ export const fromComparedElementUri = (
       fingerprint: serializedValue.fingerprint,
       remoteVersionTempFilePath: serializedValue.remoteVersionTempFilePath,
       uploadChangeControlValue: serializedValue.uploadChangeControlValue,
+      uploadProcessorGroupValue: serializedValue.uploadProcessorGroupValue,
       uploadTargetLocation: serializedValue.uploadTargetLocation,
       initialSearchContext: {
         serviceId: serializedValue.serviceId,

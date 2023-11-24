@@ -99,6 +99,7 @@ import {
   GenerateResponseErrorType,
   RetrieveElementWithSignoutResponseErrorType,
   PrintResponseErrorType,
+  ProcessorGroupValue,
 } from './_doc/Endevor';
 import { UnreachableCaseError } from './typeHelpers';
 import { parseToType, parseToTypeAndConvert } from '@local/type-parser/parser';
@@ -1706,7 +1707,7 @@ export const generateElementInPlace =
   (service: Service) =>
   (configuration: Value) =>
   (elementSearchParams: ElementMapPath) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (signOutParams?: GenerateSignOutParams): Promise<GenerateResponse> =>
     generateElements(logger)(progress)(service)(configuration)(
@@ -1726,7 +1727,7 @@ export const generateElementWithCopyBack =
   (service: Service) =>
   (configuration: Value) =>
   (elementSearchParams: ElementMapPath) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   (copyBackParams?: GenerateWithCopyBackParams) =>
   (signOutParams?: GenerateSignOutParams): Promise<GenerateResponse> =>
@@ -1772,6 +1773,7 @@ export const updateElement =
     type,
     id: name,
   }: ElementMapPath) =>
+  (processorGroup: ProcessorGroupValue) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
   async ({
     content,
@@ -1792,6 +1794,7 @@ export const updateElement =
         'from-file': elementFilePath,
         // TODO: use element content directly instead file path when API will support it
         'from-file-content': content,
+        'proc-group': processorGroup,
         ccid,
         comment,
         fingerprint,
@@ -1840,7 +1843,7 @@ export const addElement =
     type,
     id: name,
   }: ElementMapPath) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
   async ({ content, elementFilePath }: ElementData): Promise<AddResponse> => {
     const elementMapPath: IElementBasicData = {

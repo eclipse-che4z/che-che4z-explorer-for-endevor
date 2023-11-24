@@ -35,6 +35,7 @@ import {
   ElementMapPath,
   ElementTypeMapPath,
   ErrorResponseType,
+  ProcessorGroupValue,
   ProcessorGroupsResponse,
   Value,
 } from '@local/endevor/_doc/Endevor';
@@ -260,7 +261,7 @@ const addNewElement =
   (service: { id: EndevorId; value: EndevorAuthorizedService }) =>
   (searchLocation: { id: EndevorId; configuration: Value }) =>
   (element: ElementMapPath) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (uploadChangeControlValue: ChangeControlValue) =>
   async (content: string, elementFilePath: string): Promise<AddResponse> => {
     const addResult = await withNotificationProgress(
@@ -292,7 +293,7 @@ const askForAddValues =
       typeMapPath: Partial<ElementTypeMapPath>
     ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>
   ): Promise<
-    Error | [ElementMapPath, ActionChangeControlValue, Value | undefined]
+    Error | [ElementMapPath, ActionChangeControlValue, ProcessorGroupValue]
   > => {
     const addLocation = await askForAddLocation({
       environment: searchLocation.environment,

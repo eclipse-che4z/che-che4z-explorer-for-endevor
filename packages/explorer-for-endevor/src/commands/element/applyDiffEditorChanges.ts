@@ -46,6 +46,7 @@ import {
   UpdateResponse,
   ElementData,
   ElementDataWithFingerprint,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
@@ -102,6 +103,7 @@ export const applyDiffEditorChanges = async (
   const {
     uploadTargetLocation,
     uploadChangeControlValue,
+    uploadProcessorGroupValue,
     element,
     fingerprint,
     initialSearchContext: {
@@ -140,6 +142,7 @@ export const applyDiffEditorChanges = async (
     searchLocationId
   )(service)(initialSearchLocation)(
     uploadChangeControlValue,
+    uploadProcessorGroupValue,
     uploadTargetLocation
   )(
     element,
@@ -297,6 +300,7 @@ const uploadElement =
   (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   (element: Element, elementUri: Uri) =>
@@ -313,8 +317,8 @@ const uploadElement =
           element,
         })
       )(progressReporter)(service)(uploadTargetLocation)(
-        uploadChangeControlValue
-      )(elementData);
+        uploadProcessorGroupValue
+      )(uploadChangeControlValue)(elementData);
     });
     if (isErrorEndevorResponse(uploadResult)) {
       const errorResponse = uploadResult;
@@ -368,6 +372,7 @@ const uploadElement =
             service
           )(initialSearchLocation)(
             uploadChangeControlValue,
+            uploadProcessorGroupValue,
             uploadTargetLocation
           )(
             element,
@@ -380,6 +385,7 @@ const uploadElement =
             searchLocationId
           )(service)(initialSearchLocation)(
             uploadChangeControlValue,
+            uploadProcessorGroupValue,
             uploadTargetLocation
           )(element, elementUri);
         }
@@ -530,6 +536,7 @@ const uploadFingerprintMismatch =
   (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   async (element: Element, elementUri: Uri) => {
@@ -548,6 +555,7 @@ const uploadFingerprintMismatch =
       searchLocationId
     )(service)(initialSearchLocation)(
       uploadChangeControlValue,
+      uploadProcessorGroupValue,
       uploadTargetLocation
     )(element, elementUri.fsPath);
     if (isError(showCompareDialogResult)) {

@@ -15,6 +15,7 @@ import {
   ElementTypeMapPath,
   ErrorResponseType,
   ProcessorGroup,
+  ProcessorGroupValue,
   ProcessorGroupsResponse,
   Value,
 } from '@local/endevor/_doc/Endevor';
@@ -40,7 +41,7 @@ export const askForProcessorGroup = async (
     typeMapPath: Partial<ElementTypeMapPath>
   ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>,
   defaultProcGroup?: Value
-): Promise<string | undefined> => {
+): Promise<ProcessorGroupValue> => {
   logger.trace('Prompt for Element processor groups.');
   const tokenSource = new CancellationTokenSource();
   const choice = await showVscodeQuickPick(

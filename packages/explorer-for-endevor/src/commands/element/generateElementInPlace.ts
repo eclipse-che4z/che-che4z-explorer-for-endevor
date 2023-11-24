@@ -31,7 +31,7 @@ import {
   Element,
   GenerateResponse,
   ErrorResponseType,
-  Value,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import {
   FetchElementCommandCompletedStatus,
@@ -359,7 +359,7 @@ const complexGenerate =
   (serviceId: EndevorId, searchLocationId: EndevorId) =>
   (service: EndevorAuthorizedService) =>
   (element: Element) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   async (
     actionChangeControlValue: ActionChangeControlValue
   ): Promise<GenerateResponse> => {

@@ -49,6 +49,7 @@ export type ChangeControlValue = Readonly<{
   comment: Value;
 }>;
 export type ActionChangeControlValue = ChangeControlValue;
+export type ProcessorGroupValue = Value | undefined;
 
 export type EnvironmentStageMapPath = Readonly<{
   environment: Value;
