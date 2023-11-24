@@ -42,6 +42,7 @@ import {
   ElementTypesResponse,
   MoveParams,
   MoveResponse,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import { EndevorAuthorizedService } from '../../../api/_doc/Endevor';
@@ -127,6 +128,8 @@ export type UploadingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
+      processorGroup: ProcessorGroupValue
+    ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementDataWithFingerprint) => Promise<UpdateResponse>
   >,
@@ -137,6 +140,8 @@ export type UploadingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
+      processorGroup: ProcessorGroupValue
+    ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementDataWithFingerprint) => Promise<UpdateResponse>
   >,
@@ -145,11 +150,21 @@ export type UploadingElementStub = [
     (
       element: ElementMapPath
     ) => (
+      processorGroup: ProcessorGroupValue
+    ) => (
       actionCcid: ChangeControlValue
     ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
   >,
   sinon.SinonStub<
     [ElementMapPath],
+    (
+      processorGroup: ProcessorGroupValue
+    ) => (
+      actionCcid: ChangeControlValue
+    ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
+  >,
+  sinon.SinonStub<
+    [ProcessorGroupValue],
     (
       actionCcid: ChangeControlValue
     ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
@@ -166,6 +181,7 @@ export const mockUploadingElementWith =
     serviceArg: EndevorAuthorizedService,
     elementArg: ElementMapPath,
     actionCcidArg: ChangeControlValue,
+    processorGroupArg: ProcessorGroupValue,
     elementContentArg: ElementDataWithFingerprint
   ) =>
   (mockResults: ReadonlyArray<UpdateResponse>): UploadingElementStub => {
@@ -184,22 +200,37 @@ export const mockUploadingElementWith =
       >()
       .withArgs(actionCcidArg)
       .returns(withContentStub);
-    const withElementStub = sinon
+    const withProcessorGroupStub = sinon
       .stub<
-        [ElementMapPath],
+        [ProcessorGroupValue],
         (
           actionCcid: ChangeControlValue
         ) => (
           elementContent: ElementDataWithFingerprint
         ) => Promise<UpdateResponse>
       >()
-      .withArgs(elementArg)
+      .withArgs(processorGroupArg)
       .returns(withActionCcidStub);
+    const withElementStub = sinon
+      .stub<
+        [ElementMapPath],
+        (
+          processorGroup: ProcessorGroupValue
+        ) => (
+          actionCcid: ChangeControlValue
+        ) => (
+          elementContent: ElementDataWithFingerprint
+        ) => Promise<UpdateResponse>
+      >()
+      .withArgs(elementArg)
+      .returns(withProcessorGroupStub);
     const withServiceStub = sinon
       .stub<
         [EndevorAuthorizedService],
         (
           element: ElementMapPath
+        ) => (
+          processorGroup: ProcessorGroupValue
         ) => (
           actionCcid: ChangeControlValue
         ) => (
@@ -215,6 +246,8 @@ export const mockUploadingElementWith =
           service: EndevorAuthorizedService
         ) => (
           element: ElementMapPath
+        ) => (
+          processorGroup: ProcessorGroupValue
         ) => (
           actionCcid: ChangeControlValue
         ) => (
@@ -232,6 +265,7 @@ export const mockUploadingElementWith =
       withProgressReporterStub,
       withServiceStub,
       withElementStub,
+      withProcessorGroupStub,
       withActionCcidStub,
       withContentStub,
     ];
@@ -253,7 +287,7 @@ export type AddingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementData) => Promise<AddResponse>
@@ -265,7 +299,7 @@ export type AddingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementData) => Promise<AddResponse>
@@ -275,7 +309,7 @@ export type AddingElementStub = [
     (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementData) => Promise<AddResponse>
@@ -283,13 +317,13 @@ export type AddingElementStub = [
   sinon.SinonStub<
     [ElementMapPath],
     (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementData) => Promise<AddResponse>
   >,
   sinon.SinonStub<
-    [Value | undefined],
+    [ProcessorGroupValue],
     (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementData) => Promise<AddResponse>
@@ -327,7 +361,7 @@ export const mockAddingElement =
       .returns(withElementDataStub);
     const withProcGroupStub = sinon
       .stub<
-        [Value | undefined],
+        [ProcessorGroupValue],
         (
           actionCcid: ChangeControlValue
         ) => (elementData: ElementData) => Promise<AddResponse>
@@ -338,7 +372,7 @@ export const mockAddingElement =
       .stub<
         [ElementMapPath],
         (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           actionCcid: ChangeControlValue
         ) => (elementData: ElementData) => Promise<AddResponse>
@@ -351,7 +385,7 @@ export const mockAddingElement =
         (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           actionCcid: ChangeControlValue
         ) => (elementData: ElementData) => Promise<AddResponse>
@@ -366,7 +400,7 @@ export const mockAddingElement =
         ) => (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           actionCcid: ChangeControlValue
         ) => (elementData: ElementData) => Promise<AddResponse>
@@ -892,7 +926,7 @@ type GenerateElementInPlaceStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -906,7 +940,7 @@ type GenerateElementInPlaceStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -918,7 +952,7 @@ type GenerateElementInPlaceStub = [
     (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -928,7 +962,7 @@ type GenerateElementInPlaceStub = [
   sinon.SinonStub<
     [ElementMapPath],
     (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -936,7 +970,7 @@ type GenerateElementInPlaceStub = [
     ) => Promise<GenerateResponse>
   >,
   sinon.SinonStub<
-    [Value | undefined],
+    [ProcessorGroupValue],
     (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -992,7 +1026,7 @@ export const mockGenerateElementInPlace =
       .returns(withContentStub);
     const withChangeControlValueStub = sinon
       .stub<
-        [Value | undefined],
+        [ProcessorGroupValue],
         (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1005,7 +1039,7 @@ export const mockGenerateElementInPlace =
       .stub<
         [element: ElementMapPath],
         (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1020,7 +1054,7 @@ export const mockGenerateElementInPlace =
         (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1037,7 +1071,7 @@ export const mockGenerateElementInPlace =
         ) => (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1077,7 +1111,7 @@ type GenerateElementWithCopyBackStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -1093,7 +1127,7 @@ type GenerateElementWithCopyBackStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -1107,7 +1141,7 @@ type GenerateElementWithCopyBackStub = [
     (
       element: ElementMapPath
     ) => (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -1119,7 +1153,7 @@ type GenerateElementWithCopyBackStub = [
   sinon.SinonStub<
     [ElementMapPath],
     (
-      processorGroup: Value | undefined
+      processorGroup: ProcessorGroupValue
     ) => (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -1129,7 +1163,7 @@ type GenerateElementWithCopyBackStub = [
     ) => Promise<GenerateResponse>
   >,
   sinon.SinonStub<
-    [Value | undefined],
+    [ProcessorGroupValue],
     (
       generateChangeControlValue: ActionChangeControlValue
     ) => (
@@ -1207,7 +1241,7 @@ export const mockGenerateElementWithCopyBack =
       .returns(withSignOutParamsStub);
     const withProcGroupStub = sinon
       .stub<
-        [Value | undefined],
+        [ProcessorGroupValue],
         (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1222,7 +1256,7 @@ export const mockGenerateElementWithCopyBack =
       .stub<
         [element: ElementMapPath],
         (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1240,7 +1274,7 @@ export const mockGenerateElementWithCopyBack =
         (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1259,7 +1293,7 @@ export const mockGenerateElementWithCopyBack =
         ) => (
           element: ElementMapPath
         ) => (
-          procGroup: Value | undefined
+          procGroup: ProcessorGroupValue
         ) => (
           generateChangeControlValue: ActionChangeControlValue
         ) => (
@@ -1643,7 +1677,7 @@ type GetProcessorGroupsByTypeStub = [
     (procGroup?: string) => Promise<ProcessorGroupsResponse>
   >,
   sinon.SinonStub<
-    [procGroup?: string | undefined],
+    [procGroup?: ProcessorGroupValue],
     Promise<ProcessorGroupsResponse>
   >
 ];

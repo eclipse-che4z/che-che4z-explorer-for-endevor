@@ -14,6 +14,7 @@
 import {
   ElementMapPath,
   ElementTypeMapPath,
+  ProcessorGroupValue,
   ProcessorGroupsResponse,
 } from '@local/endevor/_doc/Endevor';
 import * as workspace from '@local/vscode-wrapper/workspace';
@@ -162,7 +163,7 @@ type AskForProcGroup = sinon.SinonStub<
     ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>,
     defaultProcGroup?: string
   ],
-  Promise<string | undefined>
+  Promise<ProcessorGroupValue>
 >;
 
 export const mockAskingForProcGroup = (mockResult: string): AskForProcGroup => {

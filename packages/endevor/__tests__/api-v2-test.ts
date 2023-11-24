@@ -6592,6 +6592,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6600,7 +6601,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.OK,
@@ -6638,6 +6641,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6646,7 +6650,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(newElementLocation)(addActionChangeControlValue)(elementData);
+      )(newElementLocation)(uploadProcessorGroupValue)(
+        addActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.OK,
@@ -6688,6 +6694,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6696,7 +6703,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.OK,
@@ -6717,6 +6726,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const addActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6725,9 +6735,9 @@ describe('endevor public api v2', () => {
       // act
       const updateElementResult = await updateElement(logger)(progress)(
         nonExistingService
-      )(configuration)(newElementLocation)(addActionChangeControlValue)(
-        elementData
-      );
+      )(configuration)(newElementLocation)(uploadProcessorGroupValue)(
+        addActionChangeControlValue
+      )(elementData);
       // assert
       expect(
         isErrorEndevorResponse(updateElementResult) &&
@@ -6763,6 +6773,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6771,7 +6782,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.ERROR,
@@ -6811,6 +6824,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6819,7 +6833,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.ERROR,
@@ -6861,6 +6877,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6869,7 +6886,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.ERROR,
@@ -6914,6 +6933,7 @@ describe('endevor public api v2', () => {
           version: '2.5',
         }
       );
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6922,9 +6942,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(
-        elementDataWithEmptyContent
-      );
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementDataWithEmptyContent);
       // assert
       expect(updateResult).toStrictEqual({
         status: ResponseStatus.OK,
@@ -6966,6 +6986,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -6974,7 +6995,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.ERROR,
@@ -7014,6 +7037,7 @@ describe('endevor public api v2', () => {
         type: 'TEST-TYPE',
         id: 'ELM',
       };
+      const uploadProcessorGroupValue = undefined;
       const updateActionChangeControlValue: ActionChangeControlValue = {
         ccid: 'test',
         comment: 'test',
@@ -7022,7 +7046,9 @@ describe('endevor public api v2', () => {
       // act
       const updateResult = await updateElement(logger)(progress)(service)(
         configuration
-      )(existingElementLocation)(updateActionChangeControlValue)(elementData);
+      )(existingElementLocation)(uploadProcessorGroupValue)(
+        updateActionChangeControlValue
+      )(elementData);
       // assert
       expect(updateResult).toEqual({
         status: ResponseStatus.ERROR,
