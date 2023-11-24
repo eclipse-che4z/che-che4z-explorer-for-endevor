@@ -1,5 +1,5 @@
 dependencies.json
 dependencies.txt
 yarn.lock
-results/**
 packages
+results

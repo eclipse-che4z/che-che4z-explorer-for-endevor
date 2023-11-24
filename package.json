@@ -16,10 +16,10 @@
   "scripts": {
     "lint": "yarn workspaces run lint && prettier --ignore-path .prettierignore-ci --check .",
     "pretty": "yarn workspaces run pretty && prettier --ignore-path .prettierignore-ci --write .",
-    "test": "yarn workspaces run test",
+    "test": "yarn workspaces run test && ./combined_coverage_report.sh",
     "test:vscode": "yarn workspaces run test:vscode",
-    "test:no-vscode": "yarn workspaces run test:no-vscode",
-    "clean": "yarn workspaces run clean && rimraf node_modules",
+    "test:no-vscode": "yarn workspaces run test:no-vscode && ./combined_coverage_report.sh",
+    "clean": "yarn workspaces run clean && rimraf node_modules results",
     "copy-into-build-context": "copyfiles README.md CHANGELOG.md LICENSE.txt NOTICE.md packages/explorer-for-endevor",
     "copyright-headers": "node copyrightHeaders.js"
   },
@@ -66,7 +66,6 @@
     "eslint-plugin-jest": "^27.6.0",
     "eslint-plugin-local-rules": "^2.0.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "fx": "^30.2.0",
     "glob": "^8.1.0",
     "glob-promise": "^6.0.5",
     "ignore": "^5.3.0",
