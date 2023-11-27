@@ -27,6 +27,7 @@ import {
   dialogCancelled as uploadLocationDialogCancelled,
 } from '../../dialogs/locations/endevorUploadLocationDialogs';
 import {
+  getProcessorGroupsByTypeAndLogActivity,
   signOutElementAndLogActivity,
   updateElementAndLogActivity,
 } from '../../api/endevor';
@@ -42,7 +43,10 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
+  ElementTypeMapPath,
   ErrorResponseType,
+  ProcessorGroupValue,
+  ProcessorGroupsResponse,
   SignoutElementResponse,
   SubSystemMapPath,
   UpdateResponse,
@@ -75,6 +79,11 @@ import {
   logActivity as setLogActivityContext,
 } from '../../logger';
 import { EndevorId } from '../../store/_doc/v2/Store';
+import {
+  askForProcessorGroup,
+  pickedChoiceLabel,
+} from '../../dialogs/processor-groups/processorGroupsDialogs';
+import { ProgressReporter } from '@local/endevor/_doc/Progress';
 
 export const uploadElementCommand =
   (
@@ -116,7 +125,16 @@ export const uploadElementCommand =
     );
     if (!connectionParams) return;
     const { service, searchLocation } = connectionParams;
-    const uploadValues = await askForUploadValues(searchLocation, element);
+    const uploadValues = await askForUploadValues(logger)(
+      getProcessorGroupsByTypeAndLogActivity(
+        setLogActivityContext(dispatch, {
+          serviceId,
+          searchLocationId,
+        })
+      )(service),
+      searchLocation,
+      element
+    );
     if (isError(uploadValues)) {
       const error = uploadValues;
       logger.error(`${error.message}.`);
@@ -133,17 +151,20 @@ export const uploadElementCommand =
       });
       return;
     }
-    const [uploadLocation, uploadChangeControlValue] = uploadValues;
+    const [
+      uploadLocation,
+      uploadChangeControlValue,
+      uploadProcessorGroupValue,
+    ] = uploadValues;
     await closeEditSession(elementUri);
     const uploadResult = await uploadElement(logger)(dispatch)(
       serviceId,
       searchLocationId
-    )(service)(initialSearchLocation)(uploadChangeControlValue, uploadLocation)(
-      content,
-      element,
-      elementUri.fsPath,
-      fingerprint
-    );
+    )(service)(initialSearchLocation)(
+      uploadChangeControlValue,
+      uploadProcessorGroupValue,
+      uploadLocation
+    )(content, element, elementUri.fsPath, fingerprint);
     if (isError(uploadResult)) {
       const reopenResult = await reopenEditSession(elementUri);
       if (isError(reopenResult)) {
@@ -230,35 +251,58 @@ export const uploadElementCommand =
     });
   };
 
-const askForUploadValues = async (
-  searchLocation: SearchLocation,
-  element: Element
-): Promise<[ElementMapPath, ActionChangeControlValue] | Error> => {
-  const uploadType = searchLocation.type ? searchLocation.type : element.type;
-  const uploadLocation = await askForUploadLocation({
-    environment: searchLocation.environment,
-    stageNumber: searchLocation.stageNumber,
-    system: searchLocation.system,
-    subsystem: searchLocation.subsystem,
-    type: uploadType,
-    element: element.name,
-  });
-  if (uploadLocationDialogCancelled(uploadLocation)) {
-    return new Error(
-      `Upload location must be specified to upload element ${element.name}`
+const askForUploadValues =
+  (logger: EndevorLogger) =>
+  async (
+    getProcessorGroups: (
+      progress: ProgressReporter
+    ) => (
+      typeMapPath: Partial<ElementTypeMapPath>
+    ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>,
+    searchLocation: SearchLocation,
+    element: Element
+  ): Promise<
+    [ElementMapPath, ActionChangeControlValue, ProcessorGroupValue] | Error
+  > => {
+    const uploadType = searchLocation.type ? searchLocation.type : element.type;
+    const uploadLocation = await askForUploadLocation({
+      environment: searchLocation.environment,
+      stageNumber: searchLocation.stageNumber,
+      system: searchLocation.system,
+      subsystem: searchLocation.subsystem,
+      type: uploadType,
+      element: element.name,
+    });
+    if (uploadLocationDialogCancelled(uploadLocation)) {
+      return new Error(
+        `Upload location must be specified to upload element ${element.name}`
+      );
+    }
+    let actionProcGroup = await askForProcessorGroup(
+      logger,
+      {
+        ...uploadLocation,
+        type: element.type,
+      },
+      getProcessorGroups,
+      element.processorGroup
     );
-  }
-  const uploadChangeControlValue = await askForChangeControlValue({
-    ccid: searchLocation.ccid,
-    comment: searchLocation.comment,
-  });
-  if (changeControlDialogCancelled(uploadChangeControlValue)) {
-    return new Error(
-      `CCID and Comment must be specified to upload element ${uploadLocation.id}`
-    );
-  }
-  return [uploadLocation, uploadChangeControlValue];
-};
+    if (!actionProcGroup) {
+      return new Error(`Upload of element ${element.name} was cancelled.`);
+    }
+    actionProcGroup =
+      actionProcGroup !== pickedChoiceLabel ? actionProcGroup : undefined;
+    const uploadChangeControlValue = await askForChangeControlValue({
+      ccid: searchLocation.ccid,
+      comment: searchLocation.comment,
+    });
+    if (changeControlDialogCancelled(uploadChangeControlValue)) {
+      return new Error(
+        `CCID and Comment must be specified to upload element ${uploadLocation.id}`
+      );
+    }
+    return [uploadLocation, uploadChangeControlValue, actionProcGroup];
+  };
 
 const uploadElement =
   (logger: EndevorLogger) =>
@@ -268,6 +312,7 @@ const uploadElement =
   (treePath: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   async (
@@ -286,8 +331,8 @@ const uploadElement =
           element,
         })
       )(progressReporter)(service)(uploadTargetLocation)(
-        uploadChangeControlValue
-      )({
+        uploadProcessorGroupValue
+      )(uploadChangeControlValue)({
         content,
         fingerprint,
         elementFilePath,
@@ -343,18 +388,21 @@ const uploadElement =
           if (isErrorEndevorResponse(preUpdateSignout)) return errorResponse;
           return uploadElement(logger)(dispatch)(serviceId, searchLocationId)(
             service
-          )(treePath)(uploadChangeControlValue, uploadTargetLocation)(
-            content,
-            element,
-            elementFilePath,
-            fingerprint
-          );
+          )(treePath)(
+            uploadChangeControlValue,
+            uploadProcessorGroupValue,
+            uploadTargetLocation
+          )(content, element, elementFilePath, fingerprint);
         }
         case ErrorResponseType.FINGERPRINT_MISMATCH_ENDEVOR_ERROR: {
           return uploadFingerprintMismatch(logger)(dispatch)(
             serviceId,
             searchLocationId
-          )(service)(treePath)(uploadChangeControlValue, uploadTargetLocation)(
+          )(service)(treePath)(
+            uploadChangeControlValue,
+            uploadProcessorGroupValue,
+            uploadTargetLocation
+          )(
             element,
             elementFilePath
           )(content);
@@ -570,6 +618,7 @@ const uploadFingerprintMismatch =
   (treePath: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   (element: Element, elementFilePath: string) =>
@@ -606,10 +655,11 @@ const uploadFingerprintMismatch =
     )(
       serviceId,
       searchLocationId
-    )(service)(treePath)(uploadChangeControlValue, uploadTargetLocation)(
-      element,
-      savedLocalElementVersionUri.fsPath
-    );
+    )(service)(treePath)(
+      uploadChangeControlValue,
+      uploadProcessorGroupValue,
+      uploadTargetLocation
+    )(element, savedLocalElementVersionUri.fsPath);
     if (isError(showCompareDialogResult)) {
       const error = showCompareDialogResult;
       reporter.sendTelemetryEvent({

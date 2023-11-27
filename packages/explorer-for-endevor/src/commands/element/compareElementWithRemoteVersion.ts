@@ -15,6 +15,7 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
+  ProcessorGroupValue,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import {
@@ -46,6 +47,7 @@ export const compareElementWithRemoteVersion =
   (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   async (
@@ -85,7 +87,11 @@ export const compareElementWithRemoteVersion =
     const remoteVersionTempFilePath = savedRemoteVersionUri.fsPath;
     const localElementVersionUploadableUri = toUploadableDiffEditorUri(
       initialSearchLocation
-    )(uploadChangeControlValue, uploadTargetLocation)(
+    )(
+      uploadChangeControlValue,
+      uploadProcessorGroupValue,
+      uploadTargetLocation
+    )(
       element,
       serviceId,
       searchLocationId
@@ -193,6 +199,7 @@ const toUploadableDiffEditorUri =
   (initialSearchLocation: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
+    uploadProcessorGroupValue: ProcessorGroupValue,
     uploadTargetLocation: ElementMapPath
   ) =>
   (element: Element, serviceId: EndevorId, searchLocationId: EndevorId) =>
@@ -203,6 +210,7 @@ const toUploadableDiffEditorUri =
       fingerprint: remoteVersionFingerprint,
       remoteVersionTempFilePath,
       uploadChangeControlValue,
+      uploadProcessorGroupValue,
       uploadTargetLocation,
       initialSearchContext: {
         serviceId,

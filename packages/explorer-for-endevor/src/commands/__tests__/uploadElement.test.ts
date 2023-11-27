@@ -29,6 +29,7 @@ import {
   ResponseStatus,
   ErrorResponseType,
   UpdateResponse,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
 import { toEditedElementUri } from '../../uri/editedElementUri';
@@ -45,6 +46,7 @@ import { mockClosingActiveEditorWith } from './_mocks/window';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
+  mockAskingForProcGroup,
   mockAskingForSignout,
   mockAskingForUploadLocation,
 } from './_mocks/dialogs';
@@ -151,6 +153,8 @@ describe('uploading an edited element', () => {
     lastActionCcid: 'LAST-CCID',
     processorGroup: '*NOPROC*',
   };
+  const procGroup = 'ProcessAllToCobol';
+  const procGroupDefaultValue = undefined;
   const elementFingerprint = 'some_value';
   const editedElementFilePath = '/some/temp/element.cbl';
 
@@ -166,6 +170,7 @@ describe('uploading an edited element', () => {
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -187,6 +192,7 @@ describe('uploading an edited element', () => {
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -280,6 +286,7 @@ describe('uploading an edited element', () => {
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       newUploadLocation
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -301,6 +308,7 @@ describe('uploading an edited element', () => {
       service,
       newUploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -396,6 +404,7 @@ describe('uploading an edited element', () => {
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       existingLocationDownTheMap
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -417,6 +426,7 @@ describe('uploading an edited element', () => {
       service,
       existingLocationDownTheMap,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -514,6 +524,8 @@ describe('uploading an edited element', () => {
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
+    const uploadProcessorGroupValue = undefined;
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -535,6 +547,7 @@ describe('uploading an edited element', () => {
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -571,6 +584,7 @@ describe('uploading an edited element', () => {
     const comparingElementDialogStub = mockComparingElementsDialog(
       service,
       uploadChangeControlValue,
+      uploadProcessorGroupValue,
       uploadLocation,
       element,
       serviceId,
@@ -632,6 +646,7 @@ describe('uploading an edited element', () => {
       initialSearchLocation: SubSystemMapPath
     ) => (
       uploadChangeControlValue: ActionChangeControlValue,
+      uploadProcessorGroupValue: ProcessorGroupValue,
       uploadTargetLocation: ElementMapPath
     ) => (
       element: Element,
@@ -643,6 +658,7 @@ describe('uploading an edited element', () => {
     (
       serviceArg: EndevorAuthorizedService,
       uploadChangeControlValueArg: ActionChangeControlValue,
+      uploadProcessorGroupValue: ProcessorGroupValue,
       uploadTargetLocationArg: ElementMapPath,
       elementArg: Element,
       serviceIdArg: EndevorId,
@@ -657,19 +673,24 @@ describe('uploading an edited element', () => {
         .resolves(mockResult);
       const withChangeControlValueStub = sinon
         .stub<
-          [ActionChangeControlValue, ElementMapPath],
+          [ActionChangeControlValue, ProcessorGroupValue, ElementMapPath],
           (
             element: Element,
             localVersionElementTempFilePath: string
           ) => Promise<void | Error>
         >()
-        .withArgs(uploadChangeControlValueArg, uploadTargetLocationArg)
+        .withArgs(
+          uploadChangeControlValueArg,
+          uploadProcessorGroupValue,
+          uploadTargetLocationArg
+        )
         .returns(withLocalVersionFileStub);
       const withTreePathStub = sinon
         .stub<
           [SubSystemMapPath],
           (
             uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
             uploadTargetLocation: ElementMapPath
           ) => (
             element: Element,
@@ -685,6 +706,7 @@ describe('uploading an edited element', () => {
             initialSearchLocation: SubSystemMapPath
           ) => (
             uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
             uploadTargetLocation: ElementMapPath
           ) => (
             element: Element,
@@ -702,6 +724,7 @@ describe('uploading an edited element', () => {
             initialSearchLocation: SubSystemMapPath
           ) => (
             uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
             uploadTargetLocation: ElementMapPath
           ) => (
             element: Element,
@@ -728,6 +751,7 @@ describe('uploading an edited element', () => {
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -759,6 +783,7 @@ describe('uploading an edited element', () => {
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -847,6 +872,7 @@ describe('uploading an edited element', () => {
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -882,6 +908,7 @@ describe('uploading an edited element', () => {
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -991,6 +1018,7 @@ describe('uploading an edited element', () => {
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       existingLocationDownTheMap
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -1026,6 +1054,7 @@ describe('uploading an edited element', () => {
       service,
       existingLocationDownTheMap,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,

@@ -28,6 +28,7 @@ import {
   GenerateWithCopyBackParams,
   Member,
   MoveParams,
+  ProcessorGroupValue,
   SignOutParams,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
@@ -373,7 +374,7 @@ export const generateElementInPlaceAndLogActivity =
   (progress: ProgressReporter) =>
   (service: EndevorAuthorizedService) =>
   (elementSearchParams: ElementMapPath) =>
-  (processorGroup: string | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (signOutParams?: GenerateSignOutParams) => {
     const response = await endevor.generateElementInPlace(logger)(progress)(
@@ -395,7 +396,7 @@ export const generateElementWithCopyBackAndLogActivity =
   (progress: ProgressReporter) =>
   (service: EndevorAuthorizedService) =>
   (elementSearchParams: ElementMapPath) =>
-  (processorGroup: string | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   (copyBackParams?: GenerateWithCopyBackParams) =>
   async (signOutParams?: GenerateSignOutParams) => {
@@ -498,11 +499,12 @@ export const updateElementAndLogActivity =
   (progress: ProgressReporter) =>
   (service: EndevorAuthorizedService) =>
   (element: ElementMapPath) =>
+  (processorGroupValue: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (elementData: ElementDataWithFingerprint) => {
     const response = await endevor.updateElement(logger)(progress)(service)(
       service.configuration
-    )(element)(actionChangeControlParams)(elementData);
+    )(element)(processorGroupValue)(actionChangeControlParams)(elementData);
     logActivity('Updating element')(response);
     return response;
   };
@@ -626,7 +628,7 @@ export const addElementAndLogActivity =
   (progress: ProgressReporter) =>
   (service: EndevorAuthorizedService) =>
   (element: ElementMapPath) =>
-  (processorGroup: string | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (elementData: ElementData) => {
     const response = await endevor.addElement(logger)(progress)(service)(

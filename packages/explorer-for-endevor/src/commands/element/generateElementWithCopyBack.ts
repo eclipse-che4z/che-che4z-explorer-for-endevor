@@ -35,11 +35,11 @@ import {
   ActionChangeControlValue,
   ElementMapPath,
   SubSystemMapPath,
-  Value,
   GenerateResponse,
   ErrorResponseType,
   ElementTypeMapPath,
   ProcessorGroupsResponse,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import {
   TelemetryEvents,
@@ -407,7 +407,7 @@ const complexGenerateWithCopyBack =
   (service: EndevorAuthorizedService) =>
   (generateLocationValue: ElementMapPath) =>
   (element: Element) =>
-  (processorGroup: Value | undefined) =>
+  (processorGroup: ProcessorGroupValue) =>
   (actionChangeControlValue: ActionChangeControlValue) =>
   async (
     copyBackParams?: GenerateWithCopyBackParams
@@ -485,7 +485,7 @@ const askForGenerateWithCopyBackValues =
       typeMapPath: Partial<ElementTypeMapPath>
     ) => (procGroup?: string) => Promise<ProcessorGroupsResponse>
   ): Promise<
-    [ElementMapPath, string | undefined, ActionChangeControlValue] | Error
+    [ElementMapPath, ProcessorGroupValue, ActionChangeControlValue] | Error
   > => {
     const type =
       searchLocation.type && searchLocation.type !== ANY_VALUE
