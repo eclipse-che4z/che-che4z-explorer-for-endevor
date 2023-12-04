@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: 14.x
+          node-version: 18.x
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Audit
@@ -28,7 +28,7 @@ jobs:
       - name: Build E4E
         run: yarn workspace ${{ env.PROJECT_NAME }} build:dev
       - name: Run tests
-        uses: GabrielBB/xvfb-action@v1.0
+        uses: coactions/setup-xvfb@v1
         id: tests
         with:
           run: yarn test
