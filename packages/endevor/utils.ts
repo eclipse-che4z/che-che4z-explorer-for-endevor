@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,33 +11,38 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { Logger } from '@local/extension/_doc/Logger';
+import { Session } from '@zowe/imperative/lib/rest/src/session/Session';
 import { URL } from 'url';
+import { TEN_SEC_IN_MS } from './const';
 import { UnreachableCaseError } from './typeHelpers';
+import { AuthType } from './_doc/Auth';
+import {
+  BearerTokenCredential,
+  Credential,
+  CredentialType,
+  TokenCredential,
+} from './_doc/Credential';
 import {
   EnvironmentStageResponseObject,
-  ErrorUpdateResponse,
   ServiceProtocol,
   StageNumber,
   SubSystem,
   SubSystemResponseObject,
   System,
   SystemResponseObject,
-  UpdateResponse,
   ResponseStatus,
-  ErrorPrintListingResponse,
-  PrintListingResponse,
+  ElementMapPath,
+  ErrorEndevorResponse,
+  ErrorResponseType,
+  EndevorResponse,
+  Service,
+  ServiceLocation,
+  ServiceApiVersion,
+  EndevorApiError,
+  EndevorResponseError,
+  SearchStrategies,
 } from './_doc/Endevor';
-import {
-  FingerprintMismatchError,
-  ChangeRegressionError,
-  SignoutError,
-  DuplicateElementError,
-  ProcessorStepMaxRcExceededError,
-  SelfSignedCertificateError,
-  WrongCredentialsError,
-  ConnectionError,
-  NoComponentInfoError,
-} from './_doc/Error';
 import { Progress, ProgressReporter } from './_doc/Progress';
 
 export const toUrlParms = (
@@ -98,6 +103,74 @@ export const toEndevorProtocol = (
   return undefined;
 };
 
+export const toServiceApiVersion = (
+  apiVersionString: string | undefined
+): ServiceApiVersion | undefined => {
+  if (!apiVersionString) return;
+  const cleanedApiVersionString = apiVersionString.trim();
+  switch (true) {
+    case cleanedApiVersionString.startsWith('2'):
+      return ServiceApiVersion.V2;
+    case cleanedApiVersionString.startsWith('1'):
+      return ServiceApiVersion.V1;
+    default:
+      return;
+  }
+};
+
+export const toEndevorSession =
+  ({ protocol, hostname, port, basePath }: ServiceLocation) =>
+  (rejectUnauthorized: boolean): Session => {
+    return new Session({
+      protocol,
+      hostname,
+      port,
+      basePath: toCorrectBasePathFormat(basePath),
+      rejectUnauthorized,
+    });
+  };
+
+export const toSecuredEndevorSession =
+  (logger: Logger) =>
+  ({ location, credential, rejectUnauthorized }: Service): Session => {
+    const commonSession =
+      toEndevorSession(location)(rejectUnauthorized).ISession;
+    let securedSession;
+    switch (credential.type) {
+      case CredentialType.TOKEN_BEARER:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.BEARER,
+          tokenValue: credential.tokenValue,
+        });
+        break;
+      case CredentialType.TOKEN_COOKIE:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.COOKIE,
+          tokenType: credential.tokenType,
+          tokenValue: credential.tokenValue,
+        });
+        break;
+      case CredentialType.BASE:
+        securedSession = new Session({
+          ...commonSession,
+          type: AuthType.BASIC,
+          user: credential.user,
+          password: credential.password,
+        });
+        break;
+      default:
+        throw new UnreachableCaseError(credential);
+    }
+    logger.trace(
+      `Setup Endevor session:\n${stringifyWithHiddenCredential(
+        securedSession.ISession
+      )}`
+    );
+    return securedSession;
+  };
+
 export const toEndevorStageNumber = (
   value: string | number
 ): StageNumber | undefined => {
@@ -111,6 +184,15 @@ export const fromStageNumber = (value: StageNumber | undefined): number => {
   return value ? parseInt(value) : defaultStageNumber;
 };
 
+export const validateStageNumber = (
+  stage: string | undefined
+): StageNumber | Error => {
+  if (stage === '1' || stage === '2') {
+    return stage;
+  }
+  return new Error('Stage number is incorrect, should be only "1" or "2".');
+};
+
 // Endevor base path should contain no slash at the end
 export const toCorrectBasePathFormat = (basePath: string) =>
   basePath.replace(/\/$/, '');
@@ -120,10 +202,13 @@ export const isDefined = <T>(value: T | undefined): value is T => {
 };
 
 export const stringifyWithHiddenCredential = (value: unknown): string => {
-  return JSON.stringify(value, (key, value) =>
-    key === 'password' || key === 'token' || key === 'base64EncodedAuth'
-      ? '*****'
-      : value
+  return JSON.stringify(
+    value,
+    (key, value) =>
+      key === 'password' || key === 'tokenValue' || key === 'base64EncodedAuth'
+        ? '*****'
+        : value,
+    2
   );
 };
 
@@ -131,74 +216,26 @@ export const stringifyPretty = (value: unknown): string => {
   return JSON.stringify(value, null, 2);
 };
 
-export const isErrorUpdateResponse = (
-  value: UpdateResponse
-): value is ErrorUpdateResponse => {
-  return value.status === ResponseStatus.ERROR;
+export const isErrorEndevorResponse = <
+  E extends ErrorResponseType | undefined,
+  R,
+  T extends Record<string, unknown>
+>(
+  value: EndevorResponse<E, R> | T
+): value is ErrorEndevorResponse<E> => {
+  return 'status' in value && value.status === ResponseStatus.ERROR;
 };
 
-export const isErrorPrintListingResponse = (
-  value: PrintListingResponse
-): value is ErrorPrintListingResponse => {
-  return value.status === ResponseStatus.ERROR;
+export const isEndevorApiError = <T>(
+  value: T | EndevorApiError
+): value is EndevorApiError => {
+  return value instanceof EndevorApiError;
 };
 
-export const isError = <T>(value: T | Error): value is Error => {
-  return value instanceof Error;
-};
-
-export const isSignoutError = <T>(
-  value: T | SignoutError
-): value is SignoutError => {
-  return value instanceof SignoutError;
-};
-
-export const isFingerprintMismatchError = <T>(
-  value: T | FingerprintMismatchError
-): value is FingerprintMismatchError => {
-  return value instanceof FingerprintMismatchError;
-};
-
-export const isDuplicateElementError = <T>(
-  value: T | DuplicateElementError
-): value is DuplicateElementError => {
-  return value instanceof DuplicateElementError;
-};
-
-export const isChangeRegressionError = <T>(
-  value: T | ChangeRegressionError
-): value is ChangeRegressionError => {
-  return value instanceof ChangeRegressionError;
-};
-
-export const isProcessorStepMaxRcExceededError = <T>(
-  value: T | ProcessorStepMaxRcExceededError
-): value is ProcessorStepMaxRcExceededError => {
-  return value instanceof ProcessorStepMaxRcExceededError;
-};
-
-export const isNoComponentInfoError = <T>(
-  value: T | NoComponentInfoError
-): value is NoComponentInfoError => {
-  return value instanceof NoComponentInfoError;
-};
-
-export const isWrongCredentialsError = <T>(
-  value: T | WrongCredentialsError
-): value is WrongCredentialsError => {
-  return value instanceof WrongCredentialsError;
-};
-
-export const isSelfSignedCertificateError = <T>(
-  value: T | SelfSignedCertificateError
-): value is SelfSignedCertificateError => {
-  return value instanceof SelfSignedCertificateError;
-};
-
-export const isConnectionError = <T>(
-  value: T | ConnectionError
-): value is ConnectionError => {
-  return value instanceof ConnectionError;
+export const isEndevorResponseError = <T>(
+  value: T | EndevorResponseError
+): value is EndevorResponseError => {
+  return value instanceof EndevorResponseError;
 };
 
 export const toSeveralTasksProgress =
@@ -209,13 +246,32 @@ export const toSeveralTasksProgress =
         if (progress.increment) {
           const progressPerTask = progress.increment / tasksNumber;
           progressReporter.report({
+            message: progress.message,
             increment: progressPerTask,
           });
         } else {
           progressReporter.report(progress);
         }
       },
+      message: progressReporter.message,
     };
+  };
+
+export const incrementPartialProgress =
+  (progressReporter: ProgressReporter, startPartialProgress?: boolean) =>
+  (increment: number) => {
+    progressReporter.progressRemaining = startPartialProgress
+      ? 100
+      : progressReporter.progressRemaining || 0;
+    const actualIncrement =
+      progressReporter.progressRemaining >= increment
+        ? increment
+        : progressReporter.progressRemaining;
+    progressReporter.report({
+      message: progressReporter.message,
+      increment: actualIncrement,
+    });
+    progressReporter.progressRemaining -= actualIncrement;
   };
 
 export const subsystemStageIdToStageNumber =
@@ -262,3 +318,100 @@ export const systemStageIdToStageNumber =
       })
       .filter(isDefined);
   };
+
+export const isUnique = <T>(
+  value: T,
+  index: number,
+  self: ReadonlyArray<T>
+): boolean => self.indexOf(value) == index;
+
+export const toSearchPath = (elementMapPath: ElementMapPath): string => {
+  const env = elementMapPath.environment;
+  const stage = elementMapPath.stageNumber;
+  const sys = elementMapPath.system;
+  const subSys = elementMapPath.subSystem;
+  const type = elementMapPath.type;
+  return [env, stage, sys, subSys, type].join('/');
+};
+
+export const fromEndevorMapPath = (
+  elementMapPath: string
+): Omit<ElementMapPath, 'id'> | undefined => {
+  const [environment, stageNumber, system, subSystem, type] =
+    elementMapPath.split('/');
+  if (!environment || !system || !subSystem || !type || !stageNumber) {
+    return;
+  }
+  const stageNum = toEndevorStageNumber(stageNumber);
+  if (!stageNum) return;
+  return {
+    type,
+    environment,
+    system,
+    subSystem,
+    stageNumber: stageNum,
+  };
+};
+
+export const isResponseSuccessful = (response: {
+  statusCode: number;
+}): boolean => {
+  const successHttpStatusStart = '2';
+  return response.statusCode.toString().startsWith(successHttpStatusStart);
+};
+
+export const getReportsFromParsedResponse = (
+  responseReports?: {
+    C1MSGS1: string | undefined;
+    APIMSGS: string | undefined;
+  } | null
+) => {
+  if (responseReports?.C1MSGS1 || responseReports?.APIMSGS) {
+    return {
+      C1MSGS1: responseReports?.C1MSGS1,
+      APIMSGS: responseReports?.APIMSGS,
+    };
+  }
+  return;
+};
+
+export const toEndevorReportId = (value: string): string => {
+  const matcher = value.match('^(?:http.*)?/reports/(.*)$');
+  if (matcher && matcher[1]) {
+    return matcher[1];
+  }
+  return value;
+};
+
+export const isBearerTokenCredential = (
+  value: Credential
+): value is BearerTokenCredential => {
+  return value.type === CredentialType.TOKEN_BEARER;
+};
+
+export const isTokenCredentialExpired = (token: TokenCredential): boolean => {
+  // if the validation values are unknown, consider the token is valid (API ML token case)
+  if (!token.tokenCreatedMs || !token.tokenValidForMs) return false;
+  // decrease token validity time for 10 seconds to lower a probability of immediate invalidation
+  return (
+    Date.now() - token.tokenCreatedMs >= token.tokenValidForMs - TEN_SEC_IN_MS
+  );
+};
+
+export const getSearchStrategies = (searchStrategy: SearchStrategies) => {
+  let searchUpInMap = true;
+  let firstOccurrence = 'FIR';
+  switch (searchStrategy) {
+    case SearchStrategies.IN_PLACE:
+      searchUpInMap = false;
+      break;
+    case SearchStrategies.ALL:
+      firstOccurrence = 'ALL';
+      break;
+    case SearchStrategies.FIRST_FOUND:
+      break;
+    default:
+      throw new UnreachableCaseError(searchStrategy);
+  }
+  return { searchUpInMap, firstOccurrence };
+};

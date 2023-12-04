@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -106,6 +106,8 @@ export const EndevorServiceProfile = t.partial({
   port: t.number,
   basePath: t.string,
   rejectUnauthorized: t.boolean,
+  tokenType: t.string,
+  tokenValue: t.string,
 });
 export const EndevorServiceProfiles = t.array(EndevorServiceProfile);
 class EndevorStageNumberType extends t.Type<StageNumber> {

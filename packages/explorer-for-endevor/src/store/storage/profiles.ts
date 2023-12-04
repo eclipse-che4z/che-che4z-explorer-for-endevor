@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -40,6 +40,7 @@ import {
 import {
   Credential as EndevorCredential,
   CredentialType,
+  CredentialTokenType,
 } from '@local/endevor/_doc/Credential';
 import { ANY_VALUE } from '@local/endevor/const';
 import { toCompositeKey } from './utils';
@@ -52,8 +53,8 @@ export const parseServiceProfileForLocation = ({
   profile: EndevorServiceProfile;
 }>): ServiceLocation | undefined => {
   if (!serviceProfile.host || !serviceProfile.port) {
-    logger.error(
-      `Endevor host value is missing for the service profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
+    logger.trace(
+      `Endevor host or port value is missing for the service profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
         serviceProfile
       )}.`
     );
@@ -61,13 +62,13 @@ export const parseServiceProfileForLocation = ({
   }
   const defaultProtocol = 'https';
   if (!serviceProfile.protocol) {
-    logger.warn(
+    logger.trace(
       `Endevor protocol is missing for the service profile ${serviceName}, default value ${defaultProtocol} will be used instead.`
     );
   }
   const defaultBasePath = ServiceBasePath.V2;
   if (!serviceProfile.basePath) {
-    logger.warn(
+    logger.trace(
       `Endevor base path is missing for the service profile ${serviceName}, default value ${defaultBasePath} will be used instead.`
     );
   }
@@ -85,13 +86,40 @@ const parseServiceProfileForRejectUnauthorized = ({
 }: Readonly<{ name: string; profile: EndevorServiceProfile }>): boolean => {
   const defaultValue = true;
   if (serviceProfile.rejectUnauthorized === undefined) {
-    logger.warn(
+    logger.trace(
       `RejectUnauthorized param is missing for the service profile ${serviceName}, default value ${defaultValue} will be used instead.`
     );
     return defaultValue;
   }
   return serviceProfile.rejectUnauthorized;
 };
+
+const toCredentialTokenType =
+  ({
+    serviceName,
+    serviceProfile,
+  }: Readonly<{
+    serviceName: string;
+    serviceProfile: EndevorServiceProfile;
+  }>) =>
+  (tokenType: string | undefined): CredentialTokenType | undefined => {
+    if (!tokenType) return;
+    switch (tokenType) {
+      case CredentialTokenType.APIML:
+        return CredentialTokenType.APIML;
+      case CredentialTokenType.JWT:
+        return CredentialTokenType.JWT;
+      case CredentialTokenType.LTPA:
+        return CredentialTokenType.LTPA;
+      default:
+        logger.trace(
+          `Incompatible token type for the profile ${serviceName}, actual value is ${stringifyWithHiddenCredential(
+            serviceProfile
+          )}.`
+        );
+        return;
+    }
+  };
 
 const parseServiceProfileForCredentials = ({
   name: serviceName,
@@ -100,6 +128,7 @@ const parseServiceProfileForCredentials = ({
   name: string;
   profile: EndevorServiceProfile;
 }>): EndevorCredential | undefined => {
+  // try to get base credentials first
   const user = serviceProfile.user;
   const password = serviceProfile.password;
   if (user && password) {
@@ -107,6 +136,18 @@ const parseServiceProfileForCredentials = ({
       type: CredentialType.BASE,
       user,
       password,
+    };
+  }
+  const tokenType = toCredentialTokenType({
+    serviceName,
+    serviceProfile,
+  })(serviceProfile.tokenType);
+  const tokenValue = serviceProfile.tokenValue;
+  if (tokenType && tokenValue) {
+    return {
+      type: CredentialType.TOKEN_BEARER,
+      tokenType,
+      tokenValue,
     };
   }
   logger.trace(
@@ -128,8 +169,10 @@ export const getConnections = async (
   return serviceProfiles.reduce((acc: Connections, serviceProfile) => {
     const location = parseServiceProfileForLocation(serviceProfile);
     if (!location) return acc;
-    const rejectUnauthorized =
-      parseServiceProfileForRejectUnauthorized(serviceProfile);
+    const unsecureConnection = location.protocol === 'http';
+    const rejectUnauthorized = unsecureConnection
+      ? false
+      : parseServiceProfileForRejectUnauthorized(serviceProfile);
     const id: Id = {
       name: serviceProfile.name,
       source: Source.SYNCHRONIZED,
@@ -209,7 +252,7 @@ export const getInventoryLocations = async (
     .map(({ name, profile }) => {
       if (profileIsCorrect(profile)) return { name, profile };
       logger.trace(
-        `Inventory location instance or environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
+        `Inventory location instance, environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
           profile
         )}.`
       );

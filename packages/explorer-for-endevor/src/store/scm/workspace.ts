@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -38,14 +38,14 @@ import {
 import { Uri } from 'vscode';
 import {
   ActionChangeControlValue,
-  ElementSearchLocation,
+  ElementMapPath,
   Service,
+  Value,
 } from '@local/endevor/_doc/Endevor';
-import { toSecuredEndevorSession } from '@local/endevor/endevor';
 import { ANY_VALUE } from '@local/endevor/const';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import { IHandlerProgressApi } from '@zowe/imperative';
-import { stringifyPretty } from '@local/endevor/utils';
+import { stringifyPretty, toSecuredEndevorSession } from '@local/endevor/utils';
 import { WorkspaceResponse, WorkspaceSyncResponse } from './_doc/Error';
 import { getWorkspaceResponse, getWorkspaceSyncResponse } from './error';
 
@@ -118,15 +118,15 @@ export const confirmConflictResolution = async (
 export const syncWorkspace =
   (progress: ProgressReporter) =>
   (service: Service) =>
+  (configuration: Value) =>
   ({
-    configuration,
     environment,
     stageNumber,
     system,
-    subsystem,
+    subSystem,
     type,
-    element,
-  }: ElementSearchLocation) =>
+    id: element,
+  }: Partial<ElementMapPath>) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
   async (folderUri: Uri): Promise<WorkspaceSyncResponse | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
@@ -134,7 +134,7 @@ export const syncWorkspace =
       environment: environment ?? ANY_VALUE,
       stageNumber: stageNumber ?? ANY_VALUE,
       system: system ?? ANY_VALUE,
-      subsystem: subsystem ?? ANY_VALUE,
+      subsystem: subSystem ?? ANY_VALUE,
       type: type ?? ANY_VALUE,
       element: element ?? ANY_VALUE,
     };
@@ -194,22 +194,23 @@ export const syncWorkspace =
 export const syncWorkspaceOneWay =
   (progress: ProgressReporter) =>
   (service: Service) =>
+  (configuration: Value) =>
   ({
-    configuration,
     environment,
     stageNumber,
     system,
-    subsystem,
+    subSystem,
     type,
-    element,
-  }: ElementSearchLocation) =>
+    id: element,
+  }: Partial<ElementMapPath>) =>
+  ({ ccid, comment }: ActionChangeControlValue) =>
   async (folderUri: Uri): Promise<WorkspaceSyncResponse | Error> => {
     const session = toSecuredEndevorSession(logger)(service);
     const location: IElementBasicData = {
       environment: environment ?? ANY_VALUE,
       stageNumber: stageNumber ?? ANY_VALUE,
       system: system ?? ANY_VALUE,
-      subsystem: subsystem ?? ANY_VALUE,
+      subsystem: subSystem ?? ANY_VALUE,
       type: type ?? ANY_VALUE,
       element: element ?? ANY_VALUE,
     };
@@ -219,6 +220,8 @@ export const syncWorkspaceOneWay =
       'workspace-dir': workspaceDir,
       limit: defaultLimit,
       'one-way': true,
+      ccid,
+      comment,
     };
     const progressApi: IHandlerProgressApi = {
       startBar: (params) => {
@@ -341,6 +344,8 @@ const toWorkspaceState = (state: ExternalWorkspaceState): WorkspaceElements => {
           system: system.name,
           subSystem: subsystem.name,
           type: parsedElement.type,
+          // TODO: add to the parsed value
+          id: parsedElement.fullName,
           name: parsedElement.fullName,
         },
         fileCachedVersion: {

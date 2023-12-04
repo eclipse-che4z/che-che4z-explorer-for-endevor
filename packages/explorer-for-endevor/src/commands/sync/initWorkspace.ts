@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -27,14 +27,11 @@ import { Uri } from 'vscode';
 import {
   InitWorkspaceCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { WorkspaceResponseStatus } from '../../store/scm/_doc/Error';
 
 export const initWorkspace = async (): Promise<void> => {
   logger.trace('Initialization of an Endevor workspace called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED,
-  });
   const folder = await resolveFolder();
   if (!folder) {
     logger.trace(
@@ -65,15 +62,14 @@ export const initWorkspace = async (): Promise<void> => {
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_CALLED,
+      errorContext: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED,
       status: InitWorkspaceCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
     return;
   }
   // always dump the result messages
-  // TODO: consider not to use the result messages since they include internal CLI info sometimes
-  logger.trace(initResult.messages.join('\n'));
+  initResult.messages.forEach((message) => logger.trace(message));
   switch (initResult.status) {
     case WorkspaceResponseStatus.ERROR:
       logger.error('Unable to initialize workspace.');
@@ -84,7 +80,6 @@ export const initWorkspace = async (): Promise<void> => {
       );
       break;
   }
-  logger.trace(initResult.messages.join('\n'));
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_INIT_WORKSPACE_COMPLETED,
     status: InitWorkspaceCommandCompletedStatus.SUCCESS,

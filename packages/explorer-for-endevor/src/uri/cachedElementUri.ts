@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,10 +12,12 @@
  */
 
 import { Uri } from 'vscode';
-import { Schemas } from '../_doc/Uri';
+import { Schemas } from './_doc/Uri';
 
 export const toCachedElementUri = (elementUri: Uri): Uri => {
+  const uniqueFragment = Date.now().toString();
   return elementUri.with({
     scheme: Schemas.READ_ONLY_CACHED_ELEMENT,
+    fragment: uniqueFragment,
   });
 };

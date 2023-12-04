@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -15,7 +15,7 @@ import {
   isWorkspace as isEndevorWorkspace,
   syncWorkspaceOneWay as syncEndevorWorkspaceOneWay,
 } from '../../store/scm/workspace';
-import { logger, reporter } from '../../globals';
+import { reporter } from '../../globals';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
   askForService,
@@ -26,57 +26,52 @@ import {
   dialogCancelled as locationDialogCancelled,
 } from '../../dialogs/locations/endevorSearchLocationDialogs';
 import {
-  EndevorConfiguration,
   EndevorId,
-  ValidEndevorConnection,
-  ValidEndevorCredential,
   ValidEndevorSearchLocationDescriptions,
   ExistingEndevorServiceDescriptions,
 } from '../../store/_doc/v2/Store';
-import { ElementSearchLocation } from '@local/endevor/_doc/Endevor';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
-import {
-  SyncActions,
-  WorkspaceSyncedOneWay,
-} from '../../store/scm/_doc/Actions';
+import { SyncActions, UpdateLastUsed } from '../../store/scm/_doc/Actions';
 import {
   PullFromEndevorCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import {
   isWorkspaceSyncConflictResponse,
   isWorkspaceSyncErrorResponse,
 } from '../../store/scm/utils';
 import { showConflictResolutionRequiredMessage } from '../../dialogs/scm/conflictResolutionDialogs';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import { Id } from '../../store/storage/_doc/Storage';
+import {
+  askForChangeControlValue,
+  dialogCancelled as changeControlDialogCancelled,
+} from '../../dialogs/change-control/endevorChangeControlDialogs';
+import { createEndevorLogger } from '../../logger';
 
 export const pullFromEndevorCommand = async (
-  configurations: {
-    getValidServiceDescriptions: () => ExistingEndevorServiceDescriptions;
-    getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions;
-    getConnectionDetails: (
-      id: EndevorId
-    ) => Promise<ValidEndevorConnection | undefined>;
-    getEndevorConfiguration: (
-      serviceId?: EndevorId,
-      searchLocationId?: EndevorId
-    ) => Promise<EndevorConfiguration | undefined>;
-    getCredential: (
-      connection: ValidEndevorConnection,
-      configuration: EndevorConfiguration
-    ) => (
-      credentialId: EndevorId
-    ) => Promise<ValidEndevorCredential | undefined>;
-    getElementLocation: (
-      searchLocationId: EndevorId
-    ) => Promise<Omit<ElementSearchLocation, 'configuration'> | undefined>;
-  },
-  dispatch: (action: WorkspaceSyncedOneWay) => Promise<void>
+  dispatch: (action: UpdateLastUsed) => Promise<void>,
+  getConnectionConfiguration: (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ) => Promise<
+    | {
+        service: EndevorAuthorizedService;
+        searchLocation: SearchLocation;
+      }
+    | undefined
+  >,
+  getValidServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>,
+  getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions,
+  getLastUsedServiceId: () => Id | undefined,
+  getLastUsedSearchLocationId: () => Id | undefined
 ): Promise<void> => {
+  const logger = createEndevorLogger();
   logger.trace('Pull from Endevor into workspace called.');
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
-  });
   const folderUri = await getWorkspaceUri();
   if (!folderUri) {
     const error = new Error(
@@ -85,7 +80,7 @@ export const pullFromEndevorCommand = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
@@ -98,14 +93,16 @@ export const pullFromEndevorCommand = async (
     logger.error(`${error.message}.`);
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
     return;
   }
   const serviceDialogResult = await askForService(
-    configurations.getValidServiceDescriptions()
+    await getValidServiceDescriptions(),
+    getLastUsedServiceId(),
+    'Last Used'
   );
   if (serviceDialogCancelled(serviceDialogResult)) {
     logger.trace('No Endevor connection was selected.');
@@ -116,18 +113,11 @@ export const pullFromEndevorCommand = async (
     return;
   }
   const serviceId = serviceDialogResult.id;
-  const connectionDetails = await configurations.getConnectionDetails(
-    serviceId
-  );
-  if (!connectionDetails) {
-    const error = new Error(
-      `Unable to fetch the existing ${serviceId.source} Endevor connection with the name ${serviceId.name}`
-    );
-    logger.error(`${error.message}.`);
-    return;
-  }
+  logger.updateContext({ serviceId });
   const locationDialogResult = await askForSearchLocation(
-    configurations.getValidSearchLocationDescriptions()
+    getValidSearchLocationDescriptions(),
+    getLastUsedSearchLocationId(),
+    'Last Used'
   );
   if (locationDialogCancelled(locationDialogResult)) {
     logger.trace('No Endevor inventory location was selected.');
@@ -138,67 +128,59 @@ export const pullFromEndevorCommand = async (
     return;
   }
   const searchLocationId = locationDialogResult.id;
-  const configuration = await configurations.getEndevorConfiguration(
+  logger.updateContext({ serviceId, searchLocationId });
+  dispatch({
+    type: SyncActions.UPDATE_LAST_USED,
+    lastUsedServiceId: serviceId,
+    lastUsedSearchLocationId: searchLocationId,
+  });
+  const connectionParams = await getConnectionConfiguration(
     serviceId,
     searchLocationId
   );
-  if (!configuration) {
-    const error = new Error(
-      `Unable to fetch the existing ${searchLocationId.source} inventory location with the name ${searchLocationId.name}`
-    );
-    logger.error(`${error.message}.`);
+  if (!connectionParams) return;
+  const { service, searchLocation } = connectionParams;
+  const pullChangeControlValue = await askForChangeControlValue({
+    ccid: searchLocation.ccid,
+    comment: searchLocation.comment,
+  });
+  if (changeControlDialogCancelled(pullChangeControlValue)) {
+    logger.error('CCID and Comment must be specified to pull from Endevor.');
+    reporter.sendTelemetryEvent({
+      type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
+      status: PullFromEndevorCommandCompletedStatus.CANCELLED,
+    });
     return;
   }
-  const credential = await configurations.getCredential(
-    connectionDetails,
-    configuration
-  )(serviceId);
-  if (!credential) {
-    const error = new Error(
-      `Unable to fetch the existing ${serviceId.source} Endevor connection with the name ${serviceId.name}`
-    );
-    logger.error(`${error.message}.`);
-    return;
-  }
-  const searchLocation = await configurations.getElementLocation(
-    searchLocationId
-  );
-  if (!searchLocation) {
-    const error = new Error(
-      `Unable to fetch the existing ${searchLocationId.source} inventory location with the name ${searchLocationId.name}`
-    );
-    logger.error(`${error.message}.`);
-    return;
-  }
-
-  // TODO: Remove these hardcoded values when ccid and comment are no longer required in this call.
   const syncResult = await withNotificationProgress('Pulling from Endevor')(
     (progressReporter) =>
-      syncEndevorWorkspaceOneWay(progressReporter)({
-        ...connectionDetails.value,
-        credential: credential.value,
-      })({
+      syncEndevorWorkspaceOneWay(progressReporter)(service)(
+        service.configuration
+      )({
         ...searchLocation,
-        configuration,
-      })(folderUri)
+        subSystem: searchLocation.subsystem,
+        id: searchLocation.element,
+      })(pullChangeControlValue)(folderUri)
   );
   if (isError(syncResult)) {
     const error = syncResult;
-    logger.error('Unable to pull from Endevor.', `${error.message}.`);
+    logger.errorWithDetails(
+      'Unable to pull from Endevor.',
+      `${error.message}.`
+    );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+      errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
       error,
     });
     return;
   }
   // always dump the result messages
-  // TODO: consider not to use the result messages since they include internal CLI info sometimes
-  logger.trace(syncResult.messages.join('\n'));
+  syncResult.messages.forEach((message) => logger.trace(message));
   if (isWorkspaceSyncErrorResponse(syncResult)) {
     const syncError = syncResult;
-    logger.error(
+    logger.errorWithDetails(
       `Unable to pull from Endevor these elements: ${syncError.errorDetails
         .map((errorInfo) => errorInfo.element.name)
         .join(', ')}`
@@ -218,7 +200,7 @@ export const pullFromEndevorCommand = async (
         logger.trace(errorMessage);
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.ERROR,
-          errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_CALLED,
+          errorContext: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
           status: PullFromEndevorCommandCompletedStatus.GENERIC_ERROR,
           error: new Error(errorMessage),
         });
@@ -241,8 +223,5 @@ export const pullFromEndevorCommand = async (
   reporter.sendTelemetryEvent({
     type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
     status: PullFromEndevorCommandCompletedStatus.SUCCESS,
-  });
-  dispatch({
-    type: SyncActions.WORKSPACE_SYNCED_ONEWAY,
   });
 };

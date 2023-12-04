@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,22 +11,15 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import {
-  Element,
-  ElementSearchLocation,
-  Service,
-  SubSystemMapPath,
-} from '@local/endevor/_doc/Endevor';
+import { Element, SubSystemMapPath } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
 import { EndevorId } from '../store/_doc/v2/Store';
-import { EditedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
+import { EditedElementUriQuery, QueryTypes, Schemas } from './_doc/Uri';
 
 type SerializedValue = Readonly<{
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  service: Service;
   element: Element;
-  searchLocation: ElementSearchLocation;
   treePath: SubSystemMapPath;
   fingerprint: string;
 }> & {
@@ -38,21 +31,13 @@ export const toEditedElementUri =
   ({
     element,
     fingerprint,
-    endevorConnectionDetails,
-    searchContext: {
-      serviceId,
-      searchLocationId,
-      initialSearchLocation,
-      overallSearchLocation,
-    },
+    searchContext: { serviceId, searchLocationId, initialSearchLocation },
   }: EditedElementUriQuery): Uri | Error => {
     try {
       const emptyUri = Uri.parse('');
       const query: SerializedValue = {
         serviceId,
-        service: endevorConnectionDetails,
         element,
-        searchLocation: overallSearchLocation,
         treePath: initialSearchLocation,
         searchLocationId,
         type: QueryTypes.EDITED_ELEMENT,
@@ -116,12 +101,10 @@ export const fromEditedElementUri = (
     return {
       element: serializedValue.element,
       fingerprint: serializedValue.fingerprint,
-      endevorConnectionDetails: serializedValue.service,
       searchContext: {
         serviceId: serializedValue.serviceId,
         searchLocationId: serializedValue.searchLocationId,
         initialSearchLocation: serializedValue.treePath,
-        overallSearchLocation: serializedValue.searchLocation,
       },
     };
   }

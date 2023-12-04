@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,7 @@ import {
 } from './_doc/Error';
 import { EndevorElement } from './_doc/Workspace';
 import {
+  ElementActionStatus,
   WorkspaceActionResults as ExternalWorkspaceActionResults,
   WorkspaceResponse as ExternalWorkspaceResponse,
 } from './_ext/Workspace';
@@ -36,40 +37,29 @@ import {
 export const getWorkspaceResponse = (
   externalResponse: ExternalWorkspaceResponse
 ): WorkspaceResponse => {
-  const cleanedUpMessages = externalResponse.messages.map((message) =>
-    message.trim()
+  const messages = getWorkspaceResponseMessages(externalResponse);
+  const overallResponseStatus = getWorkspaceOverallResponseStatus(
+    externalResponse.status
   );
-  // temporary get status from messages too
-  // TODO: replace with overall status from Sync API itself
-  const allMessageStatuses = getWorkspaceMessagesStatuses(
-    externalResponse.messages
-  );
-  // use statuses from messages to determine the final status
-  const overallResponseStatus =
-    getWorkspaceOverallResponseStatus(allMessageStatuses);
   return {
     status: overallResponseStatus,
-    messages: cleanedUpMessages,
+    messages,
   };
 };
 
 export const getWorkspaceSyncResponse = (
   externalResponse: ExternalWorkspaceResponse
 ): WorkspaceSyncResponse => {
-  const cleanedUpMessages = externalResponse.messages.map((message) =>
-    message.trim()
-  );
-  // temporary get status from messages too
-  // TODO: replace with overall status from Sync API itself
-  const allMessageStatuses = getWorkspaceMessagesStatuses(
-    externalResponse.messages
+  const messages = getWorkspaceResponseMessages(externalResponse);
+  const syncResponseStatus = getWorkspaceOverallResponseStatus(
+    externalResponse.status
   );
   // get necessary info from actions (if any)
   const [allActionStatuses, conflictDetails, errorDetails] =
     getWorkspaceResponseDetails(externalResponse.actions);
   // combine statuses from messages and from actions to determine the final status
   const overallResponseStatus = getWorkspaceOverallSyncResponseStatus(
-    allActionStatuses.concat(allMessageStatuses).filter(isUnique)
+    allActionStatuses.concat(syncResponseStatus).filter(isUnique)
   );
   if (
     externalResponse.unresolvedMergeConflicts ||
@@ -77,7 +67,7 @@ export const getWorkspaceSyncResponse = (
   ) {
     return {
       status: WorkspaceResponseStatus.CONFLICT,
-      messages: cleanedUpMessages,
+      messages,
       conflictDetails,
     };
   }
@@ -87,12 +77,12 @@ export const getWorkspaceSyncResponse = (
     case WorkspaceResponseStatus.WARNING:
       return {
         status: overallResponseStatus,
-        messages: cleanedUpMessages,
+        messages,
       };
     case WorkspaceResponseStatus.ERROR:
       return {
         status: overallResponseStatus,
-        messages: cleanedUpMessages,
+        messages,
         errorDetails,
       };
     default:
@@ -118,6 +108,8 @@ const getWorkspaceResponseDetails = (
       subSystem: elementAction.subsystem,
       type: elementAction.type,
       name: elementAction.fullElementName,
+      // TODO: add the elmName to the parsed value
+      id: elementAction.fullElementName,
     };
     const fileUri = Uri.file(elementAction.localFile);
     let operation: WorkspaceOperation;
@@ -214,38 +206,31 @@ const getWorkspaceOverallSyncResponseStatus = (
 };
 
 const getWorkspaceOverallResponseStatus = (
-  statuses: ReadonlyArray<WorkspaceResponseStatus>
+  externalResponseStatus: ElementActionStatus
 ):
   | WorkspaceResponseStatus.SUCCESS
   | WorkspaceResponseStatus.WARNING
   | WorkspaceResponseStatus.ERROR => {
-  switch (true) {
-    case statuses.includes(WorkspaceResponseStatus.ERROR):
+  switch (externalResponseStatus) {
+    case EndevorActionStatus.FAILURE:
       return WorkspaceResponseStatus.ERROR;
-    case statuses.includes(WorkspaceResponseStatus.WARNING):
+    case EndevorActionStatus.WARNING:
       return WorkspaceResponseStatus.WARNING;
-    case statuses.includes(WorkspaceResponseStatus.SUCCESS):
+    case EndevorActionStatus.SUCCESS:
+    case EndevorActionStatus.NOT_RUN:
     default:
       return WorkspaceResponseStatus.SUCCESS;
   }
 };
 
-// temporary workaround while overall API response status is absent
-const getWorkspaceMessagesStatuses = (
-  messages: ReadonlyArray<string>
-): ReadonlyArray<WorkspaceResponseStatus> => {
-  const allMessageStatuses: Array<WorkspaceResponseStatus> = [];
-  messages.forEach((message) => {
-    switch (true) {
-      case message.includes('[ERROR]'):
-        allMessageStatuses.push(WorkspaceResponseStatus.ERROR);
-        break;
-      case message.includes('[WARN]'):
-        allMessageStatuses.push(WorkspaceResponseStatus.WARNING);
-        break;
-      default:
-        break;
-    }
-  });
-  return allMessageStatuses.filter(isUnique);
+const getWorkspaceResponseMessages = (
+  externalResponse: ExternalWorkspaceResponse
+): ReadonlyArray<string> => {
+  return externalResponse.errorMessages
+    .map((message) => `[ERROR] ${message}`)
+    .concat(
+      externalResponse.warningMessages.map((message) => `[WARN] ${message}`),
+      externalResponse.infoMessages.map((message) => `[INFO] ${message}`)
+    )
+    .map((message) => message.trim());
 };

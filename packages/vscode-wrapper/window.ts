@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -35,11 +35,20 @@ export const closeActiveTextEditor = async () => {
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 };
 
-export const showMessageWithOptions = async ({
-  message,
-  options,
-}: MessageWithOptions): Promise<Choice | undefined> => {
-  return await vscode.window.showInformationMessage(message, ...options);
+export const showMessageWithOptions = async (
+  { message, options }: MessageWithOptions,
+  level: MessageLevel = MessageLevel.INFO
+): Promise<Choice | undefined> => {
+  switch (level) {
+    case MessageLevel.WARN:
+      return vscode.window.showWarningMessage(message, ...options);
+    case MessageLevel.ERROR:
+      return vscode.window.showErrorMessage(message, ...options);
+    case MessageLevel.INFO:
+      return vscode.window.showInformationMessage(message, ...options);
+    default:
+      throw new UnreachableCaseError(level);
+  }
 };
 
 export const showModalWithOptions = async (
@@ -79,10 +88,11 @@ export const showInputBox = (
   });
 
 export const showVscodeQuickPick = (
-  items: vscode.QuickPickItem[],
-  showOptions?: QuickPickOptions
+  items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>,
+  showOptions?: QuickPickOptions,
+  token?: vscode.CancellationToken
 ): Thenable<vscode.QuickPickItem | undefined> => {
-  return vscode.window.showQuickPick(items, showOptions);
+  return vscode.window.showQuickPick(items, showOptions, token);
 };
 
 export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
@@ -92,7 +102,7 @@ export const createVscodeQuickPick = async <I extends vscode.QuickPickItem>(
   const quickpick = vscode.window.createQuickPick<I>();
   quickpick.items = items;
   quickpick.title = options?.title;
-  quickpick.placeholder = options?.placeholder;
+  quickpick.placeholder = options?.placeHolder;
   quickpick.ignoreFocusOut = options?.ignoreFocusOut || false;
   quickpick.show();
   const choice = await new Promise<I | undefined>((choice) => {

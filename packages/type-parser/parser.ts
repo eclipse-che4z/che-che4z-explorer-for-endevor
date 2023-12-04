@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -30,4 +30,11 @@ export const parseToType = <T, O, I>(type: t.Type<T, O, I>, input: I): T => {
     },
     (value) => value
   )(result);
+};
+
+export const parseToTypeAndConvert = <T, O, I>(
+  type: t.Type<T, O, I>,
+  input: I
+): O => {
+  return type.encode(parseToType(type, input));
 };

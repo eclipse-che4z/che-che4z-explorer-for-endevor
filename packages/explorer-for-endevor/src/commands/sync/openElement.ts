@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -44,7 +44,7 @@ export const openElementCommand = async (
     } catch (error) {
       logger.warn(
         `Unable to open the element ${fileName}.`,
-        `Unable to open the element ${fileName} because of error:\n${error.message}`
+        `Unable to open the element ${fileUri.fsPath} because of error:\n${error.message}`
       );
     }
   }

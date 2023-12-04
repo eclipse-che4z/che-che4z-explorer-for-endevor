@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -15,40 +15,61 @@ import { COMMAND_PREFIX, SYNC_PREFIX } from '../constants';
 
 export const CommandId = {
   CLEANUP_STORAGE: `${COMMAND_PREFIX}.cleanupStorage`,
+  DUMP_STORAGE: `${COMMAND_PREFIX}.dumpStorageData`,
+  MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
   SUBMIT_ISSUE: `${COMMAND_PREFIX}.submitIssue`,
-  PRINT_ELEMENT: `${COMMAND_PREFIX}.printElement`,
-  PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
+  CHANGE_HISTORY_LEVEL: `${COMMAND_PREFIX}.changeHistoryLevel`,
   REFRESH_TREE_VIEW: `${COMMAND_PREFIX}.refreshTreeView`,
+  REFRESH_HISTORY_TREE_VIEW: `${COMMAND_PREFIX}.refreshHistoryTreeView`,
+
+  // service commands
   ADD_SERVICE_AND_LOCATION: `${COMMAND_PREFIX}.addServiceAndLocation`,
   ADD_NEW_SERVICE: `${COMMAND_PREFIX}.addNewService`,
-  ADD_NEW_SEARCH_LOCATION: `${COMMAND_PREFIX}.addNewSearchLocation`,
-  HIDE_SEARCH_LOCATION: `${COMMAND_PREFIX}.hideSearchLocation`,
+  EDIT_SERVICE: `${COMMAND_PREFIX}.editService`,
   HIDE_SERVICE: `${COMMAND_PREFIX}.hideService`,
   DELETE_SERVICE: `${COMMAND_PREFIX}.deleteService`,
+  EDIT_CONNECTION_DETAILS: `${COMMAND_PREFIX}.editConnectionDetails`,
+  TEST_CONNECTION_DETAILS: `${COMMAND_PREFIX}.testConnectionDetails`,
+  EDIT_CREDENTIALS: `${COMMAND_PREFIX}.editCredentials`,
+
+  // location commands
+  ADD_NEW_SEARCH_LOCATION: `${COMMAND_PREFIX}.addNewSearchLocation`,
+  HIDE_SEARCH_LOCATION: `${COMMAND_PREFIX}.hideSearchLocation`,
   DELETE_SEARCH_LOCATION: `${COMMAND_PREFIX}.deleteSearchLocation`,
+
+  // type commands
+  VIEW_TYPE_DETAILS: `${COMMAND_PREFIX}.viewTypeDetails`,
+
+  // element commands
   VIEW_ELEMENT_DETAILS: `${COMMAND_PREFIX}.viewElementDetails`,
   ADD_ELEMENT_FROM_FILE_SYSTEM: `${COMMAND_PREFIX}.addElementFromFileSystem`,
   RETRIEVE_ELEMENT: `${COMMAND_PREFIX}.retrieveElement`,
   RETRIEVE_WITH_DEPENDENCIES: `${COMMAND_PREFIX}.retrieveElementWithDependencies`,
   QUICK_EDIT_ELEMENT: `${COMMAND_PREFIX}.editElement`,
+  MOVE_ELEMENT: `${COMMAND_PREFIX}.moveElement`,
   GENERATE_ELEMENT: `${COMMAND_PREFIX}.generateElement`,
   GENERATE_ELEMENT_WITH_COPY_BACK: `${COMMAND_PREFIX}.generateElementWithCopyBack`,
   GENERATE_ELEMENT_WITH_NO_SOURCE: `${COMMAND_PREFIX}.generateElementWithNoSource`,
+  GENERATE_SUBSYSTEM_ELEMENTS: `${COMMAND_PREFIX}.generateSubsystemElements`,
   UPLOAD_ELEMENT: `${COMMAND_PREFIX}.uploadElement`,
   DISCARD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.discardChanges`,
   UPLOAD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.acceptChanges`,
   SIGN_OUT_ELEMENT: `${COMMAND_PREFIX}.signOutElement`,
   SIGN_IN_ELEMENT: `${COMMAND_PREFIX}.signInElement`,
-  MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
-  EDIT_CONNECTION_DETAILS: `${COMMAND_PREFIX}.editConnectionDetails`,
-  TEST_CONNECTION_DETAILS: `${COMMAND_PREFIX}.testConnectionDetails`,
-  EDIT_CREDENTIALS: `${COMMAND_PREFIX}.editCredentials`,
   SHOW_FIRST_FOUND: `${COMMAND_PREFIX}.showFirstFoundElements`,
   SHOW_IN_PLACE: `${COMMAND_PREFIX}.showElementsInPlace`,
+  SHOW_EMPTY_TYPES: `${COMMAND_PREFIX}.showEmptyTypes`,
+  HIDE_EMPTY_TYPES: `${COMMAND_PREFIX}.hideEmptyTypes`,
+  PRINT_ELEMENT: `${COMMAND_PREFIX}.printElement`,
+  PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
+  PRINT_HISTORY: `${COMMAND_PREFIX}.printHistory`,
+  SHOW_REPORT: `${COMMAND_PREFIX}.showReport`,
+  CREATE_PACKAGE: `${COMMAND_PREFIX}.createPackage`,
 
   // filter commands
   CLEAR_SEARCH_LOCATION_FILTERS: `${COMMAND_PREFIX}.clearSearchLocationFilters`,
   FILTER_SEARCH_LOCATION_BY_ELEMENT_NAME: `${COMMAND_PREFIX}.filterSearchLocationByElementName`,
+  FILTER_SEARCH_LOCATION_BY_ELEMENT_TYPE: `${COMMAND_PREFIX}.filterSearchLocationByElementType`,
   FILTER_SEARCH_LOCATION_BY_ELEMENT_CCID: `${COMMAND_PREFIX}.filterSearchLocationByElementCcid`,
   CLEAR_SEARCH_LOCATION_FILTER: `${COMMAND_PREFIX}.clearSearchLocationFilter`,
   CLEAR_SEARCH_LOCATION_FILTER_VALUE: `${COMMAND_PREFIX}.clearSearchLocationFilterValue`,

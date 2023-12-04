@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -16,7 +16,9 @@ import * as vscode from 'vscode';
 import { CommandId } from '../commands/id';
 import { ZOWE_PROFILE_DESCRIPTION } from '../constants';
 import { Source } from '../store/storage/_doc/Storage';
-import { ElementNode } from './_doc/ElementTree';
+import { toBasicElementUri } from '../uri/basicElementUri';
+import { isError } from '../utils';
+import { ElementNode, TypeNode } from './_doc/ElementTree';
 import { FilteredNode, FilterNode, FilterValueNode } from './_doc/FilterTree';
 import { AddNewSearchLocationNode, Node } from './_doc/ServiceLocationTree';
 
@@ -40,14 +42,26 @@ class BasicItem extends vscode.TreeItem {
   }
 }
 
+class TypeItem extends vscode.TreeItem {
+  constructor(node: TypeNode) {
+    super(
+      node.name,
+      !node.elements.length && !node.map?.elements.length
+        ? vscode.TreeItemCollapsibleState.None
+        : vscode.TreeItemCollapsibleState.Collapsed
+    );
+    this.contextValue = node.type;
+  }
+}
+
 class ServiceLocationItem extends vscode.TreeItem {
   constructor(
     name: string,
     source: Source,
     type: string,
-    tooltip: string,
     duplicated: boolean,
-    collapsable: boolean
+    collapsable: boolean,
+    tooltip?: vscode.MarkdownString | string
   ) {
     super(
       name,
@@ -69,17 +83,34 @@ class ServiceLocationItem extends vscode.TreeItem {
   }
 }
 
+class ValidServiceLocationItem extends ServiceLocationItem {
+  constructor(
+    name: string,
+    source: Source,
+    type: string,
+    duplicate: boolean,
+    showEmptyTypes: boolean,
+    collapsable: boolean,
+    tooltip?: vscode.MarkdownString | string
+  ) {
+    super(name, source, type, duplicate, collapsable, tooltip);
+    this.contextValue = `${type}${
+      showEmptyTypes ? '/WITH_EMPTY_TYPES' : ''
+    }/VALID`;
+  }
+}
+
 class InvalidServiceLocationItem extends ServiceLocationItem {
   constructor(
     name: string,
     source: Source,
     type: string,
-    tooltip: string,
     duplicate: boolean,
     collapsable: boolean,
+    tooltip?: vscode.MarkdownString | string,
     command?: vscode.Command
   ) {
-    super(name, source, type, tooltip, duplicate, collapsable);
+    super(name, source, type, duplicate, collapsable, tooltip);
     this.iconPath = new vscode.ThemeIcon('warning');
     this.command = command;
   }
@@ -94,14 +125,24 @@ class EmptyMapItem extends vscode.TreeItem {
 class ElementItem extends vscode.TreeItem {
   constructor(node: ElementNode) {
     super(node.name, vscode.TreeItemCollapsibleState.None);
-    this.resourceUri = node.uri;
+    const elementUri = toBasicElementUri(node)(node.timestamp);
+    if (!isError(elementUri)) {
+      this.resourceUri = elementUri;
+    }
     this.contextValue = node.type;
     this.tooltip = node.tooltip;
+    this.description = node.noSource ? 'no-source' : undefined;
+    this.iconPath = node.outOfDate
+      ? new vscode.ThemeIcon(
+          'history',
+          new vscode.ThemeColor('list.warningForeground')
+        )
+      : undefined;
     this.command = {
       title: 'Print Element',
       command: CommandId.PRINT_ELEMENT,
       tooltip: 'Print Element',
-      arguments: [this.resourceUri, node.name],
+      arguments: [node],
     };
   }
 }
@@ -128,18 +169,27 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
     case 'BUTTON_ADD_SEARCH_LOCATION':
       return new ButtonItem(node);
     case 'SERVICE':
-    case 'LOCATION':
-    case 'LOCATION/WITH_MAP':
     case 'SERVICE_PROFILE':
-    case 'LOCATION_PROFILE':
-    case 'LOCATION_PROFILE/WITH_MAP':
       return new ServiceLocationItem(
         node.name,
         node.source,
         node.type,
-        node.tooltip,
         node.duplicated,
-        true
+        true,
+        node.tooltip
+      );
+    case 'LOCATION':
+    case 'LOCATION/WITH_MAP':
+    case 'LOCATION_PROFILE':
+    case 'LOCATION_PROFILE/WITH_MAP':
+      return new ValidServiceLocationItem(
+        node.name,
+        node.source,
+        node.type,
+        node.duplicated,
+        !!node.withEmptyTypes,
+        true,
+        node.tooltip
       );
     case 'SERVICE_PROFILE/NON_EXISTING':
     case 'SERVICE/NON_EXISTING':
@@ -151,9 +201,9 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
         node.name,
         node.source,
         node.type,
-        node.tooltip,
         node.duplicated,
-        node.children.length > 0
+        node.children.length > 0,
+        node.tooltip
       );
     case 'LOCATION_PROFILE/NON_EXISTING':
     case 'LOCATION/NON_EXISTING':
@@ -165,16 +215,17 @@ export const toTreeItem = (node: Node): vscode.TreeItem => {
         node.name,
         node.source,
         node.type,
-        node.tooltip,
         node.duplicated,
         false,
+        node.tooltip,
         node.command
       );
     case 'MAP':
     case 'SYS':
     case 'SUB':
-    case 'TYPE':
       return new BasicItem(node.name, node.type);
+    case 'TYPE':
+      return new TypeItem(node);
     case 'EMPTY_MAP_NODE':
       return new EmptyMapItem();
     case 'FILTERED':

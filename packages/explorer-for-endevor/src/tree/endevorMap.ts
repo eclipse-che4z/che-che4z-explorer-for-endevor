@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,7 +11,7 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EndevorMap, toSubsystemMapPathId } from '../_doc/Endevor';
+import { EndevorMap, SubsystemMapPathId } from '../api/_doc/Endevor';
 import {
   EnvironmentStage,
   System,
@@ -24,6 +24,26 @@ import {
   EnvironmentStageMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { isDefined, isNotLastEnvStage } from '../utils';
+import { toSubsystemMapPathId } from '../store/utils';
+
+export const getNextLocationOnMap =
+  (elementPath: SubsystemMapPathId) =>
+  (endevorMap: EndevorMap): SubsystemMapPathId | undefined => {
+    const nextLocation = Object.entries(endevorMap).reduce(
+      (nextLocation: SubsystemMapPathId, [startPathId, route]) => {
+        if (startPathId === elementPath) {
+          return route[0] || nextLocation;
+        }
+        const index = route.findIndex((location) => location === elementPath);
+        if (index === -1) {
+          return nextLocation;
+        }
+        return route[index + 1] || nextLocation;
+      },
+      ''
+    );
+    return nextLocation === '' ? undefined : nextLocation;
+  };
 
 export const toEndevorMapWithWildcards =
   (environmentStages: ReadonlyArray<EnvironmentStage>) =>

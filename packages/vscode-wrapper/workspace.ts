@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -30,6 +30,12 @@ export const getWorkspaceUri = async (): Promise<vscode.Uri | undefined> => {
   }
   const [openedWorkspace] = openedWorkspaces;
   return openedWorkspace?.uri;
+};
+
+export const getOpenedWorkspaceFolders = async (): Promise<
+  ReadonlyArray<vscode.WorkspaceFolder> | undefined
+> => {
+  return vscode.workspace.workspaceFolders;
 };
 
 export const chooseFileUriFromFs = async (): Promise<

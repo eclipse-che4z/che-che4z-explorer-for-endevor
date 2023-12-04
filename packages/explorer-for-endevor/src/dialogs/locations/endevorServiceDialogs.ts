@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -20,26 +20,27 @@ import {
 } from '@local/vscode-wrapper/window';
 import { logger, reporter } from '../../globals';
 import {
-  ServiceApiVersion,
+  ApiVersionResponse,
+  ErrorResponseType,
   ServiceBasePath,
   ServiceLocation,
 } from '@local/endevor/_doc/Endevor';
-import { isSelfSignedCertificateError, toUrlParms } from '@local/endevor/utils';
+import { isErrorEndevorResponse, toUrlParms } from '@local/endevor/utils';
 import {
+  formatWithNewLines,
   isDefined,
   isError,
-  isTimeoutError,
-  toPromiseWithTimeout,
+  moveItemInFrontOfArray,
+  toServiceUrl,
 } from '../../utils';
 import {
   NOTIFICATION_TIMEOUT,
   ZOWE_PROFILE_DESCRIPTION,
 } from '../../constants';
-import { SelfSignedCertificateError } from '@local/endevor/_doc/Error';
 import {
   ServiceConnectionTestStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import {
   EndevorConnection,
   EndevorConnectionStatus,
@@ -48,7 +49,7 @@ import {
   InvalidEndevorServiceDescription,
   ValidEndevorServiceDescription,
 } from '../../store/_doc/v2/Store';
-import { Source } from '../../store/storage/_doc/Storage';
+import { Id, Source } from '../../store/storage/_doc/Storage';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { QuickPickOptions } from '@local/vscode-wrapper/_doc/window';
 import {
@@ -63,7 +64,8 @@ import {
   Credential,
   CredentialType,
 } from '@local/endevor/_doc/Credential';
-import { PasswordLengthPolicy } from '../../_doc/Credential';
+import { isTimeoutError, toPromiseWithTimeout } from '../utils';
+
 const enum DialogResultTypes {
   CREATED = 'CREATED',
   CHOSEN = 'CHOSEN',
@@ -114,12 +116,7 @@ export const askForServiceOrCreateNew =
     testServiceLocation: (
       location: ServiceLocation,
       rejectUnauthorized: boolean
-    ) => Promise<
-      | ServiceApiVersion
-      | SelfSignedCertificateError
-      | Error
-      | OperationCancelled
-    >
+    ) => Promise<ApiVersionResponse | OperationCancelled>
   ): Promise<DialogResult> => {
     const createNewServiceItem: QuickPickItem = {
       label: '+ Create a new Endevor connection',
@@ -127,8 +124,8 @@ export const askForServiceOrCreateNew =
     };
     const choice = await showServicesInQuickPick([
       createNewServiceItem,
-      ...Object.values(dialogRestrictions.servicesToChoose).map(
-        toServiceQuickPickItem
+      ...Object.values(dialogRestrictions.servicesToChoose).map((service) =>
+        toServiceQuickPickItem(service)
       ),
     ]);
     if (
@@ -186,18 +183,33 @@ export const askForServiceOrCreateNew =
   };
 
 export const askForService = async (
-  servicesToChoose: ExistingEndevorServiceDescriptions
+  servicesToChoose: ExistingEndevorServiceDescriptions,
+  defaultServiceId?: Id,
+  defaultServiceDesc?: string
 ): Promise<ChooseDialogResult> => {
+  let defaultQuickPickItem;
   const serviceQuickPickItems = Object.values(servicesToChoose).map(
-    toServiceQuickPickItem
+    (service) => {
+      const isDefault = defaultServiceId === service.id;
+      const quickPickItem = toServiceQuickPickItem(
+        service,
+        isDefault,
+        isDefault ? defaultServiceDesc : undefined
+      );
+      if (isDefault) {
+        defaultQuickPickItem = quickPickItem;
+      }
+      return quickPickItem;
+    }
   );
   if (!serviceQuickPickItems.length) {
     logger.warn('No Endevor connections to select from.');
     return undefined;
   }
+  moveItemInFrontOfArray(serviceQuickPickItems, defaultQuickPickItem);
   const quickPickOptions: QuickPickOptions = {
     title: 'Select from the available Endevor connections',
-    placeholder: 'An Endevor connection name',
+    placeHolder: 'An Endevor connection name',
     ignoreFocusOut: true,
   };
   const choice = await createVscodeQuickPick(
@@ -220,17 +232,22 @@ export const askForService = async (
   };
 };
 
-const toServiceQuickPickItem = ({
-  id,
-  url,
-  duplicated,
-}:
-  | ValidEndevorServiceDescription
-  | InvalidEndevorServiceDescription): ServiceQuickPickItem => {
+const toServiceQuickPickItem = (
+  {
+    id,
+    duplicated,
+    service,
+    credential,
+  }: ValidEndevorServiceDescription | InvalidEndevorServiceDescription,
+  isDefault?: boolean,
+  description?: string
+): ServiceQuickPickItem => {
   const serviceQuickPickItem: ServiceQuickPickItem = {
     label: id.name,
-    detail: url,
+    detail: toServiceUrl(service.location, credential),
     id,
+    picked: !!isDefault,
+    description,
   };
 
   switch (id.source) {
@@ -253,7 +270,7 @@ const showServicesInQuickPick = async (
 ): Promise<QuickPick<ServiceQuickPickItem> | undefined> => {
   const quickPickOptions: QuickPickOptions = {
     title: 'Add an Endevor connection',
-    placeholder:
+    placeHolder:
       'Choose "Create new..." to define a new Endevor connection or select an existing one',
     ignoreFocusOut: true,
   };
@@ -328,43 +345,49 @@ export const askForServiceValue = async (
   testServiceLocation: (
     location: ServiceLocation,
     rejectUnauthorized: boolean
-  ) => Promise<
-    ServiceApiVersion | SelfSignedCertificateError | Error | OperationCancelled
-  >
+  ) => Promise<ApiVersionResponse | OperationCancelled>,
+  prefilledUrl?: string,
+  prefilledCredential?: {
+    user?: string;
+    password?: string;
+  }
 ): Promise<CreatedService['value'] | undefined> => {
   const serviceDetailsResult = await askForConnectionDetails(
     testServiceLocation,
-    async () => !(await askForTryAgainOrContinue())
+    async () => !(await askForTryAgainOrContinue()),
+    prefilledUrl
   );
   if (!serviceDetailsResult) return;
-  if (
-    !serviceDetailsResult.credential.username ||
-    !serviceDetailsResult.credential.password
-  ) {
-    const credential = await askForCredentialValue(defaultPasswordPolicy)({
-      user: serviceDetailsResult.credential.username,
-      password: serviceDetailsResult.credential.password,
-    });
-    if (emptyValueProvided(credential)) {
+  const credential = prefilledCredential
+    ? prefilledCredential
+    : serviceDetailsResult.credential;
+  if (!credential.user || !credential.password) {
+    const credentialResult = await askForCredentialValue(defaultPasswordPolicy)(
+      {
+        user: credential.user,
+        password: credential.password,
+      }
+    );
+    if (emptyValueProvided(credentialResult)) {
       return {
         ...serviceDetailsResult,
         credential: undefined,
       };
     }
-    if (operationCancelled(credential)) {
+    if (operationCancelled(credentialResult)) {
       return;
     }
     return {
       ...serviceDetailsResult,
-      credential,
+      credential: credentialResult,
     };
   }
   return {
     ...serviceDetailsResult,
     credential: {
       type: CredentialType.BASE,
-      user: serviceDetailsResult.credential.username,
-      password: serviceDetailsResult.credential.password,
+      user: credential.user,
+      password: credential.password,
     },
   };
 };
@@ -372,7 +395,7 @@ export const askForServiceValue = async (
 export type ServiceDetailsResult = Readonly<{
   connection: EndevorConnection;
   credential: Partial<{
-    username: string;
+    user: string;
     password: string;
   }>;
 }>;
@@ -381,9 +404,7 @@ export const askForConnectionDetails = async (
   testServiceLocation: (
     location: ServiceLocation,
     rejectUnauthorized: boolean
-  ) => Promise<
-    ServiceApiVersion | SelfSignedCertificateError | Error | OperationCancelled
-  >,
+  ) => Promise<ApiVersionResponse | OperationCancelled>,
   continueWithError: () => Promise<boolean>,
   prefilledUrl?: string
 ): Promise<ServiceDetailsResult | undefined> => {
@@ -402,51 +423,11 @@ export const askForConnectionDetails = async (
       logger.error(error.message);
       return;
     }
-    const apiVersion = await testServiceLocation(
+    const apiVersionResponse = await testServiceLocation(
       parsedService.location,
       rejectUnauthorized
     );
-    if (isSelfSignedCertificateError(apiVersion)) {
-      const error = apiVersion;
-      logger.error(
-        'Unable to validate Endevor server certificate',
-        `${error.message}.`
-      );
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
-        status: ServiceConnectionTestStatus.CERT_ISSUER_VALIDATION_ERROR,
-        error,
-      });
-      rejectUnauthorized = await askForRejectUnauthorizedConnections();
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED,
-        context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
-        rejectUnauthorized,
-      });
-      // immediately start again if the value was changed: true -> false
-      if (!rejectUnauthorized) continue;
-      const tryAgain = !(await continueWithError());
-      if (tryAgain) continue;
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.SERVICE_CONNECTION_TEST,
-        context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
-        status: ServiceConnectionTestStatus.CONTINUE_WITH_ERROR,
-      });
-      return {
-        connection: {
-          status: EndevorConnectionStatus.INVALID,
-          value: {
-            rejectUnauthorized,
-            ...parsedService,
-          },
-        },
-        credential: {
-          ...parsedService,
-        },
-      };
-    }
-    if (operationCancelled(apiVersion)) {
+    if (operationCancelled(apiVersionResponse)) {
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.SERVICE_CONNECTION_TEST,
         context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
@@ -472,20 +453,57 @@ export const askForConnectionDetails = async (
         },
       };
     }
-    if (isError(apiVersion)) {
-      const error = apiVersion;
-      logger.error(
-        'Unable to connect to Endevor Web Services.',
-        `${error.message}.`
+    if (isErrorEndevorResponse(apiVersionResponse)) {
+      const errorResponse = apiVersionResponse;
+      // TODO: format using all possible error details
+      const error = new Error(
+        `Unable to fetch Endevor Web Services API version because of error:${formatWithNewLines(
+          errorResponse.details.messages
+        )}`
       );
-      const tryAgain = !(await continueWithError());
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
-        status: ServiceConnectionTestStatus.GENERIC_ERROR,
-        error,
-      });
-      if (tryAgain) continue;
+      switch (errorResponse.type) {
+        case ErrorResponseType.CERT_VALIDATION_ERROR: {
+          logger.error(
+            'Unable to validate Endevor Web Services certificate',
+            `${error.message}.`
+          );
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
+            status: ServiceConnectionTestStatus.CERT_ISSUER_VALIDATION_ERROR,
+            error,
+          });
+          rejectUnauthorized = await askForRejectUnauthorizedConnections();
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.REJECT_UNAUTHORIZED_PROVIDED,
+            context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
+            rejectUnauthorized,
+          });
+          // immediately start again if the value was changed: true -> false
+          if (!rejectUnauthorized) continue;
+          const tryAgain = !(await continueWithError());
+          if (tryAgain) continue;
+          break;
+        }
+        case ErrorResponseType.CONNECTION_ERROR:
+        case ErrorResponseType.GENERIC_ERROR: {
+          logger.error(
+            'Unable to connect to Endevor Web Services.',
+            `${error.message}.`
+          );
+          const tryAgain = !(await continueWithError());
+          reporter.sendTelemetryEvent({
+            type: TelemetryEvents.ERROR,
+            errorContext: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
+            status: ServiceConnectionTestStatus.GENERIC_ERROR,
+            error,
+          });
+          if (tryAgain) continue;
+          break;
+        }
+        default:
+          throw new UnreachableCaseError(errorResponse.type);
+      }
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.SERVICE_CONNECTION_TEST,
         context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
@@ -504,6 +522,8 @@ export const askForConnectionDetails = async (
         },
       };
     }
+    // TODO report warnings
+    const apiVersion = apiVersionResponse.result;
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.SERVICE_CONNECTION_TEST,
       context: TelemetryEvents.DIALOG_SERVICE_INFO_COLLECTION_CALLED,
@@ -605,12 +625,20 @@ export const askForTryAgainOrContinue = async (): Promise<boolean> => {
   return true;
 };
 
+type PasswordLengthPolicy = Readonly<{
+  maxLength: number;
+  minLength: number;
+}>;
+
 const askForCredentialValue =
   (passwordLengthPolicy: PasswordLengthPolicy) =>
-  async (prefilledValue?: {
-    user?: string;
-    password?: string;
-  }): Promise<BaseCredential | OperationCancelled | EmptyValue> => {
+  async (
+    prefilledValue?: {
+      user?: string;
+      password?: string;
+    },
+    prompt?: string
+  ): Promise<BaseCredential | OperationCancelled | EmptyValue> => {
     const user = await askForUsername({
       allowEmpty: true,
       prefilledValue: prefilledValue?.user,
@@ -627,6 +655,7 @@ const askForCredentialValue =
       allowEmpty: false,
       passwordLengthPolicy,
       prefilledValue: prefilledValue?.password,
+      prompt,
     });
     if (operationCancelled(password) || emptyValueProvided(password)) {
       logger.trace('No password was provided.');

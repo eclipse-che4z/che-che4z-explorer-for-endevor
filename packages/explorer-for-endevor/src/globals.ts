@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -11,14 +11,10 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { EXT_ID, EXT_VERSION, OUTPUT_CHANNEL_NAME } from './constants';
+import { OUTPUT_CHANNEL_NAME } from './constants';
 import { createLogger } from '@local/vscode-wrapper/logger';
-import { createReporter } from './telemetry';
+import { createReporter } from './telemetry/telemetry';
 
 export const logger = createLogger(OUTPUT_CHANNEL_NAME);
 
-export const reporter = createReporter(
-  EXT_ID,
-  EXT_VERSION,
-  __E4E_TELEMETRY_KEY__
-)(logger);
+export const reporter = createReporter(__E4E_TELEMETRY_KEY__)(logger);

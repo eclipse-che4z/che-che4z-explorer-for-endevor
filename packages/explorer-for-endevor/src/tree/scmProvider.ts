@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,7 +24,7 @@ import {
   WorkspaceElementType,
 } from '../store/scm/_doc/Workspace';
 import { toCachedElementUri } from '../uri/cachedElementUri';
-import { Schemas } from '../_doc/Uri';
+import { Schemas } from '../uri/_doc/Uri';
 import { toFileExplorerChange, toScmProviderChange } from './scmRender';
 
 export const scmTreeProvider =

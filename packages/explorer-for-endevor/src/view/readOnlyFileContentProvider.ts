@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -28,8 +28,8 @@ export const readOnlyFileContentProvider: TextDocumentContentProvider = {
       return new TextDecoder(ENCODING).decode(fileContent);
     } catch (error) {
       logger.error(
-        `Unable to open the read-only file ${filePath}.`,
-        `Unable to open the read-only file ${filePath} because of error ${error.message}.`
+        `Unable to open read-only file ${filePath}.`,
+        `Unable to open read-only file ${filePath} because of error:\n${error.message}.`
       );
       return;
     }

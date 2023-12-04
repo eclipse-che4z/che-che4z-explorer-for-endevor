@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -14,18 +14,13 @@
 import { getAllOpenedTextEditors } from '@local/vscode-wrapper/window';
 import { SectionChange } from '@local/vscode-wrapper/_doc/workspace';
 import * as vscode from 'vscode';
-import { reporter } from '../../globals';
 import { toCachedElementUri } from '../../uri/cachedElementUri';
-import { TelemetryEvents } from '../../_doc/telemetry/v2/Telemetry';
 
 export const revertSectionChangeCommand = async (
   elementUri: vscode.Uri,
   changesList: SectionChange[],
   changeIndex: number
 ) => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.COMMAND_REVERT_SECTION_CHANGE_CALLED,
-  });
   const [changedElementEditor] = getAllOpenedTextEditors().filter(
     (editor) => editor.document.uri.fsPath === elementUri.fsPath
   );

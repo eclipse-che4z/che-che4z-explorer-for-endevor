@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,7 +24,7 @@ import { logger, reporter } from '../../globals';
 import {
   TelemetryEvents,
   ProfileMigrationCompletedStatus,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import { toCompositeKey } from './utils';
 
 const getSettingsConnectionLocations = (): ConnectionLocations | Error => {
@@ -99,9 +99,6 @@ export const mergeConnectionLocations = (
 export const migrateConnectionLocationsFromSettings = async (
   getConnectionLocationsStorage: () => ConnectionLocationsStorage
 ): Promise<void | Error> => {
-  reporter.sendTelemetryEvent({
-    type: TelemetryEvents.PROFILES_MIGRATION_CALLED,
-  });
   const existingConnectionLocations =
     await getConnectionLocationsStorage().get();
   if (isError(existingConnectionLocations)) {
@@ -112,7 +109,7 @@ export const migrateConnectionLocationsFromSettings = async (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.PROFILES_MIGRATION_CALLED,
+      errorContext: TelemetryEvents.PROFILES_MIGRATION_COMPLETED,
       status: ProfileMigrationCompletedStatus.NO_PROFILES_MIGRATED,
       error,
     });
@@ -127,7 +124,7 @@ export const migrateConnectionLocationsFromSettings = async (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.PROFILES_MIGRATION_CALLED,
+      errorContext: TelemetryEvents.PROFILES_MIGRATION_COMPLETED,
       status: ProfileMigrationCompletedStatus.NO_PROFILES_MIGRATED,
       error,
     });
@@ -148,7 +145,7 @@ export const migrateConnectionLocationsFromSettings = async (
     );
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.ERROR,
-      errorContext: TelemetryEvents.PROFILES_MIGRATION_CALLED,
+      errorContext: TelemetryEvents.PROFILES_MIGRATION_COMPLETED,
       status: ProfileMigrationCompletedStatus.NO_PROFILES_MIGRATED,
       error,
     });

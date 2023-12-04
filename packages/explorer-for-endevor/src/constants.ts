@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -10,11 +10,6 @@
  * Contributors:
  *   Broadcom, Inc. - initial API and implementation
  */
-
-import pkgjson = require('../package.json');
-
-export const EXT_ID = `${pkgjson.publisher}.${pkgjson.name}`;
-export const EXT_VERSION = pkgjson.version;
 
 export const UNKNOWN_VERSION = '0.0.0';
 
@@ -28,6 +23,8 @@ export const ENDEVOR_CONFIGURATION = 'endevor';
 export const EXPERIMENTAL_CONFIGURATION = `${ENDEVOR_CONFIGURATION}.experimental`;
 export const AUTOMATIC_SIGN_OUT_SETTING = 'automaticSignOut';
 export const AUTOMATIC_SIGN_OUT_DEFAULT = false;
+export const AUTH_WITH_TOKEN_SETTING = 'authWithToken';
+export const AUTH_WITH_TOKEN_SETTING_DEFAULT = true;
 export const MAX_PARALLEL_REQUESTS_SETTING = 'maxParallelRequests';
 export const MAX_PARALLEL_REQUESTS_DEFAULT = 4;
 
@@ -41,6 +38,10 @@ export const WORKSPACE_SYNC_DEFAULT = false;
 export const TREE_VIEW_ID = `${COMMAND_PREFIX}.treeView`;
 export const TREE_VIEW_INITIALIZED_CONTEXT_NAME = `${TREE_VIEW_ID}.initialized`;
 
+export const ELM_HISTORY_VIEW_ID = `${COMMAND_PREFIX}.elementHistoryView`;
+
+export const ACTIVITY_VIEW_ID = `${COMMAND_PREFIX}.activityView`;
+
 export const FILE_EXT_RESOLUTION_SETTING = 'fileExtensionResolution';
 export const ELM_NAME_VALUE = 'Element name only';
 export const TYPE_EXT_VALUE = 'Endevor type file extension only';
@@ -48,11 +49,16 @@ export const TYPE_EXT_OR_NAME_VALUE =
   'Endevor type file extension or type name';
 export const FILE_EXT_RESOLUTION_DEFAULT = TYPE_EXT_OR_NAME_VALUE;
 
+export const CURRENT_CHANGE_LEVEL = 'current';
+
 export const ENCODING = 'UTF-8';
 export const BUFFER_ENCODING = 'utf-8';
 
 export const SCM_ID = `${COMMAND_PREFIX}.${SCM_PREFIX}`;
 export const SCM_LABEL = 'Endevor';
+
+export const SCM_LOCAL_DIR = '.endevor';
+export const SCM_METADATA_FILE = 'metadata.json';
 
 export const SCM_CHANGES_GROUP_ID = `${COMMAND_PREFIX}.${SCM_PREFIX}.${GROUP_PREFIX}.changes`;
 export const SCM_CHANGES_GROUP_LABEL = 'Changes';
@@ -88,8 +94,6 @@ export const SCM_STATUS_CONTEXT_NAME = `${COMMAND_PREFIX}.scm.status`;
 export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';
 
 export const EDIT_DIR = '.edit';
-
-export const EXTENSION_ISSUES_PAGE = pkgjson.bugs.url;
 
 export const ZE_API_MIN_VERSION = '2.2.1';
 export const ZOWE_PROFILE_DESCRIPTION = 'Zowe config';
@@ -161,3 +165,13 @@ export const ENDEVOR_MESSAGE_CODE_PREFIXES = [
 export const ENDEVOR_CREDENTIAL_VALIDATION_LIMIT = 2;
 
 export const DEFAULT_TREE_IN_PLACE_SEARCH_MODE = false;
+
+export const DEFAULT_SHOW_EMPTY_TYPES_MODE = false;
+
+// Retrieve with dependencies is split into 4 parts:
+// 1. Retrieve main element
+// 2. Get main element component info
+// 3. Look for dependencies in the map
+// 4. Retrieve dependencies
+// There can be additional part in case we are retrieving with signout
+export const RETRIEVE_PROGRESS_PARTS_NUM = 4;

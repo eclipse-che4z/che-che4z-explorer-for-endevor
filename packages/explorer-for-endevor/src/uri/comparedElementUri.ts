@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -15,23 +15,21 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
-  ElementSearchLocation,
-  Service,
+  ProcessorGroupValue,
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
 import { EndevorId } from '../store/_doc/v2/Store';
-import { ComparedElementUriQuery, QueryTypes, Schemas } from '../_doc/Uri';
+import { ComparedElementUriQuery, QueryTypes, Schemas } from './_doc/Uri';
 
 type SerializedValue = Readonly<{
   serviceId: EndevorId;
   searchLocationId: EndevorId;
-  service: Service;
   elementTreePath: SubSystemMapPath;
-  overallSearchLocation: ElementSearchLocation;
   element: Element;
   fingerprint: string;
   uploadChangeControlValue: ChangeControlValue;
+  uploadProcessorGroupValue: ProcessorGroupValue;
   uploadTargetLocation: ElementMapPath;
   remoteVersionTempFilePath: string;
 }> & {
@@ -47,14 +45,12 @@ export const toComparedElementUri =
         type: QueryTypes.COMPARED_ELEMENT,
         serviceId: uriQuery.initialSearchContext.serviceId,
         searchLocationId: uriQuery.initialSearchContext.searchLocationId,
-        service: uriQuery.endevorConnectionDetails,
         element: uriQuery.element,
         fingerprint: uriQuery.fingerprint,
         uploadChangeControlValue: uriQuery.uploadChangeControlValue,
+        uploadProcessorGroupValue: uriQuery.uploadProcessorGroupValue,
         uploadTargetLocation: uriQuery.uploadTargetLocation,
         elementTreePath: uriQuery.initialSearchContext.initialSearchLocation,
-        overallSearchLocation:
-          uriQuery.initialSearchContext.overallSearchLocation,
         remoteVersionTempFilePath: uriQuery.remoteVersionTempFilePath,
       };
       return emptyUri.with({
@@ -117,12 +113,11 @@ export const fromComparedElementUri = (
       fingerprint: serializedValue.fingerprint,
       remoteVersionTempFilePath: serializedValue.remoteVersionTempFilePath,
       uploadChangeControlValue: serializedValue.uploadChangeControlValue,
+      uploadProcessorGroupValue: serializedValue.uploadProcessorGroupValue,
       uploadTargetLocation: serializedValue.uploadTargetLocation,
-      endevorConnectionDetails: serializedValue.service,
       initialSearchContext: {
         serviceId: serializedValue.serviceId,
         searchLocationId: serializedValue.searchLocationId,
-        overallSearchLocation: serializedValue.overallSearchLocation,
         initialSearchLocation: serializedValue.elementTreePath,
       },
     };

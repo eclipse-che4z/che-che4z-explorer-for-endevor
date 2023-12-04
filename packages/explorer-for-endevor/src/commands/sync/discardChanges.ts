@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -24,11 +24,10 @@ import {
   WorkspaceElementType,
   NonConflictedChangedElement,
 } from '../../store/scm/_doc/Workspace';
-import { TreeElementCommandArguments } from '../../_doc/Telemetry';
 import {
   DiscardElementChangesCommandCompletedStatus,
   TelemetryEvents,
-} from '../../_doc/telemetry/v2/Telemetry';
+} from '../../telemetry/_doc/Telemetry';
 import * as path from 'path';
 import {
   deleteFile,
@@ -36,7 +35,6 @@ import {
 } from '@local/vscode-wrapper/workspace';
 import { isDefined, isError, parseFilePath } from '../../utils';
 import { toCachedElementUri } from '../../uri/cachedElementUri';
-import { SyncActions, SyncAction } from '../../store/scm/_doc/Actions';
 import { stringifyPretty } from '@local/endevor/utils';
 
 export const discardChangesCommand =
@@ -45,15 +43,9 @@ export const discardChangesCommand =
       fileUri: Uri
     ) => NonConflictedChangedElement | undefined
   ) =>
-  (scmDispatch: (_action: SyncAction) => Promise<void>) =>
   async (resourceStates: SourceControlResourceState[]): Promise<void> => {
     logger.trace('Discard element changes command called.');
     if (resourceStates.length > 1) {
-      reporter.sendTelemetryEvent({
-        type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
-        commandArguments: TreeElementCommandArguments.MULTIPLE_ELEMENTS,
-        elementsAmount: resourceStates.length,
-      });
       if (!(await askForDiscardMultipleChanges(resourceStates.length))) {
         reporter.sendTelemetryEvent({
           type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
@@ -61,13 +53,9 @@ export const discardChangesCommand =
         });
         return;
       }
-      const discardedWorkspaceElementUris = await discardMultipleElementChanges(
-        getWorkspaceChangeForFile
-      )(resourceStates);
-      await scmDispatch({
-        type: SyncActions.SYNC_ELEMENTS_DISCARDED,
-        discardedWorkspaceElementUris,
-      });
+      await discardMultipleElementChanges(getWorkspaceChangeForFile)(
+        resourceStates
+      );
       return;
     }
     const [resourceState] = resourceStates;
@@ -81,16 +69,12 @@ export const discardChangesCommand =
       );
       return;
     }
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
-      commandArguments: TreeElementCommandArguments.SINGLE_ELEMENT,
-    });
     const fileName = path.basename(fileUri.fsPath);
     const changedElement = getWorkspaceChangeForFile(fileUri);
     if (!changedElement) {
       logger.warn(
         `Discard element changes failed for the element ${fileName}.`,
-        `Discard element changes failed for the element ${fileName} because no changes were found.`
+        `Discard element changes failed for the element ${fileUri.fsPath} because no changes were found.`
       );
       return;
     }
@@ -142,20 +126,16 @@ export const discardChangesCommand =
       const error = discardResult;
       reporter.sendTelemetryEvent({
         type: TelemetryEvents.ERROR,
-        errorContext: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
+        errorContext: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
         status: DiscardElementChangesCommandCompletedStatus.GENERIC_ERROR,
         error,
       });
       logger.error(
         `Unable to discard changes for the element ${fileName}.`,
-        `Unable to discard changes for the element ${fileName} because of ${error.message}.`
+        `Unable to discard changes for the element ${fileUri.fsPath} because of ${error.message}.`
       );
       return;
     }
-    await scmDispatch({
-      type: SyncActions.SYNC_ELEMENTS_DISCARDED,
-      discardedWorkspaceElementUris: [changedElement.workspaceElementUri],
-    });
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
       status: DiscardElementChangesCommandCompletedStatus.SUCCESS,
@@ -202,7 +182,7 @@ const discardMultipleElementChanges =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.ERROR,
             errorContext:
-              TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_CALLED,
+              TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED,
             status: DiscardElementChangesCommandCompletedStatus.GENERIC_ERROR,
             error,
           });
