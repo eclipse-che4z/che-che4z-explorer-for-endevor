@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "main": "./index.js",
   "scripts": {
-    "build": "echo No Build for 'eslint-config-local' Package",
-    "lint": "echo No Lint for 'eslint-config-local' Package",
+    "build": "echo No Build for 'prettier-config-local' Package",
+    "lint": "echo No Lint for 'prettier-config-local' Package",
     "pretty": "prettier --write .",
-    "test": "echo No Tests for 'eslint-config-local' Package",
+    "test": "echo No Tests for 'prettier-config-local' Package",
+    "test:no-vscode": "echo No Tests for 'prettier-config-local' Package",
+    "test:vscode": "echo No Tests for 'prettier-config-local' Package",
     "clean": "rimraf node_modules"
   },
   "keywords": [

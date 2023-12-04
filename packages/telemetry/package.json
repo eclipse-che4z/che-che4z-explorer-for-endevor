@@ -1,23 +1,22 @@
 {
-  "name": "@local/vscode-wrapper",
+  "name": "@local/telemetry",
   "version": "1.0.0",
   "scripts": {
-    "build": "echo No Build for 'vscode-wrapper' Package",
+    "build": "echo No Build for 'telemetry' Package",
     "lint": "concurrently -n \"typescpt,_cycles_,_eslint_,prettier\" \"tsc --noemit \" \"madge --circular --extensions ts ./\" \"eslint --ext .ts .\" \"prettier --check .\"",
     "pretty": "prettier --write .",
-    "test": "echo No Tests for 'vscode-wrapper' Package",
-    "test:no-vscode": "echo No Tests for 'vscode-wrapper' Package",
-    "test:vscode": "echo No Tests for 'vscode-wrapper' Package",
+    "test": "echo No Tests for 'telemetry' Package",
+    "test:no-vscode": "echo No Tests for 'telemetry' Package",
+    "test:vscode": "echo No Tests for 'telemetry' Package",
     "tsc:watch": "tsc --noemit --watch",
     "clean": "rimraf node_modules"
   },
   "dependencies": {
     "@local/extension": "1.0.0",
-    "semver": "^7.5.2"
+    "@vscode/extension-telemetry": "^0.8.5"
   },
   "devDependencies": {
-    "@types/semver": "^7.5.5",
-    "@types/vscode": "~1.76.0"
+    "tslib": "^2.6.2"
   },
   "license": "UNLICENSED"
 }

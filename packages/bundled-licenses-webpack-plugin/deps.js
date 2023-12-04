@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -35,7 +35,9 @@ async function bundleLicenses(compilation, options) {
 }
 
 function getDependenciesLicenseInfo(compilation, override) {
-  const filter = /(^.*[/\\]node_modules[/\\]((?:@[^/\\]+[/\\])?(?:[^/\\]+)))/;
+  // collect licenses for every production dependency, except @local scoped
+  const filter =
+    /(^.*[/\\]node_modules[/\\]((?:@(?:(?!local)[^@/\\])+[/\\])?(?:[^@/\\]+)))/;
   let licenses = getLicenseInformationForCompilation(compilation, filter);
   const overrideOverkill = duplicateLicenseObjectsForWindows(override);
   licenses = overrideLicenses(licenses, overrideOverkill);
@@ -92,7 +94,7 @@ async function writeLicenseFile(depsLicenses, licenseTemplateFilePath) {
     })
     .join(separator);
   const content = `${header}${separator}${depsContent}${lineSeparator}`;
-  await writeFile('LICENSE', content);
+  await writeFile('LICENSE.txt', content);
 }
 
 module.exports = bundleLicenses;
