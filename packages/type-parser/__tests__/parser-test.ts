@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -38,18 +38,18 @@ describe('parseToType', () => {
       property1: 'some_value',
     };
     // act && assert
-    expect(() => parseToType(TestType, wrongTypedValue)).toThrowError();
+    expect(() => parseToType(TestType, wrongTypedValue)).toThrow();
   });
   it('should report for undefined', () => {
     // arrange
     const undefinedValue = undefined;
     // act && assert
-    expect(() => parseToType(TestType, undefinedValue)).toThrowError();
+    expect(() => parseToType(TestType, undefinedValue)).toThrow();
   });
   it('should report for empty string', () => {
     // arrange
     const emptyValue = '';
     // act && assert
-    expect(() => parseToType(TestType, emptyValue)).toThrowError();
+    expect(() => parseToType(TestType, emptyValue)).toThrow();
   });
 });

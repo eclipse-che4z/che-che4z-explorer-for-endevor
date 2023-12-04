@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -12,63 +12,70 @@
  */
 
 import { commands, ConfigurationTarget, Uri, workspace } from 'vscode';
-import { CommandId } from '../commands/id';
-import { uploadElementCommand } from '../commands/uploadElement';
+import { CommandId } from '../id';
+import { uploadElementCommand } from '../element/uploadElement';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
   ENDEVOR_CONFIGURATION,
-} from '../constants';
+} from '../../constants';
 import * as sinon from 'sinon';
 import {
   ActionChangeControlValue,
   Element,
   ElementMapPath,
-  ElementSearchLocation,
-  ErrorUpdateResponse,
-  Service,
-  ServiceApiVersion,
   SignOutParams,
   SubSystemMapPath,
-  SuccessUpdateResponse,
+  SuccessEndevorResponse,
   ResponseStatus,
+  ErrorResponseType,
+  UpdateResponse,
+  ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { toEditedElementUri } from '../uri/editedElementUri';
-import { isError } from '../utils';
+import { toEditedElementUri } from '../../uri/editedElementUri';
+import { isError } from '../../utils';
 import * as assert from 'assert';
 import {
   mockDeletingFileWith,
   mockGettingFileContentWith,
   mockSavingFileIntoWorkspaceDirectory,
-} from '../_mocks/workspace';
+} from './_mocks/workspace';
 import { TextEncoder } from 'util';
-import {
-  mockSignOutElement,
-  mockUploadingElementWith,
-} from '../_mocks/endevor';
-import { mockClosingActiveEditorWith } from '../_mocks/window';
+import { mockSignOutElement, mockUploadingElementWith } from './_mocks/endevor';
+import { mockClosingActiveEditorWith } from './_mocks/window';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
+  mockAskingForProcGroup,
   mockAskingForSignout,
   mockAskingForUploadLocation,
-} from '../dialogs/_mocks/dialogs';
-import {
-  FingerprintMismatchError,
-  SignoutError,
-} from '@local/endevor/_doc/Error';
-import * as compareDialog from '../commands/compareElementWithRemoteVersion';
+} from './_mocks/dialogs';
+import * as compareDialog from '../element/compareElementWithRemoteVersion';
 import * as path from 'path';
 import {
+  Action,
   Actions,
   ElementAdded,
   ElementUpdatedFromUpTheMap,
-} from '../store/_doc/Actions';
-import { Id, Source } from '../store/storage/_doc/Storage';
+} from '../../store/_doc/Actions';
+import { Source } from '../../store/storage/_doc/Storage';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import {
+  FINGERPRINT_MISMATCH_ERROR,
+  NOT_SIGNOUT_ERROR,
+} from '@local/endevor/const';
+import { EndevorId } from '../../store/_doc/v2/Store';
 
 describe('uploading an edited element', () => {
   before(() => {
-    commands.registerCommand(CommandId.UPLOAD_ELEMENT, uploadElementCommand);
+    commands.registerCommand(
+      CommandId.UPLOAD_ELEMENT,
+      (dispatch, getConnectionConfiguration, editUri) =>
+        uploadElementCommand(dispatch, getConnectionConfiguration)(editUri)
+    );
   });
 
   type NotDefined = undefined;
@@ -92,8 +99,9 @@ describe('uploading an edited element', () => {
     sinon.restore();
   });
 
-  const serviceId: Id = { name: 'serviceName', source: Source.INTERNAL };
-  const service: Service = {
+  const configuration = 'TEST-CONFIG';
+  const serviceId: EndevorId = { name: 'serviceName', source: Source.INTERNAL };
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -106,19 +114,17 @@ describe('uploading an edited element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-    apiVersion: ServiceApiVersion.V2,
+    configuration,
   };
-  const searchLocationId: Id = {
+  const searchLocationId: EndevorId = {
     name: 'searchLocationName',
     source: Source.INTERNAL,
   };
-  const vagueSearchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const vagueSearchLocation: SearchLocation = {
     environment: 'TEST',
     stageNumber: '1',
   };
-  const preciseSearchLocation: ElementSearchLocation = {
-    configuration: vagueSearchLocation.configuration,
+  const preciseSearchLocation: SearchLocation = {
     environment: vagueSearchLocation.environment,
     stageNumber: vagueSearchLocation.stageNumber,
     system: 'ANY-SYS',
@@ -135,16 +141,20 @@ describe('uploading an edited element', () => {
     subSystem: preciseSearchLocation.subsystem!,
   };
   const element: Element = {
-    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
     stageNumber: '1',
     type: 'TYP',
     name: 'ELM',
+    id: 'ELM',
+    noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
+  const procGroup = 'ProcessAllToCobol';
+  const procGroupDefaultValue = undefined;
   const elementFingerprint = 'some_value';
   const editedElementFilePath = '/some/temp/element.cbl';
 
@@ -157,17 +167,18 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: SuccessEndevorResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
+        messages: [],
         returnCode: 0,
       },
     };
@@ -181,6 +192,7 @@ describe('uploading an edited element', () => {
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -192,11 +204,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -215,6 +225,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchUpdatedElementAction,
+        async () => ({ service, searchLocation: preciseSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -242,7 +253,10 @@ describe('uploading an edited element', () => {
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
       serviceId,
       searchLocationId,
-      element: uploadLocation,
+      element: {
+        ...uploadLocation,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+      },
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
@@ -264,22 +278,23 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const newUploadLocation = {
       ...element,
-      name: 'NEW-ELM',
+      id: 'NEW-ELM',
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       newUploadLocation
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: SuccessEndevorResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
+        messages: [],
         returnCode: 0,
       },
     };
@@ -293,6 +308,7 @@ describe('uploading an edited element', () => {
       service,
       newUploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -304,11 +320,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -327,6 +341,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchUpdatedElementAction,
+        async () => ({ service, searchLocation: preciseSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -356,6 +371,7 @@ describe('uploading an edited element', () => {
       searchLocationId,
       element: {
         ...newUploadLocation,
+        name: newUploadLocation.id,
         lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
       },
     };
@@ -379,24 +395,24 @@ describe('uploading an edited element', () => {
       subsystem: vagueSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const existingLocationDownTheMap: ElementMapPath = {
-      name: element.name,
+      id: element.name,
       type: element.type,
-      configuration: preciseSearchLocation.configuration,
       ...subsystemMapPathDownTheMap,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       existingLocationDownTheMap
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: SuccessEndevorResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
+        messages: [],
         returnCode: 0,
       },
     };
@@ -410,6 +426,7 @@ describe('uploading an edited element', () => {
       service,
       existingLocationDownTheMap,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -421,11 +438,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: vagueSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -444,6 +459,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchUpdatedElementAction,
+        async () => ({ service, searchLocation: vagueSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -477,8 +493,12 @@ describe('uploading an edited element', () => {
       },
       targetElement: {
         ...existingLocationDownTheMap,
+        noSource: false,
+        name: element.name,
+        id: element.id,
         extension: element.extension,
         lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -501,10 +521,11 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
+    const uploadProcessorGroupValue = undefined;
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -515,22 +536,18 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const failedResult: ErrorUpdateResponse = {
+    const failedResult: UpdateResponse = {
       status: ResponseStatus.ERROR,
-      additionalDetails: {
-        error: new FingerprintMismatchError('error'),
+      type: ErrorResponseType.FINGERPRINT_MISMATCH_ENDEVOR_ERROR,
+      details: {
+        messages: [`ENDEVOR ERROR ${FINGERPRINT_MISMATCH_ERROR}`],
       },
     };
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      failedResult.additionalDetails.error,
-      FingerprintMismatchError.prototype
-    );
     mockUploadingElementWith(
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -539,11 +556,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -568,8 +583,8 @@ describe('uploading an edited element', () => {
     )(Uri.file(localElementVersionTempFilePath));
     const comparingElementDialogStub = mockComparingElementsDialog(
       service,
-      preciseSearchLocation,
       uploadChangeControlValue,
+      uploadProcessorGroupValue,
       uploadLocation,
       element,
       serviceId,
@@ -583,6 +598,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchUpdatedElementAction,
+        async () => ({ service, searchLocation: preciseSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -603,7 +619,10 @@ describe('uploading an edited element', () => {
       type: Actions.ELEMENT_UPDATED_IN_PLACE,
       serviceId,
       searchLocationId,
-      element: uploadLocation,
+      element: {
+        ...uploadLocation,
+        lastActionCcid: uploadChangeControlValue.ccid.toUpperCase(),
+      },
     };
     assert.deepStrictEqual(
       dispatchUpdatedElementAction.args[0]?.[0],
@@ -617,64 +636,107 @@ describe('uploading an edited element', () => {
   });
 
   type CompareElementsStub = sinon.SinonStub<
-    [service: Service, searchLocation: ElementSearchLocation, element: Element],
+    [dispatch: (action: Action) => Promise<void>],
     (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => (
+      service: EndevorAuthorizedService
+    ) => (
+      initialSearchLocation: SubSystemMapPath
+    ) => (
       uploadChangeControlValue: ActionChangeControlValue,
+      uploadProcessorGroupValue: ProcessorGroupValue,
       uploadTargetLocation: ElementMapPath
     ) => (
-      serviceId: Id,
-      searchLocationId: Id,
-      treePath: SubSystemMapPath
-    ) => (localVersionElementTempFilePath: string) => Promise<void | Error>
+      element: Element,
+      localVersionElementTempFilePath: string
+    ) => Promise<void | Error>
   >;
 
   const mockComparingElementsDialog =
     (
-      serviceArg: Service,
-      searchLocationArg: ElementSearchLocation,
+      serviceArg: EndevorAuthorizedService,
       uploadChangeControlValueArg: ActionChangeControlValue,
+      uploadProcessorGroupValue: ProcessorGroupValue,
       uploadTargetLocationArg: ElementMapPath,
       elementArg: Element,
-      serviceIdArg: Id,
-      searchLocationIdArg: Id,
+      serviceIdArg: EndevorId,
+      searchLocationIdArg: EndevorId,
       treePathArg: SubSystemMapPath,
       localVersionElementTempFilePathArg: string
     ) =>
     (mockResult?: Error): CompareElementsStub => {
       const withLocalVersionFileStub = sinon
-        .stub<
-          [localVersionElementTempFilePath: string],
-          Promise<void | Error>
-        >()
-        .withArgs(localVersionElementTempFilePathArg)
+        .stub<[Element, string], Promise<void | Error>>()
+        .withArgs(elementArg, localVersionElementTempFilePathArg)
         .resolves(mockResult);
-      const withElementStub = sinon
-        .stub<
-          [serviceId: Id, searchLocationId: Id, treePath: SubSystemMapPath],
-          (localVersionElementTempFilePath: string) => Promise<void | Error>
-        >()
-        .withArgs(serviceIdArg, searchLocationIdArg, treePathArg)
-        .returns(withLocalVersionFileStub);
       const withChangeControlValueStub = sinon
         .stub<
-          [
-            uploadChangeControlValue: ActionChangeControlValue,
-            uploadTargetLocation: ElementMapPath
-          ],
+          [ActionChangeControlValue, ProcessorGroupValue, ElementMapPath],
           (
-            serviceIdArg: Id,
-            searchLocationIdArg: Id,
-            treePath: SubSystemMapPath
-          ) => (
+            element: Element,
             localVersionElementTempFilePath: string
           ) => Promise<void | Error>
         >()
-        .withArgs(uploadChangeControlValueArg, uploadTargetLocationArg)
-        .returns(withElementStub);
+        .withArgs(
+          uploadChangeControlValueArg,
+          uploadProcessorGroupValue,
+          uploadTargetLocationArg
+        )
+        .returns(withLocalVersionFileStub);
+      const withTreePathStub = sinon
+        .stub<
+          [SubSystemMapPath],
+          (
+            uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
+            uploadTargetLocation: ElementMapPath
+          ) => (
+            element: Element,
+            localVersionElementTempFilePath: string
+          ) => Promise<void | Error>
+        >()
+        .withArgs(treePathArg)
+        .returns(withChangeControlValueStub);
+      const withServiceStub = sinon
+        .stub<
+          [EndevorAuthorizedService],
+          (
+            initialSearchLocation: SubSystemMapPath
+          ) => (
+            uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
+            uploadTargetLocation: ElementMapPath
+          ) => (
+            element: Element,
+            localVersionElementTempFilePath: string
+          ) => Promise<void | Error>
+        >()
+        .withArgs(serviceArg)
+        .returns(withTreePathStub);
+      const withIdsStub = sinon
+        .stub<
+          [EndevorId, EndevorId],
+          (
+            service: EndevorAuthorizedService
+          ) => (
+            initialSearchLocation: SubSystemMapPath
+          ) => (
+            uploadChangeControlValue: ActionChangeControlValue,
+            uploadProcessorGroupValue: ProcessorGroupValue,
+            uploadTargetLocation: ElementMapPath
+          ) => (
+            element: Element,
+            localVersionElementTempFilePath: string
+          ) => Promise<void | Error>
+        >()
+        .withArgs(serviceIdArg, searchLocationIdArg)
+        .returns(withServiceStub);
       return sinon
         .stub(compareDialog, 'compareElementWithRemoteVersion')
-        .withArgs(serviceArg, searchLocationArg, elementArg)
-        .returns(withChangeControlValueStub);
+        .withArgs(sinon.match.any)
+        .returns(withIdsStub);
     };
 
   it('should signout an element in place during uploading', async () => {
@@ -686,10 +748,10 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -703,28 +765,25 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const failedResult: ErrorUpdateResponse = {
+    const failedResult: UpdateResponse = {
       status: ResponseStatus.ERROR,
-      additionalDetails: {
-        error: new SignoutError('something'),
+      type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+      details: {
+        messages: [`ENDEVOR ERROR ${NOT_SIGNOUT_ERROR}`],
       },
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: UpdateResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
         returnCode: 0,
+        messages: [],
       },
     };
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      failedResult.additionalDetails.error,
-      SignoutError.prototype
-    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -740,7 +799,7 @@ describe('uploading an edited element', () => {
     )([
       {
         signoutArg: uploadSignOutParams,
-        result: undefined,
+        result: { status: ResponseStatus.OK },
       },
     ]);
     const dispatchActions = sinon.spy();
@@ -748,11 +807,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -766,6 +823,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchActions,
+        async () => ({ service, searchLocation: vagueSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -811,10 +869,10 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const uploadLocation = element;
     mockAskingForUploadLocation(prefilledLocationDialogValue)(uploadLocation);
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -832,28 +890,25 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const failedResult: ErrorUpdateResponse = {
+    const failedResult: UpdateResponse = {
       status: ResponseStatus.ERROR,
-      additionalDetails: {
-        error: new SignoutError('something'),
+      type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+      details: {
+        messages: [`ENDEVOR ERROR ${NOT_SIGNOUT_ERROR}`],
       },
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: UpdateResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
         returnCode: 0,
+        messages: [],
       },
     };
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      failedResult.additionalDetails.error,
-      SignoutError.prototype
-    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       uploadLocation,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
@@ -863,7 +918,6 @@ describe('uploading an edited element', () => {
       signOutElements: true,
       automaticSignOut: false,
     });
-    const signoutError = failedResult.additionalDetails.error;
     mockAskingForOverrideSignout([uploadLocation.name])(true);
     const [signoutElementStub] = mockSignOutElement(
       service,
@@ -871,11 +925,17 @@ describe('uploading an edited element', () => {
     )([
       {
         signoutArg: uploadSignOutParams,
-        result: signoutError,
+        result: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [],
+          },
+        },
       },
       {
         signoutArg: uploadOverrideSignOutParams,
-        result: undefined,
+        result: { status: ResponseStatus.OK },
       },
     ]);
     const dispatchActions = sinon.spy();
@@ -883,11 +943,10 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
+
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -901,6 +960,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchActions,
+        async () => ({ service, searchLocation: vagueSearchLocation }),
         editedElementUri
       );
     } catch (e) {
@@ -949,17 +1009,16 @@ describe('uploading an edited element', () => {
       subsystem: preciseSearchLocation.subsystem,
       type: element.type,
       element: element.name,
-      configuration: element.configuration,
     };
     const existingLocationDownTheMap: ElementMapPath = {
-      name: element.name,
+      id: element.name,
       type: element.type,
-      configuration: preciseSearchLocation.configuration,
       ...subsystemMapPathDownTheMap,
     };
     mockAskingForUploadLocation(prefilledLocationDialogValue)(
       existingLocationDownTheMap
     );
+    mockAskingForProcGroup(procGroup);
     const uploadChangeControlValue: ActionChangeControlValue = {
       ccid: 'test',
       comment: 'test',
@@ -977,50 +1036,52 @@ describe('uploading an edited element', () => {
     mockGettingFileContentWith(Uri.file(editedElementFilePath))(
       Promise.resolve(new TextEncoder().encode(editedElementContent))
     );
-    const failedResult: ErrorUpdateResponse = {
+    const failedResult: UpdateResponse = {
       status: ResponseStatus.ERROR,
-      additionalDetails: {
-        error: new SignoutError('something'),
+      type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+      details: {
+        messages: [`ENDEVOR ERROR ${NOT_SIGNOUT_ERROR}`],
       },
     };
-    const successResult: SuccessUpdateResponse = {
+    const successResult: UpdateResponse = {
       status: ResponseStatus.OK,
-      additionalDetails: {
+      details: {
         returnCode: 0,
+        messages: [],
       },
     };
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      failedResult.additionalDetails.error,
-      SignoutError.prototype
-    );
     const [uploadElementStub] = mockUploadingElementWith(
       service,
       existingLocationDownTheMap,
       uploadChangeControlValue,
+      procGroupDefaultValue,
       {
         content: editedElementContent,
         fingerprint: elementFingerprint,
       }
     )([failedResult, successResult]);
-    mockAskingForSignout([existingLocationDownTheMap.name])({
+    mockAskingForSignout([existingLocationDownTheMap.id])({
       signOutElements: true,
       automaticSignOut: false,
     });
-    const signoutError = failedResult.additionalDetails.error;
-    mockAskingForOverrideSignout([existingLocationDownTheMap.name])(true);
+    mockAskingForOverrideSignout([existingLocationDownTheMap.id])(true);
     const [signoutElementStub] = mockSignOutElement(
       service,
       element
     )([
       {
         signoutArg: uploadSignOutParams,
-        result: signoutError,
+        result: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [],
+          },
+        },
       },
       {
         signoutArg: uploadOverrideSignOutParams,
-        result: undefined,
+        result: { status: ResponseStatus.OK },
       },
     ]);
     const dispatchActions = sinon.spy();
@@ -1028,11 +1089,9 @@ describe('uploading an edited element', () => {
     const editedElementUri = toEditedElementUri(editedElementFilePath)({
       element,
       fingerprint: elementFingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         serviceId,
         searchLocationId,
-        overallSearchLocation: preciseSearchLocation,
         initialSearchLocation: subsystemMapPathDownTheMap,
       },
     });
@@ -1046,6 +1105,7 @@ describe('uploading an edited element', () => {
       await commands.executeCommand(
         CommandId.UPLOAD_ELEMENT,
         dispatchActions,
+        async () => ({ service, searchLocation: vagueSearchLocation }),
         editedElementUri
       );
     } catch (e) {

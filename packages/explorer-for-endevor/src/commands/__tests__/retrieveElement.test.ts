@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,28 +13,27 @@
 
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
-import { CommandId } from '../commands/id';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { isError } from '../utils';
+import { CommandId } from '../id';
+import { toBasicElementUri } from '../../uri/basicElementUri';
+import { isError } from '../../utils';
 import * as assert from 'assert';
 import {
   Element,
-  ElementSearchLocation,
-  Service,
-  ServiceApiVersion,
+  ErrorResponseType,
+  ResponseStatus,
   SignOutParams,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { retrieveElementCommand } from '../commands/retrieveElement';
+import { retrieveElementCommand } from '../element/retrieveElement';
 import {
-  mockRetrieveElementWithoutSignout,
+  mockRetrieveElement,
   mockRetrieveElementWithSignout,
-} from '../_mocks/endevor';
+} from './_mocks/endevor';
 import {
   mockCreatingWorkspaceDirectory,
   mockGettingWorkspaceUri,
   mockSavingFileIntoWorkspaceDirectory,
-} from '../_mocks/workspace';
+} from './_mocks/workspace';
 import * as sinon from 'sinon';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
@@ -42,18 +41,23 @@ import {
   FILE_EXT_RESOLUTION_DEFAULT,
   FILE_EXT_RESOLUTION_SETTING,
   UNIQUE_ELEMENT_FRAGMENT,
-} from '../constants';
+} from '../../constants';
 import { ConfigurationTarget, workspace } from 'vscode';
 import * as path from 'path';
-import { mockShowingFileContentWith } from '../_mocks/window';
+import { mockShowingFileContentWith } from './_mocks/window';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
-} from '../dialogs/_mocks/dialogs';
-import { SignoutError } from '@local/endevor/_doc/Error';
-import { Actions } from '../store/_doc/Actions';
-import { Source } from '../store/storage/_doc/Storage';
-import { FileExtensionResolutions } from '../settings/_doc/v2/Settings';
+} from './_mocks/dialogs';
+import { Actions } from '../../store/_doc/Actions';
+import { Source } from '../../store/storage/_doc/Storage';
+import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import { ElementNode, TypeNode } from '../../tree/_doc/ElementTree';
 
 describe('retrieve element', () => {
   type NotDefined = undefined;
@@ -62,7 +66,16 @@ describe('retrieve element', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.RETRIEVE_ELEMENT,
-      retrieveElementCommand
+      (
+        dispatch,
+        getConnectionConfiguration,
+        elementNode,
+        SelectedMultipleNodes
+      ) =>
+        retrieveElementCommand(dispatch, getConnectionConfiguration)(
+          elementNode,
+          SelectedMultipleNodes
+        )
     );
   });
 
@@ -101,6 +114,103 @@ describe('retrieve element', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-CONFIG';
+  const serviceName = 'serviceName';
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
+  const service: EndevorAuthorizedService = {
+    location: {
+      port: 1234,
+      protocol: 'http',
+      hostname: 'anything',
+      basePath: 'anythingx2',
+    },
+    credential: {
+      type: CredentialType.BASE,
+      user: 'test',
+      password: 'something',
+    },
+    rejectUnauthorized: false,
+    configuration,
+  };
+  const element: Element = {
+    environment: 'ENV',
+    system: 'SYS',
+    subSystem: 'SUBSYS',
+    stageNumber: '1',
+    type: 'TYP',
+    name: 'ELM',
+    id: 'ELM',
+    noSource: false,
+    extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
+  };
+  const searchLocationName = 'searchLocationName';
+  const searchLocationId: EndevorId = {
+    name: searchLocationName,
+    source: Source.INTERNAL,
+  };
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
+  };
+  const elementUri = toBasicElementUri({
+    serviceId: {
+      name: serviceName,
+      source: Source.INTERNAL,
+    },
+    searchLocationId: {
+      name: searchLocationName,
+      source: Source.INTERNAL,
+    },
+    element,
+  })(UNIQUE_ELEMENT_FRAGMENT);
+  if (isError(elementUri)) {
+    const error = elementUri;
+    assert.fail(
+      `Uri was not built correctly for tests because of: ${error.message}`
+    );
+  }
+  const parent: TypeNode = {
+    type: 'TYPE',
+    name: 'TYP',
+    elements: [],
+    parent: {
+      type: 'SUB',
+      name: 'SUB',
+      parent: {
+        type: 'SYS',
+        name: 'SYS',
+        children: [],
+      },
+      subSystemMapPath: {
+        environment: 'ENV',
+        stageNumber: '1',
+        system: 'SYS',
+        subSystem: 'SUB',
+      },
+      serviceId,
+      searchLocationId,
+      children: [],
+    },
+    map: {
+      type: 'MAP',
+      name: 'MAP',
+      elements: [],
+    },
+  };
+  const elementNode: ElementNode = {
+    serviceId,
+    searchLocationId,
+    type: 'ELEMENT_IN_PLACE',
+    name: element.name,
+    element,
+    parent,
+    timestamp: UNIQUE_ELEMENT_FRAGMENT,
+  };
   it('should retrieve element without signout', async () => {
     // arrange
     const automaticSignoutSetting = false;
@@ -111,61 +221,18 @@ describe('retrieve element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const serviceName = 'serviceName';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-      apiVersion: ServiceApiVersion.V2,
-    };
-    const element: Element = {
-      configuration: 'ANY',
-      environment: 'ENV',
-      system: 'SYS',
-      subSystem: 'SUBSYS',
-      stageNumber: '1',
-      type: 'TYP',
-      name: 'ELM',
-      extension: 'ext',
-      lastActionCcid: 'LAST-CCID',
-    };
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
-    };
-    const searchLocationName = 'searchLocationName';
-    const elementUri = toTreeElementUri({
-      serviceId: {
-        name: serviceName,
-        source: Source.INTERNAL,
-      },
-      searchLocationId: {
-        name: searchLocationName,
-        source: Source.INTERNAL,
-      },
-      element,
-      service,
-      searchLocation,
-    })(UNIQUE_ELEMENT_FRAGMENT);
-    if (isError(elementUri)) {
-      const error = elementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const expectedElementContent = 'Show me this Endevor!';
-    const retrieveElementStub = mockRetrieveElementWithoutSignout(
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
+    const retrieveElementStub = mockRetrieveElement(
       service,
       element
-    )(expectedElementContent);
+    )({
+      status: ResponseStatus.OK,
+      result: {
+        content,
+        fingerprint,
+      },
+    });
     const workspaceMockUri = elementUri;
     mockGettingWorkspaceUri(workspaceMockUri);
     const createdDirMockUri = workspaceMockUri;
@@ -185,7 +252,7 @@ describe('retrieve element', () => {
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
       createdDirMockUri,
       {
-        content: expectedElementContent,
+        content,
         extension: element.extension,
         name: element.name,
       }
@@ -199,11 +266,8 @@ describe('retrieve element', () => {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
         dispatchSignoutAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        async () => ({ service, searchLocation }),
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -213,6 +277,7 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
       retrieveContentStub,
     ] = retrieveElementStub;
@@ -273,6 +338,7 @@ describe('retrieve element', () => {
       'Dispatch for signout element when retrieving without signout was called'
     );
   });
+
   it('should retrieve element with signout', async () => {
     // arrange
     const automaticSignoutSetting = true;
@@ -283,57 +349,8 @@ describe('retrieve element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const serviceName = 'serviceName';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-      apiVersion: ServiceApiVersion.V2,
-    };
-    const element: Element = {
-      configuration: 'ANY',
-      environment: 'ENV',
-      system: 'SYS',
-      subSystem: 'SUBSYS',
-      stageNumber: '1',
-      type: 'TYP',
-      name: 'ELM',
-      extension: 'ext',
-      lastActionCcid: 'LAST-CCID',
-    };
-    const searchLocationName = 'searchLocationName';
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
-    };
-    const elementUri = toTreeElementUri({
-      serviceId: {
-        name: serviceName,
-        source: Source.INTERNAL,
-      },
-      searchLocationId: {
-        name: searchLocationName,
-        source: Source.INTERNAL,
-      },
-      element,
-      service,
-      searchLocation,
-    })(UNIQUE_ELEMENT_FRAGMENT);
-    if (isError(elementUri)) {
-      const error = elementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const expectedElementContent = 'Show me this Endevor!';
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
     const expectedSignoutChangeControlValue = {
       ccid: 'test',
       comment: 'very very long comment',
@@ -344,7 +361,18 @@ describe('retrieve element', () => {
     const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
       element
-    )(expectedSignOutParams, expectedElementContent)();
+    )([
+      {
+        signOutParamsArg: expectedSignOutParams,
+        signOutMockResult: {
+          status: ResponseStatus.OK,
+          result: {
+            content,
+            fingerprint,
+          },
+        },
+      },
+    ]);
     const workspaceMockUri = elementUri;
     mockGettingWorkspaceUri(workspaceMockUri);
     mockAskingForChangeControlValue(expectedSignoutChangeControlValue);
@@ -365,7 +393,7 @@ describe('retrieve element', () => {
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
       createdDirMockUri,
       {
-        content: expectedElementContent,
+        content,
         extension: element.extension,
         name: element.name,
       }
@@ -379,11 +407,8 @@ describe('retrieve element', () => {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
         dispatchSignoutAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        async () => ({ service, searchLocation }),
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -393,6 +418,7 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
       retrieveContentStub,
       signOutParamsStub,
@@ -494,60 +520,6 @@ describe('retrieve element', () => {
         automaticSignoutSetting,
         ConfigurationTarget.Global
       );
-    const serviceName = 'serviceName';
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-      apiVersion: ServiceApiVersion.V2,
-    };
-    const element: Element = {
-      configuration: 'ANY',
-      environment: 'ENV',
-      system: 'SYS',
-      subSystem: 'SUBSYS',
-      stageNumber: '1',
-      type: 'TYP',
-      name: 'ELM',
-      extension: 'ext',
-      lastActionCcid: 'LAST-CCID',
-    };
-    const searchLocationName = 'searchLocationName';
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
-    };
-    const elementUri = toTreeElementUri({
-      serviceId: {
-        name: serviceName,
-        source: Source.INTERNAL,
-      },
-      searchLocationId: {
-        name: searchLocationName,
-        source: Source.INTERNAL,
-      },
-      element,
-      service,
-      searchLocation,
-    })(UNIQUE_ELEMENT_FRAGMENT);
-    if (isError(elementUri)) {
-      const error = elementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
-    const error = new SignoutError('something');
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(error, SignoutError.prototype);
     const expectedSignoutChangeControlValue = {
       ccid: 'test',
       comment: 'very very long comment',
@@ -559,14 +531,33 @@ describe('retrieve element', () => {
       signoutChangeControlValue: expectedSignoutChangeControlValue,
       overrideSignOut: true,
     };
-    const expectedContent = 'Show me this!';
+    const content = 'Show me this Endevor!';
+    const fingerprint = 'finger';
     const retrieveElementWithOverrideStub = mockRetrieveElementWithSignout(
       service,
       element
-    )(expectedSignOutParams, error)(
-      expectedOverrideSignOutParams,
-      expectedContent
-    );
+    )([
+      {
+        signOutParamsArg: expectedSignOutParams,
+        signOutMockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [],
+          },
+        },
+      },
+      {
+        signOutParamsArg: expectedOverrideSignOutParams,
+        signOutMockResult: {
+          status: ResponseStatus.OK,
+          result: {
+            content,
+            fingerprint,
+          },
+        },
+      },
+    ]);
     const workspaceMockUri = elementUri;
     mockGettingWorkspaceUri(workspaceMockUri);
     mockAskingForChangeControlValue(expectedSignoutChangeControlValue);
@@ -588,7 +579,7 @@ describe('retrieve element', () => {
     const saveElementStub = mockSavingFileIntoWorkspaceDirectory(
       createdDirMockUri,
       {
-        content: expectedContent,
+        content,
         extension: element.extension,
         name: element.name,
       }
@@ -602,11 +593,8 @@ describe('retrieve element', () => {
       await vscode.commands.executeCommand(
         CommandId.RETRIEVE_ELEMENT,
         dispatchSignoutActions,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        async () => ({ service, searchLocation }),
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -616,6 +604,7 @@ describe('retrieve element', () => {
     // assert
     const [
       generalRetrieveFunctionStub,
+      ,
       retrieveWithServiceStub,
       retrieveContentStub,
       signOutParamsStub,

@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -19,9 +19,25 @@ import {
   EnvironmentStageMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { toEndevorMap, toEndevorMapWithWildcards } from '../endevorMap';
-import { EndevorMap, toSubsystemMapPathId } from '../../_doc/Endevor';
+import { EndevorMap } from '../../api/_doc/Endevor';
+import { toSubsystemMapPathId } from '../../store/utils';
 
 jest.mock('vscode', () => ({}), { virtual: true });
+jest.mock(
+  '../../globals',
+  () => ({
+    logger: {
+      trace: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    },
+    reporter: {
+      sendTelemetryEvent: jest.fn(),
+    },
+  }),
+  { virtual: true }
+);
 
 describe('building the endevor map', () => {
   // arrange

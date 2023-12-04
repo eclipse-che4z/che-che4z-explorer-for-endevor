@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -14,7 +14,7 @@
 import * as sinon from 'sinon';
 import * as assert from 'assert';
 import { ConfigurationTarget, Uri, workspace } from 'vscode';
-import { editElementCommand } from '../commands/edit/editElementCommand';
+import { editElementCommand } from '../element/editElement';
 import {
   AUTOMATIC_SIGN_OUT_SETTING,
   EDIT_DIR,
@@ -22,34 +22,38 @@ import {
   FILE_EXT_RESOLUTION_DEFAULT,
   FILE_EXT_RESOLUTION_SETTING,
   UNIQUE_ELEMENT_FRAGMENT,
-} from '../constants';
+} from '../../constants';
 import {
   Element,
-  ElementSearchLocation,
-  Service,
-  ServiceApiVersion,
+  ErrorResponseType,
+  ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { getEditFolderUri, isError, joinUri } from '../utils';
+import { getEditFolderUri, joinUri } from '../../utils';
 import {
   mockCreatingDirectory,
   mockSavingFileIntoWorkspaceDirectory,
-} from '../_mocks/workspace';
-import { mockShowingFileContentWith } from '../_mocks/window';
-import { fromEditedElementUri } from '../uri/editedElementUri';
-import { mockRetrievingElementWithFingerprint } from '../_mocks/endevor';
-import { EditedElementUriQuery } from '../_doc/Uri';
+} from './_mocks/workspace';
+import { mockShowingFileContentWith } from './_mocks/window';
+import { fromEditedElementUri } from '../../uri/editedElementUri';
+import { EditedElementUriQuery } from '../../uri/_doc/Uri';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
-} from '../dialogs/_mocks/dialogs';
-import { SignoutError } from '@local/endevor/_doc/Error';
-import { Actions } from '../store/_doc/Actions';
-import { TypeNode } from '../tree/_doc/ElementTree';
-import { Source } from '../store/storage/_doc/Storage';
-import { toServiceLocationCompositeKey } from '../store/utils';
-import { FileExtensionResolutions } from '../settings/_doc/v2/Settings';
+} from './_mocks/dialogs';
+import { Actions } from '../../store/_doc/Actions';
+import { TypeNode } from '../../tree/_doc/ElementTree';
+import { Source } from '../../store/storage/_doc/Storage';
+import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import {
+  mockRetrieveElement,
+  mockRetrieveElementWithSignout,
+} from './_mocks/endevor';
 
 describe('starting edit session for element', () => {
   type NotDefined = undefined;
@@ -91,8 +95,13 @@ describe('starting edit session for element', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
-  const service: Service = {
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -105,44 +114,30 @@ describe('starting edit session for element', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-    apiVersion: ServiceApiVersion.V2,
+    configuration,
   };
   const element: Element = {
-    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
     stageNumber: '1',
     type: 'TYP',
     name: 'ELM',
+    id: 'ELM',
+    noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
   const searchLocationName = 'searchLocationName';
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocationId: EndevorId = {
+    name: searchLocationName,
+    source: Source.INTERNAL,
+  };
+  const searchLocation: SearchLocation = {
     environment: 'ANY-ENV',
     stageNumber: '1',
   };
-  const elementUri = toTreeElementUri({
-    serviceId: {
-      name: serviceName,
-      source: Source.INTERNAL,
-    },
-    searchLocationId: {
-      name: searchLocationName,
-      source: Source.INTERNAL,
-    },
-    element,
-    service,
-    searchLocation,
-  })(UNIQUE_ELEMENT_FRAGMENT);
-  if (isError(elementUri)) {
-    const error = elementUri;
-    assert.fail(
-      `Uri was not built correctly for tests because of: ${error.message}`
-    );
-  }
 
   it('should start an edit session for an element without signout', async () => {
     // arrange
@@ -156,17 +151,16 @@ describe('starting edit session for element', () => {
       );
     const content = 'Show me this Endevor!';
     const fingerprint = 'finger';
-    const retrieveElementStub = mockRetrievingElementWithFingerprint(
+    const retrieveElementStub = mockRetrieveElement(
       service,
       element
-    )([
-      {
-        result: {
-          content,
-          fingerprint,
-        },
+    )({
+      status: ResponseStatus.OK,
+      result: {
+        content,
+        fingerprint,
       },
-    ]);
+    });
     // can be anything, but URI
     const storageUri = Uri.file(__dirname);
     const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
@@ -209,6 +203,14 @@ describe('starting edit session for element', () => {
           name: element.system,
           children: [],
         },
+        subSystemMapPath: {
+          environment: 'ENV',
+          stageNumber: '1',
+          system: 'SYS',
+          subSystem: 'SUB',
+        },
+        serviceId,
+        searchLocationId,
         children: [],
       },
       map: {
@@ -218,22 +220,24 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await editElementCommand({
-        getTempEditFolderUri: () => tempEditFolderUri,
-        dispatch: dispatchActions,
-      })({
+      await editElementCommand(
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
+      )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
-        uri: elementUri,
-        searchLocationId: toServiceLocationCompositeKey({
+        element,
+        serviceId: {
           name: serviceName,
           source: Source.INTERNAL,
-        })({
+        },
+        searchLocationId: {
           name: searchLocationName,
           source: Source.INTERNAL,
-        }),
+        },
         parent,
-        tooltip: 'FAKETOOLTIP',
+        timestamp: UNIQUE_ELEMENT_FRAGMENT,
       });
     } catch (e) {
       assert.fail(
@@ -241,7 +245,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.called,
       'Retrieve an element Endevor API was not called'
@@ -267,7 +271,6 @@ describe('starting edit session for element', () => {
     const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
       fingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         searchLocationId: {
           name: searchLocationName,
@@ -277,7 +280,6 @@ describe('starting edit session for element', () => {
           name: serviceName,
           source: Source.INTERNAL,
         },
-        overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           environment: searchLocation.environment!,
@@ -321,17 +323,20 @@ describe('starting edit session for element', () => {
     mockAskingForChangeControlValue(signoutChangeControlValue);
     const content = 'Show me this Endevor!';
     const fingerprint = 'finger';
-    const retrieveElementStub = mockRetrievingElementWithFingerprint(
+    const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
       element
     )([
       {
-        signoutArg: {
+        signOutParamsArg: {
           signoutChangeControlValue,
         },
-        result: {
-          content,
-          fingerprint,
+        signOutMockResult: {
+          status: ResponseStatus.OK,
+          result: {
+            content,
+            fingerprint,
+          },
         },
       },
     ]);
@@ -377,6 +382,14 @@ describe('starting edit session for element', () => {
           name: element.system,
           children: [],
         },
+        subSystemMapPath: {
+          environment: 'ENV',
+          stageNumber: '1',
+          system: 'SYS',
+          subSystem: 'SUB',
+        },
+        serviceId,
+        searchLocationId,
         children: [],
       },
       map: {
@@ -386,22 +399,24 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await editElementCommand({
-        getTempEditFolderUri: () => tempEditFolderUri,
-        dispatch: dispatchActions,
-      })({
+      await editElementCommand(
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
+      )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
-        uri: elementUri,
-        searchLocationId: toServiceLocationCompositeKey({
+        element,
+        serviceId: {
           name: serviceName,
           source: Source.INTERNAL,
-        })({
+        },
+        searchLocationId: {
           name: searchLocationName,
           source: Source.INTERNAL,
-        }),
+        },
         parent,
-        tooltip: 'FAKETOOLTIP',
+        timestamp: UNIQUE_ELEMENT_FRAGMENT,
       });
     } catch (e) {
       assert.fail(
@@ -409,7 +424,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.called,
       'Retrieve an element Endevor API was not called'
@@ -435,7 +450,6 @@ describe('starting edit session for element', () => {
     const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
       fingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         searchLocationId: {
           name: searchLocationName,
@@ -445,7 +459,6 @@ describe('starting edit session for element', () => {
           name: serviceName,
           source: Source.INTERNAL,
         },
-        overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           environment: searchLocation.environment!,
@@ -508,33 +521,39 @@ describe('starting edit session for element', () => {
       comment: 'test',
     };
     mockAskingForChangeControlValue(signoutChangeControlValue);
-    const error = new SignoutError('something');
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(error, SignoutError.prototype);
-    const firstAttempt = {
-      signoutArg: {
-        signoutChangeControlValue,
-      },
-      result: error,
-    };
     mockAskingForOverrideSignout([element.name])(true);
     const content = 'Show me this Endevor!';
     const fingerprint = 'finger';
-    const secondAttempt = {
-      signoutArg: {
-        signoutChangeControlValue,
-        overrideSignout: true,
-      },
-      result: {
-        content,
-        fingerprint,
-      },
-    };
-    const retrieveElementStub = mockRetrievingElementWithFingerprint(
+    const retrieveElementStub = mockRetrieveElementWithSignout(
       service,
       element
-    )([firstAttempt, secondAttempt]);
+    )([
+      {
+        signOutParamsArg: {
+          signoutChangeControlValue,
+        },
+        signOutMockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [],
+          },
+        },
+      },
+      {
+        signOutParamsArg: {
+          signoutChangeControlValue,
+          overrideSignOut: true,
+        },
+        signOutMockResult: {
+          status: ResponseStatus.OK,
+          result: {
+            content,
+            fingerprint,
+          },
+        },
+      },
+    ]);
     // can be anything, but URI
     const storageUri = Uri.file(__dirname);
     const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
@@ -577,6 +596,14 @@ describe('starting edit session for element', () => {
           name: element.system,
           children: [],
         },
+        subSystemMapPath: {
+          environment: 'ENV',
+          stageNumber: '1',
+          system: 'SYS',
+          subSystem: 'SUB',
+        },
+        serviceId,
+        searchLocationId,
         children: [],
       },
       map: {
@@ -586,22 +613,24 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await editElementCommand({
-        getTempEditFolderUri: () => tempEditFolderUri,
-        dispatch: dispatchActions,
-      })({
+      await editElementCommand(
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
+      )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
-        uri: elementUri,
-        searchLocationId: toServiceLocationCompositeKey({
+        element,
+        serviceId: {
           name: serviceName,
           source: Source.INTERNAL,
-        })({
+        },
+        searchLocationId: {
           name: searchLocationName,
           source: Source.INTERNAL,
-        }),
+        },
         parent,
-        tooltip: 'FAKETOOLTIP',
+        timestamp: UNIQUE_ELEMENT_FRAGMENT,
       });
     } catch (e) {
       assert.fail(
@@ -609,7 +638,7 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
-    const [, , contentStub] = retrieveElementStub;
+    const [, , , , contentStub] = retrieveElementStub;
     assert.ok(
       contentStub.calledTwice,
       'Retrieve an element Endevor API was not called twice'
@@ -635,7 +664,6 @@ describe('starting edit session for element', () => {
     const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
       fingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         searchLocationId: {
           name: searchLocationName,
@@ -645,7 +673,6 @@ describe('starting edit session for element', () => {
           name: serviceName,
           source: Source.INTERNAL,
         },
-        overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           environment: searchLocation.environment!,
@@ -708,29 +735,36 @@ describe('starting edit session for element', () => {
       comment: 'test',
     };
     mockAskingForChangeControlValue(signoutChangeControlValue);
-    const signoutError = new SignoutError('something');
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(signoutError, SignoutError.prototype);
-    const firstRetrieveAttempt = {
-      signoutArg: {
-        signoutChangeControlValue,
-      },
-      result: signoutError,
-    };
     mockAskingForOverrideSignout([element.name])(false);
     const content = 'Show me this Endevor!';
     const fingerprint = 'finger';
-    const secondRetrieveAttempt = {
+    const retrieveElementWithSignOutStub = mockRetrieveElementWithSignout(
+      service,
+      element
+    )([
+      {
+        signOutParamsArg: {
+          signoutChangeControlValue,
+        },
+        signOutMockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [],
+          },
+        },
+      },
+    ]);
+    const retrieveElementStub = mockRetrieveElement(
+      service,
+      element
+    )({
+      status: ResponseStatus.OK,
       result: {
         content,
         fingerprint,
       },
-    };
-    const retrieveElementStub = mockRetrievingElementWithFingerprint(
-      service,
-      element
-    )([firstRetrieveAttempt, secondRetrieveAttempt]);
+    });
     // can be anything, but URI
     const storageUri = Uri.file(__dirname);
     const tempEditFolderUri = joinUri(storageUri)(EDIT_DIR);
@@ -773,6 +807,14 @@ describe('starting edit session for element', () => {
           name: element.system,
           children: [],
         },
+        subSystemMapPath: {
+          environment: 'ENV',
+          stageNumber: '1',
+          system: 'SYS',
+          subSystem: 'SUB',
+        },
+        serviceId,
+        searchLocationId,
         children: [],
       },
       map: {
@@ -782,22 +824,24 @@ describe('starting edit session for element', () => {
       },
     };
     try {
-      await editElementCommand({
-        getTempEditFolderUri: () => tempEditFolderUri,
-        dispatch: dispatchActions,
-      })({
+      await editElementCommand(
+        dispatchActions,
+        async () => ({ service, searchLocation }),
+        () => tempEditFolderUri
+      )({
         type: 'ELEMENT_UP_THE_MAP',
         name: element.name,
-        uri: elementUri,
-        searchLocationId: toServiceLocationCompositeKey({
+        element,
+        serviceId: {
           name: serviceName,
           source: Source.INTERNAL,
-        })({
+        },
+        searchLocationId: {
           name: searchLocationName,
           source: Source.INTERNAL,
-        }),
+        },
         parent,
-        tooltip: 'FAKETOOLTIP',
+        timestamp: UNIQUE_ELEMENT_FRAGMENT,
       });
     } catch (e) {
       assert.fail(
@@ -805,10 +849,16 @@ describe('starting edit session for element', () => {
       );
     }
     // assert
+    const [, , , , retrieveElementWithSignOutContentStub] =
+      retrieveElementWithSignOutStub;
+    assert.ok(
+      retrieveElementWithSignOutContentStub.calledOnce,
+      'Retrieve an element with sign out Endevor API was not called once'
+    );
     const [, , contentStub] = retrieveElementStub;
     assert.ok(
-      contentStub.calledTwice,
-      'Retrieve an element Endevor API was not called twice'
+      contentStub.calledOnce,
+      'Retrieve an element copy Endevor API was not called once'
     );
     assert.ok(
       createElementDirectoryStub.called,
@@ -831,7 +881,6 @@ describe('starting edit session for element', () => {
     const expectedEditSessionDetails: EditedElementUriQuery = {
       element,
       fingerprint,
-      endevorConnectionDetails: service,
       searchContext: {
         searchLocationId: {
           name: searchLocationName,
@@ -841,7 +890,6 @@ describe('starting edit session for element', () => {
           name: serviceName,
           source: Source.INTERNAL,
         },
-        overallSearchLocation: searchLocation,
         initialSearchLocation: {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           environment: searchLocation.environment!,

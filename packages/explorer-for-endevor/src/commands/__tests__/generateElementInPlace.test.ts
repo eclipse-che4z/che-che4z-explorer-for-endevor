@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,40 +13,43 @@
 
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
-import { CommandId } from '../commands/id';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { isError } from '../utils';
+import { CommandId } from '../id';
 import * as assert from 'assert';
 import {
   Element,
-  ElementSearchLocation,
-  Service,
-  ServiceApiVersion,
+  ErrorResponseType,
+  ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { generateElementInPlaceCommand } from '../commands/generateElementInPlace';
-import { mockGenerateElementInPlace } from '../_mocks/endevor';
+import { generateElementInPlaceCommand } from '../element/generateElementInPlace';
+import { mockGenerateElementInPlace } from './_mocks/endevor';
 import * as sinon from 'sinon';
-import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
+import { UNIQUE_ELEMENT_FRAGMENT } from '../../constants';
 import {
+  mockAskingForProcGroup,
   mockAskingForChangeControlValue,
+  mockAskingForListing,
   mockAskingForOverrideSignout,
-  mockAskingForPrintListing,
-} from '../dialogs/_mocks/dialogs';
-import { Actions, ElementGeneratedInPlace } from '../store/_doc/Actions';
-import * as printListingCommand from '../commands/printListing';
+} from '../../commands/__tests__/_mocks/dialogs';
+import { Actions, ElementGeneratedInPlace } from '../../store/_doc/Actions';
+import * as printListingCommand from '../element/printListing';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import { Source } from '../../store/storage/_doc/Storage';
 import {
-  ProcessorStepMaxRcExceededError,
-  SignoutError,
-} from '@local/endevor/_doc/Error';
-import { EndevorId } from '../store/_doc/v2/Store';
-import { Source } from '../store/storage/_doc/Storage';
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
+import { ElementNode, TypeNode } from '../../tree/_doc/ElementTree';
 
 describe('generating an element in place', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.GENERATE_ELEMENT,
-      generateElementInPlaceCommand
+      (dispatch, getConnectionConfiguration, elementNode) =>
+        generateElementInPlaceCommand(
+          dispatch,
+          getConnectionConfiguration
+        )(elementNode)
     );
   });
 
@@ -56,12 +59,13 @@ describe('generating an element in place', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -74,58 +78,97 @@ describe('generating an element in place', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-    apiVersion: ServiceApiVersion.V2,
+    configuration,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
   };
   const element: Element = {
-    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
     stageNumber: '1',
     type: 'TYP',
     name: 'ELM',
+    id: 'ELM',
+    noSource: false,
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
   };
-  const elementUri = toTreeElementUri({
-    serviceId,
-    searchLocationId,
-    element,
-    service,
-    searchLocation,
-  })(UNIQUE_ELEMENT_FRAGMENT);
-  if (isError(elementUri)) {
-    const error = elementUri;
-    assert.fail(
-      `Uri was not built correctly for tests because of: ${error.message}`
-    );
-  }
+  const procGroup = 'ProcessAllToCobol';
   const actionChangeControlValue = {
     ccid: '111',
     comment: 'aaa',
   };
+  const parent: TypeNode = {
+    type: 'TYPE',
+    name: 'TYP',
+    elements: [],
+    parent: {
+      type: 'SUB',
+      name: 'SUB',
+      parent: {
+        type: 'SYS',
+        name: 'SYS',
+        children: [],
+      },
+      subSystemMapPath: {
+        environment: 'ENV',
+        stageNumber: '1',
+        system: 'SYS',
+        subSystem: 'SUB',
+      },
+      serviceId,
+      searchLocationId,
+      children: [],
+    },
+    map: {
+      type: 'MAP',
+      name: 'MAP',
+      elements: [],
+    },
+  };
+  const elementNode: ElementNode = {
+    serviceId,
+    searchLocationId,
+    type: 'ELEMENT_IN_PLACE',
+    name: element.name,
+    element,
+    parent,
+    timestamp: UNIQUE_ELEMENT_FRAGMENT,
+  };
 
   it('should generate an element in place with printing an element listing afterwards', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
     const generateElementStub = mockGenerateElementInPlace(
       service,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    mockAskingForPrintListing(true);
+    const askForListingStub = mockAskingForListing({
+      printListing: true,
+      printExecutionReport: false,
+    });
     const printListingStub = mockPrintElementListingCommand();
     const dispatchGenerateAction = sinon.spy();
     // act
@@ -133,18 +176,14 @@ describe('generating an element in place', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
         dispatchGenerateAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        async () => ({ service, searchLocation }),
+        elementNode
       );
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
       );
     }
-    // assert
     const [generalFunctionStub] = generateElementStub;
     assert.ok(
       generalFunctionStub.called,
@@ -159,7 +198,7 @@ describe('generating an element in place', () => {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
       serviceId,
       searchLocationId,
-      element,
+      element: { ...element, lastActionCcid: actionChangeControlValue.ccid },
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -167,6 +206,10 @@ describe('generating an element in place', () => {
       `Dispatch for the generated element was not called with: ${JSON.stringify(
         expectedDispatchAction
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
+    );
+    assert.ok(
+      askForListingStub.called,
+      'Prompt for the generated elemen listing was not called'
     );
     assert.ok(
       printListingStub.called,
@@ -182,23 +225,25 @@ describe('generating an element in place', () => {
 
   it('should print an element listing for the generate processor element error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
-    const generateProcessorError = new ProcessorStepMaxRcExceededError(
-      'Do you really expect me to generate this crap, you think Im russian propagandist or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      generateProcessorError,
-      ProcessorStepMaxRcExceededError.prototype
-    );
     const generateElementStub = mockGenerateElementInPlace(
       service,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
-        mockResult: generateProcessorError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.PROCESSOR_STEP_MAX_RC_EXCEEDED_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'Do you really expect me to generate this crap, you think Im russian propagandist or smt ;?',
+            ],
+            returnCode: 8,
+          },
+        },
       },
     ]);
     const dispatchGenerateAction = sinon.spy();
@@ -208,11 +253,10 @@ describe('generating an element in place', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
         dispatchGenerateAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        () => {
+          return { service, searchLocation };
+        },
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -234,7 +278,7 @@ describe('generating an element in place', () => {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
       serviceId,
       searchLocationId,
-      element,
+      element: { ...element, lastActionCcid: actionChangeControlValue.ccid },
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -251,27 +295,41 @@ describe('generating an element in place', () => {
 
   it('should generate an element with overriding the signout', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
-    const signoutError = new SignoutError(
-      'You are trying to enter the territory which is not yours, are you Putin or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(signoutError, SignoutError.prototype);
     const generateElementStub = mockGenerateElementInPlace(
       service,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
-        mockResult: signoutError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'You are trying to enter the territory which is not yours, are you Putin or smt ;?',
+            ],
+            returnCode: 8,
+          },
+        },
       },
       {
         signoutArg: { overrideSignOut: true },
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    const askToPrintListingStub = mockAskingForPrintListing(false);
+    const askForListingStub = mockAskingForListing({
+      printExecutionReport: false,
+      printListing: false,
+    });
     mockAskingForOverrideSignout([element.name])(true);
     const dispatchGenerateAction = sinon.spy();
     // act
@@ -279,11 +337,10 @@ describe('generating an element in place', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
         dispatchGenerateAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        () => {
+          return { service, searchLocation };
+        },
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -291,7 +348,7 @@ describe('generating an element in place', () => {
       );
     }
     // assert
-    const [, , , , generalFunctionStub] = generateElementStub;
+    const [generalFunctionStub] = generateElementStub;
     assert.ok(
       generalFunctionStub.calledTwice,
       `Generate element in place Endevor API was not called twice`
@@ -305,7 +362,7 @@ describe('generating an element in place', () => {
       type: Actions.ELEMENT_GENERATED_IN_PLACE,
       serviceId,
       searchLocationId,
-      element,
+      element: { ...element, lastActionCcid: actionChangeControlValue.ccid },
     };
     assert.deepStrictEqual(
       actualDispatchAction,
@@ -315,30 +372,34 @@ describe('generating an element in place', () => {
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
     );
     assert.ok(
-      askToPrintListingStub.called,
-      'Dialog about printing listing the generated element was not called'
+      askForListingStub.called,
+      'Prompt for the generated element listing was not called'
     );
   });
 
   it('should cancel the command in case of signout error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
-    const signoutError = new SignoutError(
-      'You are trying to enter the territory which is not yours, are you Putin or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(signoutError, SignoutError.prototype);
     const generateElementStub = mockGenerateElementInPlace(
       service,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
-        mockResult: signoutError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'You are trying to enter the territory which is not yours, are you Putin or smt ;?',
+            ],
+            returnCode: 8,
+          },
+        },
       },
     ]);
-    const askToPrintListingStub = mockAskingForPrintListing(false);
     const askForOverrideSignoutStub = mockAskingForOverrideSignout([
       element.name,
     ])(false);
@@ -348,11 +409,10 @@ describe('generating an element in place', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
         dispatchGenerateAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        () => {
+          return { service, searchLocation };
+        },
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -373,39 +433,41 @@ describe('generating an element in place', () => {
       dispatchGenerateAction.notCalled,
       'Dispatch for the generated element was called'
     );
-    assert.ok(
-      askToPrintListingStub.notCalled,
-      'Dialog about printing listing the generated element was called'
-    );
   });
 
   it('should not show an element listing for the generic generate error', async () => {
     // arrange
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(actionChangeControlValue);
-    const genericError = new Error(
-      'Something generic and usual, like peace in the whole world <3'
-    );
     const generateElementStub = mockGenerateElementInPlace(
       service,
       element,
-      actionChangeControlValue
+      actionChangeControlValue,
+      procGroup
     )([
       {
-        mockResult: genericError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.GENERIC_ERROR,
+          details: {
+            messages: [
+              'Something generic and usual, like peace in the whole world <3',
+            ],
+            returnCode: 8,
+          },
+        },
       },
     ]);
-    const askToPrintListingStub = mockAskingForPrintListing(false);
     const dispatchGenerateAction = sinon.spy();
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT,
         dispatchGenerateAction,
-        {
-          type: element.type,
-          name: element.name,
-          uri: elementUri,
-        }
+        () => {
+          return { service, searchLocation };
+        },
+        elementNode
       );
     } catch (e) {
       assert.fail(
@@ -421,10 +483,6 @@ describe('generating an element in place', () => {
     assert.ok(
       dispatchGenerateAction.notCalled,
       'Dispatch for the generated element was called'
-    );
-    assert.ok(
-      askToPrintListingStub.notCalled,
-      'Dialog about printing listing the generated element was called'
     );
   });
 });

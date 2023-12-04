@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,47 +13,48 @@
 
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
-import { CommandId } from '../commands/id';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { isError } from '../utils';
+import { CommandId } from '../id';
 import * as assert from 'assert';
 import {
   Element,
   ElementMapPath,
-  ElementSearchLocation,
-  Service,
-  ServiceApiVersion,
+  ErrorResponseType,
+  ResponseStatus,
 } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { generateElementWithCopyBackCommand } from '../commands/generateElementWithCopyBack';
-import { mockGenerateElementWithCopyBack } from '../_mocks/endevor';
+import { generateElementWithCopyBackCommand } from '../element/generateElementWithCopyBack';
+import { mockGenerateElementWithCopyBack } from './_mocks/endevor';
 import * as sinon from 'sinon';
-import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
 import {
   mockAskingForChangeControlValue,
   mockAskingForOverrideSignout,
-  mockAskingForPrintListing,
+  mockAskingForListing,
   mockAskingForUploadLocation,
-} from '../dialogs/_mocks/dialogs';
-import { TypeNode } from '../tree/_doc/ElementTree';
-import * as printListingCommand from '../commands/printListing';
+  mockAskingForProcGroup,
+} from './_mocks/dialogs';
+import { TypeNode } from '../../tree/_doc/ElementTree';
+import * as printListingCommand from '../element/printListing';
 import {
   Actions,
   ElementGeneratedInPlace,
   ElementGeneratedWithCopyBack,
-} from '../store/_doc/Actions';
+} from '../../store/_doc/Actions';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import { Source } from '../../store/storage/_doc/Storage';
 import {
-  ProcessorStepMaxRcExceededError,
-  SignoutError,
-} from '@local/endevor/_doc/Error';
-import { EndevorId } from '../store/_doc/v2/Store';
-import { Source } from '../store/storage/_doc/Storage';
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('generating an element with copy back', () => {
   before(() => {
     vscode.commands.registerCommand(
       CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
-      generateElementWithCopyBackCommand
+      (dispatch, getConnectionConfiguration, elementNode, options) =>
+        generateElementWithCopyBackCommand(
+          dispatch,
+          getConnectionConfiguration
+        )(elementNode, options)
     );
   });
 
@@ -63,12 +64,13 @@ describe('generating an element with copy back', () => {
     sinon.restore();
   });
 
+  const configuration = 'TEST-CONFIG';
   const serviceName = 'serviceName';
   const serviceId: EndevorId = {
     name: serviceName,
     source: Source.INTERNAL,
   };
-  const service: Service = {
+  const service: EndevorAuthorizedService = {
     location: {
       port: 1234,
       protocol: 'http',
@@ -81,43 +83,34 @@ describe('generating an element with copy back', () => {
       password: 'something',
     },
     rejectUnauthorized: false,
-    apiVersion: ServiceApiVersion.V2,
+    configuration,
   };
   const searchLocationName = 'searchLocationName';
   const searchLocationId: EndevorId = {
     name: searchLocationName,
     source: Source.INTERNAL,
   };
-  const searchLocation: ElementSearchLocation = {
-    configuration: 'ANY-CONFIG',
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
+  };
+  const procGroup = 'ProcessAllToCobol';
+  const changeControlValue = {
+    ccid: '111',
+    comment: 'aaa',
   };
   const element: Element = {
-    configuration: 'ANY',
     environment: 'ENV',
     system: 'SYS',
     subSystem: 'SUBSYS',
     stageNumber: '1',
     type: 'TYP',
+    id: 'ELM',
     name: 'ELM',
     extension: 'ext',
     lastActionCcid: 'LAST-CCID',
-  };
-  const elementUri = toTreeElementUri({
-    serviceId,
-    searchLocationId,
-    element,
-    service,
-    searchLocation,
-  })(UNIQUE_ELEMENT_FRAGMENT);
-  if (isError(elementUri)) {
-    const error = elementUri;
-    assert.fail(
-      `Uri was not built correctly for tests because of: ${error.message}`
-    );
-  }
-  const changeControlValue = {
-    ccid: '111',
-    comment: 'aaa',
+    noSource: false,
+    processorGroup: '*NOPROC*',
   };
   const parent: TypeNode = {
     type: 'TYPE',
@@ -131,6 +124,14 @@ describe('generating an element with copy back', () => {
         name: 'SYS',
         children: [],
       },
+      subSystemMapPath: {
+        environment: 'ENV',
+        stageNumber: '1',
+        system: 'SYS',
+        subSystem: 'SUB',
+      },
+      serviceId,
+      searchLocationId,
       children: [],
     },
     map: {
@@ -143,40 +144,54 @@ describe('generating an element with copy back', () => {
   it('should generate an element with copy back with printing an element listing afterwards', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
+    mockAskingForProcGroup(procGroup);
     mockAskingForUploadLocation(element)(targetLocation);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    mockAskingForPrintListing(true);
     const dispatchGenerateAction = sinon.spy();
+    const askForListingStub = mockAskingForListing({
+      printListing: true,
+      printExecutionReport: false,
+    });
     const printListingStub = mockPrintElementListingCommand();
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        async () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -209,8 +224,12 @@ describe('generating an element with copy back', () => {
       },
       targetElement: {
         ...targetLocation,
+        id: element.id,
+        name: element.name,
+        noSource: false,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -219,6 +238,10 @@ describe('generating an element with copy back', () => {
       `Dispatch for the generated element was not called with: ${JSON.stringify(
         expectedDispatchAction
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
+    );
+    assert.ok(
+      askForListingStub.called,
+      'Prompt for the generated elemen listing was not called'
     );
     assert.ok(
       printListingStub.called,
@@ -235,40 +258,53 @@ describe('generating an element with copy back', () => {
   it('should generate an element with no source', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: true }
+      { noSource: true },
+      procGroup
     )([
       {
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    mockAskingForPrintListing(false);
     const dispatchGenerateAction = sinon.spy();
+    const askForListingStub = mockAskingForListing({
+      printListing: false,
+      printExecutionReport: false,
+    });
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
+          serviceId,
+          searchLocationId,
         },
-        true
+        { noSource: true }
       );
     } catch (e) {
       assert.fail(
@@ -301,8 +337,12 @@ describe('generating an element with copy back', () => {
       },
       targetElement: {
         ...targetLocation,
+        id: element.id,
+        name: element.name,
+        noSource: true,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -312,36 +352,55 @@ describe('generating an element with copy back', () => {
         expectedDispatchAction
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
     );
+    assert.ok(
+      askForListingStub.called,
+      'Prompt for the generated elemen listing was not called'
+    );
   });
 
   it('should generate an element in place', async () => {
     // arrange
     const targetLocation: ElementMapPath = element;
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    mockAskingForPrintListing(false);
     const dispatchGenerateAction = sinon.spy();
+    const askForListingStub = mockAskingForListing({
+      printListing: false,
+      printExecutionReport: false,
+    });
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -372,57 +431,78 @@ describe('generating an element with copy back', () => {
         expectedDispatchAction
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
     );
+    assert.ok(
+      askForListingStub.called,
+      'Prompt for the generated elemen listing was not called'
+    );
   });
 
   it('should generate an element with overriding the element signout', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
-    const signoutError = new SignoutError(
-      'You are trying to enter the territory which is not yours, are you Putin or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(signoutError, SignoutError.prototype);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: signoutError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'You are trying to enter the territory which is not yours, are you Putin or smt ;?',
+            ],
+            returnCode: 8,
+          },
+        },
       },
       {
         signoutArg: {
           overrideSignOut: true,
         },
-        mockResult: undefined,
+        mockResult: {
+          status: ResponseStatus.OK,
+          details: {
+            messages: [],
+            returnCode: 0,
+          },
+        },
       },
     ]);
-    mockAskingForPrintListing(false);
     mockAskingForOverrideSignout([element.name])(true);
     const dispatchGenerateAction = sinon.spy();
+    const askForListingStub = mockAskingForListing({
+      printListing: false,
+      printExecutionReport: false,
+    });
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -430,14 +510,28 @@ describe('generating an element with copy back', () => {
       );
     }
     // assert
-    const [, , , , generalFunctionStub] = generateElementStub;
+    const generalFunctionStub = generateElementStub.pop();
     assert.ok(
-      generalFunctionStub.calledTwice,
+      generalFunctionStub?.calledTwice,
       `Generate element with copy back Endevor API was not called twice`
     );
     assert.ok(
       dispatchGenerateAction.called,
       'Dispatch for the generated element was not called'
+    );
+    assert.deepStrictEqual(
+      generalFunctionStub?.secondCall.args,
+      [{ overrideSignOut: true }],
+      'Second generate was not called with override signout set'
+    );
+    generateElementStub.shift(); // do not test first argument which is logActivity
+    generateElementStub.shift(); // do not test first argument which is progressReporter
+    generateElementStub.forEach((stub) =>
+      assert.deepStrictEqual(
+        stub.secondCall.args,
+        stub.firstCall.args,
+        'Arguments in the first generate call and second generate call with override signout were not equal'
+      )
     );
     const actualDispatchAction = dispatchGenerateAction.args[0]?.[0];
     const expectedDispatchAction: ElementGeneratedWithCopyBack = {
@@ -455,8 +549,12 @@ describe('generating an element with copy back', () => {
       },
       targetElement: {
         ...targetLocation,
+        id: element.id,
+        name: element.name,
+        noSource: element.noSource,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -466,38 +564,43 @@ describe('generating an element with copy back', () => {
         expectedDispatchAction
       )}, but with: ${JSON.stringify(actualDispatchAction)} instead`
     );
+    assert.ok(
+      askForListingStub.called,
+      'Prompt for the generated element listing was not called'
+    );
   });
 
   it('should show an element listing for the generate processor error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
-    const generateProcessorError = new ProcessorStepMaxRcExceededError(
-      'Do you really expect me to generate this crap, you think Im russian propagandist or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(
-      generateProcessorError,
-      ProcessorStepMaxRcExceededError.prototype
-    );
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: generateProcessorError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.PROCESSOR_STEP_MAX_RC_EXCEEDED_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'Do you really expect me to generate this crap, you think Im russian propagandist or smt ;?',
+            ],
+            returnCode: 8,
+          },
+        },
       },
     ]);
     const dispatchGenerateAction = sinon.spy();
@@ -507,12 +610,16 @@ describe('generating an element with copy back', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -545,8 +652,12 @@ describe('generating an element with copy back', () => {
       },
       targetElement: {
         ...targetLocation,
+        id: element.id,
+        name: element.name,
+        noSource: element.noSource,
         extension: element.extension,
         lastActionCcid: changeControlValue.ccid.toUpperCase(),
+        processorGroup: element.processorGroup,
       },
     };
     assert.deepStrictEqual(
@@ -565,30 +676,34 @@ describe('generating an element with copy back', () => {
   it('should cancel the command in case of signout error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
-    const signoutError = new SignoutError(
-      'You are trying to enter the territory which is not yours, are you Putin or smt ;?'
-    );
-    // workaround for the tests, for some reason, the error is passed incorrectly,
-    // but works properly in the code itself
-    Object.setPrototypeOf(signoutError, SignoutError.prototype);
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: signoutError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.SIGN_OUT_ENDEVOR_ERROR,
+          details: {
+            messages: [
+              'You are trying to enter the territory which is not yours, are you Putin or smt ;?',
+            ],
+            reasonCode: 8,
+          },
+        },
       },
     ]);
     mockAskingForOverrideSignout([element.name])(false);
@@ -598,12 +713,16 @@ describe('generating an element with copy back', () => {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(
@@ -625,42 +744,56 @@ describe('generating an element with copy back', () => {
   it('should not show an element listing for the generic generate error', async () => {
     // arrange
     const targetLocation: ElementMapPath = {
-      configuration: searchLocation.configuration,
       environment: 'PREVENV',
       system: parent.parent.parent.name,
       subSystem: parent.parent.name,
       stageNumber: '1',
       type: parent.type,
-      name: element.name,
+      id: element.name,
     };
     mockAskingForUploadLocation(element)(targetLocation);
+    mockAskingForProcGroup(procGroup);
     mockAskingForChangeControlValue(changeControlValue);
-    const genericError = new Error(
-      'Something generic and usual, like peace in the whole world <3'
-    );
     const generateElementStub = mockGenerateElementWithCopyBack(
       service,
       element,
       changeControlValue,
-      { noSource: false }
+      { noSource: false },
+      procGroup
     )([
       {
-        mockResult: genericError,
+        mockResult: {
+          status: ResponseStatus.ERROR,
+          type: ErrorResponseType.GENERIC_ERROR,
+          details: {
+            messages: [
+              'Something generic and usual, like peace in the whole world <3',
+            ],
+            reasonCode: 8,
+          },
+        },
       },
     ]);
-    const askToPrintListingStub = mockAskingForPrintListing(false);
+    const askToPrintListingStub = mockAskingForListing({
+      printExecutionReport: false,
+      printListing: false,
+    });
     const dispatchGenerateAction = sinon.spy();
     // act
     try {
       await vscode.commands.executeCommand(
         CommandId.GENERATE_ELEMENT_WITH_COPY_BACK,
         dispatchGenerateAction,
+        () => ({ service, searchLocation }),
         {
           type: element.type,
           name: element.name,
-          uri: elementUri,
+          element,
           parent,
-        }
+          serviceId,
+          searchLocationId,
+        },
+        { noSource: false }
       );
     } catch (e) {
       assert.fail(

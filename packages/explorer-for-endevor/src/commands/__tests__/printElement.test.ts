@@ -1,5 +1,5 @@
 /*
- * © 2022 Broadcom Inc and/or its subsidiaries; All rights reserved
+ * © 2023 Broadcom Inc and/or its subsidiaries; All rights reserved
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -13,34 +13,26 @@
 
 import { describe } from 'mocha';
 import * as vscode from 'vscode';
-import { CommandId } from '../commands/id';
-import { toTreeElementUri } from '../uri/treeElementUri';
-import { isError } from '../utils';
+import { CommandId } from '../id';
 import * as assert from 'assert';
-import {
-  Element,
-  ElementSearchLocation,
-  Service,
-  ServiceApiVersion,
-} from '@local/endevor/_doc/Endevor';
+import { Element, ResponseStatus } from '@local/endevor/_doc/Endevor';
 import { CredentialType } from '@local/endevor/_doc/Credential';
-import { printElement } from '../commands/printElement';
-import { Schemas } from '../_doc/Uri';
-import { elementContentProvider } from '../view/elementContentProvider';
-import { mockPrintingElementWith } from '../_mocks/endevor';
-import { mockShowingDocumentWith } from '../_mocks/window';
+import { printElement } from '../element/printElement';
+import { Schemas } from '../../uri/_doc/Uri';
+import { elementContentProvider } from '../../view/elementContentProvider';
+import { mockPrintingElementWith } from './_mocks/endevor';
+import { mockShowingDocumentWith } from './_mocks/window';
 import * as sinon from 'sinon';
-import { UNIQUE_ELEMENT_FRAGMENT } from '../constants';
-import { EndevorId } from '../store/_doc/v2/Store';
-import { Source } from '../store/storage/_doc/Storage';
+import { EndevorId } from '../../store/_doc/v2/Store';
+import { Source } from '../../store/storage/_doc/Storage';
+import {
+  EndevorAuthorizedService,
+  SearchLocation,
+} from '../../api/_doc/Endevor';
 
 describe('printing element content', () => {
   before(() => {
     vscode.commands.registerCommand(CommandId.PRINT_ELEMENT, printElement);
-    vscode.workspace.registerTextDocumentContentProvider(
-      Schemas.TREE_ELEMENT,
-      elementContentProvider
-    );
   });
 
   afterEach(() => {
@@ -49,70 +41,84 @@ describe('printing element content', () => {
     sinon.restore();
   });
 
-  it('should show fetched element content', async () => {
-    // arrange
-    const serviceName = 'serviceName';
-    const serviceId: EndevorId = {
-      name: serviceName,
-      source: Source.INTERNAL,
-    };
-    const service: Service = {
-      location: {
-        port: 1234,
-        protocol: 'http',
-        hostname: 'anything',
-        basePath: 'anythingx2',
-      },
-      credential: {
-        type: CredentialType.BASE,
-        user: 'test',
-        password: 'something',
-      },
-      rejectUnauthorized: false,
-      apiVersion: ServiceApiVersion.V2,
-    };
-    const element: Element = {
-      configuration: 'ANY',
-      environment: 'ENV',
-      system: 'SYS',
-      subSystem: 'SUBSYS',
-      stageNumber: '1',
-      type: 'TYP',
-      name: 'ELM',
-      extension: 'ext',
-      lastActionCcid: 'LAST-CCID',
-    };
-    const searchLocationName = 'searchLocationName';
-    const searchLocationId: EndevorId = {
-      name: searchLocationName,
-      source: Source.INTERNAL,
-    };
-    const searchLocation: ElementSearchLocation = {
-      configuration: 'ANY-CONFIG',
-    };
-    const elementUri = toTreeElementUri({
-      serviceId,
-      searchLocationId,
-      element,
+  // arrange
+  const configuration = 'TEST-CONFIG';
+  const serviceName = 'serviceName';
+  const serviceId: EndevorId = {
+    name: serviceName,
+    source: Source.INTERNAL,
+  };
+  const service: EndevorAuthorizedService = {
+    location: {
+      port: 1234,
+      protocol: 'http',
+      hostname: 'anything',
+      basePath: 'anythingx2',
+    },
+    credential: {
+      type: CredentialType.BASE,
+      user: 'test',
+      password: 'something',
+    },
+    rejectUnauthorized: false,
+    configuration,
+  };
+  const element: Element = {
+    environment: 'ENV',
+    system: 'SYS',
+    subSystem: 'SUBSYS',
+    stageNumber: '1',
+    type: 'TYP',
+    name: 'ELM',
+    id: 'ELM',
+    noSource: false,
+    extension: 'ext',
+    lastActionCcid: 'LAST-CCID',
+    processorGroup: '*NOPROC*',
+  };
+  const searchLocationName = 'searchLocationName';
+  const searchLocationId: EndevorId = {
+    name: searchLocationName,
+    source: Source.INTERNAL,
+  };
+  const searchLocation: SearchLocation = {
+    environment: 'ENV',
+    stageNumber: '1',
+  };
+  const dispatchActions = sinon.spy();
+  vscode.workspace.registerTextDocumentContentProvider(
+    Schemas.TREE_ELEMENT,
+    elementContentProvider(dispatchActions, async () => ({
       service,
       searchLocation,
-    })(UNIQUE_ELEMENT_FRAGMENT);
-    if (isError(elementUri)) {
-      const error = elementUri;
-      assert.fail(
-        `Uri was not built correctly for tests because of: ${error.message}`
-      );
-    }
+    }))
+  );
+
+  it('should show fetched element content', async () => {
     const expectedElementContent = 'Show me this Endevor!';
+
     const printElementStub = mockPrintingElementWith(
       service,
       element
-    )(expectedElementContent);
+    )({
+      status: ResponseStatus.OK,
+      details: {
+        messages: [],
+        returnCode: 0,
+      },
+      result: expectedElementContent,
+    });
     const success = Promise.resolve();
     const showElementContentStub = mockShowingDocumentWith()(success);
     // act
     try {
-      await vscode.commands.executeCommand(CommandId.PRINT_ELEMENT, elementUri);
+      await vscode.commands.executeCommand(CommandId.PRINT_ELEMENT, {
+        name: element.name,
+        element,
+        serviceId,
+        searchLocationId,
+        noSource: element.noSource,
+      });
     } catch (e) {
       assert.fail(
         `Test failed because of uncaught error inside command: ${e.message}`
@@ -121,6 +127,7 @@ describe('printing element content', () => {
     // assert
     const [
       generalPrintFunctionStub,
+      ,
       printWithServiceStub,
       printElementContentStub,
     ] = printElementStub;
