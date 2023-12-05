@@ -41,6 +41,7 @@ import {
   getAuthenticationToken,
   downloadReportById,
   moveElements,
+  createPackage,
   printMember,
   getMembersFromDataset,
 } from '../endevor';
@@ -69,6 +70,7 @@ import {
   SearchStrategies,
   Value,
   ErrorResponseType,
+  PackageInformation,
   Member,
   Dataset,
 } from '../_doc/Endevor';
@@ -9433,6 +9435,147 @@ describe('endevor public api v2', () => {
     });
   });
 
+  describe('creating a package', () => {
+    const configuration = 'TEST-INST';
+    const sclContent = 'MOVE SCL';
+    const packageInfo: PackageInformation = {
+      name: 'TESTPACKAGE',
+      description: 'DESCRIPTION',
+    };
+    const packageOptions = {
+      sharable: true,
+      backoutEnabled: true,
+      doNotValidateSCL: true,
+      isEmergency: true,
+    };
+
+    it('should create a package', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 0;
+      const messages: string[] = [];
+      mockServer.forAnyRequest().thenJson(
+        200,
+        {
+          data: [],
+          messages,
+          reports: {},
+          returnCode,
+        },
+        {
+          version: '2.5',
+          'content-type': 'application/json',
+        }
+      );
+      const service = toService(mockServer.url);
+      // act
+      const createPackageResult = await createPackage(logger)(progress)(
+        service
+      )(configuration)(packageInfo)(packageOptions)(sclContent);
+      // assert
+      expect(createPackageResult).toEqual({
+        status: ResponseStatus.OK,
+        details: {
+          returnCode: 0,
+          messages: [],
+        },
+      });
+    });
+
+    it('should return error for incorrect connection details', async () => {
+      // arrange
+      const nonExistingService = toService(nonExistingServerURL);
+      // act
+      const createPackageResult = await createPackage(logger)(progress)(
+        nonExistingService
+      )(configuration)(packageInfo)(packageOptions)(sclContent);
+      // assert
+      expect(createPackageResult).toEqual({
+        status: ResponseStatus.ERROR,
+        type: 'CONNECTION_ERROR',
+        details: {
+          connectionCode: 'ECONNREFUSED',
+          httpStatusCode: undefined,
+          messages: [
+            `connect ECONNREFUSED ${nonExistingService.location.hostname}:${nonExistingService.location.port}`,
+          ],
+        },
+      });
+    });
+
+    it('should return error for incorrect base credentials', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const messages = ['API0034S INVALID USERID OR PASSWORD DETECTED'];
+      const returnCode = 20;
+      mockServer.forAnyRequest().thenJson(
+        401,
+        {
+          returnCode,
+          reasonCode: 34,
+          reports: null,
+          messages,
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const service = toService(mockServer.url);
+      // act
+      const createPackageResult = await createPackage(logger)(progress)(
+        service
+      )(configuration)(packageInfo)(packageOptions)(sclContent);
+      // assert
+      expect(createPackageResult).toEqual({
+        status: ResponseStatus.ERROR,
+        type: ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR,
+        details: {
+          messages: ['API0034S INVALID USERID OR PASSWORD DETECTED'],
+          returnCode: 20,
+        },
+      });
+    });
+
+    it('should return error if something goes wrong in Endevor side', async () => {
+      // arrange
+      // this chunked multipart/form-data request seems not available to be mocked with mockttp
+      // TODO: investigate ability to use mockServer.put().withForm() method instead, but it seems like it is not working
+      const returnCode = 20;
+      const messages = ['Something went really wrong....'];
+      mockServer.forAnyRequest().thenJson(
+        500,
+        {
+          returnCode,
+          reasonCode: 34,
+          reports: null,
+          messages,
+          data: [],
+        },
+        {
+          'content-type': 'application/json',
+          version: '2.5',
+        }
+      );
+      const service = toService(mockServer.url);
+      // act
+      const createPackageResult = await createPackage(logger)(progress)(
+        service
+      )(configuration)(packageInfo)(packageOptions)(sclContent);
+      // assert
+      expect(createPackageResult).toEqual({
+        status: ResponseStatus.ERROR,
+        type: ErrorResponseType.GENERIC_ERROR,
+        details: {
+          messages: messages.map((message) => message.trim()),
+          returnCode: 20,
+        },
+      });
+    });
+  });
   describe('printing members', () => {
     const configuration = 'TEST-INST';
     const member: Member = {

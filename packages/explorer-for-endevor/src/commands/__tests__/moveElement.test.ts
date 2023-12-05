@@ -216,19 +216,15 @@ describe('moving an element', () => {
       const moveElementStub = mockMoveElement(
         service,
         element,
-        changeControlValue
-      )([
-        {
-          moveParamsArg: moveOptions,
-          mockResult: {
-            status: ResponseStatus.OK,
-            details: {
-              messages: [],
-              returnCode: 0,
-            },
-          },
+        changeControlValue,
+        moveOptions
+      )({
+        status: ResponseStatus.OK,
+        details: {
+          messages: [],
+          returnCode: 0,
         },
-      ]);
+      });
       // act
       try {
         await vscode.commands.executeCommand(
@@ -321,19 +317,15 @@ describe('moving an element', () => {
       const moveElementStub = mockMoveElement(
         service,
         element,
-        changeControlValue
-      )([
-        {
-          moveParamsArg: moveOptions,
-          mockResult: {
-            status: ResponseStatus.OK,
-            details: {
-              messages: [],
-              returnCode: 0,
-            },
-          },
+        changeControlValue,
+        moveOptions
+      )({
+        status: ResponseStatus.OK,
+        details: {
+          messages: [],
+          returnCode: 0,
         },
-      ]);
+      });
       // act
       try {
         await vscode.commands.executeCommand(
@@ -421,19 +413,15 @@ describe('moving an element', () => {
       const moveElementStub = mockMoveElement(
         service,
         element,
-        changeControlValue
-      )([
-        {
-          moveParamsArg: moveOptions,
-          mockResult: {
-            status: ResponseStatus.OK,
-            details: {
-              messages: [],
-              returnCode: 0,
-            },
-          },
+        changeControlValue,
+        moveOptions
+      )({
+        status: ResponseStatus.OK,
+        details: {
+          messages: [],
+          returnCode: 0,
         },
-      ]);
+      });
       // act
       try {
         await vscode.commands.executeCommand(
@@ -515,19 +503,15 @@ describe('moving an element', () => {
       const moveElementStub = mockMoveElement(
         service,
         element,
-        changeControlValue
-      )([
-        {
-          moveParamsArg: moveOptions,
-          mockResult: {
-            status: ResponseStatus.OK,
-            details: {
-              messages: [],
-              returnCode: 0,
-            },
-          },
+        changeControlValue,
+        moveOptions
+      )({
+        status: ResponseStatus.OK,
+        details: {
+          messages: [],
+          returnCode: 0,
         },
-      ]);
+      });
       // act
       try {
         await vscode.commands.executeCommand(

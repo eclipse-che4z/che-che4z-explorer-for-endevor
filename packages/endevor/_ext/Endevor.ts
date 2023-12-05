@@ -58,7 +58,7 @@ export type BaseResponseWithNoData = t.TypeOf<typeof BaseResponseWithNoData>;
 export type SystemsResponse = t.TypeOf<typeof SystemsResponse>;
 export type SubSystemsResponse = t.TypeOf<typeof SubSystemsResponse>;
 export type ElementTypesResponse = t.TypeOf<typeof ElementTypesResponse>;
-export type ProcessorGroupsRepsonse = t.TypeOf<typeof ProcessorGroupsRepsonse>;
+export type ProcessorGroupsResponse = t.TypeOf<typeof ProcessorGroupsResponse>;
 export type ElementsResponse = t.TypeOf<typeof ElementsResponse>;
 
 export type ComponentsResponse = t.TypeOf<typeof ComponentsResponse>;
@@ -71,6 +71,8 @@ export type MoveResponse = t.TypeOf<typeof MoveResponse>;
 export type GenerateResponse = t.TypeOf<typeof GenerateResponse>;
 
 export type SignInElementResponse = t.TypeOf<typeof SignInElementResponse>;
+
+export type PackageCreateResponse = t.TypeOf<typeof PackageCreateResponse>;
 
 export type AuthenticationTokenResponse = t.TypeOf<
   typeof AuthenticationTokenResponse
@@ -314,7 +316,7 @@ export const SystemsResponse = BaseResponseWithUnknownDataOrNull;
 export const SubSystemsResponse = BaseResponseWithUnknownDataOrNull;
 export const ElementTypesResponse = BaseResponseWithUnknownDataOrNull;
 export const ElementsResponse = BaseResponseWithUnknownDataOrNull;
-export const ProcessorGroupsRepsonse = BaseResponseWithUnknownDataOrNull;
+export const ProcessorGroupsResponse = BaseResponseWithUnknownDataOrNull;
 
 export const PrintResponse = BaseResponseWithContentOrNull;
 
@@ -360,3 +362,5 @@ export const GenerateResponse = BaseResponseWithNoData;
 export const UpdateResponse = BaseResponseWithNoData;
 export const AddResponse = BaseResponseWithNoData;
 export const SignInElementResponse = BaseResponseWithNoData;
+
+export const PackageCreateResponse = BaseResponseWithNoData;

@@ -247,6 +247,7 @@ import { viewTypeDetails } from './commands/type/viewTypeDetails';
 import { logActivity } from './logger';
 import { moveElementCommand } from './commands/element/moveElement';
 import { EndevorAuthorizedService, SearchLocation } from './api/_doc/Endevor';
+import { createPackageCommand } from './commands/package/createPackage';
 import { ElementInfo, ExternalEndevorApi } from './api/_doc/Api';
 import {
   emitElementsUpdatedEvent,
@@ -1069,6 +1070,17 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
             dispatch,
             connectionConfigurationResolver
           )(elementNode)
+        );
+      },
+    ],
+    [
+      CommandId.CREATE_PACKAGE,
+      (elementNode: ElementNode, nodes?: ElementNode[]) => {
+        return withErrorLogging(CommandId.CREATE_PACKAGE)(
+          createPackageCommand(dispatch, connectionConfigurationResolver)(
+            elementNode,
+            nodes
+          )
         );
       },
     ],

@@ -64,6 +64,7 @@ export const CommandId = {
   PRINT_LISTING: `${COMMAND_PREFIX}.printListing`,
   PRINT_HISTORY: `${COMMAND_PREFIX}.printHistory`,
   SHOW_REPORT: `${COMMAND_PREFIX}.showReport`,
+  CREATE_PACKAGE: `${COMMAND_PREFIX}.createPackage`,
 
   // filter commands
   CLEAR_SEARCH_LOCATION_FILTERS: `${COMMAND_PREFIX}.clearSearchLocationFilters`,

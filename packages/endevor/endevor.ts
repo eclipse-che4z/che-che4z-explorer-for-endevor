@@ -29,6 +29,8 @@ import {
 import {
   AddUpdElement,
   AddUpdElmDictionary,
+  CreateUpdatePackage,
+  DefinePkgDictionary,
   ElmSpecDictionary,
   EncodingDictionary,
   EndevorClient,
@@ -99,6 +101,10 @@ import {
   GenerateResponseErrorType,
   RetrieveElementWithSignoutResponseErrorType,
   PrintResponseErrorType,
+  PackageCreateResponse,
+  CreatePackageParams,
+  PackageInformation,
+  PackageSclContent,
   ProcessorGroupValue,
 } from './_doc/Endevor';
 import { UnreachableCaseError } from './typeHelpers';
@@ -131,7 +137,8 @@ import {
   ElementsResponse as ExternalElementsResponse,
   MoveResponse as ExternalMoveResponse,
   GenerateResponse as ExternalGenerateResponse,
-  ProcessorGroupsRepsonse as ExternalProcessorGroupResponse,
+  ProcessorGroupsResponse as ExternalProcessorGroupResponse,
+  PackageCreateResponse as ExternalPackageCreateResponse,
   BaseResponseWithUnknownDataOrNull,
   BaseResponseWithNoData,
 } from './_ext/Endevor';
@@ -1946,6 +1953,63 @@ export const getMembersFromDataset =
       details: {
         messages: parsedResponse.body.messages,
         returnCode: parsedResponse.body.returnCode,
+      },
+    };
+  };
+
+export const createPackage =
+  (logger: Logger) =>
+  (progress: ProgressReporter) =>
+  (service: Service) =>
+  (configuration: Value) =>
+  ({ name, description }: PackageInformation) =>
+  ({
+    sharable,
+    backoutEnabled,
+    doNotValidateSCL,
+    isEmergency,
+  }: CreatePackageParams) =>
+  async (sclContent: PackageSclContent): Promise<PackageCreateResponse> => {
+    const session = toSecuredEndevorSession(logger)(service);
+    const requestParams: DefinePkgDictionary = {
+      'from-text': sclContent,
+      description,
+      promotion: 'yes',
+      'validate-scl': doNotValidateSCL ? 'no' : undefined,
+      sharable: sharable ? 'yes' : undefined,
+      backout: backoutEnabled ? 'yes' : undefined,
+      'emergency-package': isEmergency ? 'yes' : undefined,
+    };
+    progress.report({ increment: 30 });
+
+    const parsedResponse =
+      await executeEndevorRequest<ExternalPackageCreateResponse>(logger)(
+        progress
+      )(ExternalPackageCreateResponse, async () => {
+        return CreateUpdatePackage.createPackage(
+          session,
+          configuration,
+          name,
+          await CreateUpdatePackage.setupCreateUpdatePackageRequest(
+            requestParams,
+            true
+          )
+        );
+      });
+    if (
+      isEndevorApiError(parsedResponse) ||
+      isEndevorResponseError(parsedResponse)
+    ) {
+      progress.report({ increment: 100 });
+      return getErrorEndevorAuthorizedResponse<undefined>(parsedResponse);
+    }
+    progress.report({ increment: 20 });
+    return {
+      status: ResponseStatus.OK,
+      details: {
+        messages: parsedResponse.body.messages,
+        returnCode: parsedResponse.body.returnCode,
+        reportIds: getReportsFromParsedResponse(parsedResponse.body.reports),
       },
     };
   };

@@ -27,6 +27,7 @@ import * as printListingDialogs from '../../../dialogs/listings/showListingDialo
 import * as endevorSubsystemDialogs from '../../../dialogs/locations/endevorSubsystemDialogs';
 import * as processorGroupDialogs from '../../../dialogs/processor-groups/processorGroupsDialogs';
 import * as moveOptionsMultiStep from '../../../dialogs/multi-step/moveOptions';
+import * as packageCreateOptionsMultiStep from '../../../dialogs/multi-step/packageCreate';
 import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
 import { SearchLocation } from '../../../api/_doc/Endevor';
 import { EndevorLogger } from '../../../logger';
@@ -174,7 +175,7 @@ export const mockAskingForProcGroup = (mockResult: string): AskForProcGroup => {
 };
 
 type AskForMoveOptionsStub = sinon.SinonStub<
-  [defaultCcid?: string, defaultComment?: string],
+  [defaultCcid?: string, defaultComment?: string, customTitle?: string],
   Promise<moveOptionsMultiStep.MoveOptions | undefined>
 >;
 
@@ -184,5 +185,33 @@ export const mockAskingForMoveOptions = (
   return sinon
     .stub(moveOptionsMultiStep, 'multiStepMoveOptions')
     .withArgs(sinon.match.any)
+    .resolves(resolveWith);
+};
+
+type AskForPackageMoveOptionsStub = sinon.SinonStub<
+  [packageName: string, defaultCcid?: string, defaultComment?: string],
+  Promise<moveOptionsMultiStep.MoveOptions | undefined>
+>;
+
+export const mockAskingForPackageMoveOptions = (
+  resolveWith: moveOptionsMultiStep.MoveOptions | undefined
+): AskForPackageMoveOptionsStub => {
+  return sinon
+    .stub(moveOptionsMultiStep, 'multiStepMoveOptionsForPackage')
+    .withArgs(sinon.match.any)
+    .resolves(resolveWith);
+};
+
+type AskForPackageCreateOptionsStub = sinon.SinonStub<
+  [defaultCcid?: string, defaultComment?: string],
+  Promise<packageCreateOptionsMultiStep.PackageCreateOptions | undefined>
+>;
+
+export const mockAskingForPackageCreateOptions = (
+  resolveWith: packageCreateOptionsMultiStep.PackageCreateOptions | undefined
+): AskForPackageCreateOptionsStub => {
+  return sinon
+    .stub(packageCreateOptionsMultiStep, 'multiStepCreatePackageOptions')
+    .withArgs()
     .resolves(resolveWith);
 };

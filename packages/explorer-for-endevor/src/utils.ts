@@ -48,6 +48,23 @@ export const filterElementNodes = (nodes: Node[]): ElementNode[] => {
     .filter(isDefined);
 };
 
+export const areElementNodesFromSameSearchLocation = (
+  elementNodes: ElementNode[]
+): boolean => {
+  if (!elementNodes.length || !elementNodes[0]) {
+    return true;
+  }
+  const searchLocation = {
+    serviceId: elementNodes[0].serviceId,
+    searchLocationId: elementNodes[0].searchLocationId,
+  };
+  return !elementNodes.some(
+    (elementNode) =>
+      elementNode.serviceId !== searchLocation.serviceId ||
+      elementNode.searchLocationId !== searchLocation.searchLocationId
+  );
+};
+
 export const isDefined = <T>(value: T | undefined): value is T => {
   return value !== undefined;
 };

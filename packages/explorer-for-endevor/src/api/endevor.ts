@@ -16,6 +16,7 @@ import * as endevor from '@local/endevor/endevor';
 import {
   ActionChangeControlValue,
   Dataset,
+  CreatePackageParams,
   Element,
   ElementData,
   ElementDataWithFingerprint,
@@ -28,6 +29,8 @@ import {
   GenerateWithCopyBackParams,
   Member,
   MoveParams,
+  PackageInformation,
+  PackageSclContent,
   ProcessorGroupValue,
   SignOutParams,
   SubSystemMapPath,
@@ -676,6 +679,26 @@ export const searchForTypesInPlaceAndLogActivity =
       typeParams.type
     );
     logActivity('Fetching type info')(response);
+    return response;
+  };
+
+export const createPackageAndLogActivity =
+  (
+    logActivity: (
+      actionName: string
+    ) => <E extends ErrorResponseType | undefined, R>(
+      response: EndevorResponse<E, R>
+    ) => void
+  ) =>
+  (progress: ProgressReporter) =>
+  (service: EndevorAuthorizedService) =>
+  (packageInfo: PackageInformation) =>
+  (packageParams: CreatePackageParams) =>
+  async (sclContent: PackageSclContent) => {
+    const response = await endevor.createPackage(logger)(progress)(service)(
+      service.configuration
+    )(packageInfo)(packageParams)(sclContent);
+    logActivity(`Creating package ${packageInfo.name}`)(response);
     return response;
   };
 

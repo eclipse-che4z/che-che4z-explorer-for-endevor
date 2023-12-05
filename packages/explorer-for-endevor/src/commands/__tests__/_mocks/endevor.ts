@@ -42,6 +42,10 @@ import {
   ElementTypesResponse,
   MoveParams,
   MoveResponse,
+  CreatePackageParams,
+  PackageCreateResponse,
+  PackageInformation,
+  PackageSclContent,
   ProcessorGroupValue,
 } from '@local/endevor/_doc/Endevor';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
@@ -824,7 +828,7 @@ type MoveElementStub = [
   >,
   sinon.SinonStub<
     [ActionChangeControlValue],
-    (moveParams: MoveParams) => Promise<GenerateResponse>
+    (moveParams: MoveParams) => Promise<MoveResponse>
   >,
   sinon.SinonStub<[moveParams: MoveParams], Promise<MoveResponse>>
 ];
@@ -833,29 +837,16 @@ export const mockMoveElement =
   (
     serviceArg: EndevorAuthorizedService,
     elementArg: Element,
-    changeControlValueArg: ActionChangeControlValue
+    changeControlValueArg: ActionChangeControlValue,
+    moveParamsArg: MoveParams
   ) =>
-  (
-    mockResults: ReadonlyArray<{
-      moveParamsArg: MoveParams;
-      mockResult: MoveResponse;
-    }>
-  ): MoveElementStub => {
+  (mockResult: MoveResponse): MoveElementStub => {
     const anyLogActivity = sinon.match.any;
     const anyProgressReporter = sinon.match.any;
-    const withContentStub = sinon.stub<
-      [moveParamsArg: MoveParams],
-      Promise<MoveResponse>
-    >();
-    mockResults.forEach(({ moveParamsArg, mockResult }) => {
-      if (moveParamsArg) {
-        withContentStub
-          .withArgs(moveParamsArg)
-          .returns(Promise.resolve(mockResult));
-      } else {
-        withContentStub.returns(Promise.resolve(mockResult));
-      }
-    });
+    const withContentStub = sinon
+      .stub<[moveParams: MoveParams], Promise<MoveResponse>>()
+      .withArgs(moveParamsArg)
+      .returns(Promise.resolve(mockResult));
     const withMoveParamsStub = sinon
       .stub<
         [moveChangeControlValue: ActionChangeControlValue],
@@ -1835,6 +1826,127 @@ export const mockGetTypesInPlace =
       withProgressReporterStub,
       withServiceStub,
       withEnvSearchParams,
+      withContentStub,
+    ];
+  };
+
+type CreatePackageStub = [
+  sinon.SinonStub<
+    [
+      logActivity: (
+        actionName: string
+      ) => <E extends ErrorResponseType | undefined, R>(
+        response: EndevorResponse<E, R>
+      ) => void
+    ],
+    (
+      progress: ProgressReporter
+    ) => (
+      service: EndevorAuthorizedService
+    ) => (
+      packageInfo: PackageInformation
+    ) => (
+      packageParams: CreatePackageParams
+    ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+  >,
+  sinon.SinonStub<
+    [progress: ProgressReporter],
+    (
+      service: EndevorAuthorizedService
+    ) => (
+      packageInfo: PackageInformation
+    ) => (
+      packageParams: CreatePackageParams
+    ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+  >,
+  sinon.SinonStub<
+    [EndevorAuthorizedService],
+    (
+      packageInfo: PackageInformation
+    ) => (
+      packageParams: CreatePackageParams
+    ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+  >,
+  sinon.SinonStub<
+    [packageInfo: PackageInformation],
+    (
+      packageParams: CreatePackageParams
+    ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+  >,
+  sinon.SinonStub<
+    [packageParams: CreatePackageParams],
+    (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+  >,
+  sinon.SinonStub<
+    [sclContent: PackageSclContent],
+    Promise<PackageCreateResponse>
+  >
+];
+
+export const mockCreatePackage =
+  (
+    serviceArg: EndevorAuthorizedService,
+    packageInfoArg: PackageInformation,
+    createPackageParamsArg: CreatePackageParams,
+    sclContentArg: PackageSclContent
+  ) =>
+  (mockResult: PackageCreateResponse): CreatePackageStub => {
+    const anyLogActivity = sinon.match.any;
+    const anyProgressReporter = sinon.match.any;
+    const withContentStub = sinon
+      .stub<[sclContent: PackageSclContent], Promise<PackageCreateResponse>>()
+      .withArgs(sclContentArg)
+      .returns(Promise.resolve(mockResult));
+    const withPackageParamsStub = sinon
+      .stub<
+        [packageParams: CreatePackageParams],
+        (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+      >()
+      .withArgs(createPackageParamsArg)
+      .returns(withContentStub);
+    const withPackageInfoStub = sinon
+      .stub<
+        [packageInfo: PackageInformation],
+        (
+          packageParams: CreatePackageParams
+        ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+      >()
+      .withArgs(packageInfoArg)
+      .returns(withPackageParamsStub);
+    const withServiceStub = sinon
+      .stub<
+        [EndevorAuthorizedService],
+        (
+          packageInfo: PackageInformation
+        ) => (
+          packageParams: CreatePackageParams
+        ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+      >()
+      .withArgs(serviceArg)
+      .returns(withPackageInfoStub);
+    const withProgressReporterStub = sinon
+      .stub<
+        [ProgressReporter],
+        (
+          service: EndevorAuthorizedService
+        ) => (
+          packageInfo: PackageInformation
+        ) => (
+          packageParams: CreatePackageParams
+        ) => (sclContent: PackageSclContent) => Promise<PackageCreateResponse>
+      >()
+      .withArgs(anyProgressReporter)
+      .returns(withServiceStub);
+    const generalFunctionStub = sinon
+      .stub(endevor, 'createPackageAndLogActivity')
+      .withArgs(anyLogActivity)
+      .returns(withProgressReporterStub);
+    return [
+      generalFunctionStub,
+      withProgressReporterStub,
+      withServiceStub,
+      withPackageInfoStub,
+      withPackageParamsStub,
       withContentStub,
     ];
   };

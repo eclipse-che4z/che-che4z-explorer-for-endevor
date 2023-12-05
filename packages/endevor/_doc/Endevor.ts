@@ -51,6 +51,11 @@ export type ChangeControlValue = Readonly<{
 export type ActionChangeControlValue = ChangeControlValue;
 export type ProcessorGroupValue = Value | undefined;
 
+export type PackageInformation = Readonly<{
+  name: Value;
+  description: Value;
+}>;
+
 export type EnvironmentStageMapPath = Readonly<{
   environment: Value;
   stageNumber: StageNumber;
@@ -199,6 +204,8 @@ export type ElementDataWithFingerprint = ElementData &
     fingerprint: Value;
   }>;
 
+export type PackageSclContent = string;
+
 export type AuthorizationToken = Readonly<{
   token: Value;
   tokenCreatedOn: Value;
@@ -239,6 +246,13 @@ export type SignOutParams = Readonly<{
   signoutChangeControlValue: ActionChangeControlValue;
   overrideSignOut?: OverrideSignOut;
 }>;
+
+export type CreatePackageParams = {
+  sharable: boolean;
+  backoutEnabled: boolean;
+  doNotValidateSCL: boolean;
+  isEmergency: boolean;
+};
 
 export const enum SearchStrategies {
   IN_PLACE = 'IN_PLACE',
@@ -511,3 +525,4 @@ export class EndevorResponseError extends Error {
     Object.setPrototypeOf(this, EndevorResponseError.prototype);
   }
 }
+export type PackageCreateResponse = AuthorizedEndevorResponse<undefined>;

@@ -50,9 +50,21 @@ export interface MoveOptions {
   ackElementJump: boolean;
 }
 
-export async function multiStepMoveOptions(
+export const multiStepMoveOptionsForPackage = async (
+  packageName: string,
   defaultCcid?: string,
   defaultComment?: string
+) => {
+  const title = `Move Element options${
+    packageName ? ' for package ' + packageName : ''
+  }`;
+  return multiStepMoveOptions(defaultCcid, defaultComment, title);
+};
+
+export async function multiStepMoveOptions(
+  defaultCcid?: string,
+  defaultComment?: string,
+  customTitle?: string
 ): Promise<MoveOptions | undefined> {
   const options: QuickPickItem[] = [
     [
@@ -77,7 +89,7 @@ export async function multiStepMoveOptions(
     ],
   ].map((option) => ({ label: option[0] || 'N/A', detail: option[1] }));
 
-  const title = 'Move Element';
+  const title = customTitle ?? 'Move Element';
 
   async function collectInputs(): Promise<MoveOptions | undefined> {
     const state: MoveOptionsState = {
