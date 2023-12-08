@@ -968,6 +968,23 @@
           "default": "Endevor type file extension or type name",
           "scope": "resource"
         },
+        "endevor.generateAfterEdit": {
+          "title": "Generate after edit",
+          "description": "Specifies if any generate action should be taken after the element is edited",
+          "type": "string",
+          "enum": [
+            "Generate the element",
+            "Do not generate the element",
+            "Ask if the element should be generated"
+          ],
+          "enumDescriptions": [
+            "Generates the element after edit",
+            "Does not generate the element after edit",
+            "Asks if the element should be generated after edit"
+          ],
+          "default": "Ask if the element should be generated",
+          "scope": "resource"
+        },
         "profiles.keepInSync": {
           "type": "boolean",
           "scope": "resource",
