@@ -29,3 +29,18 @@ export const toPromiseWithTimeout =
       ),
     ]);
   };
+
+export const operationCancelled = <T>(
+  value: T | undefined
+): value is undefined => {
+  return value === undefined;
+};
+
+export const valueNotProvided = <T>(
+  value: T | undefined
+): value is undefined => {
+  if (typeof value === 'boolean') {
+    return !value.toString();
+  }
+  return !value;
+};

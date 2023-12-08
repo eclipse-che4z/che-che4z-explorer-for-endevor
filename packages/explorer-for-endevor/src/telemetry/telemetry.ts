@@ -82,6 +82,7 @@ const getTelemetryEventProperties = (
     case TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES:
     case TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS:
     case TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION:
+    case TelemetryEvents.SETTING_CHANGED_GENERATE_AFTER_EDIT:
     case TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN:
     case TelemetryEvents.COMMAND_DISCARD_ELEMENT_CHANGES_COMPLETED:
     case TelemetryEvents.COMMAND_CONFIRM_CONFLICT_RESOLUTION_COMPLETED:

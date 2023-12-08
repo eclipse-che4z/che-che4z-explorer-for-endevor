@@ -49,6 +49,12 @@ export const TYPE_EXT_OR_NAME_VALUE =
   'Endevor type file extension or type name';
 export const FILE_EXT_RESOLUTION_DEFAULT = TYPE_EXT_OR_NAME_VALUE;
 
+export const GEN_AFTER_EDIT_SETTING = 'generateAfterEdit';
+export const GENERATE_VALUE = 'Generate the element';
+export const DO_NOT_GENERATE_VALUE = 'Do not generate the element';
+export const ASK_IF_GENERATE_VALUE = 'Ask if the element should be generated';
+export const GEN_AFTER_EDIT_DEFAULT = ASK_IF_GENERATE_VALUE;
+
 export const CURRENT_CHANGE_LEVEL = 'current';
 
 export const ENCODING = 'UTF-8';

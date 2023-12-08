@@ -16,8 +16,8 @@ import {
   ChangeControlValue,
   Element,
   ElementMapPath,
-  ProcessorGroupValue,
   SubSystemMapPath,
+  UpdateParams,
   Value,
 } from '@local/endevor/_doc/Endevor';
 import { EndevorId } from '../../store/_doc/v2/Store';
@@ -70,7 +70,7 @@ export type ComparedElementUriQuery = Readonly<{
     searchLocationId: EndevorId;
   };
   uploadChangeControlValue: ChangeControlValue;
-  uploadProcessorGroupValue: ProcessorGroupValue;
+  uploadParameters: UpdateParams;
   uploadTargetLocation: ElementMapPath;
 }>;
 

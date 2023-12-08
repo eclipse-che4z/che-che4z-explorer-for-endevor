@@ -34,6 +34,7 @@ import {
   ProcessorGroupValue,
   SignOutParams,
   SubSystemMapPath,
+  UpdateParams,
 } from '@local/endevor/_doc/Endevor';
 import { formatWithNewLines } from '../utils';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
@@ -502,12 +503,12 @@ export const updateElementAndLogActivity =
   (progress: ProgressReporter) =>
   (service: EndevorAuthorizedService) =>
   (element: ElementMapPath) =>
-  (processorGroupValue: ProcessorGroupValue) =>
+  (updateParams: UpdateParams) =>
   (actionChangeControlParams: ActionChangeControlValue) =>
   async (elementData: ElementDataWithFingerprint) => {
     const response = await endevor.updateElement(logger)(progress)(service)(
       service.configuration
-    )(element)(processorGroupValue)(actionChangeControlParams)(elementData);
+    )(element)(updateParams)(actionChangeControlParams)(elementData);
     logActivity('Updating element')(response);
     return response;
   };

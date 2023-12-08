@@ -13,7 +13,10 @@
 
 import * as t from 'io-ts';
 import {
+  ASK_IF_GENERATE_VALUE,
+  DO_NOT_GENERATE_VALUE,
   ELM_NAME_VALUE,
+  GENERATE_VALUE,
   TYPE_EXT_OR_NAME_VALUE,
   TYPE_EXT_VALUE,
 } from '../../../constants';
@@ -30,6 +33,8 @@ export type FileExtensionsResolution = t.TypeOf<
   typeof FileExtensionsResolution
 >;
 
+export type GenerateAfterEdit = t.TypeOf<typeof GenerateAfterEdit>;
+
 export const AutoSignOut = t.boolean;
 export const AuthWithToken = t.boolean;
 export const SyncWithProfiles = t.boolean;
@@ -40,6 +45,12 @@ export const FileExtensionsResolution = t.union([
   t.literal(ELM_NAME_VALUE),
   t.literal(TYPE_EXT_VALUE),
   t.literal(TYPE_EXT_OR_NAME_VALUE),
+]);
+
+export const GenerateAfterEdit = t.union([
+  t.literal(GENERATE_VALUE),
+  t.literal(DO_NOT_GENERATE_VALUE),
+  t.literal(ASK_IF_GENERATE_VALUE),
 ]);
 
 export const WorkspaceSync = t.boolean;

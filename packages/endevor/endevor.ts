@@ -106,6 +106,7 @@ import {
   PackageInformation,
   PackageSclContent,
   ProcessorGroupValue,
+  UpdateParams,
 } from './_doc/Endevor';
 import { UnreachableCaseError } from './typeHelpers';
 import { parseToType, parseToTypeAndConvert } from '@local/type-parser/parser';
@@ -1780,7 +1781,7 @@ export const updateElement =
     type,
     id: name,
   }: ElementMapPath) =>
-  (processorGroup: ProcessorGroupValue) =>
+  ({ generate, processorGroup }: UpdateParams) =>
   ({ ccid, comment }: ActionChangeControlValue) =>
   async ({
     content,
@@ -1802,6 +1803,7 @@ export const updateElement =
         // TODO: use element content directly instead file path when API will support it
         'from-file-content': content,
         'proc-group': processorGroup,
+        generate,
         ccid,
         comment,
         fingerprint,

@@ -30,6 +30,11 @@ import {
   EXPERIMENTAL_CONFIGURATION,
   AUTH_WITH_TOKEN_SETTING_DEFAULT,
   AUTH_WITH_TOKEN_SETTING,
+  GEN_AFTER_EDIT_SETTING,
+  GEN_AFTER_EDIT_DEFAULT,
+  GENERATE_VALUE,
+  DO_NOT_GENERATE_VALUE,
+  ASK_IF_GENERATE_VALUE,
 } from '../constants';
 import { logger, reporter } from '../globals';
 import { parseToType } from '@local/type-parser/parser';
@@ -38,7 +43,10 @@ import {
   updateGlobalSettingsValue,
 } from '@local/vscode-wrapper/settings';
 import * as vscode from 'vscode';
-import { FileExtensionResolutions } from './_doc/v2/Settings';
+import {
+  FileExtensionResolutions,
+  GenerateAfterEditSettings,
+} from './_doc/v2/Settings';
 import {
   AutoSignOut,
   FileExtensionsResolution,
@@ -46,6 +54,7 @@ import {
   SyncWithProfiles,
   AuthWithToken,
   WorkspaceSync,
+  GenerateAfterEdit,
 } from './_ext/v2/Settings';
 import {
   TelemetryEvents,
@@ -113,6 +122,27 @@ export const getFileExtensionResolutionSettingValue =
       case TYPE_EXT_OR_NAME_VALUE:
       default:
         return FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME;
+    }
+  };
+
+export const getGenerateAfterEditSettingValue =
+  (): GenerateAfterEditSettings => {
+    const generateAfterEdit = getSettingsValue(ENDEVOR_CONFIGURATION)(
+      GEN_AFTER_EDIT_SETTING,
+      GEN_AFTER_EDIT_DEFAULT
+    );
+    const parsedGenerateAfterEdit = parseToType(
+      GenerateAfterEdit,
+      generateAfterEdit
+    );
+    switch (parsedGenerateAfterEdit) {
+      case GENERATE_VALUE:
+        return GenerateAfterEditSettings.GENERATE;
+      case DO_NOT_GENERATE_VALUE:
+        return GenerateAfterEditSettings.DO_NOT_GENERATE;
+      case ASK_IF_GENERATE_VALUE:
+      default:
+        return GenerateAfterEditSettings.ASK_IF_GENERATE;
     }
   };
 
@@ -314,6 +344,38 @@ export const watchForFileExtensionResolutionChanges = () => {
   });
 };
 
+export const watchForGenerateAfterEditChanges = () => {
+  return vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration(
+        `${ENDEVOR_CONFIGURATION}.${GEN_AFTER_EDIT_SETTING}`
+      )
+    ) {
+      try {
+        const generateAfterEdit = getGenerateAfterEditSettingValue();
+        logger.trace(
+          `Setting ${GEN_AFTER_EDIT_SETTING} updated with the ${generateAfterEdit} value.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.SETTING_CHANGED_GENERATE_AFTER_EDIT,
+          status: SettingChangedStatus.SUCCESS,
+          value: generateAfterEdit,
+        });
+      } catch (e) {
+        logger.trace(
+          `Setting ${GEN_AFTER_EDIT_SETTING} updated with an incorrect value because of ${e.message}.`
+        );
+        reporter.sendTelemetryEvent({
+          type: TelemetryEvents.ERROR,
+          errorContext: TelemetryEvents.SETTING_CHANGED_GENERATE_AFTER_EDIT,
+          error: e,
+          status: SettingChangedStatus.WRONG_SETTING_TYPE_ERROR,
+        });
+      }
+    }
+  });
+};
+
 export const turnOnAutomaticSignOut = async (): Promise<void> => {
   return updateGlobalSettingsValue(ENDEVOR_CONFIGURATION)(
     AUTOMATIC_SIGN_OUT_SETTING,
@@ -390,5 +452,17 @@ export const getFileExtensionResolution = (): FileExtensionResolutions => {
       `Reading settings error: ${e.message}.`
     );
     return FileExtensionResolutions.FROM_TYPE_EXT_OR_NAME;
+  }
+};
+
+export const getGenerateAfterEdit = (): GenerateAfterEditSettings => {
+  try {
+    return getGenerateAfterEditSettingValue();
+  } catch (e) {
+    logger.warn(
+      `Cannot read the settings value for generate element after edit, default: ${GEN_AFTER_EDIT_DEFAULT} will be used instead.`,
+      `Reading settings error: ${e.message}.`
+    );
+    return GenerateAfterEditSettings.ASK_IF_GENERATE;
   }
 };

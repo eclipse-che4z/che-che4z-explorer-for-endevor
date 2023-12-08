@@ -16,3 +16,9 @@ export const enum FileExtensionResolutions {
   FROM_TYPE_EXT = 'FROM_TYPE_EXT',
   FROM_TYPE_EXT_OR_NAME = 'FROM_TYPE_EXT_OR_NAME',
 }
+
+export const enum GenerateAfterEditSettings {
+  GENERATE = 'GENERATE',
+  DO_NOT_GENERATE = 'DO_NOT_GENERATE',
+  ASK_IF_GENERATE = 'ASK_IF_GENERATE',
+}

@@ -74,6 +74,7 @@ import {
   isWorkspaceSync,
   watchForWorkspaceSyncChanges,
   getFileExtensionResolution,
+  watchForGenerateAfterEditChanges,
 } from './settings/settings';
 import {
   Extension,
@@ -1355,6 +1356,7 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
     watchForSyncProfilesChanges(),
     watchForWorkspaceSyncChanges(),
     watchForFileExtensionResolutionChanges(),
+    watchForGenerateAfterEditChanges(),
     watchForAuthWithTokenChanges(),
     vscode.workspace.onDidSaveTextDocument((document) =>
       textDocumentSavedHandlers

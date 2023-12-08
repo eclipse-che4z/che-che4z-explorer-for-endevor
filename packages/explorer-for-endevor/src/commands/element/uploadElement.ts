@@ -45,10 +45,10 @@ import {
   ElementMapPath,
   ElementTypeMapPath,
   ErrorResponseType,
-  ProcessorGroupValue,
   ProcessorGroupsResponse,
   SignoutElementResponse,
   SubSystemMapPath,
+  UpdateParams,
   UpdateResponse,
 } from '@local/endevor/_doc/Endevor';
 import { compareElementWithRemoteVersion } from './compareElementWithRemoteVersion';
@@ -58,7 +58,10 @@ import {
   askToOverrideSignOutForElements,
   askToSignOutElements,
 } from '../../dialogs/change-control/signOutDialogs';
-import { turnOnAutomaticSignOut } from '../../settings/settings';
+import {
+  getGenerateAfterEdit,
+  turnOnAutomaticSignOut,
+} from '../../settings/settings';
 import * as path from 'path';
 import { Action, Actions } from '../../store/_doc/Actions';
 import {
@@ -84,6 +87,9 @@ import {
   pickedChoiceLabel,
 } from '../../dialogs/processor-groups/processorGroupsDialogs';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
+import { askToGenerateAfterEdit } from '../../dialogs/settings/settingsDialogs';
+import { GenerateAfterEditSettings } from '../../settings/_doc/v2/Settings';
+import { operationCancelled } from '../../dialogs/utils';
 
 export const uploadElementCommand =
   (
@@ -151,18 +157,15 @@ export const uploadElementCommand =
       });
       return;
     }
-    const [
-      uploadLocation,
-      uploadChangeControlValue,
-      uploadProcessorGroupValue,
-    ] = uploadValues;
+    const [uploadLocation, uploadChangeControlValue, uploadParams] =
+      uploadValues;
     await closeEditSession(elementUri);
     const uploadResult = await uploadElement(logger)(dispatch)(
       serviceId,
       searchLocationId
     )(service)(initialSearchLocation)(
       uploadChangeControlValue,
-      uploadProcessorGroupValue,
+      uploadParams,
       uploadLocation
     )(content, element, elementUri.fsPath, fingerprint);
     if (isError(uploadResult)) {
@@ -262,7 +265,7 @@ const askForUploadValues =
     searchLocation: SearchLocation,
     element: Element
   ): Promise<
-    [ElementMapPath, ActionChangeControlValue, ProcessorGroupValue] | Error
+    [ElementMapPath, ActionChangeControlValue, UpdateParams] | Error
   > => {
     const uploadType = searchLocation.type ? searchLocation.type : element.type;
     const uploadLocation = await askForUploadLocation({
@@ -301,7 +304,19 @@ const askForUploadValues =
         `CCID and Comment must be specified to upload element ${uploadLocation.id}`
       );
     }
-    return [uploadLocation, uploadChangeControlValue, actionProcGroup];
+    const generateAfterEditSetting = getGenerateAfterEdit();
+    const generateAfterEdit =
+      generateAfterEditSetting === GenerateAfterEditSettings.ASK_IF_GENERATE
+        ? await askToGenerateAfterEdit()
+        : generateAfterEditSetting === GenerateAfterEditSettings.GENERATE;
+    if (operationCancelled(generateAfterEdit)) {
+      return new Error(`Upload of element ${element.name} was cancelled.`);
+    }
+    return [
+      uploadLocation,
+      uploadChangeControlValue,
+      { processorGroup: actionProcGroup, generate: generateAfterEdit },
+    ];
   };
 
 const uploadElement =
@@ -312,7 +327,7 @@ const uploadElement =
   (treePath: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
-    uploadProcessorGroupValue: ProcessorGroupValue,
+    uploadParameters: UpdateParams,
     uploadTargetLocation: ElementMapPath
   ) =>
   async (
@@ -330,9 +345,9 @@ const uploadElement =
           searchLocationId,
           element,
         })
-      )(progressReporter)(service)(uploadTargetLocation)(
-        uploadProcessorGroupValue
-      )(uploadChangeControlValue)({
+      )(progressReporter)(service)(uploadTargetLocation)(uploadParameters)(
+        uploadChangeControlValue
+      )({
         content,
         fingerprint,
         elementFilePath,
@@ -390,7 +405,7 @@ const uploadElement =
             service
           )(treePath)(
             uploadChangeControlValue,
-            uploadProcessorGroupValue,
+            uploadParameters,
             uploadTargetLocation
           )(content, element, elementFilePath, fingerprint);
         }
@@ -400,7 +415,7 @@ const uploadElement =
             searchLocationId
           )(service)(treePath)(
             uploadChangeControlValue,
-            uploadProcessorGroupValue,
+            uploadParameters,
             uploadTargetLocation
           )(
             element,
@@ -618,7 +633,7 @@ const uploadFingerprintMismatch =
   (treePath: SubSystemMapPath) =>
   (
     uploadChangeControlValue: ChangeControlValue,
-    uploadProcessorGroupValue: ProcessorGroupValue,
+    uploadParameters: UpdateParams,
     uploadTargetLocation: ElementMapPath
   ) =>
   (element: Element, elementFilePath: string) =>
@@ -657,7 +672,7 @@ const uploadFingerprintMismatch =
       searchLocationId
     )(service)(treePath)(
       uploadChangeControlValue,
-      uploadProcessorGroupValue,
+      uploadParameters,
       uploadTargetLocation
     )(element, savedLocalElementVersionUri.fsPath);
     if (isError(showCompareDialogResult)) {

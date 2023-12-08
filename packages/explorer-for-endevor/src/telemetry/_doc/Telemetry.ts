@@ -12,7 +12,10 @@
  */
 
 import { ServiceApiVersion } from '@local/endevor/_doc/Endevor';
-import { FileExtensionResolutions } from '../../settings/_doc/v2/Settings';
+import {
+  FileExtensionResolutions,
+  GenerateAfterEditSettings,
+} from '../../settings/_doc/v2/Settings';
 import { Source } from '../../store/storage/_doc/Storage';
 import { ElementToggleFilters } from '../../store/_doc/v2/Store';
 
@@ -92,6 +95,7 @@ export const enum TelemetryEvents {
   SETTING_CHANGED_AUTO_SIGN_OUT = 'automatic signout setting changed',
   SETTING_CHANGED_SYNC_WITH_PROFILES = 'sync with profiles setting changed',
   SETTING_CHANGED_FILE_EXT_RESOLUTION = 'file extension resolution setting changed',
+  SETTING_CHANGED_GENERATE_AFTER_EDIT = 'generate after edit setting changed',
   SETTING_CHANGED_MAX_PARALLEL_REQUESTS = 'max parallel requests setting changed',
   SETTING_CHANGED_AUTH_WITH_TOKEN = 'auth with token setting changed',
 
@@ -550,6 +554,7 @@ export type SettingChangedEvent =
       errorContext:
         | TelemetryEvents.SETTING_CHANGED_AUTO_SIGN_OUT
         | TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION
+        | TelemetryEvents.SETTING_CHANGED_GENERATE_AFTER_EDIT
         | TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS
         | TelemetryEvents.SETTING_CHANGED_SYNC_WITH_PROFILES
         | TelemetryEvents.SETTING_CHANGED_AUTH_WITH_TOKEN;
@@ -570,6 +575,11 @@ export type SettingChangedEvent =
       type: TelemetryEvents.SETTING_CHANGED_FILE_EXT_RESOLUTION;
       status: SettingChangedStatus.SUCCESS;
       value: FileExtensionResolutions;
+    }
+  | {
+      type: TelemetryEvents.SETTING_CHANGED_GENERATE_AFTER_EDIT;
+      status: SettingChangedStatus.SUCCESS;
+      value: GenerateAfterEditSettings;
     }
   | {
       type: TelemetryEvents.SETTING_CHANGED_MAX_PARALLEL_REQUESTS;

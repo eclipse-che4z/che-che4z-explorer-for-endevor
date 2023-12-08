@@ -240,6 +240,11 @@ export type GenerateSignOutParams = Readonly<{
   overrideSignOut?: boolean;
 }>;
 
+export type UpdateParams = Readonly<{
+  generate?: boolean;
+  processorGroup: ProcessorGroupValue;
+}>;
+
 export type OverrideSignOut = boolean;
 
 export type SignOutParams = Readonly<{
