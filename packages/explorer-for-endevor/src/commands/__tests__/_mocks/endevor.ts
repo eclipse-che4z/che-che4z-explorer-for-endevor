@@ -47,6 +47,7 @@ import {
   PackageInformation,
   PackageSclContent,
   ProcessorGroupValue,
+  UpdateParams,
 } from '@local/endevor/_doc/Endevor';
 import { ProgressReporter } from '@local/endevor/_doc/Progress';
 import { EndevorAuthorizedService } from '../../../api/_doc/Endevor';
@@ -132,7 +133,7 @@ export type UploadingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: ProcessorGroupValue
+      updateParams: UpdateParams
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementDataWithFingerprint) => Promise<UpdateResponse>
@@ -144,7 +145,7 @@ export type UploadingElementStub = [
     ) => (
       element: ElementMapPath
     ) => (
-      processorGroup: ProcessorGroupValue
+      updateParams: UpdateParams
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementData: ElementDataWithFingerprint) => Promise<UpdateResponse>
@@ -154,7 +155,7 @@ export type UploadingElementStub = [
     (
       element: ElementMapPath
     ) => (
-      processorGroup: ProcessorGroupValue
+      updateParams: UpdateParams
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
@@ -162,13 +163,13 @@ export type UploadingElementStub = [
   sinon.SinonStub<
     [ElementMapPath],
     (
-      processorGroup: ProcessorGroupValue
+      updateParams: UpdateParams
     ) => (
       actionCcid: ChangeControlValue
     ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
   >,
   sinon.SinonStub<
-    [ProcessorGroupValue],
+    [UpdateParams],
     (
       actionCcid: ChangeControlValue
     ) => (elementContent: ElementDataWithFingerprint) => Promise<UpdateResponse>
@@ -185,7 +186,7 @@ export const mockUploadingElementWith =
     serviceArg: EndevorAuthorizedService,
     elementArg: ElementMapPath,
     actionCcidArg: ChangeControlValue,
-    processorGroupArg: ProcessorGroupValue,
+    updateParamsArg: UpdateParams,
     elementContentArg: ElementDataWithFingerprint
   ) =>
   (mockResults: ReadonlyArray<UpdateResponse>): UploadingElementStub => {
@@ -206,20 +207,20 @@ export const mockUploadingElementWith =
       .returns(withContentStub);
     const withProcessorGroupStub = sinon
       .stub<
-        [ProcessorGroupValue],
+        [UpdateParams],
         (
           actionCcid: ChangeControlValue
         ) => (
           elementContent: ElementDataWithFingerprint
         ) => Promise<UpdateResponse>
       >()
-      .withArgs(processorGroupArg)
+      .withArgs(updateParamsArg)
       .returns(withActionCcidStub);
     const withElementStub = sinon
       .stub<
         [ElementMapPath],
         (
-          processorGroup: ProcessorGroupValue
+          updateParams: UpdateParams
         ) => (
           actionCcid: ChangeControlValue
         ) => (
@@ -234,7 +235,7 @@ export const mockUploadingElementWith =
         (
           element: ElementMapPath
         ) => (
-          processorGroup: ProcessorGroupValue
+          updateParams: UpdateParams
         ) => (
           actionCcid: ChangeControlValue
         ) => (
@@ -251,7 +252,7 @@ export const mockUploadingElementWith =
         ) => (
           element: ElementMapPath
         ) => (
-          processorGroup: ProcessorGroupValue
+          updateParams: UpdateParams
         ) => (
           actionCcid: ChangeControlValue
         ) => (

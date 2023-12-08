@@ -66,7 +66,7 @@ describe('discarding local changes in compared element', () => {
       lastActionCcid: 'LAST-CCID',
       processorGroup: '*NOPROC*',
     };
-    const uploadProcessorGroupValue = undefined;
+    const uploadParameters = { processorGroup: undefined };
     const uploadChangeControlValue: ChangeControlValue = {
       ccid: 'some_ccid',
       comment: 'some_comment',
@@ -86,7 +86,7 @@ describe('discarding local changes in compared element', () => {
       element,
       fingerprint: remoteElementVersionFingerprint,
       uploadChangeControlValue,
-      uploadProcessorGroupValue,
+      uploadParameters,
       uploadTargetLocation: element,
       remoteVersionTempFilePath: remoteElementVersionFsPath,
       initialSearchContext: {

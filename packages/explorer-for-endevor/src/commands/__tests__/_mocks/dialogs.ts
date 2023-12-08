@@ -28,6 +28,7 @@ import * as endevorSubsystemDialogs from '../../../dialogs/locations/endevorSubs
 import * as processorGroupDialogs from '../../../dialogs/processor-groups/processorGroupsDialogs';
 import * as moveOptionsMultiStep from '../../../dialogs/multi-step/moveOptions';
 import * as packageCreateOptionsMultiStep from '../../../dialogs/multi-step/packageCreate';
+import * as settingsDialogs from '../../../dialogs/settings/settingsDialogs';
 import { MessageLevel } from '@local/vscode-wrapper/_doc/window';
 import { SearchLocation } from '../../../api/_doc/Endevor';
 import { EndevorLogger } from '../../../logger';
@@ -212,6 +213,20 @@ export const mockAskingForPackageCreateOptions = (
 ): AskForPackageCreateOptionsStub => {
   return sinon
     .stub(packageCreateOptionsMultiStep, 'multiStepCreatePackageOptions')
+    .withArgs()
+    .resolves(resolveWith);
+};
+
+type AskToGenerateAfterEditStub = sinon.SinonStub<
+  [],
+  Promise<boolean | undefined>
+>;
+
+export const mockAskToGenerateAfterEdit = (
+  resolveWith: boolean
+): AskToGenerateAfterEditStub => {
+  return sinon
+    .stub(settingsDialogs, 'askToGenerateAfterEdit')
     .withArgs()
     .resolves(resolveWith);
 };
