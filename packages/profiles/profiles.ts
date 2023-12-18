@@ -17,6 +17,7 @@ import {
   EndevorServiceProfile,
   ProfileNameResponse,
   ProfileNamesResponse,
+  ProfileResponse,
   ProfileResponses,
   ProfileTypes,
 } from './_ext/Profile';
@@ -80,11 +81,39 @@ export const profilesStoreFromZoweExplorer =
             );
             return [];
           }
+          let profileResponses;
           try {
-            return parseToType(ProfileResponses, response);
+            profileResponses = parseToType(ProfileResponses, response);
           } catch (error) {
             return new ProfileStoreAPIError(error);
           }
+          let responseDefaultProfile;
+          try {
+            responseDefaultProfile = cache.getDefaultProfile(profileType);
+          } catch (error) {
+            return new ProfileStoreAPIError(error);
+          }
+          let defaultProfileName: string | undefined;
+          if (responseDefaultProfile) {
+            try {
+              defaultProfileName = parseToType(
+                ProfileResponse,
+                responseDefaultProfile
+              ).name;
+            } catch (error) {
+              logger.trace(
+                `Default profile of type ${profileType} has incorrect format: ${error.message}`
+              );
+            }
+          } else {
+            logger.trace(
+              `Default profile of type ${profileType} was not found`
+            );
+          }
+          return profileResponses.map((profileResponse) => ({
+            ...profileResponse,
+            isDefault: profileResponse.name === defaultProfileName,
+          }));
         },
       };
     } catch (e) {
@@ -110,6 +139,7 @@ export const getEndevorProfiles =
   ): Promise<
     | ReadonlyArray<{
         name: ProfileNameResponse;
+        isDefault: boolean;
         profile: EndevorServiceProfile;
       }>
     | ProfileStoreAPIError
@@ -124,6 +154,7 @@ export const getEndevorProfiles =
         try {
           return {
             name: profile.name,
+            isDefault: profile.isDefault,
             profile: parseToType(EndevorServiceProfile, profile.profile),
           };
         } catch (error) {
@@ -233,6 +264,7 @@ export const getEndevorLocationProfiles =
   ): Promise<
     | ReadonlyArray<{
         name: ProfileNameResponse;
+        isDefault: boolean;
         profile: EndevorLocationProfile;
       }>
     | ProfileStoreAPIError
@@ -249,6 +281,7 @@ export const getEndevorLocationProfiles =
         try {
           return {
             name: profile.name,
+            isDefault: profile.isDefault,
             profile: parseToType(EndevorLocationProfile, profile.profile),
           };
         } catch (error) {
