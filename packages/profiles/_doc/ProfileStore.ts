@@ -11,11 +11,19 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { ProfileResponses, ProfileTypes } from '../_ext/Profile';
+import { ProfileTypes } from '../_ext/Profile';
 import { ProfileStoreAPIError } from './Error';
+
+export type Profile = Readonly<{
+  name: string;
+  isDefault: boolean;
+  profile: unknown;
+}>;
+
+export type Profiles = ReadonlyArray<Profile>;
 
 export type ProfileStore = Readonly<{
   getProfiles(
     profileType: ProfileTypes
-  ): Promise<ProfileResponses | ProfileStoreAPIError>;
+  ): Promise<Profiles | ProfileStoreAPIError>;
 }>;

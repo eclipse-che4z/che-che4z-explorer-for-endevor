@@ -14,6 +14,7 @@
 export type ZoweExplorerExtenderApi = {
   getProfilesCache: () => {
     getProfiles: (profileType?: string) => ReadonlyArray<unknown> | undefined;
+    getDefaultProfile: (profileType?: string) => unknown | undefined;
     registerCustomProfilesType: (profileType: string) => void;
   };
   initForZowe: (
