@@ -91,27 +91,24 @@ export const profilesStoreFromZoweExplorer =
           try {
             responseDefaultProfile = cache.getDefaultProfile(profileType);
           } catch (error) {
-            const apiError = new ProfileStoreAPIError(error);
-            logger.error(apiError.message);
+            return new ProfileStoreAPIError(error);
           }
-          if (!responseDefaultProfile) {
+          let defaultProfileName: string | undefined;
+          if (responseDefaultProfile) {
+            try {
+              defaultProfileName = parseToType(
+                ProfileResponse,
+                responseDefaultProfile
+              ).name;
+            } catch (error) {
+              logger.trace(
+                `Default profile of type ${profileType} has incorrect format: ${error.message}`
+              );
+            }
+          } else {
             logger.trace(
               `Default profile of type ${profileType} was not found`
             );
-            return profileResponses.map((profileResponse) => ({
-              ...profileResponse,
-              isDefault: false,
-            }));
-          }
-          let defaultProfileName: string | undefined;
-          try {
-            defaultProfileName = parseToType(
-              ProfileResponse,
-              responseDefaultProfile
-            ).name;
-          } catch (error) {
-            const apiError = new ProfileStoreAPIError(error);
-            logger.error(apiError.message);
           }
           return profileResponses.map((profileResponse) => ({
             ...profileResponse,
