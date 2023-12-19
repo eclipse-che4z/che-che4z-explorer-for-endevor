@@ -114,10 +114,7 @@ import { applyDiffEditorChanges } from './commands/element/applyDiffEditorChange
 import { addElementFromFileSystem } from './commands/location/addElementFromFileSystem';
 import { generateSubsystemElementsCommand } from './commands/subsystem/generateSubsystemElements';
 import { TelemetryEvents } from './telemetry/_doc/Telemetry';
-import {
-  deleteDirectoryWithContent,
-  getWorkspaceUri,
-} from '@local/vscode-wrapper/workspace';
+import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
   createConnectionLocationsStorage,
   createConnectionsStorage,
@@ -254,18 +251,6 @@ import {
   make as makeExternalEndevorApi,
 } from './api/external';
 
-const cleanTempDirectory = async (
-  tempEditFolderUri: vscode.Uri
-): Promise<void> => {
-  try {
-    await deleteDirectoryWithContent(tempEditFolderUri);
-  } catch (error) {
-    logger.trace(
-      `Unable to clean edit files temp directory because of error: ${error.message}.`
-    );
-  }
-};
-
 const getExtensionVersionFromSettings =
   (getSettingsStorage: () => SettingsStorage) =>
   async (currentExtensionVersion: string) => {
@@ -341,8 +326,19 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
   );
 
   const tempEditFolderUri = joinUri(context.globalStorageUri)(EDIT_DIR);
-  await cleanTempDirectory(tempEditFolderUri);
   const getTempEditFolderUri = () => tempEditFolderUri;
+
+  const getElementsInEdit = async () => {
+    const allPattern = '**';
+    const relativePattern = new vscode.RelativePattern(
+      getTempEditFolderUri(),
+      allPattern
+    );
+    const allElementsInEdit = (
+      await vscode.workspace.findFiles(relativePattern)
+    ).map((element) => element.fsPath);
+    return allElementsInEdit;
+  };
 
   const treeChangeEmitter = new vscode.EventEmitter<Node | null>();
   const elementHistoryTreeChangeEmitter =
@@ -358,6 +354,7 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
     searchLocations: {},
     serviceLocations: {},
     activityEntries: [],
+    editElements: [],
   };
   const refreshTree = (_node?: Node) => {
     treeChangeEmitter.fire(null);
@@ -424,7 +421,8 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
       stateForTree = state;
       return;
     },
-    emitElementsUpdatedEvent(invalidatedElementsEmitter, getTempEditFolderUri)
+    emitElementsUpdatedEvent(invalidatedElementsEmitter, getTempEditFolderUri),
+    getElementsInEdit
   );
 
   const refreshElementHistory = async (

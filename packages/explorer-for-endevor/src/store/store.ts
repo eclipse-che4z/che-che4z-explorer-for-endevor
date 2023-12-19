@@ -19,7 +19,13 @@ import {
   SubSystemMapPath,
 } from '@local/endevor/_doc/Endevor';
 import { logger } from '../globals';
-import { isDefined, isElementUpTheMap, isError, isUnique } from '../utils';
+import {
+  isDefined,
+  isElementUpTheMap,
+  isError,
+  isUnique,
+  updateEditElementsWhenContext,
+} from '../utils';
 import { Action, Actions } from './_doc/Actions';
 import { Node } from '../tree/_doc/ServiceLocationTree';
 import {
@@ -113,9 +119,10 @@ export const make =
       serviceId: EndevorId,
       searchLocationId: EndevorId,
       elements: ReadonlyArray<Element>
-    ) => void
+    ) => void,
+    getElementsInEdit: () => Promise<string[]>
   ) => {
-    updateState(await readLatestState(storageGetters));
+    updateState(await readLatestState(getElementsInEdit)(storageGetters));
     refreshTree();
 
     const dispatch = async (action: Action): Promise<void> => {
@@ -1074,6 +1081,35 @@ export const make =
           persistState(storageGetters)(state());
           break;
         }
+        case Actions.ELEMENT_EDIT_OPENED: {
+          const elementsInEdit = state().editElements;
+          if (elementsInEdit.includes(action.elementPath)) break;
+          const updatedElementsInEdit = [...elementsInEdit, action.elementPath];
+          const initialState = state();
+          updateState({
+            ...initialState,
+            editElements: updatedElementsInEdit,
+          });
+          updateEditElementsWhenContext(updatedElementsInEdit);
+          break;
+        }
+        case Actions.ELEMENT_EDIT_CLOSED: {
+          const elementsInEdit = state().editElements;
+          if (!elementsInEdit.includes(action.elementPath)) break;
+          const updatedElementsInEdit = [
+            ...elementsInEdit
+              .map((elementPath) => {
+                if (elementPath !== action.elementPath) {
+                  return elementPath;
+                }
+                return;
+              })
+              .filter(isDefined),
+          ];
+          updateEditElementsWhenContext(updatedElementsInEdit);
+
+          break;
+        }
         default:
           throw new UnreachableCaseError(action);
       }
@@ -1081,56 +1117,60 @@ export const make =
     return dispatch;
   };
 
-const readLatestState = async (
-  storageGetters: StorageGetters
-): Promise<State> => {
-  const state: State = {
-    caches: {},
-    services: {},
-    filters: {},
-    sessions: {},
-    searchLocations: {},
-    serviceLocations: {},
-    activityEntries: [],
-  };
-  const inventoryLocations = await storageGetters
-    .getInventoryLocationsStorage()
-    .get();
-  if (isError(inventoryLocations)) {
-    const error = inventoryLocations;
-    logger.warn(
-      'Unable to read the inventory locations from the extension storage.',
-      `Unable to read the inventory locations from the extension storage because of ${error.message}.`
-    );
-  } else {
-    state.searchLocations = inventoryLocations;
-  }
-  const connections = await storageGetters.getConnectionsStorage().get();
-  if (isError(connections)) {
-    const error = connections;
-    logger.warn(
-      'Unable to read the connections from the extension storage.',
-      `Unable to read the connections from the extension storage because of ${error.message}.`
-    );
-  } else {
-    state.services = connections;
-  }
-  if (!isError(connections) && !isError(inventoryLocations)) {
-    const connectionLocations = await storageGetters
-      .getConnectionLocationsStorage()
+const readLatestState =
+  (getElementsInEdit: () => Promise<string[]>) =>
+  async (storageGetters: StorageGetters): Promise<State> => {
+    const state: State = {
+      caches: {},
+      services: {},
+      filters: {},
+      sessions: {},
+      searchLocations: {},
+      serviceLocations: {},
+      activityEntries: [],
+      editElements: [],
+    };
+
+    const inventoryLocations = await storageGetters
+      .getInventoryLocationsStorage()
       .get();
-    if (isError(connectionLocations)) {
-      const error = connectionLocations;
+    if (isError(inventoryLocations)) {
+      const error = inventoryLocations;
       logger.warn(
-        'Unable to read the connection locations from the extension storage.',
-        `Unable to read the connection locations from the extension storage because of ${error.message}.`
+        'Unable to read the inventory locations from the extension storage.',
+        `Unable to read the inventory locations from the extension storage because of ${error.message}.`
       );
     } else {
-      state.serviceLocations = connectionLocations;
+      state.searchLocations = inventoryLocations;
     }
-  }
-  return state;
-};
+    const connections = await storageGetters.getConnectionsStorage().get();
+    if (isError(connections)) {
+      const error = connections;
+      logger.warn(
+        'Unable to read the connections from the extension storage.',
+        `Unable to read the connections from the extension storage because of ${error.message}.`
+      );
+    } else {
+      state.services = connections;
+    }
+    if (!isError(connections) && !isError(inventoryLocations)) {
+      const connectionLocations = await storageGetters
+        .getConnectionLocationsStorage()
+        .get();
+      if (isError(connectionLocations)) {
+        const error = connectionLocations;
+        logger.warn(
+          'Unable to read the connection locations from the extension storage.',
+          `Unable to read the connection locations from the extension storage because of ${error.message}.`
+        );
+      } else {
+        state.serviceLocations = connectionLocations;
+      }
+    }
+    state.editElements = await getElementsInEdit();
+    updateEditElementsWhenContext(state.editElements);
+    return state;
+  };
 
 const persistState =
   (storageGetters: StorageGetters) => async (state: State) => {
@@ -2871,3 +2911,6 @@ export const getFilteredEndevorTypes =
 
 export const getActivityRecords = (state: () => State): ActivityRecords =>
   state().activityEntries;
+
+export const getElementsInEdit = (state: () => State): ReadonlyArray<string> =>
+  state().editElements;

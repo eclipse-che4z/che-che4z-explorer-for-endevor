@@ -78,6 +78,8 @@ export const enum Actions {
   SELECTED_ELEMENTS_UPDATED = 'SELECTED_ELEMENTS_UPDATED_IN_PLACE',
   SELECTED_ELEMENTS_FETCHED = 'SELECTED_ELEMENTS_FETCHED',
   ACTIVITY_RECORD_ADDED = 'ACTIVITY_RECORD/ADDED',
+  ELEMENT_EDIT_OPENED = 'ELEMENT_EDIT/OPENED',
+  ELEMENT_EDIT_CLOSED = 'ELEMENT_EDIT/CLOSED',
 }
 
 export interface ActivityRecordAdded {
@@ -352,6 +354,16 @@ export type SelectedElementsFetched = {
   elements: ReadonlyArray<Element>;
 };
 
+export interface ElementEditOpened {
+  type: Actions.ELEMENT_EDIT_OPENED;
+  elementPath: string;
+}
+
+export interface ElementEditClosed {
+  type: Actions.ELEMENT_EDIT_CLOSED;
+  elementPath: string;
+}
+
 export type Action =
   | ActivityRecordAdded
   | SessionEndevorTokenAdded
@@ -388,4 +400,6 @@ export type Action =
   | EndevorSearchLocationFiltersCleared
   | SubsystemElementsUpdatedInPlace
   | SelectedElementsUpdated
-  | SelectedElementsFetched;
+  | SelectedElementsFetched
+  | ElementEditOpened
+  | ElementEditClosed;
