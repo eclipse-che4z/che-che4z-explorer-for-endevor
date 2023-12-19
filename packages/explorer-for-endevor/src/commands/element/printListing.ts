@@ -18,7 +18,7 @@ import { isError } from '../../utils';
 import { toElementListingUri } from '../../uri/elementListingUri';
 import { createEndevorLogger } from '../../logger';
 
-type SelectedElementNode = ElementNode;
+type SelectedElementNode = Omit<ElementNode, 'parent' | 'type'>;
 
 export const printListingCommand = async (elementNode: SelectedElementNode) => {
   const logger = createEndevorLogger({
