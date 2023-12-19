@@ -498,12 +498,12 @@
         {
           "command": "e4e.diff.discardChanges",
           "group": "navigation",
-          "when": "isInDiffEditor && resourceDirname in e4e.editedFolders && isWeb != true"
+          "when": "isInDiffEditor && resourcePath in e4e.editedElements && isWeb != true"
         },
         {
           "command": "e4e.diff.acceptChanges",
           "group": "navigation",
-          "when": "isInDiffEditor && resourceDirname in e4e.editedFolders && isWeb != true"
+          "when": "isInDiffEditor && resourcePath in e4e.editedElements && isWeb != true"
         }
       ],
       "view/item/context": [
