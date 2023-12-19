@@ -35,6 +35,18 @@ export const closeActiveTextEditor = async () => {
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 };
 
+export const findEditor = (
+  uri: vscode.Uri | undefined
+): vscode.TextEditor | undefined => {
+  if (!uri) {
+    return;
+  }
+  const openedEditors = getAllOpenedTextEditors();
+  return openedEditors.find(
+    (editor) => editor.document.uri.toString() === uri.toString()
+  );
+};
+
 export const showMessageWithOptions = async (
   { message, options }: MessageWithOptions,
   level: MessageLevel = MessageLevel.INFO

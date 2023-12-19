@@ -11,9 +11,30 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
+import { CURRENT_CHANGE_LEVEL } from './constants';
+import { ElementHistoryData } from './tree/_doc/ChangesTree';
+
 export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
 };
 
 export const formatWithNewLines = (lines: ReadonlyArray<string>): string =>
   ['', ...lines].join('\n');
+
+export const getPreviousVersionLevel = (
+  historyData: ElementHistoryData | undefined,
+  currentVvll: string
+): string | undefined => {
+  if (!historyData?.changeLevels?.length) {
+    return;
+  }
+  const currentChangeNodeIndex =
+    currentVvll === CURRENT_CHANGE_LEVEL
+      ? historyData.changeLevels.length - 1
+      : historyData.changeLevels?.findIndex(
+          (changeNode) => changeNode.vvll === currentVvll
+        ) ?? -1;
+  return historyData.changeLevels && currentChangeNodeIndex > 0
+    ? historyData.changeLevels[currentChangeNodeIndex - 1]?.vvll
+    : undefined;
+};

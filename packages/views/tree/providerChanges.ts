@@ -26,6 +26,7 @@ import {
   TreeItemCollapsibleState,
   TreeView,
   Uri,
+  commands,
   window,
 } from 'vscode';
 import { CURRENT_CHANGE_LEVEL } from '../constants';
@@ -42,34 +43,19 @@ import {
   Service,
 } from '@local/endevor/_doc/Endevor';
 import { getHistoryContent } from '../endevor';
-import { fromElementChangeUri } from '../uri/elementHistoryUri';
-import { isError } from '../utils';
+import {
+  fromElementChangeUri,
+  toElementChangeUri,
+} from '../uri/elementHistoryUri';
+import { getPreviousVersionLevel, isError } from '../utils';
 import { UriFunctions } from '../_doc/Uri';
 
-export const Decorations = {
-  typeAdded: window.createTextEditorDecorationType({
-    backgroundColor: 'rgba(72, 126, 2, 0.4)',
-    after: {
-      margin: '0 0 0 3em',
-      textDecoration: 'none',
-    },
-    overviewRulerColor: 'rgba(72, 126, 2, 0.4)',
-  }),
-  typeRemoved: window.createTextEditorDecorationType({
-    backgroundColor: 'rgba(241, 76, 76, 0.4)',
-    after: {
-      margin: '0 0 0 3em',
-      textDecoration: 'none',
-    },
-    overviewRulerColor: 'rgba(241, 76, 76, 0.4)',
-  }),
-  blame: window.createTextEditorDecorationType({
-    after: {
-      margin: '0 0 0 3em',
-      textDecoration: 'none',
-    },
-  }),
-};
+export const BlameDecoration = window.createTextEditorDecorationType({
+  after: {
+    margin: '0 0 0 3em',
+    textDecoration: 'none',
+  },
+});
 
 export type HistoryViewDataProvider = TreeDataProvider<ChangeLevelNode> &
   Partial<{
@@ -124,37 +110,10 @@ export const make =
         }
         const { element, service, configuration: instance } = configurations;
         this.treeView.description = `${element.name} • ${element.type} type`;
-        if (this.mode === HistoryViewModes.SHOW_IN_EDITOR) {
-          const changedElementQuery = fromElementChangeUri(this.elementUri)(
-            uriScheme
-          );
-          if (isError(changedElementQuery)) {
-            return noHistory(
-              this.treeView,
-              'There are no element tabs/editors activated to provide element history information.',
-              treeViewId
-            );
-          }
-          try {
-            this.treeView.message = undefined;
-            const historyEditor = await window.showTextDocument(
-              this.elementUri,
-              { preview: true }
-            );
-            decorate(
-              getHistoryData,
-              historyEditor,
-              this.elementUri,
-              changedElementQuery.vvll
-            );
-          } catch (error) {
-            logger.trace('Unable to show element history document');
-          }
-        }
         const logActivityFromUri = logActivity
           ? logActivity(this.elementUri)
           : undefined;
-        let historyData;
+        let historyData: ElementHistoryData | undefined;
         if (this.mode === HistoryViewModes.ONLY_SHOW_CHANGES) {
           historyData = await refreshHistoryData(
             refreshHistory,
@@ -187,6 +146,48 @@ export const make =
               this.elementUri,
               logActivityFromUri
             );
+          }
+        }
+        if (this.mode === HistoryViewModes.SHOW_IN_EDITOR) {
+          const changedElementQuery = fromElementChangeUri(this.elementUri)(
+            uriScheme
+          );
+          if (isError(changedElementQuery)) {
+            return noHistory(
+              this.treeView,
+              'There are no element tabs/editors activated to provide element history information.',
+              treeViewId
+            );
+          }
+          try {
+            this.treeView.message = undefined;
+            const previousVvll = getPreviousVersionLevel(
+              historyData,
+              changedElementQuery.vvll
+            );
+            if (previousVvll) {
+              const changeLvlUri = toElementChangeUri({
+                ...changedElementQuery,
+                vvll: previousVvll,
+              })(uriScheme)(Date.now().toString());
+              if (isError(changeLvlUri)) {
+                const error = changeLvlUri;
+                logger.error(
+                  `Unable to show change level ${previousVvll}.`,
+                  `Unable to show change level ${previousVvll} because parsing of the element's URI failed with error ${error.message}.`
+                );
+                return;
+              }
+              await commands.executeCommand(
+                'vscode.diff',
+                changeLvlUri,
+                this.elementUri
+              );
+            } else {
+              await window.showTextDocument(this.elementUri, { preview: true });
+            }
+          } catch (error) {
+            logger.trace('Unable to show element history document');
           }
         }
         if (!historyData || !historyData.changeLevels) {
@@ -261,9 +262,7 @@ export const decorate = (
   elementUri: Uri,
   vvll: string
 ) => {
-  const decorationsArrayAdded: DecorationOptions[] = [];
-  const decorationsArrayRemoved: DecorationOptions[] = [];
-  const otherDecorations: DecorationOptions[] = [];
+  const blameDecorations: DecorationOptions[] = [];
   const historyData = getHistoryData(elementUri);
   if (!historyData || !historyData.changeLevels || !historyData.historyLines) {
     return;
@@ -275,57 +274,30 @@ export const decorate = (
           (changeLevel) => changeLevel.vvll === vvll
         );
   const changeLines = changeToDecorate?.lineNums;
-  const vvllToDecorate = changeToDecorate?.vvll;
 
-  if (!changeLines || !vvllToDecorate) {
+  if (!changeLines) {
     return;
   }
-  const getBaseLevel = (): ChangeLevelNode | undefined => {
-    return historyData.changeLevels ? historyData.changeLevels[0] : undefined;
-  };
   let lineIndex = 0;
   changeLines.forEach((changeLine) => {
     const range = new Range(
       new Position(lineIndex, 0),
       new Position(lineIndex, changeLine.lineLength || 0)
     );
+    const blameChangeLevel = historyData.changeLevels?.find(
+      (changeLevel) => changeLevel.vvll === changeLine.addedVersion
+    );
+    blameDecorations.push({
+      range,
+      renderOptions: createBlameDecoration(
+        changeLine.addedVersion,
+        blameChangeLevel
+      ),
+    });
 
-    if (changeLine.removedVersion === vvllToDecorate) {
-      const blameChangeLevel = historyData.changeLevels?.find(
-        (changeLevel) => changeLevel.vvll === vvllToDecorate
-      );
-      decorationsArrayRemoved.push({
-        range,
-        renderOptions: createBlameDecoration(vvllToDecorate, blameChangeLevel),
-      });
-    } else if (
-      getBaseLevel()?.vvll !== vvllToDecorate &&
-      changeLine.addedVersion === vvllToDecorate
-    ) {
-      const blameChangeLevel = historyData.changeLevels?.find(
-        (changeLevel) => changeLevel.vvll === vvllToDecorate
-      );
-      decorationsArrayAdded.push({
-        range,
-        renderOptions: createBlameDecoration(vvllToDecorate, blameChangeLevel),
-      });
-    } else {
-      const blameChangeLevel = historyData.changeLevels?.find(
-        (changeLevel) => changeLevel.vvll === changeLine.addedVersion
-      );
-      otherDecorations.push({
-        range,
-        renderOptions: createBlameDecoration(
-          changeLine.addedVersion,
-          blameChangeLevel
-        ),
-      });
-    }
     lineIndex++;
   });
-  editor.setDecorations(Decorations.typeAdded, decorationsArrayAdded);
-  editor.setDecorations(Decorations.typeRemoved, decorationsArrayRemoved);
-  editor.setDecorations(Decorations.blame, otherDecorations);
+  editor.setDecorations(BlameDecoration, blameDecorations);
 };
 
 const createBlameDecoration = (

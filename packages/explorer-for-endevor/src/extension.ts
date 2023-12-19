@@ -229,17 +229,14 @@ import {
 import { printEndevorReportCommand } from './commands/printEndevorReport';
 import {
   make as makeElementHistoryTreeProvider,
-  decorate,
-  Decorations,
+  BlameDecoration,
 } from '@local/views/tree/providerChanges';
 import {
   ChangeLevelNode,
   ElementHistoryData,
   HistoryViewModes,
 } from '@local/views/tree/_doc/ChangesTree';
-import path = require('path');
 import { getConnectionConfiguration } from './store/utils';
-import { fromElementChangeUri } from '@local/views/uri/elementHistoryUri';
 import { viewTypeDetails } from './commands/type/viewTypeDetails';
 import { logActivity } from './logger';
 import { moveElementCommand } from './commands/element/moveElement';
@@ -250,6 +247,7 @@ import {
   emitElementsUpdatedEvent,
   make as makeExternalEndevorApi,
 } from './api/external';
+import { subscribeToActiveEditorChangedEvent } from './events/events';
 
 const getExtensionVersionFromSettings =
   (getSettingsStorage: () => SettingsStorage) =>
@@ -1263,43 +1261,6 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
     },
   ];
 
-  const onActiveEditorChanged = async (
-    editor: vscode.TextEditor | undefined
-  ): Promise<void> => {
-    let activeEditor = editor;
-    if (!activeEditor) {
-      // First this event is triggered when changing editors, `editor` is usually undefined.
-      // Therefore we will wait a second and then get an active editor. This is to prevent
-      // blinking of the message in the Element History
-      await new Promise((f) => setTimeout(f, 1000));
-      activeEditor = vscode.window.activeTextEditor;
-    }
-    const editorUri = activeEditor?.document.uri;
-    refreshElementHistoryTree(editorUri);
-    if (
-      activeEditor &&
-      editorUri &&
-      editorUri.scheme === Schemas.ELEMENT_CHANGE_LVL
-    ) {
-      const elementQuery = fromElementChangeUri(editorUri)(editorUri.scheme);
-      if (isError(elementQuery)) {
-        const error = elementQuery;
-        const elementName = path.basename(editorUri.fsPath);
-        logger.error(
-          `Unable to show history for element ${elementName}`,
-          `Unable to show history for element ${elementName} because of ${error.message}.`
-        );
-        return;
-      }
-      decorate(
-        getElementHistoryFromUri,
-        activeEditor,
-        editorUri,
-        elementQuery.vvll
-      );
-    }
-  };
-
   context.subscriptions.push(
     reporter,
     vscode.window.createTreeView(TREE_VIEW_ID, {
@@ -1361,10 +1322,11 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
           await handler.apply(document);
         })
     ),
-    vscode.window.onDidChangeActiveTextEditor((editor) =>
-      onActiveEditorChanged(editor)
+    subscribeToActiveEditorChangedEvent(
+      getElementHistoryFromUri,
+      refreshElementHistoryTree
     ),
-    ...Object.values(Decorations)
+    BlameDecoration
   );
 
   if (isWorkspaceSync()) {
