@@ -18,9 +18,6 @@ export const CommandId = {
   DUMP_STORAGE: `${COMMAND_PREFIX}.dumpStorageData`,
   MIGRATE_LOCATIONS: `${COMMAND_PREFIX}.migrateLocationsFromSettings`,
   SUBMIT_ISSUE: `${COMMAND_PREFIX}.submitIssue`,
-  CHANGE_HISTORY_LEVEL: `${COMMAND_PREFIX}.changeHistoryLevel`,
-  REFRESH_TREE_VIEW: `${COMMAND_PREFIX}.refreshTreeView`,
-  REFRESH_HISTORY_TREE_VIEW: `${COMMAND_PREFIX}.refreshHistoryTreeView`,
 
   // service commands
   ADD_SERVICE_AND_LOCATION: `${COMMAND_PREFIX}.addServiceAndLocation`,
@@ -39,6 +36,12 @@ export const CommandId = {
 
   // type commands
   VIEW_TYPE_DETAILS: `${COMMAND_PREFIX}.viewTypeDetails`,
+
+  // history commands
+  CHANGE_HISTORY_LEVEL: `${COMMAND_PREFIX}.changeHistoryLevel`,
+  REFRESH_TREE_VIEW: `${COMMAND_PREFIX}.refreshTreeView`,
+  REFRESH_HISTORY_TREE_VIEW: `${COMMAND_PREFIX}.refreshHistoryTreeView`,
+  COMPARE_WITH: `${COMMAND_PREFIX}.historyCompareWith`,
 
   // element commands
   VIEW_ELEMENT_DETAILS: `${COMMAND_PREFIX}.viewElementDetails`,

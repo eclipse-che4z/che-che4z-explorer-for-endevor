@@ -47,7 +47,11 @@ import {
   fromElementChangeUri,
   toElementChangeUri,
 } from '../uri/elementHistoryUri';
-import { getPreviousVersionLevel, isError } from '../utils';
+import {
+  getDescriptionFromChangeNode,
+  getPreviousVersionLevel,
+  isError,
+} from '../utils';
 import { UriFunctions } from '../_doc/Uri';
 
 export const BlameDecoration = window.createTextEditorDecorationType({
@@ -62,6 +66,7 @@ export type HistoryViewDataProvider = TreeDataProvider<ChangeLevelNode> &
     elementUri: Uri;
     treeView: TreeView<ChangeLevelNode>;
     mode: HistoryViewModes;
+    compareWithVvll: string;
   }>;
 
 export const make =
@@ -161,31 +166,35 @@ export const make =
           }
           try {
             this.treeView.message = undefined;
-            const previousVvll = getPreviousVersionLevel(
-              historyData,
-              changedElementQuery.vvll
-            );
-            if (previousVvll) {
+            const vvllToUseInDiff: string | undefined =
+              this.compareWithVvll ||
+              getPreviousVersionLevel(historyData, changedElementQuery.vvll);
+            const getUriToUseInDiff = (vvll?: string): Uri | undefined => {
+              if (!vvll) {
+                return;
+              }
               const changeLvlUri = toElementChangeUri({
                 ...changedElementQuery,
-                vvll: previousVvll,
+                vvll,
               })(uriScheme)(Date.now().toString());
               if (isError(changeLvlUri)) {
                 const error = changeLvlUri;
                 logger.error(
-                  `Unable to show change level ${previousVvll}.`,
-                  `Unable to show change level ${previousVvll} because parsing of the element's URI failed with error ${error.message}.`
+                  `Unable to show change level ${vvll}.`,
+                  `Unable to show change level ${vvll} because parsing of the element's URI failed with error ${error.message}.`
                 );
                 return;
               }
-              await commands.executeCommand(
-                'vscode.diff',
-                changeLvlUri,
-                this.elementUri
-              );
-            } else {
-              await window.showTextDocument(this.elementUri, { preview: true });
-            }
+              return changeLvlUri;
+            };
+            const uriToUseInDiff: Uri | undefined =
+              getUriToUseInDiff(vvllToUseInDiff);
+            await showInEditor(
+              this.elementUri,
+              changedElementQuery.vvll,
+              uriToUseInDiff,
+              vvllToUseInDiff
+            );
           } catch (error) {
             logger.trace('Unable to show element history document');
           }
@@ -204,6 +213,23 @@ export const make =
       },
     };
   };
+
+const showInEditor = async (
+  currentUri: Uri,
+  currentVvll: string,
+  uriForDiff?: Uri,
+  vvllForDiff?: string
+) => {
+  if (!uriForDiff || !vvllForDiff) {
+    await window.showTextDocument(currentUri, { preview: true });
+    return;
+  }
+  if (currentVvll > vvllForDiff) {
+    await commands.executeCommand('vscode.diff', uriForDiff, currentUri);
+  } else {
+    await commands.executeCommand('vscode.diff', currentUri, uriForDiff);
+  }
+};
 
 const refreshHistoryData = async (
   refreshHistoryData: (
@@ -332,15 +358,8 @@ const createBlameDecoration = (
 class ChangeLevelItem extends TreeItem {
   constructor(node: ChangeLevelNode, commandId: string) {
     super(node.vvll, TreeItemCollapsibleState.None);
-    this.description =
-      node.user?.trim() +
-      ', ' +
-      node.date +
-      '-' +
-      node.time +
-      (node.ccid && node.ccid.trim() !== ''
-        ? ' → ' + node.ccid.trim() + ' | ' + node.comment?.trim()
-        : '');
+    this.description = getDescriptionFromChangeNode(node);
+    this.contextValue = 'CHANGE_LVL';
     this.command = {
       title: 'Show Changes',
       command: commandId,

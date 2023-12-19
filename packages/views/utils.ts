@@ -12,7 +12,7 @@
  */
 
 import { CURRENT_CHANGE_LEVEL } from './constants';
-import { ElementHistoryData } from './tree/_doc/ChangesTree';
+import { ChangeLevelNode, ElementHistoryData } from './tree/_doc/ChangesTree';
 
 export const isError = <T>(value: T | Error): value is Error => {
   return value instanceof Error;
@@ -37,4 +37,17 @@ export const getPreviousVersionLevel = (
   return historyData.changeLevels && currentChangeNodeIndex > 0
     ? historyData.changeLevels[currentChangeNodeIndex - 1]?.vvll
     : undefined;
+};
+
+export const getDescriptionFromChangeNode = (node: ChangeLevelNode): string => {
+  return (
+    node.user?.trim() +
+    ', ' +
+    node.date +
+    '-' +
+    node.time +
+    (node.ccid && node.ccid.trim() !== ''
+      ? ' → ' + node.ccid.trim() + ' | ' + node.comment?.trim()
+      : '')
+  );
 };
