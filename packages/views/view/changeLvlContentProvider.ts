@@ -120,16 +120,16 @@ export const getChangeLevelContent = async (
       !historyData.changeLevels ||
       !historyData.historyLines
     ) {
-      return historyContent;
+      return;
     }
     vvllToUpdate =
       historyData.changeLevels[historyData.changeLevels.length - 1]?.vvll || '';
     if (vvllToUpdate === '') {
-      return historyContent;
+      return;
     }
   }
   if (!historyData || !historyData.changeLevels || !historyData.historyLines) {
-    return historyContent;
+    return;
   }
   const nodeToUpdate = historyData.changeLevels?.find(
     (changeNode) => changeNode.vvll === vvllToUpdate
@@ -154,7 +154,7 @@ export const getChangeLevelContent = async (
     if (historyLine.removedVersion > vvllToUpdate) {
       removedVersion = '';
     }
-    if (!removedVersion || removedVersion == '') {
+    if (!removedVersion || removedVersion === '') {
       if (historyLine.addedVersion > vvllToUpdate) {
         return;
       }
@@ -163,7 +163,7 @@ export const getChangeLevelContent = async (
         textForChange += addLine(historyLine);
       }
     } else {
-      if (removedVersion < vvllToUpdate) {
+      if (removedVersion <= vvllToUpdate) {
         return;
       }
       if (removedVersion === vvllToUpdate) {

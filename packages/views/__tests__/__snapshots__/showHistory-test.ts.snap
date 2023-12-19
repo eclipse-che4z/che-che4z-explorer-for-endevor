@@ -19,7 +19,6 @@ LINE 2
 
 exports[`showHistory getChangeLevelContent creates correct content for level 0103 1`] = `
 "ELEMENT                                                                         
-LINE 2                                                                          
 LINE 3                                                                          
 "
 `;
@@ -28,6 +27,5 @@ exports[`showHistory getChangeLevelContent creates correct content for level 010
 "ELEMENT                                                                         
 LINE 4                                                                          
 LINE 5                                                                          
-LINE 3                                                                          
 "
 `;
