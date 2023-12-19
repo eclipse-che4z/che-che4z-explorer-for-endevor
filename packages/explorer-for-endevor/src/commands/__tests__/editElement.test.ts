@@ -301,7 +301,7 @@ describe('starting edit session for element', () => {
     );
     assert.deepStrictEqual(
       dispatchActions.called,
-      false,
+      true,
       'Dispatch for signout element when edit without signout was called'
     );
   });

@@ -41,7 +41,6 @@ import {
   getElementExtension,
   isError,
   parseFilePath,
-  updateEditFoldersWhenContext,
 } from '../../utils';
 import {
   ActionChangeControlValue,
@@ -215,7 +214,7 @@ const editSingleElement =
     const saveResult = await saveIntoEditFolder(getTempEditFolderUri())(
       elementNode.serviceId,
       elementNode.searchLocationId
-    )(elementNode.element, retrieveResponse.result.content);
+    )(dispatch)(elementNode.element, retrieveResponse.result.content);
     if (isError(saveResult)) {
       const error = saveResult;
       logger.errorWithDetails(
@@ -411,7 +410,7 @@ const editSingleElementWithSignout =
     const saveResult = await saveIntoEditFolder(getTempEditFolderUri())(
       serviceId,
       searchLocationId
-    )(element, retrieveResponse.result.content);
+    )(dispatch)(element, retrieveResponse.result.content);
     if (isError(saveResult)) {
       const error = saveResult;
       logger.error(
@@ -606,6 +605,7 @@ const updateTreeAfterSuccessfulSignout =
 const saveIntoEditFolder =
   (tempEditFolderUri: vscode.Uri) =>
   (serviceId: EndevorId, searchLocationId: EndevorId) =>
+  (dispatch: (action: Action) => Promise<void>) =>
   async (
     element: Element,
     elementContent: string
@@ -627,8 +627,10 @@ const saveIntoEditFolder =
         selectFileParams(element),
         elementContent
       );
-      // update edit folders context variable to make sure all edited element paths are known
-      updateEditFoldersWhenContext(saveLocationUri.fsPath);
+      dispatch({
+        type: Actions.ELEMENT_EDIT_OPENED,
+        elementPath: saveResult.fsPath,
+      });
       return saveResult;
     } catch (error) {
       return new Error(

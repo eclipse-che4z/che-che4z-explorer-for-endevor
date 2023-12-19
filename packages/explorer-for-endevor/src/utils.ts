@@ -141,17 +141,11 @@ export const getEditFolderUri =
     );
   };
 
-export const updateEditFoldersWhenContext = (() => {
-  // use internal closure to store the edit folders between multiple calls
-  const editFolders: string[] = [];
-  // provide the function to append a new edit folder path to internal list
-  return (newEditFolder: string): void => {
-    // update the list and the context only if there is no such value yet
-    if (editFolders.includes(newEditFolder)) return;
-    editFolders.push(newEditFolder);
-    setContextVariable(DIFF_EDITOR_WHEN_CONTEXT_NAME, editFolders);
-  };
-})();
+export const updateEditElementsWhenContext = (
+  elementsInEdit: ReadonlyArray<string>
+) => {
+  setContextVariable(DIFF_EDITOR_WHEN_CONTEXT_NAME, elementsInEdit);
+};
 
 export const parseFilePath = (
   filePath: string

@@ -88,7 +88,7 @@ export const SCM_RESOURCE_CONFLICTED_COLOR =
 
 export const SCM_VIEW_ID = 'workbench.scm';
 
-export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedFolders`;
+export const DIFF_EDITOR_WHEN_CONTEXT_NAME = `${COMMAND_PREFIX}.editedElements`;
 export const SCM_STATUS_CONTEXT_NAME = `${COMMAND_PREFIX}.scm.status`;
 
 export const UNIQUE_ELEMENT_FRAGMENT = 'SOME_UNIQUE_STRING';

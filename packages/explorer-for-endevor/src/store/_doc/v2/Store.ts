@@ -309,6 +309,7 @@ export type State = {
   searchLocations: EndevorSearchLocations;
   serviceLocations: ConnectionLocations;
   activityEntries: ActivityRecords;
+  editElements: ReadonlyArray<string>;
 };
 
 // external types
