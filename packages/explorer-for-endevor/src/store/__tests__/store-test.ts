@@ -71,6 +71,7 @@ jest.mock(
   }),
   { virtual: true }
 );
+jest.mock('../../utils');
 
 const inPlaceLocation: SubSystemMapPath = {
   environment: 'ENV',
@@ -226,6 +227,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -240,6 +242,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -295,6 +300,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -309,6 +315,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -396,6 +405,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -410,6 +420,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const outdatedLocation: SubSystemMapPath = {
@@ -492,6 +505,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -506,6 +520,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -580,6 +597,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -594,6 +612,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const existingElement: CachedElement = {
@@ -733,6 +754,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -747,6 +769,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -833,6 +858,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -847,6 +873,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const endevorMapCacheVersion = EndevorCacheVersion.OUTDATED;
@@ -936,6 +965,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -950,6 +980,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -1008,6 +1041,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1022,6 +1056,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -1097,6 +1134,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1111,6 +1149,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -1197,6 +1238,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1211,6 +1253,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const originalEnvStage: EnvironmentStage = {
@@ -1302,6 +1347,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1316,6 +1362,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const nonRelatedLocation: SubSystemMapPath = {
@@ -1494,6 +1543,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1508,6 +1558,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const element: Element = {
@@ -1564,6 +1617,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1578,6 +1632,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -1613,6 +1670,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1627,6 +1685,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -1715,6 +1776,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1729,6 +1791,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const element: Element = {
@@ -1792,6 +1857,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1806,6 +1872,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -1850,6 +1919,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1864,6 +1934,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -1901,6 +1974,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -1915,6 +1989,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -2000,6 +2077,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -2014,6 +2092,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const element: Element = {
@@ -2077,6 +2158,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -2091,6 +2173,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -2135,6 +2220,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -2149,6 +2235,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       storeState.caches = {
@@ -2186,6 +2275,7 @@ describe('store actions callbacks', () => {
         services: {},
         caches: {},
         activityEntries: [],
+        editElements: [],
       };
       const dispatch = await makeStore(mockedGetters)(
         () => storeState,
@@ -2200,6 +2290,9 @@ describe('store actions callbacks', () => {
         },
         () => {
           // do nothing
+        },
+        async () => {
+          return [];
         }
       );
       // act
@@ -2243,6 +2336,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const elementInPlace: Element = {
         ...inPlaceLocation,
@@ -2291,6 +2385,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2386,6 +2481,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2440,6 +2536,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2494,6 +2591,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2568,6 +2666,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2613,6 +2712,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
@@ -2654,6 +2754,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const inPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2777,6 +2878,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2870,6 +2972,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -2971,6 +3074,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3023,6 +3127,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3075,6 +3180,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const firstInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3147,6 +3253,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3192,6 +3299,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const emptyInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3232,6 +3340,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
@@ -3273,6 +3382,7 @@ describe('store getters', () => {
         caches: {},
         filters: {},
         activityEntries: [],
+        editElements: [],
       };
       const anotherInPlaceLocation: SubSystemMapPath = {
         environment: 'ENV',
@@ -3331,6 +3441,7 @@ describe('store getters', () => {
           },
         },
         activityEntries: [],
+        editElements: [],
       };
       storeState.caches = {
         [toServiceLocationCompositeKey(serviceId)(inventoryLocationId)]: {
