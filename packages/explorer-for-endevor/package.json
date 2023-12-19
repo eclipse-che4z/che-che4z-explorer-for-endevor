@@ -359,6 +359,11 @@
       {
         "command": "e4e.viewTypeDetails",
         "title": "View Type Details"
+      },
+      {
+        "command": "e4e.historyCompareWith",
+        "title": "Compare with ...",
+        "category": "Explorer for Endevor"
       }
     ],
     "submenus": [
@@ -715,6 +720,10 @@
         {
           "command": "e4e.viewTypeDetails",
           "when": "viewItem == TYPE"
+        },
+        {
+          "command": "e4e.historyCompareWith",
+          "when": "viewItem == CHANGE_LVL"
         }
       ],
       "commandPalette": [
@@ -896,6 +905,10 @@
         },
         {
           "command": "e4e.viewTypeDetails",
+          "when": "false"
+        },
+        {
+          "command": "e4e.historyCompareWith",
           "when": "false"
         }
       ]
