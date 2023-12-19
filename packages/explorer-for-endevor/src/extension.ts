@@ -217,6 +217,7 @@ import {
 } from './tree/utils';
 import { printHistoryCommand } from '@local/views/commands/printHistory';
 import { showChangeLevelCommand } from '@local/views/commands/showChangeLevel';
+import { compareWithCommand } from '@local/views/commands/compareWith';
 import { changeLvlContentProvider } from '@local/views/view/changeLvlContentProvider';
 import { resultTableContentProvider } from './view/resultTableContentProvider';
 import { endevorReportContentProvider } from './view/endevorReportContentProvider';
@@ -582,10 +583,12 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
   elementHistoryTreeProvider.treeView = elementHistoryTreeView;
   const refreshElementHistoryTree = (
     uri?: vscode.Uri,
-    mode?: HistoryViewModes
+    mode?: HistoryViewModes,
+    compareWithVvll?: string
   ) => {
     elementHistoryTreeProvider.elementUri = uri;
     elementHistoryTreeProvider.mode = mode;
+    elementHistoryTreeProvider.compareWithVvll = compareWithVvll;
     elementHistoryTreeChangeEmitter.fire(null);
     if (mode === HistoryViewModes.SHOW_IN_EDITOR) {
       focusOnView(ELM_HISTORY_VIEW_ID);
@@ -1235,6 +1238,22 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
         return withErrorLogging(CommandId.VIEW_TYPE_DETAILS)(
           Promise.resolve(
             viewTypeDetails(dispatch, connectionConfigurationResolver)(typeNode)
+          )
+        );
+      },
+    ],
+    [
+      CommandId.COMPARE_WITH,
+      (changeNode: ChangeLevelNode) => {
+        return withErrorLogging(CommandId.COMPARE_WITH)(
+          Promise.resolve(
+            compareWithCommand(
+              logger,
+              refreshElementHistoryTree,
+              getElementHistoryFromUri,
+              changeNode,
+              Schemas.ELEMENT_CHANGE_LVL
+            )
           )
         );
       },
