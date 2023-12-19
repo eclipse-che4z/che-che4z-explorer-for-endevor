@@ -54,6 +54,7 @@ export const CommandId = {
   GENERATE_ELEMENT_WITH_COPY_BACK: `${COMMAND_PREFIX}.generateElementWithCopyBack`,
   GENERATE_ELEMENT_WITH_NO_SOURCE: `${COMMAND_PREFIX}.generateElementWithNoSource`,
   GENERATE_SUBSYSTEM_ELEMENTS: `${COMMAND_PREFIX}.generateSubsystemElements`,
+  GENERATE_ELEMENT_FROM_URI: `${COMMAND_PREFIX}.generateElementFromUri`,
   UPLOAD_ELEMENT: `${COMMAND_PREFIX}.uploadElement`,
   DISCARD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.discardChanges`,
   UPLOAD_COMPARED_ELEMENT: `${COMMAND_PREFIX}.diff.acceptChanges`,

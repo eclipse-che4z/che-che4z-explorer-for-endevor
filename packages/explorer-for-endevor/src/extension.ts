@@ -95,7 +95,10 @@ import { uploadElementCommand } from './commands/element/uploadElement';
 import { signOutElementCommand } from './commands/element/signOutElement';
 import { signInElementCommand } from './commands/element/signInElement';
 import { isError, joinUri } from './utils';
-import { generateElementInPlaceCommand } from './commands/element/generateElementInPlace';
+import {
+  generateElementInPlaceCommand,
+  generateElementInPlaceFromUriCommand,
+} from './commands/element/generateElementInPlace';
 import { generateElementWithCopyBackCommand } from './commands/element/generateElementWithCopyBack';
 import { listingContentProvider } from './view/listingContentProvider';
 import { Actions } from './store/_doc/Actions';
@@ -966,6 +969,17 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
             dispatch,
             connectionConfigurationResolver
           )(elementNode, { noSource: true })
+        );
+      },
+    ],
+    [
+      CommandId.GENERATE_ELEMENT_FROM_URI,
+      (elementUri: vscode.Uri) => {
+        return withErrorLogging(CommandId.GENERATE_ELEMENT_FROM_URI)(
+          generateElementInPlaceFromUriCommand(
+            dispatch,
+            connectionConfigurationResolver
+          )(elementUri)
         );
       },
     ],

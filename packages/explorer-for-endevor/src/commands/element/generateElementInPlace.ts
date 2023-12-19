@@ -36,6 +36,7 @@ import {
 import {
   FetchElementCommandCompletedStatus,
   GenerateElementInPlaceCommandCompletedStatus,
+  GenerateElementCommandContext,
   SignoutErrorRecoverCommandCompletedStatus,
   TelemetryEvents,
 } from '../../telemetry/_doc/Telemetry';
@@ -63,8 +64,49 @@ import {
   EndevorAuthorizedService,
   SearchLocation,
 } from '../../api/_doc/Endevor';
+import { Uri } from 'vscode';
+import { fromBasicElementUri } from '../../uri/basicElementUri';
 
-type SelectedElementNode = ElementNode;
+type SelectedElementNode = Omit<ElementNode, 'parent' | 'type'>;
+
+export const generateElementInPlaceFromUriCommand =
+  (
+    dispatch: (action: Action) => Promise<void>,
+    getConnectionConfiguration: (
+      serviceId: EndevorId,
+      searchLocationId: EndevorId
+    ) => Promise<
+      | {
+          service: EndevorAuthorizedService;
+          searchLocation: SearchLocation;
+        }
+      | undefined
+    >
+  ) =>
+  async (elementUri: Uri): Promise<void> => {
+    const uriParams = fromBasicElementUri(elementUri);
+    if (isError(uriParams)) {
+      return;
+    }
+    const { serviceId, searchLocationId, element } = uriParams;
+    const logger = createEndevorLogger({
+      serviceId,
+      searchLocationId,
+    });
+    logger.traceWithDetails(
+      `Generate command from URI was called for ${element.environment}/${element.stageNumber}/${element.system}/${element.subSystem}/${element.type}/${element.name}.`
+    );
+    await generateSingleElement(
+      dispatch,
+      getConnectionConfiguration
+    )({
+      name: element.name,
+      element,
+      timestamp: uriParams.fragment,
+      serviceId,
+      searchLocationId,
+    })(GenerateElementCommandContext.BROWSE_ELEMENT);
+  };
 
 export const generateElementInPlaceCommand =
   (
@@ -92,7 +134,7 @@ export const generateElementInPlaceCommand =
     await generateSingleElement(
       dispatch,
       getConnectionConfiguration
-    )(elementNode);
+    )(elementNode)(GenerateElementCommandContext.ELEMENT_TREE);
   };
 
 const generateSingleElement =
@@ -109,15 +151,14 @@ const generateSingleElement =
       | undefined
     >
   ) =>
-  async ({
+  ({
     name,
     element,
     timestamp,
-    type,
-    parent,
     serviceId,
     searchLocationId,
-  }: ElementNode): Promise<void> => {
+  }: SelectedElementNode) =>
+  async (context: GenerateElementCommandContext): Promise<void> => {
     const logger = createEndevorLogger({
       serviceId,
       searchLocationId,
@@ -162,9 +203,7 @@ const generateSingleElement =
     const updatedElementNode: SelectedElementNode = {
       serviceId,
       searchLocationId,
-      type,
       name,
-      parent,
       element,
       timestamp,
     };
@@ -223,6 +262,7 @@ const generateSingleElement =
           reporter.sendTelemetryEvent({
             type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             status: GenerateElementInPlaceCommandCompletedStatus.SUCCESS,
+            generateContext: context,
           });
           return;
         }
@@ -237,6 +277,7 @@ const generateSingleElement =
             errorContext:
               TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
+            generateContext: context,
           });
           return;
         case ErrorResponseType.WRONG_CREDENTIALS_ENDEVOR_ERROR:
@@ -252,6 +293,7 @@ const generateSingleElement =
             errorContext:
               TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
+            generateContext: context,
           });
           return;
         case ErrorResponseType.CERT_VALIDATION_ERROR:
@@ -265,6 +307,7 @@ const generateSingleElement =
             errorContext:
               TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
+            generateContext: context,
           });
           return;
         case ErrorResponseType.GENERIC_ERROR: {
@@ -290,6 +333,7 @@ const generateSingleElement =
             errorContext:
               TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
             error,
+            generateContext: context,
           });
           return;
         }
@@ -350,6 +394,7 @@ const generateSingleElement =
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED,
       status: GenerateElementInPlaceCommandCompletedStatus.SUCCESS,
+      generateContext: context,
     });
   };
 

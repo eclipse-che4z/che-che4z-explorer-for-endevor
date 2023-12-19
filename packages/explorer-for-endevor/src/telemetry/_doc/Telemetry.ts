@@ -417,6 +417,11 @@ export const enum GenerateWithCopyBackCommandCompletedStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export const enum GenerateElementCommandContext {
+  ELEMENT_TREE = 'ELEMENT_TREE',
+  BROWSE_ELEMENT = 'BROWSE_ELEMENT',
+}
+
 export type CommandGenerateElementCompletedEvent =
   | {
       type: TelemetryEvents.ERROR;
@@ -427,12 +432,14 @@ export type CommandGenerateElementCompletedEvent =
         | GenerateElementInPlaceCommandCompletedStatus.GENERIC_ERROR
         | GenerateWithCopyBackCommandCompletedStatus.GENERIC_ERROR;
       error: Error;
+      generateContext?: GenerateElementCommandContext;
     }
   | {
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_IN_PLACE_COMPLETED;
       status:
         | GenerateElementInPlaceCommandCompletedStatus.SUCCESS
         | GenerateElementInPlaceCommandCompletedStatus.CANCELLED;
+      generateContext: GenerateElementCommandContext;
     }
   | {
       type: TelemetryEvents.COMMAND_GENERATE_ELEMENT_WITH_COPY_BACK_COMPLETED;
