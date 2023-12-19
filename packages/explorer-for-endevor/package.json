@@ -252,6 +252,10 @@
         "title": "Generate with No Source"
       },
       {
+        "command": "e4e.generateElementFromUri",
+        "title": "Generate in Place"
+      },
+      {
         "command": "e4e.printListing",
         "title": "Print a Listing"
       },
@@ -824,6 +828,10 @@
           "when": "false"
         },
         {
+          "command": "e4e.generateElementFromUri",
+          "when": "false"
+        },
+        {
           "command": "e4e.printListing",
           "when": "false"
         },
@@ -910,6 +918,13 @@
         {
           "command": "e4e.historyCompareWith",
           "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "e4e.generateElementFromUri",
+          "group": "04_e4e",
+          "when": "resourceScheme == e4eElement"
         }
       ]
     },
