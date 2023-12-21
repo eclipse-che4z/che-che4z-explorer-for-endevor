@@ -144,14 +144,6 @@ export const toSecuredEndevorSession =
           tokenValue: credential.tokenValue,
         });
         break;
-      case CredentialType.TOKEN_COOKIE:
-        securedSession = new Session({
-          ...commonSession,
-          type: AuthType.COOKIE,
-          tokenType: credential.tokenType,
-          tokenValue: credential.tokenValue,
-        });
-        break;
       case CredentialType.BASE:
         securedSession = new Session({
           ...commonSession,

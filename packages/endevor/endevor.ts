@@ -426,6 +426,7 @@ export const getAuthenticationToken =
       result: authorizationToken
         ? {
             type: CredentialType.TOKEN_BEARER,
+            user: service.credential.user,
             // EWS provides JSON Web Tokens (JWT)
             tokenType: CredentialTokenType.JWT,
             tokenValue: authorizationToken.token,
