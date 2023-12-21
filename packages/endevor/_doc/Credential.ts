@@ -14,7 +14,6 @@
 export const enum CredentialType {
   BASE = 'base-credential',
   TOKEN_BEARER = 'token-bearer-credential',
-  TOKEN_COOKIE = 'token-cookie-credential',
   // another authentication possibilities for the future
   // BASE64 = 'base64-credential',
   // CERT = 'certificate-credential',
@@ -36,6 +35,7 @@ export type BearerTokenCredential = Readonly<{
   tokenType: CredentialTokenType;
   tokenValue: string;
 }> &
+  Partial<{ user: string }> &
   Partial<TokenValidityParams>;
 
 // our own enum for token types not to expose imperative types
@@ -48,13 +48,6 @@ export const enum CredentialTokenType {
   APIML = 'apimlAuthenticationToken',
 }
 
-export type CookieTokenCredential = Readonly<{
-  type: CredentialType.TOKEN_COOKIE;
-  tokenType: CredentialTokenType;
-  tokenValue: string;
-}> &
-  Partial<TokenValidityParams>;
-
-export type TokenCredential = BearerTokenCredential | CookieTokenCredential;
+export type TokenCredential = BearerTokenCredential;
 
 export type Credential = BaseCredential | TokenCredential;

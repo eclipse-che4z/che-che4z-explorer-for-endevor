@@ -142,6 +142,8 @@ import {
   defineAnyConnectionDetailsResolutionOrder,
   resolveValidOrUnknownCredentials,
   defineValidOrUnknownCredentialsResolutionOrder,
+  resolveCurrentUsername,
+  defineCurrentUsernameResolutionOrder,
 } from './store/resolvers';
 import {
   LocationNode,
@@ -559,6 +561,17 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
       getSearchLocation: searchLocationResolver,
       getEndevorConfiguration: endevorConfigurationResolver,
     }
+  );
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const currentUsernameResolver = resolveCurrentUsername(
+    defineCurrentUsernameResolutionOrder(
+      getState,
+      dispatch,
+      getCredentialsStorage,
+      endevorConfigurationResolver
+    )
   );
 
   const elementHistoryTreeProvider = makeElementHistoryTreeProvider(

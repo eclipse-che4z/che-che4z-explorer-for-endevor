@@ -19,8 +19,6 @@ export const enum AuthType {
   BASIC = 'basic',
   // SessConstants.AUTH_TYPE_BEARER
   BEARER = 'bearer',
-  // SessConstants.AUTH_TYPE_TOKEN
-  COOKIE = 'token',
   // SessConstants.AUTH_TYPE_CERT_PEM
   CERT = 'cert-pem',
 }

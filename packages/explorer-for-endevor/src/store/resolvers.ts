@@ -13,6 +13,7 @@
 
 import {
   askForCredentialWithoutValidation,
+  askForUsername,
   dialogCancelled,
 } from '../dialogs/credentials/endevorCredentialDialogs';
 import { reporter } from '../globals';
@@ -22,6 +23,8 @@ import {
   getEndevorConnectionDetails as getEndevorConnectionDetailsFromStore,
   getEndevorConfigurationBySearchLocationId as getEndevorConfigurationFromSearchLocation,
   getToken as getTokenFromStore,
+  getToken,
+  getCredential,
 } from './store';
 import {
   EndevorConfiguration,
@@ -482,6 +485,79 @@ export const defineSearchLocationResolutionOrder = (
   return [
     async (searchLocationId) => {
       return getSearchLocationFromStore(getState)(searchLocationId);
+    },
+  ];
+};
+
+export type GetCurrentUsername = (
+  serviceId: EndevorId,
+  searchLocationId: EndevorId
+) => Promise<string | undefined>;
+export const resolveCurrentUsername =
+  (currentUsernameGetters: ReadonlyArray<GetCurrentUsername>) =>
+  async (
+    serviceId: EndevorId,
+    searchLocationId: EndevorId
+  ): Promise<string | undefined> => {
+    for (const getCurrentUsername of currentUsernameGetters) {
+      const currentUsername = await getCurrentUsername(
+        serviceId,
+        searchLocationId
+      );
+      if (currentUsername) return currentUsername;
+    }
+    return undefined;
+  };
+export const defineCurrentUsernameResolutionOrder = (
+  getState: () => State,
+  dispatch: (action: Action) => Promise<void>,
+  getCredentialsStorage: () => CredentialsStorage,
+  getEndevorConfiguration: GetEndevorConfiguration
+): ReadonlyArray<GetCurrentUsername> => {
+  return [
+    async (serviceId, searchLocationId) => {
+      const configuration = await getEndevorConfiguration(
+        serviceId,
+        searchLocationId
+      );
+      if (!configuration) {
+        return;
+      }
+      const token = await getToken(getState)(getCredentialsStorage)(serviceId)(
+        configuration
+      );
+      return token?.status === EndevorTokenStatus.ENABLED
+        ? token.value.user
+        : undefined;
+    },
+    async (serviceId) => {
+      const credential = await getCredential(getState)(getCredentialsStorage)(
+        serviceId
+      );
+      if (!credential) {
+        return;
+      }
+      if (credential.value.user) {
+        return credential.value.user;
+      }
+      const username = await askForUsername({
+        allowEmpty: false,
+      });
+      if (!username) {
+        return;
+      }
+      dispatch({
+        type: Actions.SESSION_ENDEVOR_CREDENTIAL_ADDED,
+        sessionId: serviceId,
+        credential: {
+          ...credential,
+          value: {
+            ...credential.value,
+            user: username,
+          },
+        },
+      });
+      return username;
     },
   ];
 };
