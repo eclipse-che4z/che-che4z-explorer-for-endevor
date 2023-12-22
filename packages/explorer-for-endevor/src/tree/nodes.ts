@@ -107,10 +107,12 @@ const toValidServiceNode =
       name: serviceDescription.id.name,
       source: serviceDescription.id.source,
       duplicated: serviceDescription.duplicated,
+      isDefault: serviceDescription.isDefault,
       tooltip: toServiceTooltip({
         serviceId: serviceDescription.id,
         service: serviceDescription.service,
         credential: serviceDescription.credential,
+        isDefault: serviceDescription.isDefault,
       }),
       children: Object.values(locationDescriptions)
         .map((location) => {
@@ -148,10 +150,12 @@ const toEmptyServiceNode = (
     name: serviceDescription.id.name,
     source: serviceDescription.id.source,
     duplicated: serviceDescription.duplicated,
+    isDefault: serviceDescription.isDefault,
     tooltip: toServiceTooltip({
       serviceId: serviceDescription.id,
       service: serviceDescription.service,
       credential: serviceDescription.credential,
+      isDefault: serviceDescription.isDefault,
     }),
     children: [],
   };
@@ -180,11 +184,13 @@ const toInvalidConnectionServiceNode =
       name: serviceDescription.id.name,
       source: serviceDescription.id.source,
       duplicated: serviceDescription.duplicated,
+      isDefault: serviceDescription.isDefault,
       tooltip: toServiceTooltip(
         {
           serviceId: serviceDescription.id,
           service: serviceDescription.service,
           credential: serviceDescription.credential,
+          isDefault: serviceDescription.isDefault,
         },
         'Unable to validate this Endevor connection. Edit the configuration or hide the connection.'
       ),
@@ -261,11 +267,13 @@ const toWrongCredentialsServiceNode =
       name: serviceDescription.id.name,
       source: serviceDescription.id.source,
       duplicated: serviceDescription.duplicated,
+      isDefault: serviceDescription.isDefault,
       tooltip: toServiceTooltip(
         {
           serviceId: serviceDescription.id,
           service: serviceDescription.service,
           credential: serviceDescription.credential,
+          isDefault: serviceDescription.isDefault,
         },
         'Unable to validate credentials for this Endevor connection.'
       ),
@@ -306,9 +314,11 @@ const toSearchLocationNode =
       serviceSource: serviceDescription.id.source,
       duplicated: locationDescription.duplicated,
       withEmptyTypes: locationDescription.showEmptyTypes,
+      isDefault: locationDescription.isDefault,
       tooltip: toSearchLocationTooltip({
         locationId: locationDescription.id,
         location: locationDescription.location,
+        isDefault: locationDescription.isDefault,
       }),
     };
     switch (locationDescription.id.source) {
@@ -351,6 +361,7 @@ const toInvalidSearchLocationNode =
       duplicated: locationDescription.duplicated,
       serviceName: serviceDescription.id.name,
       serviceSource: serviceDescription.id.source,
+      isDefault: locationDescription.isDefault,
     };
     if (locationDescription.status === EndevorSearchLocationStatus.INVALID) {
       return {

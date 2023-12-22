@@ -178,6 +178,7 @@ export const getConnections = async (
       source: Source.SYNCHRONIZED,
     };
     acc[toCompositeKey(id)] = {
+      isDefault: serviceProfile.isDefault,
       value: {
         location,
         rejectUnauthorized,
@@ -249,8 +250,8 @@ export const getInventoryLocations = async (
     return error;
   }
   return locationProfiles
-    .map(({ name, profile }) => {
-      if (profileIsCorrect(profile)) return { name, profile };
+    .map(({ name, profile, isDefault }) => {
+      if (profileIsCorrect(profile)) return { name, profile, isDefault };
       logger.trace(
         `Inventory location instance, environment or stage number is missing for the profile ${name}, actual value is ${stringifyWithHiddenCredential(
           profile
@@ -259,39 +260,46 @@ export const getInventoryLocations = async (
       return undefined;
     })
     .filter(isDefined)
-    .reduce((acc: InventoryLocations, { name, profile: locationProfile }) => {
-      const id: Id = {
-        name,
-        source: Source.SYNCHRONIZED,
-      };
-      acc[toCompositeKey(id)] = {
-        value: {
-          configuration: locationProfile.instance,
-          environment: locationProfile.environment.toUpperCase(),
-          stageNumber: locationProfile.stageNumber,
-          system: locationProfile.system
-            ? locationProfile.system !== ANY_VALUE
-              ? locationProfile.system.toUpperCase()
-              : undefined
-            : undefined,
-          subsystem: locationProfile.subsystem
-            ? locationProfile.subsystem !== ANY_VALUE
-              ? locationProfile.subsystem.toUpperCase()
-              : undefined
-            : undefined,
-          type: locationProfile.type
-            ? locationProfile.type !== ANY_VALUE
-              ? locationProfile.type.toUpperCase()
-              : undefined
-            : undefined,
-          ccid: locationProfile.ccid,
-          comment: locationProfile.comment,
-        },
-        id: {
+    .reduce(
+      (
+        acc: InventoryLocations,
+        { name, profile: locationProfile, isDefault }
+      ) => {
+        const id: Id = {
           name,
           source: Source.SYNCHRONIZED,
-        },
-      };
-      return acc;
-    }, {});
+        };
+        acc[toCompositeKey(id)] = {
+          value: {
+            configuration: locationProfile.instance,
+            environment: locationProfile.environment.toUpperCase(),
+            stageNumber: locationProfile.stageNumber,
+            system: locationProfile.system
+              ? locationProfile.system !== ANY_VALUE
+                ? locationProfile.system.toUpperCase()
+                : undefined
+              : undefined,
+            subsystem: locationProfile.subsystem
+              ? locationProfile.subsystem !== ANY_VALUE
+                ? locationProfile.subsystem.toUpperCase()
+                : undefined
+              : undefined,
+            type: locationProfile.type
+              ? locationProfile.type !== ANY_VALUE
+                ? locationProfile.type.toUpperCase()
+                : undefined
+              : undefined,
+            ccid: locationProfile.ccid,
+            comment: locationProfile.comment,
+          },
+          id: {
+            name,
+            source: Source.SYNCHRONIZED,
+          },
+          isDefault,
+        };
+        return acc;
+      },
+      {}
+    );
 };

@@ -52,6 +52,7 @@ export const toServiceTooltip = (
     serviceId,
     service,
     credential,
+    isDefault,
   }: {
     serviceId: EndevorId;
     service?: {
@@ -59,6 +60,7 @@ export const toServiceTooltip = (
       rejectUnauthorized: boolean;
     };
     credential?: Credential;
+    isDefault?: boolean;
   },
   warning?: string
 ): MarkdownString => {
@@ -68,7 +70,7 @@ export const toServiceTooltip = (
 ${
   serviceId.source === Source.SYNCHRONIZED
     ? `
-**Source:** Zowe`
+**Source:** Zowe${isDefault ? ' (default)' : ''}`
     : ''
 }
 ${
@@ -128,9 +130,11 @@ export const toSearchLocationTooltip = (
   {
     locationId,
     location,
+    isDefault,
   }: {
     locationId: EndevorId;
     location?: ElementSearchLocation;
+    isDefault?: boolean;
   },
   warning?: string
 ): MarkdownString => {
@@ -140,7 +144,7 @@ export const toSearchLocationTooltip = (
 ${
   locationId.source === Source.SYNCHRONIZED
     ? `
-**Source:** Zowe`
+**Source:** Zowe${isDefault ? ' (default)' : ''}`
     : ''
 }
 ${

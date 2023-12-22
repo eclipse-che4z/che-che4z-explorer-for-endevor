@@ -204,6 +204,39 @@ export const byNameOrder = (
   return l.name.localeCompare(r.name);
 };
 
+export const byIsDefaultOrder = (
+  l: { isDefault?: boolean },
+  r: { isDefault?: boolean }
+): number => {
+  if (l.isDefault && !r.isDefault) {
+    return -1;
+  }
+  if (!l.isDefault && r.isDefault) {
+    return 1;
+  }
+  return 0;
+};
+
+type ServiceLocationComparator = (
+  l: { name: string; isDefault?: boolean },
+  r: { name: string; isDefault?: boolean }
+) => number;
+
+export const byComplexOrder =
+  (comparators: ReadonlyArray<ServiceLocationComparator>) =>
+  (
+    l: { name: string; isDefault?: boolean },
+    r: { name: string; isDefault?: boolean }
+  ) => {
+    for (const compare of comparators) {
+      const compareResult = compare(l, r);
+      if (compareResult !== 0) {
+        return compareResult;
+      }
+    }
+    return 0;
+  };
+
 export const getElementExtension = (element: {
   type: string;
   extension?: string;

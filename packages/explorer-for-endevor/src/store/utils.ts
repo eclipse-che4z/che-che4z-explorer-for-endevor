@@ -400,6 +400,7 @@ export const toExistingServiceDescription =
       id: serviceId,
       value: persistentServiceValue,
       credential: persistentCredential,
+      isDefault,
     }: EndevorService &
       Partial<{
         credential: Credential;
@@ -414,6 +415,7 @@ export const toExistingServiceDescription =
       id: serviceId,
       status: EndevorServiceStatus.VALID,
       duplicated,
+      isDefault,
       // always try to use the session overrides first
       service: sessionDetails?.connection
         ? sessionDetails.connection.value
@@ -536,6 +538,7 @@ export const toValidLocationDescription =
       status: EndevorSearchLocationStatus.VALID,
       searchForFirstFoundElements,
       showEmptyTypes,
+      isDefault: endevorSearchLocation.isDefault,
       location: endevorSearchLocation.value,
     };
   };
