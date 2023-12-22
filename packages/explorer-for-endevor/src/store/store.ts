@@ -1164,13 +1164,58 @@ const readLatestState =
           `Unable to read the connection locations from the extension storage because of ${error.message}.`
         );
       } else {
-        state.serviceLocations = connectionLocations;
+        const updatedConnectionLocations = updateConnectionLocationsByDefaults(
+          connectionLocations,
+          connections,
+          inventoryLocations
+        );
+        state.serviceLocations =
+          updatedConnectionLocations || connectionLocations;
+        if (updatedConnectionLocations) {
+          persistState(storageGetters)(state);
+        }
       }
     }
     state.editElements = await getElementsInEdit();
     updateEditElementsWhenContext(state.editElements);
     return state;
   };
+
+const updateConnectionLocationsByDefaults = (
+  connectionLocations: ConnectionLocations,
+  connections: Connections,
+  inventoryLocations: InventoryLocations
+) => {
+  const defaultConnection = Object.values(connections).find(
+    (connection) => connection.isDefault
+  );
+  let updated = false;
+  if (defaultConnection) {
+    const defaultConnectionKey = toCompositeKey(defaultConnection.id);
+    let defaultInConnectionLocations =
+      connectionLocations[defaultConnectionKey];
+    if (!defaultInConnectionLocations) {
+      defaultInConnectionLocations = {
+        id: defaultConnection.id,
+        value: {},
+      };
+      updated = true;
+    }
+    const defaultInventoryLocation = Object.values(inventoryLocations).find(
+      (location) => location.isDefault
+    );
+    if (defaultInventoryLocation) {
+      const defaultLocationKey = toCompositeKey(defaultInventoryLocation.id);
+      if (!defaultInConnectionLocations.value[defaultLocationKey]) {
+        updated = true;
+        defaultInConnectionLocations.value[defaultLocationKey] =
+          defaultInventoryLocation;
+      }
+    }
+    connectionLocations[defaultConnectionKey] = defaultInConnectionLocations;
+  }
+  return updated ? connectionLocations : undefined;
+};
 
 const persistState =
   (storageGetters: StorageGetters) => async (state: State) => {
@@ -1224,7 +1269,33 @@ const persistState =
     ) {
       const updateConnectionLocationsResult = await storageGetters
         .getConnectionLocationsStorage()
-        .store(state.serviceLocations);
+        .store(
+          Object.entries(state.serviceLocations).reduce(
+            (accServices: ConnectionLocations, [serviceKey, service]) => {
+              if (!service) return accServices;
+              accServices[serviceKey] = {
+                id: service.id,
+                value: {
+                  ...Object.entries(service.value).reduce(
+                    (
+                      accLocations: InventoryLocationNames,
+                      [locationKey, location]
+                    ) => {
+                      if (!location) return accLocations;
+                      accLocations[locationKey] = {
+                        id: location.id,
+                      };
+                      return accLocations;
+                    },
+                    {}
+                  ),
+                },
+              };
+              return accServices;
+            },
+            {}
+          )
+        );
       if (isError(updateConnectionLocationsResult)) {
         const error = updateConnectionLocationsResult;
         logger.warn(
@@ -2441,6 +2512,7 @@ export const getAllServiceLocations =
             credential: await readCredentialFromStorage(getCredentialsStorage)(
               serviceLocation.id
             ),
+            isDefault: serviceLocation.isDefault,
           })
         )
       )

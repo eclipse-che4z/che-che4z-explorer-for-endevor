@@ -56,6 +56,7 @@ export type Connection = {
     location: ServiceLocation;
     rejectUnauthorized: boolean;
   };
+  isDefault?: boolean;
 };
 export type Connections = {
   [key: ConnectionKey]: Connection;
@@ -65,6 +66,7 @@ export type ConnectionsStorage = Storage<Connections>;
 export type InventoryLocation = {
   id: Id;
   value: ElementSearchLocation;
+  isDefault?: boolean;
 };
 export type InventoryLocations = {
   [key: InventoryLocationKey]: InventoryLocation;
@@ -74,12 +76,14 @@ export type InventoryLocationsStorage = Storage<InventoryLocations>;
 export type InventoryLocationNames = {
   [key: InventoryLocationKey]: {
     id: Id;
+    isDefault?: boolean;
   };
 };
 export type ConnectionLocations = {
   [key: ConnectionKey]: {
     id: Id;
     value: InventoryLocationNames;
+    isDefault?: boolean;
   };
 };
 export type ConnectionLocationsStorage = Storage<ConnectionLocations>;

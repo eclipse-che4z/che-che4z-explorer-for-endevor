@@ -37,6 +37,7 @@ export type InternalServiceNode = Readonly<{
   children: LocationNodes;
   duplicated: boolean;
   tooltip?: MarkdownString | string;
+  isDefault?: boolean;
 }>;
 export type SyncedServiceNode = Omit<InternalServiceNode, 'type'> &
   Readonly<{
@@ -73,6 +74,7 @@ export type InternalLocationNode = Readonly<{
   serviceSource: Source;
   duplicated: boolean;
   withEmptyTypes?: boolean;
+  isDefault?: boolean;
   tooltip?: MarkdownString | string;
   // showMap: boolean;
   // baseUrl: EndevorUrl;

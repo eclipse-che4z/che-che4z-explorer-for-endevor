@@ -46,11 +46,13 @@ import {
 import { toTreeItem } from './render';
 import {
   byNameOrder,
+  byComplexOrder,
   formatWithNewLines,
   isDefined,
   isElementUpTheMap,
   isError,
   isUnique,
+  byIsDefaultOrder,
 } from '../utils';
 import { Action, Actions } from '../store/_doc/Actions';
 import {
@@ -157,7 +159,7 @@ export const make =
           setContextVariable(TREE_VIEW_INITIALIZED_CONTEXT_NAME, true);
           const serviceNodes = toServiceNodes(
             await dataGetters.getServiceLocations()
-          ).sort(byNameOrder);
+          ).sort(byComplexOrder([byIsDefaultOrder, byNameOrder]));
           sendTreeRefreshTelemetry(serviceNodes);
           return serviceNodes;
         }
@@ -166,7 +168,9 @@ export const make =
             return [];
           case 'SERVICE':
           case 'SERVICE_PROFILE': {
-            const searchLocations = node.children.sort(byNameOrder);
+            const searchLocations = node.children.sort(
+              byComplexOrder([byIsDefaultOrder, byNameOrder])
+            );
             if (searchLocations.length) return searchLocations;
             return [addNewSearchLocationButton(node)];
           }

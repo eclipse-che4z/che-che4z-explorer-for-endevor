@@ -334,6 +334,7 @@ export type ValidEndevorServiceDescription = Readonly<{
   id: EndevorId;
   service: Connection['value'];
   credential?: Credential['value'];
+  isDefault?: boolean;
 }>;
 
 export type InvalidEndevorServiceDescription = Readonly<{
@@ -344,6 +345,7 @@ export type InvalidEndevorServiceDescription = Readonly<{
   id: EndevorId;
   service: Connection['value'];
   credential?: Credential['value'];
+  isDefault?: boolean;
 }>;
 
 export type NonExistingServiceDescription = Readonly<{
@@ -382,12 +384,14 @@ export type ValidEndevorSearchLocationDescription = Readonly<{
   location: EndevorSearchLocation['value'];
   searchForFirstFoundElements: boolean;
   showEmptyTypes: boolean;
+  isDefault?: boolean;
 }>;
 
 export type InvalidEndevorSearchLocationDescription = Readonly<{
   status: EndevorSearchLocationStatus.INVALID;
   duplicated: boolean;
   id: EndevorId;
+  isDefault?: boolean;
 }>;
 
 export type EndevorSearchLocationDescription =
