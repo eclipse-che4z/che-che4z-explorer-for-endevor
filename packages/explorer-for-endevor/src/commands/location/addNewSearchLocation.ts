@@ -170,11 +170,13 @@ export const addNewSearchLocation =
     if (!locationChosen(dialogResult)) {
       const createdSearchLocation = dialogResult;
       dispatch({
-        type: Actions.ENDEVOR_SEARCH_LOCATION_CREATED,
+        type: Actions.ENDEVOR_SEARCH_LOCATION_ADDED,
         serviceId,
+        searchLocationId: createdSearchLocation.id,
         searchLocation: {
           value: createdSearchLocation.value,
           id: createdSearchLocation.id,
+          isDefault: false,
         },
       });
       reporter.sendTelemetryEvent({

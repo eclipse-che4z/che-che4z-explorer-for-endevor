@@ -61,6 +61,10 @@ import {
   getElementHistoryData,
   getActivityRecords,
   getEmptyTypesFilterValue,
+  getLastUsedService,
+  getLastUsedSearchLocation,
+  getDefaultServiceProfile,
+  getDefaultLocationProfile,
 } from './store/store';
 import {
   watchForAutoSignoutChanges,
@@ -94,14 +98,14 @@ import { editElementCommand } from './commands/element/editElement';
 import { uploadElementCommand } from './commands/element/uploadElement';
 import { signOutElementCommand } from './commands/element/signOutElement';
 import { signInElementCommand } from './commands/element/signInElement';
-import { isError, joinUri } from './utils';
+import { isError, joinUri, toSearchLocationPath, toServiceUrl } from './utils';
 import {
   generateElementInPlaceCommand,
   generateElementInPlaceFromUriCommand,
 } from './commands/element/generateElementInPlace';
 import { generateElementWithCopyBackCommand } from './commands/element/generateElementWithCopyBack';
 import { listingContentProvider } from './view/listingContentProvider';
-import { Actions } from './store/_doc/Actions';
+import { Action, Actions } from './store/_doc/Actions';
 import {
   ElementFilterType,
   EndevorConfiguration,
@@ -172,8 +176,6 @@ import {
   getAllWorkspaceChanges,
   make as makeScmStore,
   getNonConflictedWorkspaceChangeForFile,
-  getLastUsedServiceId,
-  getLastUsedSearchLocationId,
 } from './store/scm/store';
 import {
   makeFileExplorerDecorationProvider,
@@ -242,7 +244,10 @@ import {
   ElementHistoryData,
   HistoryViewModes,
 } from '@local/views/tree/_doc/ChangesTree';
-import { getConnectionConfiguration } from './store/utils';
+import {
+  getConnectionConfiguration,
+  toServiceLocationTooltip,
+} from './store/utils';
 import { viewTypeDetails } from './commands/type/viewTypeDetails';
 import { logActivity } from './logger';
 import { moveElementCommand } from './commands/element/moveElement';
@@ -254,6 +259,11 @@ import {
   make as makeExternalEndevorApi,
 } from './api/external';
 import { subscribeToActiveEditorChangedEvent } from './events/events';
+import {
+  defineCurrentSyncServiceLocationResolutionOrder,
+  resolveCurrentSyncServiceLocation,
+} from './store/scm/resolvers';
+import { addServiceAndLocationCommand } from './commands/addServiceAndLocation';
 
 const getExtensionVersionFromSettings =
   (getSettingsStorage: () => SettingsStorage) =>
@@ -411,7 +421,45 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
       extensionVersion
     );
   }
+  const syncStatusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  syncStatusBar.command = CommandId.UPDATE_CONNECTION_LOCATION;
+  const getStatusBar = () => syncStatusBar;
 
+  const updateStatusBar = () => {
+    let serviceProfile;
+    let locationProfile;
+    const lastUsedServiceProfile = getLastUsedService(getState);
+    const lastUsedLocationProfile = getLastUsedSearchLocation(getState);
+    if (lastUsedServiceProfile && lastUsedLocationProfile) {
+      serviceProfile = lastUsedServiceProfile;
+      locationProfile = lastUsedLocationProfile;
+    } else {
+      serviceProfile = getDefaultServiceProfile(getState);
+      locationProfile = getDefaultLocationProfile(getState);
+    }
+    if (!serviceProfile || !locationProfile) return;
+    const statusBar = getStatusBar();
+    const maxNameLength = 15;
+    const serviceName =
+      serviceProfile.id.name.length < maxNameLength
+        ? serviceProfile.id.name
+        : `${serviceProfile.id.name.substring(0, maxNameLength)}...`;
+    const locationName =
+      locationProfile.id.name.length < maxNameLength
+        ? locationProfile.id.name
+        : `${locationProfile.id.name.substring(0, maxNameLength)}...`;
+    statusBar.text = `$(person) ${serviceName} | ${locationName}`;
+    statusBar.tooltip = toServiceLocationTooltip({
+      serviceId: serviceProfile.id,
+      serviceUrl: toServiceUrl(serviceProfile.value.location),
+      searchLocationId: locationProfile.id,
+      searchLocationPath: toSearchLocationPath(locationProfile.value),
+    });
+    statusBar.show();
+  };
   const dispatch = await makeStore({
     getConnectionLocationsStorage,
     getConnectionsStorage,
@@ -426,7 +474,8 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
       return;
     },
     emitElementsUpdatedEvent(invalidatedElementsEmitter, getTempEditFolderUri),
-    getElementsInEdit
+    getElementsInEdit,
+    updateStatusBar
   );
 
   const refreshElementHistory = async (
@@ -742,32 +791,30 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
       CommandId.ADD_SERVICE_AND_LOCATION,
       () => {
         return withErrorLogging(CommandId.ADD_SERVICE_AND_LOCATION)(
-          (async () => {
-            const serviceId = await addNewServiceCommand(dispatch, {
+          addServiceAndLocationCommand(
+            dispatch,
+            {
               getValidServiceDescriptions: () =>
                 getExistingUnusedServiceDescriptions(getState)(
                   getCredentialsStorage
                 ),
               getAllServiceNames: () => getAllServiceNames(getState),
-            });
-            if (serviceId) {
-              await addNewSearchLocation(dispatch, {
-                getSearchLocationNames: () =>
-                  getAllSearchLocationNames(getState),
-                getValidSearchLocationDescriptionsForService:
-                  getValidUnusedSearchLocationDescriptionsForService(getState),
-                getServiceDescriptionsBySearchLocationId:
-                  getAllServiceDescriptionsBySearchLocationId(getState)(
-                    getCredentialsStorage
-                  ),
-                getConnectionDetails: validConnectionDetailsResolver,
-                getValidUsedServiceDescriptions: () =>
-                  getExistingUsedServiceDescriptions(getState)(
-                    getCredentialsStorage
-                  ),
-              })(serviceId);
+            },
+            {
+              getSearchLocationNames: () => getAllSearchLocationNames(getState),
+              getValidSearchLocationDescriptionsForService:
+                getValidUnusedSearchLocationDescriptionsForService(getState),
+              getServiceDescriptionsBySearchLocationId:
+                getAllServiceDescriptionsBySearchLocationId(getState)(
+                  getCredentialsStorage
+                ),
+              getConnectionDetails: validConnectionDetailsResolver,
+              getValidUsedServiceDescriptions: () =>
+                getExistingUsedServiceDescriptions(getState)(
+                  getCredentialsStorage
+                ),
             }
-          })()
+          )
         );
       },
     ],
@@ -1374,7 +1421,6 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
     ),
     BlameDecoration
   );
-
   if (isWorkspaceSync()) {
     setContextVariable(SCM_STATUS_CONTEXT_NAME, ScmStatus.UNKNOWN);
     const folderUri = await getWorkspaceUri();
@@ -1448,6 +1494,52 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
           return;
         }
       )(folderUri);
+      const statusBarDispatch = async (action: Action) => {
+        if (
+          action.type === Actions.ENDEVOR_SERVICE_ADDED &&
+          action.service &&
+          action.connectionStatus
+        ) {
+          const service = action.service;
+          const connectionStatus = action.connectionStatus;
+          await dispatch({
+            ...action,
+            service,
+            connectionStatus,
+            type: Actions.ENDEVOR_SERVICE_CREATED,
+          });
+          return;
+        }
+        if (action.type === Actions.ENDEVOR_SEARCH_LOCATION_ADDED) {
+          const searchLocation = action.searchLocation;
+          if (searchLocation) {
+            await dispatch({
+              ...action,
+              searchLocation,
+              type: Actions.ENDEVOR_SEARCH_LOCATION_CREATED,
+            });
+            return;
+          }
+          await dispatch({
+            type: Actions.UPDATE_LAST_USED,
+            lastUsedServiceId: action.serviceId,
+            lastUsedSearchLocationId: action.searchLocationId,
+          });
+          return;
+        }
+        await dispatch(action);
+      };
+      const syncServiceLocationResolver = () =>
+        resolveCurrentSyncServiceLocation(
+          defineCurrentSyncServiceLocationResolutionOrder(
+            getState,
+            () =>
+              getAllExistingServiceDescriptions(getState)(
+                getCredentialsStorage
+              ),
+            () => getAllValidSearchLocationDescriptions(getState)
+          )
+        );
       context.subscriptions.push(
         watchForWorkspaceChanges(folderUri)(scmDispatch),
         endevorSourceControl,
@@ -1469,15 +1561,9 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
           () => {
             return withErrorLogging(CommandId.SYNC_WORKSPACE)(
               syncWorkspace(
-                scmDispatch,
+                dispatch,
                 connectionConfigurationResolver,
-                () =>
-                  getAllExistingServiceDescriptions(getState)(
-                    getCredentialsStorage
-                  ),
-                () => getAllValidSearchLocationDescriptions(getState),
-                () => getLastUsedServiceId(getScmState),
-                () => getLastUsedSearchLocationId(getScmState)
+                syncServiceLocationResolver
               )
             );
           },
@@ -1487,15 +1573,9 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
           () => {
             return withErrorLogging(CommandId.PULL_FROM_ENDEVOR)(
               pullFromEndevorCommand(
-                scmDispatch,
+                dispatch,
                 connectionConfigurationResolver,
-                () =>
-                  getAllExistingServiceDescriptions(getState)(
-                    getCredentialsStorage
-                  ),
-                () => getAllValidSearchLocationDescriptions(getState),
-                () => getLastUsedServiceId(getScmState),
-                () => getLastUsedSearchLocationId(getScmState)
+                syncServiceLocationResolver
               )
             );
           },
@@ -1592,7 +1672,40 @@ export const activate: Extension<ExternalEndevorApi>['activate'] = async (
             );
           },
         ],
+        [
+          CommandId.UPDATE_CONNECTION_LOCATION,
+          () => {
+            return withErrorLogging(CommandId.UPDATE_CONNECTION_LOCATION)(
+              addServiceAndLocationCommand(
+                statusBarDispatch,
+                {
+                  getValidServiceDescriptions: () =>
+                    getAllExistingServiceDescriptions(getState)(
+                      getCredentialsStorage
+                    ),
+                  getAllServiceNames: () => getAllServiceNames(getState),
+                },
+                {
+                  getSearchLocationNames: () =>
+                    getAllSearchLocationNames(getState),
+                  getValidSearchLocationDescriptionsForService: () =>
+                    getAllValidSearchLocationDescriptions(getState),
+                  getServiceDescriptionsBySearchLocationId:
+                    getAllServiceDescriptionsBySearchLocationId(getState)(
+                      getCredentialsStorage
+                    ),
+                  getConnectionDetails: validConnectionDetailsResolver,
+                  getValidUsedServiceDescriptions: () =>
+                    getExistingUsedServiceDescriptions(getState)(
+                      getCredentialsStorage
+                    ),
+                }
+              )
+            );
+          },
+        ],
       ] as const;
+      updateStatusBar();
       context.subscriptions.push(
         ...scmCommands.map(([id, command]) =>
           vscode.commands.registerCommand(id, command)

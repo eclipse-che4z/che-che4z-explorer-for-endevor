@@ -120,7 +120,8 @@ export const make =
       searchLocationId: EndevorId,
       elements: ReadonlyArray<Element>
     ) => void,
-    getElementsInEdit: () => Promise<string[]>
+    getElementsInEdit: () => Promise<string[]>,
+    updateStatusBar: () => void
   ) => {
     updateState(await readLatestState(getElementsInEdit)(storageGetters));
     refreshTree();
@@ -892,6 +893,51 @@ export const make =
           break;
         }
         case Actions.ENDEVOR_SERVICE_ADDED: {
+          if (action.service) {
+            updateState(
+              updateServiceReducer(state())({
+                value: action.service.value,
+                id: action.service.id,
+                isDefault: action.service.isDefault,
+              })
+            );
+            if (action.service.credential) {
+              storeCredentialToStorage(storageGetters.getCredentialsStorage)(
+                action.service.id,
+                action.service.credential
+              );
+            }
+            if (
+              action.connectionStatus?.status === EndevorConnectionStatus.VALID
+            ) {
+              updateState(
+                sessionReducer(state())(action.service.id)({
+                  id: action.service.id,
+                  connection: {
+                    status: action.connectionStatus.status,
+                    value: {
+                      ...action.service.value,
+                      apiVersion: action.connectionStatus.apiVersion,
+                    },
+                  },
+                })
+              );
+            }
+            if (
+              action.connectionStatus?.status ===
+              EndevorConnectionStatus.INVALID
+            ) {
+              updateState(
+                sessionReducer(state())(action.service.id)({
+                  id: action.service.id,
+                  connection: {
+                    status: action.connectionStatus.status,
+                    value: action.service.value,
+                  },
+                })
+              );
+            }
+          }
           updateState(addServiceLocationReducer(state())(action.serviceId)());
           refreshTree();
           persistState(storageGetters)(state());
@@ -902,6 +948,7 @@ export const make =
             updateServiceReducer(state())({
               value: action.service.value,
               id: action.service.id,
+              isDefault: action.service.isDefault,
             })
           );
           if (action.service.credential) {
@@ -910,7 +957,6 @@ export const make =
               action.service.credential
             );
           }
-          updateState(addServiceLocationReducer(state())(action.service.id)());
           if (
             action.connectionStatus.status === EndevorConnectionStatus.VALID
           ) {
@@ -949,6 +995,8 @@ export const make =
             updateServiceReducer(state())({
               id: action.serviceId,
               value: action.connection.value,
+              // Currently this action is used only for internal services, and they cannot be default
+              isDefault: false,
             })
           );
           let credential: EndevorSessionCredential | undefined;
@@ -990,6 +1038,11 @@ export const make =
           break;
         }
         case Actions.ENDEVOR_SEARCH_LOCATION_ADDED: {
+          if (action.searchLocation) {
+            updateState(
+              createSearchLocationReducer(state())(action.searchLocation)
+            );
+          }
           updateState(
             addServiceLocationReducer(state())(action.serviceId)(
               action.searchLocationId
@@ -1108,6 +1161,13 @@ export const make =
           ];
           updateEditElementsWhenContext(updatedElementsInEdit);
 
+          break;
+        }
+        case Actions.UPDATE_LAST_USED: {
+          const serviceId = action.lastUsedServiceId;
+          const searchLocationId = action.lastUsedSearchLocationId;
+          updateState(lastUsedReducer(state())(serviceId, searchLocationId));
+          updateStatusBar();
           break;
         }
         default:
@@ -1250,6 +1310,7 @@ const persistState =
                 rejectUnauthorized: false,
                 location: service.value.location,
               },
+              isDefault: service.isDefault,
             };
             return acc;
           },
@@ -2107,6 +2168,11 @@ const findUpdatedElements =
     });
   };
 
+const lastUsedReducer =
+  (initialState: State) =>
+  (lastUsedServiceId: Id, lastUsedSearchLocationId: Id): State => {
+    return { ...initialState, lastUsedServiceId, lastUsedSearchLocationId };
+  };
 // public API
 
 export const getAllElementFilterValues =
@@ -2986,3 +3052,35 @@ export const getActivityRecords = (state: () => State): ActivityRecords =>
 
 export const getElementsInEdit = (state: () => State): ReadonlyArray<string> =>
   state().editElements;
+
+export const getDefaultServiceProfile = (state: () => State) => {
+  const services = state().services;
+  const defaultServices = Object.values(services).find(
+    (service) => service && service.isDefault
+  );
+  return defaultServices;
+};
+
+export const getDefaultLocationProfile = (state: () => State) => {
+  const locations = state().searchLocations;
+  const defaultLocations = Object.values(locations).find(
+    (location) => location && location.isDefault
+  );
+  return defaultLocations;
+};
+
+export const getLastUsedService = (
+  state: () => State
+): EndevorService | undefined => {
+  const lastUsedServiceId = state().lastUsedServiceId;
+  if (!lastUsedServiceId) return;
+  return state().services[toCompositeKey(lastUsedServiceId)];
+};
+
+export const getLastUsedSearchLocation = (
+  state: () => State
+): EndevorSearchLocation | undefined => {
+  const lastUsedLocationId = state().lastUsedSearchLocationId;
+  if (!lastUsedLocationId) return;
+  return state().searchLocations[toCompositeKey(lastUsedLocationId)];
+};

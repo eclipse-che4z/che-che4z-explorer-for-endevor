@@ -18,29 +18,12 @@ import {
 import { reporter } from '../../globals';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
 import {
-  askForService,
-  dialogCancelled as serviceDialogCancelled,
-} from '../../dialogs/locations/endevorServiceDialogs';
-import {
-  askForSearchLocation,
-  dialogCancelled as locationDialogCancelled,
-} from '../../dialogs/locations/endevorSearchLocationDialogs';
-import {
   askForChangeControlValue,
   dialogCancelled as changeControlDialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
-import {
-  EndevorId,
-  ValidEndevorSearchLocationDescriptions,
-  ExistingEndevorServiceDescriptions,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
-import {
-  SyncActions,
-  UpdateLastUsed,
-  WorkspaceSynced,
-} from '../../store/scm/_doc/Actions';
 import {
   SyncWorkspaceCommandCompletedStatus,
   TelemetryEvents,
@@ -54,11 +37,12 @@ import {
   EndevorAuthorizedService,
   SearchLocation,
 } from '../../api/_doc/Endevor';
-import { Id } from '../../store/storage/_doc/Storage';
 import { createEndevorLogger } from '../../logger';
+import { SyncServiceLocation } from '../../store/scm/resolvers';
+import { Actions, UpdateLastUsed } from '../../store/_doc/Actions';
 
 export const syncWorkspace = async (
-  dispatch: (action: WorkspaceSynced | UpdateLastUsed) => Promise<void>,
+  dispatch: (action: UpdateLastUsed) => Promise<void>,
   getConnectionConfiguration: (
     serviceId: EndevorId,
     searchLocationId: EndevorId
@@ -69,10 +53,7 @@ export const syncWorkspace = async (
       }
     | undefined
   >,
-  getValidServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>,
-  getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions,
-  getLastUsedServiceId: () => Id | undefined,
-  getLastUsedSearchLocationId: () => Id | undefined
+  getSyncServiceLocation: () => Promise<SyncServiceLocation | undefined>
 ): Promise<void> => {
   const logger = createEndevorLogger();
   logger.trace('Synchronization of an Endevor workspace called.');
@@ -103,47 +84,27 @@ export const syncWorkspace = async (
     });
     return;
   }
-  const serviceDialogResult = await askForService(
-    await getValidServiceDescriptions(),
-    getLastUsedServiceId(),
-    'Last Used'
-  );
-  if (serviceDialogCancelled(serviceDialogResult)) {
-    logger.trace('No Endevor connection was selected.');
+  const syncServiceLocation = await getSyncServiceLocation();
+  if (!syncServiceLocation) {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
       status: SyncWorkspaceCommandCompletedStatus.CANCELLED,
     });
     return;
   }
-  const serviceId = serviceDialogResult.id;
-  logger.updateContext({ serviceId });
-  const locationDialogResult = await askForSearchLocation(
-    getValidSearchLocationDescriptions(),
-    getLastUsedSearchLocationId(),
-    'Last Used'
-  );
-  if (locationDialogCancelled(locationDialogResult)) {
-    logger.trace('No Endevor inventory location was selected.');
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_SYNC_WORKSPACE_COMPLETED,
-      status: SyncWorkspaceCommandCompletedStatus.CANCELLED,
-    });
-    return;
-  }
-  const searchLocationId = locationDialogResult.id;
+  const { serviceId, searchLocationId } = syncServiceLocation;
   logger.updateContext({ serviceId, searchLocationId });
-  dispatch({
-    type: SyncActions.UPDATE_LAST_USED,
-    lastUsedServiceId: serviceId,
-    lastUsedSearchLocationId: searchLocationId,
-  });
   const connectionParams = await getConnectionConfiguration(
     serviceId,
     searchLocationId
   );
   if (!connectionParams) return;
   const { service, searchLocation } = connectionParams;
+  dispatch({
+    type: Actions.UPDATE_LAST_USED,
+    lastUsedServiceId: serviceId,
+    lastUsedSearchLocationId: searchLocationId,
+  });
   const syncChangeControlValue = await askForChangeControlValue({
     ccid: searchLocation.ccid,
     comment: searchLocation.comment,

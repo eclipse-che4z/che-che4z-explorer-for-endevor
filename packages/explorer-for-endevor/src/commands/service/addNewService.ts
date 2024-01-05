@@ -86,7 +86,8 @@ export const addNewServiceCommand = async (
     createdService.value.connection.status === EndevorConnectionStatus.VALID
   ) {
     dispatch({
-      type: Actions.ENDEVOR_SERVICE_CREATED,
+      type: Actions.ENDEVOR_SERVICE_ADDED,
+      serviceId: createdService.id,
       service: {
         id: createdService.id,
         value: createdService.value.connection.value,
@@ -96,6 +97,7 @@ export const addNewServiceCommand = async (
               id: createdService.id,
             }
           : undefined,
+        isDefault: false,
       },
       connectionStatus: {
         status: createdService.value.connection.status,
@@ -104,7 +106,8 @@ export const addNewServiceCommand = async (
     });
   } else {
     dispatch({
-      type: Actions.ENDEVOR_SERVICE_CREATED,
+      type: Actions.ENDEVOR_SERVICE_ADDED,
+      serviceId: createdService.id,
       service: {
         id: createdService.id,
         value: createdService.value.connection.value,
@@ -114,6 +117,7 @@ export const addNewServiceCommand = async (
               id: createdService.id,
             }
           : undefined,
+        isDefault: false,
       },
       connectionStatus: {
         status: createdService.value.connection.status,
