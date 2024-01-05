@@ -245,6 +245,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -318,6 +321,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
@@ -423,6 +429,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const outdatedLocation: SubSystemMapPath = {
@@ -523,6 +532,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
@@ -615,6 +627,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const existingElement: CachedElement = {
@@ -772,6 +787,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -876,6 +894,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const endevorMapCacheVersion = EndevorCacheVersion.OUTDATED;
@@ -983,6 +1004,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
@@ -1059,6 +1083,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -1152,6 +1179,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
@@ -1256,6 +1286,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const originalEnvStage: EnvironmentStage = {
@@ -1365,6 +1398,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const nonRelatedLocation: SubSystemMapPath = {
@@ -1561,6 +1597,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const element: Element = {
@@ -1635,6 +1674,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -1688,6 +1730,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -1794,6 +1839,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const element: Element = {
@@ -1875,6 +1923,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -1937,6 +1988,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -1992,6 +2046,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
@@ -2095,6 +2152,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const element: Element = {
@@ -2176,6 +2236,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       const emptyLocation = inPlaceLocation;
@@ -2238,6 +2301,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       storeState.caches = {
@@ -2293,6 +2359,9 @@ describe('store actions callbacks', () => {
         },
         async () => {
           return [];
+        },
+        () => {
+          return;
         }
       );
       // act
