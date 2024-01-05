@@ -310,6 +310,8 @@ export type State = {
   serviceLocations: ConnectionLocations;
   activityEntries: ActivityRecords;
   editElements: ReadonlyArray<string>;
+  lastUsedServiceId?: Id;
+  lastUsedSearchLocationId?: Id;
 };
 
 // external types

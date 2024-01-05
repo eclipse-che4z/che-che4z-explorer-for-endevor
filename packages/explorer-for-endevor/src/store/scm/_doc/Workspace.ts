@@ -13,7 +13,6 @@
 
 import { Element } from '@local/endevor/_doc/Endevor';
 import { Uri } from 'vscode';
-import { Id } from '../../storage/_doc/Storage';
 
 export type EndevorElement = Omit<Element, 'noSource' | 'lastActionCcid'>;
 
@@ -75,8 +74,6 @@ export type WorkspaceElements = ReadonlyArray<WorkspaceElement>;
 
 export type State = {
   workspaceElements: WorkspaceElements;
-  lastUsedServiceId?: Id;
-  lastUsedSearchLocationId?: Id;
 };
 
 export const enum ScmStatus {

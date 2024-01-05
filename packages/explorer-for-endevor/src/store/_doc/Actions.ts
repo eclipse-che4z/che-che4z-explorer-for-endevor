@@ -80,6 +80,7 @@ export const enum Actions {
   ACTIVITY_RECORD_ADDED = 'ACTIVITY_RECORD/ADDED',
   ELEMENT_EDIT_OPENED = 'ELEMENT_EDIT/OPENED',
   ELEMENT_EDIT_CLOSED = 'ELEMENT_EDIT/CLOSED',
+  UPDATE_LAST_USED = 'UPDATE_LAST_USED',
 }
 
 export interface ActivityRecordAdded {
@@ -145,6 +146,20 @@ export interface EndevorServiceDeleted {
 export interface EndevorServiceAdded {
   type: Actions.ENDEVOR_SERVICE_ADDED;
   serviceId: EndevorId;
+  service?: EndevorService &
+    Partial<{
+      credential: Credential;
+    }>;
+  connectionStatus?:
+    | {
+        status: EndevorConnectionStatus.VALID;
+        apiVersion: ServiceApiVersion;
+      }
+    | {
+        status:
+          | EndevorConnectionStatus.UNKNOWN
+          | EndevorConnectionStatus.INVALID;
+      };
 }
 
 export interface EndevorServiceCreated {
@@ -182,6 +197,7 @@ export interface EndevorSearchLocationAdded {
   type: Actions.ENDEVOR_SEARCH_LOCATION_ADDED;
   serviceId: EndevorId;
   searchLocationId: EndevorId;
+  searchLocation?: EndevorSearchLocation;
 }
 
 export interface ElementNamesFilterUpdated {
@@ -364,6 +380,12 @@ export interface ElementEditClosed {
   elementPath: string;
 }
 
+export type UpdateLastUsed = Readonly<{
+  type: Actions.UPDATE_LAST_USED;
+  lastUsedServiceId: EndevorId;
+  lastUsedSearchLocationId: EndevorId;
+}>;
+
 export type Action =
   | ActivityRecordAdded
   | SessionEndevorTokenAdded
@@ -402,4 +424,5 @@ export type Action =
   | SelectedElementsUpdated
   | SelectedElementsFetched
   | ElementEditOpened
-  | ElementEditClosed;
+  | ElementEditClosed
+  | UpdateLastUsed;

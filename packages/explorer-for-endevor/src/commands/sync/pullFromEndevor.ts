@@ -17,22 +17,9 @@ import {
 } from '../../store/scm/workspace';
 import { reporter } from '../../globals';
 import { getWorkspaceUri } from '@local/vscode-wrapper/workspace';
-import {
-  askForService,
-  dialogCancelled as serviceDialogCancelled,
-} from '../../dialogs/locations/endevorServiceDialogs';
-import {
-  askForSearchLocation,
-  dialogCancelled as locationDialogCancelled,
-} from '../../dialogs/locations/endevorSearchLocationDialogs';
-import {
-  EndevorId,
-  ValidEndevorSearchLocationDescriptions,
-  ExistingEndevorServiceDescriptions,
-} from '../../store/_doc/v2/Store';
+import { EndevorId } from '../../store/_doc/v2/Store';
 import { withNotificationProgress } from '@local/vscode-wrapper/window';
 import { isError } from '../../utils';
-import { SyncActions, UpdateLastUsed } from '../../store/scm/_doc/Actions';
 import {
   PullFromEndevorCommandCompletedStatus,
   TelemetryEvents,
@@ -46,12 +33,13 @@ import {
   EndevorAuthorizedService,
   SearchLocation,
 } from '../../api/_doc/Endevor';
-import { Id } from '../../store/storage/_doc/Storage';
 import {
   askForChangeControlValue,
   dialogCancelled as changeControlDialogCancelled,
 } from '../../dialogs/change-control/endevorChangeControlDialogs';
 import { createEndevorLogger } from '../../logger';
+import { SyncServiceLocation } from '../../store/scm/resolvers';
+import { Actions, UpdateLastUsed } from '../../store/_doc/Actions';
 
 export const pullFromEndevorCommand = async (
   dispatch: (action: UpdateLastUsed) => Promise<void>,
@@ -65,10 +53,7 @@ export const pullFromEndevorCommand = async (
       }
     | undefined
   >,
-  getValidServiceDescriptions: () => Promise<ExistingEndevorServiceDescriptions>,
-  getValidSearchLocationDescriptions: () => ValidEndevorSearchLocationDescriptions,
-  getLastUsedServiceId: () => Id | undefined,
-  getLastUsedSearchLocationId: () => Id | undefined
+  getSyncServiceLocation: () => Promise<SyncServiceLocation | undefined>
 ): Promise<void> => {
   const logger = createEndevorLogger();
   logger.trace('Pull from Endevor into workspace called.');
@@ -99,47 +84,27 @@ export const pullFromEndevorCommand = async (
     });
     return;
   }
-  const serviceDialogResult = await askForService(
-    await getValidServiceDescriptions(),
-    getLastUsedServiceId(),
-    'Last Used'
-  );
-  if (serviceDialogCancelled(serviceDialogResult)) {
-    logger.trace('No Endevor connection was selected.');
+  const syncServiceLocation = await getSyncServiceLocation();
+  if (!syncServiceLocation) {
     reporter.sendTelemetryEvent({
       type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
       status: PullFromEndevorCommandCompletedStatus.CANCELLED,
     });
     return;
   }
-  const serviceId = serviceDialogResult.id;
-  logger.updateContext({ serviceId });
-  const locationDialogResult = await askForSearchLocation(
-    getValidSearchLocationDescriptions(),
-    getLastUsedSearchLocationId(),
-    'Last Used'
-  );
-  if (locationDialogCancelled(locationDialogResult)) {
-    logger.trace('No Endevor inventory location was selected.');
-    reporter.sendTelemetryEvent({
-      type: TelemetryEvents.COMMAND_PULL_FROM_ENDEVOR_COMPLETED,
-      status: PullFromEndevorCommandCompletedStatus.CANCELLED,
-    });
-    return;
-  }
-  const searchLocationId = locationDialogResult.id;
+  const { serviceId, searchLocationId } = syncServiceLocation;
   logger.updateContext({ serviceId, searchLocationId });
-  dispatch({
-    type: SyncActions.UPDATE_LAST_USED,
-    lastUsedServiceId: serviceId,
-    lastUsedSearchLocationId: searchLocationId,
-  });
   const connectionParams = await getConnectionConfiguration(
     serviceId,
     searchLocationId
   );
   if (!connectionParams) return;
   const { service, searchLocation } = connectionParams;
+  dispatch({
+    type: Actions.UPDATE_LAST_USED,
+    lastUsedServiceId: serviceId,
+    lastUsedSearchLocationId: searchLocationId,
+  });
   const pullChangeControlValue = await askForChangeControlValue({
     ccid: searchLocation.ccid,
     comment: searchLocation.comment,

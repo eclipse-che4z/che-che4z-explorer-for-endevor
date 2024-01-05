@@ -75,6 +75,7 @@ import {
   ValidEndevorCredential,
   ValidEndevorSearchLocationDescription,
 } from './_doc/v2/Store';
+import { MarkdownString } from 'vscode';
 
 export const getConnectionConfiguration =
   ({
@@ -628,5 +629,36 @@ export const createEndevorInventory = (
       return accEnvStages;
     },
     {}
+  );
+};
+
+export const toServiceLocationTooltip = ({
+  serviceId,
+  serviceUrl,
+  searchLocationId: locationId,
+  searchLocationPath,
+}: {
+  serviceId: EndevorId;
+  serviceUrl: string;
+  searchLocationId: EndevorId;
+  searchLocationPath: string;
+}): MarkdownString => {
+  return new MarkdownString(
+    `
+  **Endevor Workspace Sync Defaults:**
+
+  **Connection name:** ${serviceId.name} ${
+      serviceId.source === Source.SYNCHRONIZED ? `   **Source:** Zowe` : ''
+    }
+    ${serviceUrl}
+    
+***
+
+  **Inventory location name:** ${locationId.name} ${
+      locationId.source === Source.SYNCHRONIZED ? `   **Source:** Zowe` : ''
+    }
+    ${searchLocationPath}
+`,
+    true
   );
 };

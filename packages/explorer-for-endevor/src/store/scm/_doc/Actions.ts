@@ -11,12 +11,9 @@
  *   Broadcom, Inc. - initial API and implementation
  */
 
-import { Id } from '../../storage/_doc/Storage';
-
 export const enum SyncActions {
   ELEMENTS_UPDATED = 'ELEMENTS_UPDATED',
   WORKSPACE_META_UPDATED = 'WORKSPACE_META_UPDATED',
-  UPDATE_LAST_USED = 'UPDATE_LAST_USED',
 }
 
 export type SyncElementsUpdated = Readonly<{
@@ -27,10 +24,4 @@ export type WorkspaceSynced = Readonly<{
   type: SyncActions.WORKSPACE_META_UPDATED;
 }>;
 
-export type UpdateLastUsed = Readonly<{
-  type: SyncActions.UPDATE_LAST_USED;
-  lastUsedServiceId: Id;
-  lastUsedSearchLocationId: Id;
-}>;
-
-export type SyncAction = SyncElementsUpdated | WorkspaceSynced | UpdateLastUsed;
+export type SyncAction = SyncElementsUpdated | WorkspaceSynced;

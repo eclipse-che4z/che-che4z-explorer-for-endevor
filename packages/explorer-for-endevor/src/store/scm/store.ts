@@ -25,7 +25,6 @@ import { logger } from '../../globals';
 import { SyncAction, SyncActions } from './_doc/Actions';
 import { UnreachableCaseError } from '@local/endevor/typeHelpers';
 import { Uri } from 'vscode';
-import { Id } from '../storage/_doc/Storage';
 
 export const make =
   (
@@ -42,14 +41,6 @@ export const make =
         case SyncActions.WORKSPACE_META_UPDATED:
           updateState(await fetchWorkspaceElementsReducer(state())(folderUri));
           renderTree(action);
-          break;
-        case SyncActions.UPDATE_LAST_USED:
-          updateState(
-            lastUsedReducer(state())(
-              action.lastUsedServiceId,
-              action.lastUsedSearchLocationId
-            )
-          );
           break;
         default:
           throw new UnreachableCaseError(action);
@@ -76,12 +67,6 @@ const fetchWorkspaceElementsReducer =
       return { ...initialState, workspaceElements: [] };
     }
     return { ...initialState, workspaceElements: workspaceState };
-  };
-
-const lastUsedReducer =
-  (initialState: State) =>
-  (lastUsedServiceId: Id, lastUsedSearchLocationId: Id): State => {
-    return { ...initialState, lastUsedServiceId, lastUsedSearchLocationId };
   };
 
 // public API
@@ -189,13 +174,3 @@ export const getElementOriginalVersionForFile =
     }
     return;
   };
-
-export const getLastUsedServiceId = (state: () => State): Id | undefined => {
-  return state().lastUsedServiceId;
-};
-
-export const getLastUsedSearchLocationId = (
-  state: () => State
-): Id | undefined => {
-  return state().lastUsedSearchLocationId;
-};

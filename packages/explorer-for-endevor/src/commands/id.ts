@@ -21,6 +21,7 @@ export const CommandId = {
 
   // service commands
   ADD_SERVICE_AND_LOCATION: `${COMMAND_PREFIX}.addServiceAndLocation`,
+  UPDATE_CONNECTION_LOCATION: `${COMMAND_PREFIX}.updateConnectionLocation`,
   ADD_NEW_SERVICE: `${COMMAND_PREFIX}.addNewService`,
   EDIT_SERVICE: `${COMMAND_PREFIX}.editService`,
   HIDE_SERVICE: `${COMMAND_PREFIX}.hideService`,
