@@ -368,6 +368,10 @@
         "command": "e4e.historyCompareWith",
         "title": "Compare with ...",
         "category": "Explorer for Endevor"
+      },
+      {
+        "command": "e4e.updateConnectionLocation",
+        "title": "Update Connection Location"
       }
     ],
     "submenus": [
@@ -917,6 +921,10 @@
         },
         {
           "command": "e4e.historyCompareWith",
+          "when": "false"
+        },
+        {
+          "command": "e4e.updateConnectionLocation",
           "when": "false"
         }
       ],
