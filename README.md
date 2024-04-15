@@ -11,20 +11,25 @@
 The Explorer for Endevor VS Code extension modernizes the way you interact with Endevor and offers a user-friendly and convenient way to work with elements and inventory locations. Explorer for Endevor includes the following features:
 
 - Work with multiple Endevor inventory locations
-- Filter elements in the tree
+- Filter elements in the **Endevor Elements** view
 - Fetch elements from up the Endevor map
 - Add an element
 - View an element
 - Edit an element
 - Move an element
 - Retrieve an element with dependencies
+- Create a package
+- Cast and reset a package
+- List and filter packages
 - View element details
 - View history of elements
+- View the element diff in element history
 - Check action reports
 - Perform a Generate action
 - Print a listing
 - Read team configuration files and Zowe CLI profiles (including Zowe base profiles)
 - Create and synchronize an Endevor workspace
+- Leverage a basic SCL highlighter
 
 Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che4z) open-source project. The extension is also part of [Code4z](https://techdocs.broadcom.com/code4z), an all-round VS Code extension package that offers a modern experience for mainframe application developers, including tools for language support, data editing, testing, and source code management. For an interactive overview of Code4z, see the [Code4z Developer Cockpit](https://mainframe.broadcom.com/code4z-developer-cockpit).
 
@@ -35,15 +40,15 @@ Explorer for Endevor is a part of the [Che4z](https://github.com/eclipse/che-che
   - [Get Started Walkthroughs](#get-started-walkthroughs)
   - [Create an Endevor Connection](#create-an-endevor-connection)
   - [Create an Endevor Inventory Location](#create-an-endevor-inventory-location)
-- [Multi-factor Authentication and PassTickets](#multi-factor-authentication-and-passtickets)
+- [Token Authentication and PassTickets](#token-authentication-and-passtickets)
 - [Workspace Synchronization](#workspace-synchronization)
 - [Use Cases](#use-cases)
 - [Base Profiles](#base-profiles)
-  - [Access API Mediation Layer Services](#access-api-mediation-layer-services)
+  - [Access Zowe API Mediation Layer](#access-zowe-api-mediation-layer)
 - [Team Configuration File](#team-configuration-file)
-- [Activity View](#activity-view)
+- [Reports View](#reports-view)
+- [Packages View](#packages-view)
 - [Manage the Extension Tree](#manage-the-extension-tree)
-- [Environment Variables](#environment-variables)
 - [Configure Explorer for Endevor](#configure-explorer-for-endevor)
 - [List of Limitations](#list-of-limitations)
 - [Contribute to Explorer for Endevor](#contribute-to-explorer-for-endevor)
@@ -63,18 +68,33 @@ Ensure that you meet the following prerequisites before you use Explorer for End
 
 **Host-side prerequisites**:
 
-- Either Endevor version 18.0.12 with the SO09580 and SO09581 PTFs or Endevor version 18.1 with the SO15978 PTF.
+- Endevor 18.0.12 or higher:
+
+  - (Endevor 18.0.12) Install PTF SO09580.
+  - (Endevor 18.1) Install PTF SO09581.
+  - (Endevor 19.0)
+
 - Endevor Web Services.
 
 ## Getting Started
 
 Create an Endevor connection and Endevor inventory location and review use cases to see how you can use the full potential of Explorer for Endevor. Alternatively, use your existing Zowe CLI Endevor profiles to get started.
 
+Explorer for Endevor 1.7.0 includes the following new features and changes:
+
+- Create, cast, and reset a package for multiple elements.
+
+- Select the processor group before uploading an edited element back to Endevor.
+
+- Split the element save and element upload functionalities. Now you can make changes in the element and choose when to upload the element back to Endevor.
+
+- The default profiles from the team config files, if present, are now propagated to the top of the Endevor Elements view at the beginning of the Explorer for Endevor session.
+
 With the 1.6.0 release, Explorer for Endevor introduces a number of features that further improve user experience.
 
 - The **Move** command enables you to move (promote) elements one stage up the map.
 
-- Activity View tracks the session activity and provides the Execution and API reports.
+- Report View tracks the session activity and provides the Execution and API reports.
 
 - Ability to connect to API Mediation Layer (ML) and take advantage of microservices using your base profile.
 
@@ -119,7 +139,7 @@ Create an Endevor connection.
    - If your connection does not include credentials during the first session of Explorer for Endevor, you are prompted to enter credentials.
    - Passwords with 9 or more characters are treated as a _passphrase_ by the server and are case-sensitive.
 
-Your new connection is now available in the tree.
+Your new connection is now available in the Endevor Elements view.
 
 ### Create an Endevor Inventory Location
 
@@ -155,7 +175,7 @@ For more information on PassTickets, check the [Multi-Factor Authentication (MFA
 
 ## Workspace Synchronization
 
-A synchronized Endevor workspace enables you to work with inventory locations locally and synchronize elements from and to Endevor on the mainframe. You can create an Endevor workspace in your VS Code by enabling the **Workspace Sync** setting in the extension settings. Synchronized elements appear in the selected folder and you can see them in the **File Explorer** panel. You can manage the workspace from VSCode with Explorer for Endevor extension installed.
+A synchronized Endevor workspace enables you to work with inventory locations locally and synchronize elements from and to Endevor on the mainframe. You can create an Endevor workspace in your VS Code by enabling the **Workspace Sync** setting in the extension settings. Synchronized elements appear in the selected folder and you can see them in the **File Explorer** panel. You can manage the workspace from VS Code with Explorer for Endevor extension installed.
 
 **Note:** The feature is experimental in Explorer for Endevor v1.3.0, v1.4.0 and v1.5.0.
 
@@ -174,10 +194,16 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 - [Move an element](#move-an-element): Move an element up the map by using the Endevor `move statement` with such options as **With History**, **Bypass Element Delete**, **Synchronize**, **Retain Signout**, and **Jump**.
 - [View details](#view-details): View the details of a chosen element. The details include the environment, stage, system, subsystem, element type, and the name and extension of the element.
 - [Show history](#show-history): Review the history of a selected element.
-- [Generate elements for the entire subsystem](#generate-Elements-for-the-entire-subsystem): Review the summary of a C1MSGS1 Endevor batch execution report that is available to you once the **Generate All Elements** function is executed.
+- [Generate all elements for a subsystem](#generate-all-elements-for-a-subsystem):
+  Generate the elements that are allocated in place in the selected subsystem, using a proper type sequence. Additionally, produce a detailed report that contains build status.
 - [Review the Generate report](#review-the-Generate-report): Review the C1MSGS1 Endevor batch execution report that is available to you once the **Generate in Place** or **Generate with Copyback** function is executed.
 - [Retrieve an element](#retrieve-an-element): Download the selected element.
 - [Retrieve an element with dependencies](#retrieve-an-element-with-dependencies): You can download the selected element with dependencies.
+- [Create a package](#create-a-package): You can create a package from multiple elements.
+- [Show packages](#show-packages): Show packages from an Endevor instance.
+- [Filter packages](#filter-packages): Filter one or multiple packages by their status.
+- [Cast a package](#cast-a-package): You can cast a package using various cast options.
+- [Reset a package](#reset-a-package): The Reset action enables you to reset package back to the IN-EDIT status.
 - [Edit](#edit): The Edit action enables you to download an element to your workspace, edit, and upload the selected element step by step. Once you are done with editing the element, press CTRL+S or Command+S to upload the edited element back.
 - [Generate](#generate): Call the Generate action for an element to invoke the Generate Processor that creates an executable form of the element.
 - [Print a listing](#print-a-listing): Reveal the output of the performed Generate action.
@@ -186,9 +212,9 @@ Review the following use cases to familiarize yourself with the basic Explorer f
 
 ### Filter Elements
 
-You apply a filter or multiple filters to the Endevor elements that were fetched into the tree. Filters enable you to display the specified elements only.
+You apply a filter or multiple filters to the Endevor elements that were fetched into the **Endevor Elements** view. Filters enable you to display the specified elements only.
 
-1. Hover over an inventory location in the tree.
+1. Hover over an inventory location in the **Endevor Elements** view.
 
    The **Filter an Inventory Location** icon appears on the right side of the panel.
 
@@ -210,39 +236,39 @@ You apply a filter or multiple filters to the Endevor elements that were fetched
 
 3. Press Enter to confirm your choice.
 
-   A **Filtered** row appears in the tree. You can expand the row to see what filters are applied to the inventory location.
+   A **Filtered** row appears in the **Endevor Elements** view. You can expand the row to see what filters are applied to the inventory location.
 
 4. (Optional) Edit or remove your filters by clicking the **Edit filter** or **Clear filter value** options respectively. The options appear when you hover over the filter names.
 
-![Filter Elements](packages/explorer-for-endevor/images/E4E-filter-elements.gif?raw=true 'Filter Elements')
+![Filter Elements](images/E4E-filter-elements.gif?raw=true 'Filter Elements')
 <br /><br />
 
 You successfully set a filter for your inventory location.
 
 ### Fetch Elements from up the Map
 
-Both **Build using map** and **Return first found** Endevor search element options are combined to fetch first found elements from up the map into the tree.
+Both **Build using map** and **Return first found** Endevor search element options are combined to fetch first found elements from up the map into the **Endevor Elements** view.
 
-1. Hover over an inventory location in the tree.
+1. Hover over an inventory location in the **Endevor Elements** view.
 
    The **Show Endevor elements from up the map** icon appears on the right side of the panel.
 
 2. Click the **Show Endevor elements from up the map** icon.
 
-   The elements from up the Endevor map appear in the tree.
+   The elements from up the Endevor map appear in the **Endevor Elements** view.
 
 3. (Optional) You can switch back to the elements from the inventory location only view by clicking the **Show Endevor elements in place**.
 
-![Show Endevor Elements from up the Map](packages/explorer-for-endevor/images/E4E-up-the-map.gif?raw=true 'Show Endevor Elements from up the Map')
+![Show Endevor Elements from up the Map](images/E4E-up-the-map.gif?raw=true 'Show Endevor Elements from up the Map')
 <br /><br />
 
 You successfully fetched the elements from up the map.
 
 ### Add an Element
 
-You can upload a new element to your inventory location. Also, you can assign a processor group to your element in the process of uploading the element. The uploaded element appears under the selected type in the tree.
+You can upload a new element to your inventory location. Also, you can assign a processor group to your element in the process of uploading the element. The uploaded element appears under the selected type in the **Endevor Elements** view.
 
-1. Hover over an inventory location in the tree.
+1. Hover over an inventory location in the **Endevor Elements** view.
 
    The **Add an Element** icon appears on the right side of the panel.
 
@@ -254,30 +280,30 @@ You can upload a new element to your inventory location. Also, you can assign a 
 
 4. (Optional) Select an available processor group from the drop-down list.
 
-![Add an Element](packages/explorer-for-endevor/images/E4E-add.gif?raw=true 'Add an Element')
+![Add an Element](images/E4E-add.gif?raw=true 'Add an Element')
 <br /><br />
 
 You successfully added the element.
 
 ### View an Element
 
-You can view the contents, summary, and source level information of an element by clicking on the element in the tree. The chosen element appears in the editor area. Viewing the contents of the element allows you to determine if you want to retrieve and work with the element.
+You can view the contents, summary, and source level information of an element by clicking on the element in the **Endevor Elements** view. The chosen element appears in the editor area. Viewing the contents of the element allows you to determine if you want to retrieve and work with the element.
 
 1. Hover over an element that you want to view.
 2. Click the element to see the contents of the element.
 
    The contents of the element appear in the editor area.
 
-![View an Element](packages/explorer-for-endevor/images/E4E-view.gif?raw=true 'View an Element')
+![View an Element](images/E4E-view.gif?raw=true 'View an Element')
 <br /><br />
 
 ### Move an Element
 
-Use the **Move** option against an element to move the selected element up the map. When the move is successful, the element is displayed in the next stage up the map. To see the result of the move, click the **Show Endevor Elements Up The Map** option that fetches the elements from up the map into the tree. By default, the up the map view is not enabled.
+Use the **Move** option against an element to move the selected element up the map. When the move is successful, the element is displayed in the next stage up the map. To see the result of the move, click the **Show Endevor Elements Up The Map** option that fetches the elements from up the map into the **Endevor Elements** view. By default, the up the map view is not enabled.
 
-1. (Optional) Hover over your environment location in the tree and click the **Show Endevor Elements Up The Map** option.
+1. (Optional) Hover over your environment location in the **Endevor Elements** view and click the **Show Endevor Elements Up The Map** option.
 
-   The up the map elements display in the tree.
+   The up the map elements display in the **Endevor Elements** view.
 
 2. Right-click the element you want to move and select the **Move** option.
 
@@ -304,7 +330,7 @@ The inventory location details of an element you want to view appear in the edit
 
    The details of the element appear in the editor area.
 
-![View Details](packages/explorer-for-endevor/images/E4E-view-details.gif?raw=true 'View Details')
+![View Details](images/E4E-view-details.gif?raw=true 'View Details')
 <br /><br />
 
 ### Show History
@@ -316,7 +342,7 @@ The **Show History** feature enables you to review changes of the element. You c
 
    The history of the element appears in the editor area.
 
-![View History](packages/explorer-for-endevor/images/E4E-view-history.gif?raw=true 'View History=')
+![View History](images/E4E-view-history.gif?raw=true 'View History=')
 <br /><br />
 
 ### Review the Generate Report
@@ -331,10 +357,10 @@ You can retrieve the C1MSGS1 Endevor batch execution report that contains the de
 
    The C1MSGS1 Endevor batch execution report appears in the editor area.
 
-![View History](packages/explorer-for-endevor/images/E4E-report-after-actions.gif?raw=true 'View History=')
+![View History](images/E4E-report-after-actions.gif?raw=true 'View History=')
 <br /><br />
 
-### Generate Elements for the Entire Subsystem
+### Generate All Elements for a Subsystem
 
 - **Generate All Elements** enables you to generate all the elements within a subsystem.
 
@@ -345,7 +371,7 @@ You can retrieve the C1MSGS1 Endevor batch execution report that contains the de
 
    The summary table for a C1MSGS1 Endevor batch execution report is produced in the event of error(s) while generating element(s). You can review the table in the editor area.
 
-![Report Table](packages/explorer-for-endevor/images/E4E-report-table-generate.gif?raw=true 'Report Table')
+![Report Table](images/E4E-report-table-generate.gif?raw=true 'Report Table')
 <br /><br />
 
 ### Retrieve an Element
@@ -359,7 +385,7 @@ You can download an element to your workspace and work with the element locally.
 
 You successfully retrieved the element.
 
-![Retrieve an Element](packages/explorer-for-endevor/images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
+![Retrieve an Element](images/E4E-retrieve.gif?raw=true 'Retrieve an Element')
 <br /><br />
 
 ### Retrieve an Element with Dependencies
@@ -373,8 +399,90 @@ You can download an element with dependencies to your workspace and work with th
 
 You successfully retrieved the element with dependencies.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](images/E4E-retrieve-dep.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
+
+### Create a Package
+
+Create a package from multiple elements. Select elements that you want to organize in a package and right-click on the selection to select the **Create Package** option.
+
+1. Select an element or an array of elements by holding the **CTRL/Command** key and using the left mouse button.
+2. Right-click the selected element(s) and select the **Create Package** option.
+3. Enter a name for the package.
+4. Enter a description for the package.
+5. Select options for the package.
+6. (Optional) Enter a CCID.
+7. (Optional) Enter a comment.
+8. Select **Move** command options for the package.
+
+You successfully created the package.
+
+You can find the package in the **Endevor Packages** view.
+
+![Create a Package](images/E4E-create-package.gif?raw=true 'Create a package')
+
+<br /><br />
+
+### Show packages
+
+Use the following ways to show packages from an Endevor instance.
+
+- Select an Endevor instance from the **Endevor Packages** view:
+
+  1. Hover over the **Endevor Packages** view toolbar and click **Change Instance**.
+  2. Select connection and configuration.
+  3. (Optional) Select a package status filter.
+
+- Use **Show Packages** from the **Endevor Element** view:
+
+  1. Right-click the Endevor inventory location in the **Endevor Element** view.
+  2. Select the **Show Packages** option.
+  3. (Optional) Select a package status filter.
+
+You successfully displayed the packages.
+
+### Filter Packages
+
+You can apply a status filter when listing packages in the Endevor instance for the first time. The filter reduces the number of packages that are pulled from Endevor based on the status.
+
+1. Right-click the filter icon at the top of the list in the **Endevor Element** view and select the **Change Filter** option.
+
+2. Select a status you want to filter.
+
+   **Note:** If all statuses are selected, no packages are filtered out.
+
+You successfully applied a filter to the listed packages.
+
+### Cast a Package
+
+Use the **Cast** option against a package to prepare the package for review and subsequent execution.
+
+1. Right-click the package you want to cast and select the **Cast Package** option.
+
+2. (Optional) Select the following **Cast** options:
+
+   - **Backout Enabled**: Indicates whether the backout facility is available for the selected package.
+   - **Components Validation** (radio group):
+     - **Validate**: Enables component validation. If component validation fails, the cast fails, as well.
+     - **Do not validate**: Disables component validation for the package.
+     - **(Default) Validate with warnings**: Enables component validation and generates a warning if component validation fails.
+
+You successfully cast the package. You should see a notification pop-up with the **Show Execution Report** and **Cancel** options and the following message:
+
+```text
+Cast package ... using configuration ... was successful. Would you like to see the report?
+```
+
+If the cast of the package fails, the execution report is displayed automatically.
+
+### Reset a Package
+
+Use the **Reset** option against a package if you want to set status back to **In-edit**, which enables you to modify the package. You can use the **Reset** option against any package status type.
+
+1. Right-click a package.
+2. Select the **Reset Package** option.
+
+You successfully performed the **Reset Package** action.
 
 ### Edit
 
@@ -385,7 +493,7 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
    The contents of the element appear in the editor area. You can now edit the element.
 
-3. Press **CTLR+S** or **Command+S** when you want to save and upload the edited element back.
+3. Press **CTLR+S** or **Command+S** when you want to save the edited element.
 4. Specify any accessible Endevor path and a name for the element.
 5. Enter a CCID.
 6. Enter a comment.
@@ -397,9 +505,9 @@ The **Edit** action lets you download an element, edit, and upload the element b
 
    - (Theia only) When you resolve a conflict, open the Command Palette by pressing **CTRL+SHIFT+P** or **CMD+SHIFT+P** and use one of the following commands: `Accept changes` or `Discard changes`.
 
-You successfully edited, saved, and uploaded the element.
+You successfully edited and saved the element.
 
-![Retrieve with Dependencies](packages/explorer-for-endevor/images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
+![Retrieve with Dependencies](images/E4E-edit.gif?raw=true 'Retrieve with Dependencies')
 <br /><br />
 
 ### Generate
@@ -418,12 +526,12 @@ You can use the **Generate in Place**, **Generate with Copyback**, or **Generate
 
    - Right-click an element and select the **Generate in Place** option.
 
-     ![Generate in Place](packages/explorer-for-endevor/images/E4E-Generate-in-Place.gif?raw=true 'Generate in Place')
+     ![Generate in Place](images/E4E-Generate-in-Place.gif?raw=true 'Generate in Place')
      <br /><br />
 
    - Right-click an element from up the map and select the **Generate with Copy back** option.
 
-     ![Generate with Copy back](packages/explorer-for-endevor/images/E4E-Generate-Copyback.gif?raw=true 'Generate with Copy back')
+     ![Generate with Copy back](images/E4E-Generate-Copyback.gif?raw=true 'Generate with Copy back')
      <br /><br />
 
    - Right-click an element from up the map and select the **Generate with No Source** option.
@@ -455,7 +563,7 @@ The **Print a listing** option enables you to display the most recently created 
 
 You successfully printed the listing.
 
-![Print Listing](packages/explorer-for-endevor/images/E4E-Print-Listing.gif?raw=true 'Print Listing')
+![Print Listing](images/E4E-Print-Listing.gif?raw=true 'Print Listing')
 <br /><br />
 
 ### Sign Out
@@ -469,7 +577,7 @@ The **Sign out** option enables you to lock an element, which prevents other use
 
 You successfully signed out the element.
 
-![Sign Out](packages/explorer-for-endevor/images/E4E-signout.gif?raw=true 'Sign Out')
+![Sign Out](images/E4E-signout.gif?raw=true 'Sign Out')
 <br /><br />
 
 ### Sign In
@@ -483,25 +591,21 @@ You successfully signed in the element.
 
 ## Base Profiles
 
-Explorer for Endevor enables you to use Zowe CLI base profiles. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and rejectUnauthorized in the base profile. For more information, see [the Base Profile section](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#base-profiles) on Zowe Docs.
+Explorer for Endevor enables you to use Zowe CLI base profiles. To make your default base profile work in the extension, ensure that you specify such parameters as username, password, host, port, and `rejectUnauthorized` in the base profile. For more information about how base profiles work, see [the Base Profile](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#base-profiles) section on Zowe Docs.
 
-### Access Zowe API Mediation
+### Access Zowe API Mediation Layer
 
 The extension enables you to connect to Endevor Web Services that are integrated with the Zowe API Mediation Layer, using your existing base profile. Ensure that you log in to the Zowe API Mediation layer authentication service, using your credentials and edit your current Endevor location to include the API ML endpoint for Endevor Web Services.
 
 1. Navigate to Zowe Explorer.
 
-2. Right-click your profile in the tree and select the **Log in to Authentication Service** option.
+2. Right-click your profile in the Data Sets view and select the **Manage Profile** option.
 
-3. Enter your username and password when prompted.
+3. Select the **Edit Profile** option from the drop-down menu.
 
-   Alternatively, you can authenticate to API ML, using the `zowe auth login apiml` Zowe CLI command. For more information about how to authenticate using the Zowe CLI command, see [Integrating with API Mediation Layer](https://docs.zowe.org/stable/user-guide/cli-using-integrating-apiml/#logging-in) on Zowe Docs.
+   A team configuration file is opened.
 
-   Explorer for Endevor re-uses your authentication information from the API ML setup.
-
-4. Open your team configuration file.
-
-5. Add a new Endevor connection with the following properties:
+4. Add a new Endevor connection with the following properties:
 
    ```json
    {
@@ -529,9 +633,11 @@ The extension enables you to connect to Endevor Web Services that are integrated
 
    where `host` and `port` are the common endpoint of your Zowe API ML services, and `basePath` is the specific endpoint where your Endevor Web Services are deployed under the Zowe API ML.
 
-6. Save your team configuration file.
+5. Save your team configuration file.
 
-You successfully established a connection to the API ML services from your Endevor connection.
+For more information about Zowe API Mediation Layer, see [Integrating with API Mediation Layer](https://docs.zowe.org/stable/user-guide/cli-using-integrating-apiml/) on Zowe Docs.
+
+You successfully customized the API ML connection properties for your Endevor connection.
 
 ## Team Configuration File
 
@@ -541,11 +647,11 @@ As an application developer, you can obtain a shared global configuration file f
 
 > **Tip**: You can convert your existing Zowe CLI profiles into team configuration files with the `zowe config convert-profiles` command. For more information about team config conversion, see [Using Profiles](https://docs.zowe.org/stable/user-guide/cli-using-using-profiles/#important-information-about-team-profiles) on Zowe Docs.
 
-## Activity View
+## Reports View
 
-The extension enables you to monitor activity of the session in the Explorer for Endevor tab that you can access using the View tab. The Activity View feature helps you troubleshoot any errors that occur in the extension more efficiently.
+The extension enables you to monitor activity of the session in the Explorer for Endevor tab that you can access using the View tab. The Reports View feature helps you troubleshoot any errors that occur in the extension more efficiently.
 
-Use Activity View to keep track of events that happen during an active session of the extension and review execution errors or API notification messages.
+Use Reports View to keep track of events that happen during an active session of the extension and review execution errors or API notification messages.
 
 1. Navigate to the **View** tab in VS Code.
 
@@ -553,13 +659,27 @@ Use Activity View to keep track of events that happen during an active session o
 
    The command prompt is displayed.
 
-3. Type **Explorer for Endevor: Focus of Activity View** and press Enter.
+3. Type **Explorer for Endevor: Focus on Endevor Reports View** and press Enter.
 
-The Activity View is displayed.
+The Report View is displayed.
 
 You can now click on events to expand them and access execution or API error reports.
 
 To see a list of Endevor messages and codes that were reported, hover over records of the warning or error messages.
+
+## Packages View
+
+The extension enables you to see the Endevor packages in a specified Endevor instance, to filter the packages and perform package-related actions.
+
+You can perform the following actions to change the way packages are displayed and the order in which they are displayed:
+
+- **Show Packages Created by User**: Click on the **Show Packages Created by User** icon in the **Endevor Packages** view toolbar to show only packages created by currently logged in user.
+
+- **Descending/Ascending Order by Package ID**: Click on the **Descending/Ascending Order by Package ID** icon to toggle the order in which packages are shown.
+
+- **Change Instance**: Click on the **Change Instance** icon to change the Endevor instance whose packages are displayed.
+
+- **Refresh Endevor Packages**: Click on the **Refresh Endevor Packages** icon to retrieve packages information from Endevor, using the current Endevor instance and filter.
 
 ## Manage the Extension Tree
 
@@ -569,9 +689,9 @@ You can perform the following actions to manage your connections and inventory l
 
 - **Delete an inventory location**: Delete your inventory location permanently by right-clicking an inventory location node and selecting the **Delete an inventory location** option.
 
-- **Hide a connection**: If you do not want to list your connections in the tree, you can hide such connections. To hide a connection, right-click the connection node and select the **Hide a connection** option.
+- **Hide a connection**: If you do not want to list your connections in the **Endevor Elements** view, you can hide such connections. To hide a connection, right-click the connection node and select the **Hide a connection** option.
 
-- **Hide an inventory location**: If you do not want to list your inventory locations in the tree, you can hide such locations. To hide an inventory location, right-click the location node and select the **Hide an inventory location** option.
+- **Hide an inventory location**: If you do not want to list your inventory locations in the **Endevor Elements** view, you can hide such locations. To hide an inventory location, right-click the location node and select the **Hide an inventory location** option.
 
 - **Edit an Endevor Connection**: Edit your Endevor connection login details by right-clicking a connection node and selecting the **Edit an Endevor Connection** option.
 
@@ -589,7 +709,7 @@ You can configure the following settings of the extension:
 
   **Note:** This setting applies not only to Explorer for Endevor but to all extensions in your VS Code.
 
-- Profiles: Keep in Sync. The option enables you to use a team configuration file that stores your pre-saved Endevor configuration or Zowe CLI Endevor profiles with Endevor locations in the extension. By default, the setting is enabled, meaning that the extension reads your team configuration files on startup and displays profile information in the Tree View. If the option is disabled, the extension does not check the `.zowe` folder for available profiles.
+- Profiles: Keep in Sync. The option enables you to use a team configuration file that stores your pre-saved Endevor configuration or Zowe CLI Endevor profiles with Endevor locations in the extension. By default, the setting is enabled, meaning that the extension reads your team configuration files on startup and displays profile information in the **Endevor Elements** view. If the option is disabled, the extension does not check the `.zowe` folder for available profiles.
 
   **Notes**:
 
@@ -606,6 +726,16 @@ You can configure the following settings of the extension:
 - (Experimental) Workspace Synchronization. The option enables the Endevor Workspace initialization that lets you create a synchronized Endevor workspace locally.
 
   **Note:** Experimental features might include undiscovered errors. Please, use this feature at your own discretion.
+
+- Ask for Processor Group. The option enables selection of a processor group when you perform Generate, Add, or Upload actions. A selected processor group overrides the previously chosen processor group.
+
+- Generate Subsystem. The option enables the extension to add the Generate all Elements feature. The option is disabled by default. Once enabled, the feature appears in the **Endevor Elements** view. You can then perform the Generate all Elements action against a susbystem node.
+
+- The editor auto save setting is disabled by default.
+
+  **Note**: Using the auto save feature with Explorer for Endevor might result in a bad user experience.
+
+  To change the setting, navigate to the VS Code Settings and look for **Files: Auto Save**.
 
 Access the Explorer for Endevor settings by clicking **Settings** > **Extensions** > **Explorer for Endevor**.
 
@@ -631,8 +761,7 @@ Explorer for Endevor is included with Eclipse Che version 7.6.0 and above. For m
 
 ## Zowe Conformance Program
 
-<a href="https://www.openmainframeproject.org/all-projects/zowe/conformance"><img src="https://www.openmainframeproject.org/wp-content/uploads/sites/11/2022/05/zowe-conformant-zowev2-explorer-color.png" 
-alt="Zowe Conformance Badge" width="200" height="160"/></a>
+<a href="https://www.openmainframeproject.org/all-projects/zowe/conformance"><img src="images/zowe-conformant.png" alt="Zowe Conformance Badge" width="200" height="160"/></a>
 
 Explorer for Endevor is Zowe V2 Conformant. The Zowe Conformance Program ensures a high level of common functionality, interoperability, and user experience while using an extension that leverages Zowe. For more information, see [Zowe Conformance Program](https://www.openmainframeproject.org/all-projects/zowe/conformance).
 
@@ -645,7 +774,7 @@ This data collection uses built-in Microsoft VS Code Telemetry, which can be dis
 The current release of Explorer for Endevor collects anonymous data for the following events:
 
 - Extension commands, such as Add, Retrieve, Sign in, Sign out, Edit, Generate, etc.
-- Build the tree view, refresh the tree view
+- Build the **Endevor Elements** view, refresh the view
 - Filter elements
 - Internal and Endevor errors
 
@@ -679,4 +808,4 @@ Note: To receive technical assistance and support, you must remain compliant wit
 
 ---
 
-Copyright © 2023 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+Copyright © 2024 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.

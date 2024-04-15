@@ -2,6 +2,65 @@
 
 You can find all notable changes to Explorer for Endevor in this document.
 
+## [1.7.2] &ndash; 2024-03-22
+
+### Added
+
+- Added an additional C1MSGSA report type to the request records in the Endevor Reports view.
+
+### Fixed
+
+- Fixed an issue that prevented the editor from closing after upload.
+- Fixed an issue with prompting to continue an edit session even if no changes were made to elements.
+- Fixed an issue preventing file extensions from being properly rendered while editing.
+
+### Changed
+
+- Reduced logging traces when working with profiles.
+- Suppressed unnecessary error logging when deleting internal temporary files.
+
+## [1.7.1] &ndash; 2024-03-06
+
+### Fixed
+
+- Fixed an issue that prevented the extension from starting in certain environments.
+
+## [1.7.0] &ndash; 2024-03-04
+
+### Added
+
+- Added the ability to create, cast, and reset packages.
+- Added a package view with the ability to filter by package states and user packages.
+- Added basic support and highlighting for Software Control Language (SCL).
+- Added a functionality that lets you override a processor group before uploading an element.
+- Added an extension setting that lets you set the condition of an element upload after the edit. The default behavior is to upload an element after the save action.
+- Added a functionality that lets you view local changes in an edited element before uploading the element back to Endevor.
+- Added a functionality that lets you compare changes between selected element revisions in the Element History view.
+- Integration with HLASM Language Support 1.12.0 and higher.
+
+### Changed
+
+- Default Zowe profile is now propagated to the top of the Elements view when starting the extension.
+- Interrupted or canceled element editing session can now be restored by opening the same element for editing.
+- Temporary internal element files are now hidden.
+- The update, discard, and show changes element actions are now available from the element editor context menu.
+- Reduced the amount of potential element change loss during editing when VS Code is restarted or crashed.
+- The generate element in place action is now available from the element editor context menu.
+- The generate all elements in the subsystem feature is disabled by default. You can enable the feature in the extension settings.
+- Overriding the processor group dialogs for add, upload, generate element is disabled by default. You can enable the feature in the extension settings.
+- Element History view is now using the built-in VS Code split editor that provides improved user experience when working with changes.
+- Profiles for the pull or synchronize workspace actions can now be chosen from the VS Code status bar. The selectors also show recently used profiles on the top.
+- Element signin action now uses a sign out API call that no longer requires you to specify a CCID or Comment.
+- Improved UI elements to increase user experience.
+
+### Fixed
+
+- Fixed an issue that overloaded the extension OUTPUT channel with confusing error messages.
+- Fixed an issue that caused replacement of a previously opened listing tab with a newly opened one.
+- Fixed an issue that caused permanent disablement of certificate validation for Endevor connections.
+- Fixed an issue with showing the wrong listing after the generate element with copyback action is performed.
+- Fixed the name validation procedure that caused the creation of connections that could break the element editing functionality.
+
 ## [1.6.0] &ndash; 2023-11-21
 
 ### Added
