@@ -1,3 +1,6 @@
+> [!WARNING]
+> Explorer for Endevor is no longer being actively developed under the Eclipse Foundation repository.
+
 # Explorer for Endevor <!-- omit in toc -->
 
 <div id="header" align="center">
