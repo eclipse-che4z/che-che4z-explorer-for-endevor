@@ -1,3 +1,7 @@
+<div style="border:2px solid red; padding: 10px;" align="center">
+<span style="color:red">Explorer for Endevor is no longer being actively developed under the Eclipse Foundation repository.</span>
+</div>
+
 # Explorer for Endevor <!-- omit in toc -->
 
 <div id="header" align="center">
